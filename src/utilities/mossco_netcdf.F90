@@ -3039,6 +3039,7 @@ module mossco_netcdf
     real(ESMF_KIND_R8)                           :: weight_
     integer(ESMF_KIND_I8)                        :: ticks
     character(ESMF_MAXSTR)                       :: timeUnit, message, refTimeISOString
+    logical                                      :: isShort = .false.
 
     rc_ = ESMF_SUCCESS
     if (present(kwe)) rc_ = rc_
@@ -3080,22 +3081,11 @@ module mossco_netcdf
       i=index(timeUnit,' ')
       if (i>0) timeUnit=timeUnit(1:i-1)
 
-      ticks4 = -1
-      ticks = -1
-
-      if (currTime < refTime) then
-        call ESMF_LogWrite('  time cannot be smaller then reference time', ESMF_LOGMSG_ERROR)
-        if (present(rc)) rc=ESMF_RC_NOT_IMPL
-        return
-      endif
-
       timeInterval = currTime - refTime
-
 
       call ESMF_TimePrint(refTime, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
 
       call ESMF_TimePrint(currTime, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -3105,11 +3095,15 @@ module mossco_netcdf
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+      isShort = .false.
+
       if (timeUnit(1:6) == 'second') then
         call ESMF_TimeIntervalGet(timeInterval, startTime=refTime, s_i8=ticks, rc=localrc)
       elseif (timeUnit(1:6) == 'minute') then
+        isShort = .true.
         call ESMF_TimeIntervalGet(timeInterval, startTime=refTime, m=ticks4, rc=localrc)
       elseif (timeUnit(1:4) == 'hour') then
+        isShort = .true.
         call ESMF_TimeIntervalGet(timeInterval, startTime=refTime, h=ticks4, rc=localrc)
       elseif (timeUnit(1:3) == 'day') then
         call ESMF_TimeIntervalGet(timeInterval, startTime=refTime, d_i8=ticks, rc=localrc)
@@ -3133,7 +3127,7 @@ module mossco_netcdf
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (ticks4 > -1) ticks = ticks4
+      if (isShort) ticks = ticks4
 
       ntime = self%dimlens(self%timeDimId)
       if (ntime < 1) then
