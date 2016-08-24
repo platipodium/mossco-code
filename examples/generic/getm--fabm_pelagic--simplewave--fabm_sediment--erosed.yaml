@@ -127,7 +127,7 @@ coupling:
     interval: 30 m
   - components:
      - erosed
-     - mossco_gfwserpd
+     - mossco_gfwse
     interval: 60 h
   - components:
      - simplewave
