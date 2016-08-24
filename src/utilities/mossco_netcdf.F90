@@ -3801,6 +3801,8 @@ module mossco_netcdf
     if (localrc /= NF90_NOERR) then
       write(message,'(A)') '  there is no missing_value attribute in variable '//trim(var%name)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      write(message,'(A)') '  this might severely slow down your simulation'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
     endif
 
     if (present(rc)) rc = rc_
