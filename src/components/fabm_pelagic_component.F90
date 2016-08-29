@@ -1032,8 +1032,8 @@ module fabm_pelagic_component
 
           endif
           call set_item_flags(importState,attribute_name,requiredFlag=.false.,requiredRank=2)
-          break
-          
+          exit
+
         enddo
 
         ! check for valid upper bounds of possibly existing array
