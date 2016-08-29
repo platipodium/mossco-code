@@ -708,65 +708,31 @@ module fabm_pelagic_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      !> @todo move this to subroutine to simplify code
-      !> set maximum value for zero-gradient boundary condition limiter
-      if (trim(varname)=='Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water') then
-        call ESMF_AttributeSet(concfield,'hackmax', 0.8d0)
-        call ESMF_AttributeSet(concfield,'hackmaxmin', 0.2d0)
-        call ESMF_LogWrite('  use maximum boundary value of 0.8 for '//trim(varname),ESMF_LOGMSG_WARNING)
-      end if
-
-      if (trim(varname)=='Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water') then
-        call ESMF_AttributeSet(concfield,'hackmax', 8.0d0)
-        call ESMF_AttributeSet(concfield,'hackmaxmin', 2.0d0)
-        call ESMF_LogWrite('  use maximum boundary value of 8.0 for '//trim(varname),ESMF_LOGMSG_WARNING)
-      end if
-
-      if (trim(varname)=='Detritus_Nitrogen_detN_in_water') then
-        call ESMF_AttributeSet(concfield,'hackmax', 1.2d0)
-        call ESMF_AttributeSet(concfield,'hackmaxmin', 0.2d0)
-        call ESMF_LogWrite('  use maximum boundary value of 1.0 for '//trim(varname),ESMF_LOGMSG_WARNING)
-      end if
-      if (trim(varname)=='Phytplankton_Nitrogen_phyN_in_water') then
-        call ESMF_AttributeSet(concfield,'hackmax', 1.2d0)
-        call ESMF_AttributeSet(concfield,'hackmaxmin', 0.2d0)
-        call ESMF_LogWrite('  use maximum boundary value of 1.0 for '//trim(varname),ESMF_LOGMSG_WARNING)
-      end if
-      if (trim(varname)=='Detritus_Phosphorus_detP_in_water') then
-        call ESMF_AttributeSet(concfield,'hackmax', 0.2d0)
-        call ESMF_AttributeSet(concfield,'hackmaxmin', 0.04d0)
-        call ESMF_LogWrite('  use maximum boundary value of 0.3 for '//trim(varname),ESMF_LOGMSG_WARNING)
-      end if
-      if (trim(varname)=='Phytplankton_Phosphorus_phyP_in_water') then
-        call ESMF_AttributeSet(concfield,'hackmax', 0.2d0)
-        call ESMF_AttributeSet(concfield,'hackmaxmin', 0.04d0)
-        call ESMF_LogWrite('  use maximum boundary value of 0.3 for '//trim(varname),ESMF_LOGMSG_WARNING)
-      end if
-      if (trim(varname)=='Detritus_Carbon_detC_in_water') then
-        call ESMF_AttributeSet(concfield,'hackmax', 14.d0)
-        call ESMF_AttributeSet(concfield,'hackmaxmin', 2.d0)
-        call ESMF_LogWrite('  use maximum boundary value of 10. for '//trim(varname),ESMF_LOGMSG_WARNING)
-      end if
-      if (trim(varname)=='Phytplankton_Carbon_phyC_in_water') then
-        call ESMF_AttributeSet(concfield,'hackmax', 18.d0)
-        call ESMF_AttributeSet(concfield,'hackmaxmin', 2.d0)
-        call ESMF_LogWrite('  use maximum boundary value of 10. for '//trim(varname),ESMF_LOGMSG_WARNING)
-      end if
-      if (trim(varname)=='Chl_chl_in_water') then
-        call ESMF_AttributeSet(concfield,'hackmax', 7.6d0)
-        call ESMF_AttributeSet(concfield,'hackmaxmin', 0.4d0)
-        call ESMF_LogWrite('  use maximum boundary value of 1.0 for '//trim(varname),ESMF_LOGMSG_WARNING)
-      end if
-      if (trim(varname)=='fraction_of_Rubisco_Rub_in_water') then
-        call ESMF_AttributeSet(concfield,'hackmax', 7.6d0)
-        call ESMF_AttributeSet(concfield,'hackmaxmin', 0.4d0)
-        call ESMF_LogWrite('  use maximum boundary value of 1.0 for '//trim(varname),ESMF_LOGMSG_WARNING)
-      end if
-      if (trim(varname)=='Zooplankton_Carbon_zooC_in_water') then
-        call ESMF_AttributeSet(concfield,'hackmax', 1.4d0)
-        call ESMF_AttributeSet(concfield,'hackmaxmin', 0.4d0)
-        call ESMF_LogWrite('  use maximum boundary value of 1.0 for '//trim(varname),ESMF_LOGMSG_WARNING)
-      end if
+      select case (trim(varname))
+      case ('Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water')
+        call set_hackrange(concfield, 0.2d0, .8d0, rc=localrc)
+      case ('Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water')
+        call set_hackrange(concfield, 0.2d0, .8d0, rc=localrc)
+      case ('Detritus_Nitrogen_detN_in_water')
+        call set_hackrange(concfield, 0.2d0, 1.2d0, rc=localrc)
+      case ('Phytplankton_Nitrogen_phyN_in_water')
+        call set_hackrange(concfield, 0.2d0, 1.2d0, rc=localrc)
+      case ('Detritus_Phosphorus_detP_in_water')
+        call set_hackrange(concfield, 0.04d0, .2d0, rc=localrc)
+      case ('Phytplankton_Phosphorus_phyP_in_water')
+        call set_hackrange(concfield, 0.04d0, .2d0, rc=localrc)
+      case ('Detritus_Carbon_detC_in_water')
+        call set_hackrange(concfield, 2.0d0, 14.0d0, rc=localrc)
+      case ('Phytplankton_Carbon_phyC_in_water')
+        call set_hackrange(concfield, 2.0d0, 18.0d0, rc=localrc)
+      case ('Chl_chl_in_water')
+        call set_hackrange(concfield, 0.4d0, 7.6d0, rc=localrc)
+      case ('fraction_of_Rubisco_Rub_in_water')
+        call set_hackrange(concfield, 0.4d0, 7.6d0, rc=localrc)
+      case ('Zooplankton_Carbon_zooC_in_water')
+        call set_hackrange(concfield, 0.4d0, 1.4d0, rc=localrc)
+      case default
+      end select
 
       !> add fabm index in concentration array as "external_index" to be used by other components
       call ESMF_AttributeSet(concfield, 'external_index', int(pel%export_states(n)%fabm_id,ESMF_KIND_I8))
@@ -2124,5 +2090,31 @@ module fabm_pelagic_component
     enddo
 
   end subroutine integrate_flux_in_water
+
+  subroutine set_hackrange(field, valid_max, valid_min, rc)
+
+    type(ESMF_Field), intent(inout)              :: field
+    real(ESMF_KIND_R8), intent(in)               :: valid_max, valid_min
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    character(ESMF_MAXSTR)                       :: message
+    integer(ESMF_KIND_I4)                        :: rc_, localrc
+
+    if (present(rc)) rc = ESMF_SUCCESS
+
+    call ESMF_AttributeSet(field,'hackmax', valid_max, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeSet(field,'hackmaxmin', valid_min, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    write(message, '(A,ES9.3,A,ES9.3,A)') '  uses range restriction ', &
+      valid_min,'--',valid_max,' on field '
+    call MOSSCO_FieldWrite(field, message)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+  end subroutine set_hackrange
 
 end module fabm_pelagic_component
