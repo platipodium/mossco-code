@@ -250,7 +250,7 @@ module fabm_pelagic_component
 
         write(message,'(A)') trim(name)//' created diagnostic field '
         call MOSSCO_FieldString(field, message, rc=localrc)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
         call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -465,7 +465,8 @@ module fabm_pelagic_component
       else
         write(message,'(A)') 'foreign grid must be of rank 2 or 3'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        rc = ESMF_RC_ARG_BAD
+        return
       end if
       deallocate(maxIndex)
     end if
@@ -550,7 +551,8 @@ module fabm_pelagic_component
     if (.not.isPresent) then
       write(message,'(A)') trim(name)//' could not find required namelist file '//trim(fabm_nml)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      rc = ESMF_RC_NOT_FOUND
+      return
     endif
 
     pel = mossco_create_fabm_pelagic(fabm_nml)
@@ -595,8 +597,8 @@ module fabm_pelagic_component
     call ESMF_GridGetItem(state_grid, itemflag=ESMF_GRIDITEM_AREA, staggerloc=ESMF_STAGGERLOC_CENTER_VCENTER, farrayPtr=ptr_f3, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       pel%column_area = 1.0d0
-      write(message,*) 'cannot find vcenter area in grid, set area to 1.0 and assume fluxes_in_water to come as mass per m2 per s'
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+      write(message, '(A)') trim(name)//' cannot find vcenter area in grid, set to 1.0 and assume fluxes_in_water to come as mass m-2 s-1'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
     else
       ! use layer 1 cell area.
       ! the indexing fits to GETM layout that starts at i=1-totalLWidth(1)
@@ -1030,6 +1032,8 @@ module fabm_pelagic_component
 
           endif
           call set_item_flags(importState,attribute_name,requiredFlag=.false.,requiredRank=2)
+          break
+          
         enddo
 
         ! check for valid upper bounds of possibly existing array
