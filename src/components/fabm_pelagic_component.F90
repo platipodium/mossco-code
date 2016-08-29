@@ -2112,7 +2112,7 @@ module fabm_pelagic_component
 
     write(message, '(A,ES9.3,A,ES9.3,A)') '  uses range restriction ', &
       valid_min,'--',valid_max,' on field '
-    call MOSSCO_FieldWrite(field, message)
+    call MOSSCO_FieldString(field, message)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
   end subroutine set_hackrange
