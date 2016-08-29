@@ -952,6 +952,17 @@ module fabm_pelagic_component
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
             rc = ESMF_RC_NOT_IMPL
             return
+
+            !> This is a partial implementation, needs testing
+            if (i == 1) then
+              allocate(ptr_f2(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2)), stat=localrc)
+              ptr_f2 = spread(coord1d, 2, ubnd2(2)-lbnd2(2) + 1)
+            else
+              allocate(ptr_f2(lbnd2(2):ubnd2(2),lbnd2(1):ubnd2(1)), stat=localrc)
+              ptr_f2 = spread(coord1d, 2, ubnd2(1)-lbnd2(1) + 1)
+              ptr_f2 = transpose(ptr_f2)
+            endif
+
           else
             call ESMF_GridGetCoord(state_grid, staggerloc=ESMF_STAGGERLOC_CENTER, &
               coorddim=i, farrayptr=ptr_f2, rc=localrc)
