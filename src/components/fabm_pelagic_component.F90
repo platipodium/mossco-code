@@ -933,56 +933,18 @@ module fabm_pelagic_component
 
     if (associated(pel%horizontal_dependencies)) then
       do n=1, size(pel%horizontal_dependencies)
+
         !> check for existing field
         if (trim(pel%horizontal_dependencies(n)%name)=='bottom_depth') then
           esmf_name = 'water_depth_at_soil_surface'
-        elseif (trim(pel%horizontal_dependencies(n)%name)=='latitude' .or. &
-                trim(pel%horizontal_dependencies(n)%name)=='longitude') then
-
-          i = 1 ! Longitude is first coordinate in ESMF
-          if (trim(pel%horizontal_dependencies(n)%name)=='latitude') i = 2 ! lat coord
-
-          if (coordDimCount(i) .eq. 1) then
-            !> @todo This need implementation of using 1D coords
-            call ESMF_GridGetCoord(state_grid, staggerloc=ESMF_STAGGERLOC_CENTER, &
-              coorddim=i, farrayptr=coord1d, rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-            write(message,'(A)') trim(name)//' not implemented using 1D coordinates'
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-            rc = ESMF_RC_NOT_IMPL
-            return
-
-            !> This is a partial implementation, needs testing
-            if (i == 1) then
-              allocate(ptr_f2(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2)), stat=localrc)
-              ptr_f2 = spread(coord1d, 2, ubnd2(2)-lbnd2(2) + 1)
-            else
-              allocate(ptr_f2(lbnd2(2):ubnd2(2),lbnd2(1):ubnd2(1)), stat=localrc)
-              ptr_f2 = spread(coord1d, 2, ubnd2(1)-lbnd2(1) + 1)
-              ptr_f2 = transpose(ptr_f2)
-            endif
-
-          else
-            call ESMF_GridGetCoord(state_grid, staggerloc=ESMF_STAGGERLOC_CENTER, &
-              coorddim=i, farrayptr=ptr_f2, rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          endif
-
-          call pel%set_environment(pel%horizontal_dependencies(i)%name,ptr_horizontal=ptr_f2)
-
-          write(message,'(A,A)') trim(name)//' uses coordinate horizontal dependency field ', &
-            trim(pel%horizontal_dependencies(n)%name)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-          cycle
         else
           esmf_name = pel%horizontal_dependencies(n)%name(1:ESMF_MAXSTR)
         end if
+
         call ESMF_StateGet(importState, trim(esmf_name), itemType,rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
         if (itemType == ESMF_STATEITEM_NOTFOUND) then
 
           field = ESMF_FieldCreate(horizontal_grid, &
@@ -1016,6 +978,7 @@ module fabm_pelagic_component
 
         attribute_name=trim(esmf_name)
         call set_item_flags(importState,attribute_name,requiredFlag=.true.,requiredRank=2)
+
         !! set FABM's pointers to dependencies data,
         !! this probably has to be done only once (here) and not in Run
         call ESMF_StateGet(importState, trim(esmf_name), field=field, rc=localrc)
@@ -1029,6 +992,45 @@ module fabm_pelagic_component
         if (itemType == ESMF_STATEITEM_NOTFOUND) then
           ptr_f2 = 0.0_rk
         end if
+
+        !> Try to fill coordinates with grid information
+        do while (itemType == ESMF_STATEITEM_NOTFOUND .and. ( &
+          trim(pel%horizontal_dependencies(n)%name)=='latitude' .or. &
+          trim(pel%horizontal_dependencies(n)%name)=='longitude'))
+
+          call ESMF_GridGet(horizontal_grid, coordSys=coordSys, rc=localrc)
+          if (coordSys /= ESMF_COORDSYS_SPH_DEG) exit
+
+          k = 1 ! Longitude is first coordinate in ESMF_COORDSYS_SPH_DEG
+          if (trim(pel%horizontal_dependencies(n)%name)=='latitude') k = 2 ! lat coord
+
+          if (coordDimCount(k) .eq. 1) then
+            call ESMF_GridGetCoord(horizontal_grid, staggerloc=ESMF_STAGGERLOC_CENTER, &
+              coorddim=k, farrayptr=coord1d, rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+            if (k == 1) then ! lon coordinate
+              do j = 1, pel%jnum
+                ptr_f2(:,j) = coord1d(:)
+              enddo
+            else
+              do i = 1, pel%inum
+                ptr_f2(i,:) = coord1d(:)
+              enddo
+            endif
+          else
+            call ESMF_GridGetCoord(horizontal_grid, staggerloc=ESMF_STAGGERLOC_CENTER, &
+              coorddim=k, farrayptr=coord2d, exclusiveLBound=lbnd2, exclusiveUBound=ubnd2,rc=localrc)
+
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+            ptr_f2(1:pel%inum,1:pel%jnum) = coord2d(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2))
+
+          endif
+          call set_item_flags(importState,attribute_name,requiredFlag=.false.,requiredRank=2)
+        enddo
 
         ! check for valid upper bounds of possibly existing array
         if ((ubound(ptr_f2,1).lt.pel%inum).or. &
