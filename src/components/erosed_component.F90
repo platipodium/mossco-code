@@ -545,7 +545,7 @@ contains
 !      end do
 
     else
-      Write (0,*) 'Error: sedparams.txt for use in erosed does not exit.!!'
+      Write (0,*) 'Error: sedparams.txt for use in erosed does not exist.!!'
       stop
     end if
 
