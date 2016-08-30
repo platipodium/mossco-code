@@ -28,7 +28,7 @@ module pelagic_soil_connector
   private
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DETN,DIN,vDETN
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DIP=>null(),DETP,vDETP
-  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: vDETC,DETC
+  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: vDETC=>null(),DETC=>null()
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: nit,amm
   real(ESMF_KIND_R8),dimension(:,:),   pointer :: oxy=>null(),odu=>null()
   real(ESMF_KIND_R8),dimension(:,:),   pointer :: depth=>null()
@@ -356,9 +356,11 @@ module pelagic_soil_connector
       fac_env = fac_env + sinking_factor_min/sinking_factor
 
       ! reduce sedimentation due to detritus-C (assuming higher DETN in shallow areas)
-      if (critical_detritus .gt. 1E-3 .and. critical_detritus .lt. 9E9) then
-        fac_env = fac_env * 1.0d0/(1.0d0 + &
+      if (associated(DETC)) then
+        if (critical_detritus .gt. 1E-3 .and. critical_detritus .lt. 9E9) then
+          fac_env = fac_env * 1.0d0/(1.0d0 + &
            (DETC(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))/critical_detritus)**4)
+        end if
       end if    
 
       call mossco_state_get(exportState, &
