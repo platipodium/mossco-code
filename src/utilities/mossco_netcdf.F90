@@ -2792,15 +2792,16 @@ module mossco_netcdf
     !! set start indices for target field
     fstart(1:gridRank)=start(1:gridRank)-minIndexPDe(1:gridRank,localPet+1)+1
 
-    !! restrict length of field to read from netcdf to available size
-    do i=1, fieldRank
+    !! restrict length of field to read from netcdf to available size, only do this
+    !! on the gridded dimensions
+    do i=1, gridRank
       if (ncubnd(i)>self%dimlens(var%dimids(i))) ncubnd(i)=self%dimlens(var%dimids(i))
     enddo
     count=count+ncubnd-start
 
     !> overwrite global indexing, if matching netcdf data domain
     !! then simply copy whole array:
-    do i=1, fieldRank
+    do i=1, gridRank
       if (ubnd(i)-lbnd(i)+1==self%dimlens(var%dimids(i))) then
         start(i) = 1
         count(i) = ubnd(i)-lbnd(i)+1
