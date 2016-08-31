@@ -1,5 +1,7 @@
 ytl=[1E-5 1E-4 1E-3 0.01 0.1 0.3 1 3 10 20 50 100 1E3 1E4 1E5 1E6];  
 ili=1; 
+ntagm=ntags+(exist('datat') & strcmp(varshort0,'CHL'));
+ 
 if isstrprop(ptag(2), 'xdigit') 
   vli=2:length(ptag); mode='s';
 else
@@ -43,7 +45,7 @@ for im=1:length(vli)
  end
  if ti-toffm<=length(ind)
 % goes to new figure (if required)
-  np = ntags*(cell2mat(var{i}(6))-1)+ ns + nfig;
+  np = ntagm*(cell2mat(var{i}(6))-1)+ ns + nfig;
   if(im==1) vt{np-nfig}=[varshort0 tag]; end
 %%  if cmpm==1
     figure(np); set(gcf, 'visible','off','Color','w'); hold on
@@ -63,7 +65,8 @@ for im=1:length(vli)
   else
     value = squeeze(tmp(:,:,ti))*di;  % surface maps
     ta=sprintf('%s%d %d',mons(4:6),year(ti-toffm),doy(ti-toffm));
-  end  
+  end
+
   indn=find(~isnan(value));
   fprintf('%d %s/%s\t np=%d/%d mofc=%d im=%d i=%d %d\tmean=%1.2f\n',i,varshort,varn,np,cell2mat(var{i}(6)),mofc,im,ix,iy,mean(mean(value(indn))));
 
@@ -94,7 +97,7 @@ for im=1:length(vli)
   else set(gca,'Clim',[minval maxVal]); end
 
 %  colormap(coljm(i0:end,:));
-  colormap(ssec);  %% choose color map
+%%  colormap(ssec);  %% choose color map
  %        set(p,'MeshStyle','both','EdgeAlpha',0);
   shading flat;
   m_grid('box','off','color','k','backcolor','none','tickdir','out','linestyle','none','xtick',[],'ytick',[],'xticklabel','','yticklabel',''); 
@@ -104,7 +107,7 @@ for im=1:length(vli)
 %% colorbar settings
     cb=colorbar;
     title(cb,units,'FontSize',fs-2,'FontWeight','bold','Color','k');
-    set(cb, 'Position', [x0+0.03*dxpm y0+dypm*0.06 .014 0.3*dypm],'FontSize',fs);
+    set(cb, 'Position', [x0+0.03*dxpm y0+dypm*0.04 .012 0.3*dypm],'FontSize',fs);
     if(islog)
 %      ctl =ceil(log10(minval)):0.5:ceil(log10(maxVal));
        if(islog) set(cb,'YTick',log10(ytl),'YTicklabels',ytl); 
@@ -112,7 +115,7 @@ for im=1:length(vli)
     end
   end
  
-  m_text(lonlimit(1)-0.3,latlimit(2)-0.2,[varshort0 ' ' tag],'HorizontalAlignment','left','FontSize',fs+8,'FontWeight','bold','FontName','Helvetica','Interpreter','none');
+  if(ix==1) m_text(lonlimit(1)-0.3,latlimit(2)-0.2,[varshort0 ' ' tag],'HorizontalAlignment','left','FontSize',fs+8,'FontWeight','bold','FontName','Helvetica','Interpreter','none'); end
   m_text(lonlimit(2)-1.2,latlimit(1)+0.5,ta,'FontWeight','bold','HorizontalAlignment','right','FontSize',fs);
   set(gca,'FontSize',fs);
 
@@ -125,13 +128,17 @@ for im=1:length(vli)
 % ,'VerticalAlignment','center'annotation('textbox',tpos-[0 0.14*dyp 0 0],'String',compn{Zt(i)},'Color',col,'Fontweight','bold','FontSize',fs-2,'LineStyle','none');
 
 
- if 1==1 & ntags>1 % cmp different scenarios
-  if abs(ntags-nrowm)<abs(ntags-ncolm)
-    ix = 1+mod(im-1,ncolm); npc=floor((im-1)/ncolm); iy = ns;
-%    ax_cmp=subplot(ncolm,ntags,im);
+ if ntagm>1 % cmp different scenarios
+  if abs(ntagm-nrowm)<abs(ntagm-ncolm)
+    if(2*ntagm<=nrowm)
+      ix = 1+mod(im-1,ncolm); npc=floor((im-1)/ncolm); iy = ns;
+    else
+      ix = 1+mod(im-1,ncolm); npc=floor((im-1)/ncolm); iy = ns;
+    end
+%    ax_cmp=subplot(ncolm,ntagm,im);
   else
     iy = 1+mod(im-1,nrowm); npc=floor((im-1)/nrowm); ix = ns;
-%    ax_cmp=subplot(ntags,nrowm,im);
+%    ax_cmp=subplot(ntagm,nrowm,im);
   end
 
   if(~strcmp(varshort,varshortmc0))
@@ -146,7 +153,21 @@ for im=1:length(vli)
   x0=0.06+(ix-1)*1.15*dxpm; y0=0.1+(iy-1)*1.03*dypm;
   fprintf('im=%d ix=%d iy=%d %1.2f npc=%d\t%d\n',im,ix,iy,y0,npc,mofc);
   ax_cmp=subplot('Position',[x0 y0 dxpm dypm]);hold on
-  copyaxes(axs,ax_cmp,true );  colormap(ssec); 
+  copyaxes(axs,ax_cmp,true );  
+
+
+%% plot satellite map for comparison  
+  if(ntagm~=ntags)
+    % find best date of data
+    ii=find(yearg==year(ti-toffm));
+    [mdv mdi]=min(abs(doyg(ii)-doy(ti-toffm)));
+    if(mdv < 32)
+     iy = max(nrowm-ntags-0,0);
+     plotdatamap;
+    end
+  end   
+
+  % colormap(ssec); 
   imc=imc+1;
  end
  end % if

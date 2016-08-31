@@ -15,6 +15,7 @@ for id=0:ndvar-1
   else
 %   iw=strfind(datvarname,'DIP');
     iw=strfind(datvarname,'-');
+    if length(iw)>0
     varid = netcdf.inqVarID(ncid,datvarname);
     if ~strcmpi(datvarname(1:iw-1),oldstatn)
       is=is+1;
@@ -34,6 +35,7 @@ for id=0:ndvar-1
    %end
     iv=iv+1;
     vars{id,iv}='';
+    end
   end
 end
 %% print list of stations and their location
@@ -55,7 +57,7 @@ dadoy=floor(mod(datime,365.25)+1);
 dayear=floor(datime./(365.25));
 dayears=unique(dayear);
 for i=1:is
-  dval = data{i,1};
+  dval = squeeze(data{i,1});
   indd  = find(~isnan(dval) & dayear>=2002 & dayear<=2005 );
   fprintf('found %d in 2002-2005 for station %s\n',length(indd),statn{i});
 end

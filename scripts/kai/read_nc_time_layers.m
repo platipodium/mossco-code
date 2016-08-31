@@ -34,13 +34,15 @@ end
 if IsWater
   try
     water_dz   = squeeze(ncread(ncfile,'layer_height_in_water'));
+
   catch exception
      varid=netcdf.inqDimID(ncid,[coordn '_3']);
      [id nz]=netcdf.inqDim(ncid,varid);
      fprintf('using equidistant mesh\n');
      water_dz = ones(nz,length(time));
   end
-  dimdz=length(size(water_dz));
+  dimdz=length(size(water_dz));  
+  nz=size(water_dz,dimdz-1);
   water_depth= cumsum(water_dz,dimdz-1);
 %  depth = unique(water_depth);
   water_dzt  = squeeze(sum(water_dz,dimdz-1));

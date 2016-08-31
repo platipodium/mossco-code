@@ -17,9 +17,9 @@ var={
   {'Chl_chl_in_water';'CHL';0.;24; 1;					1; 1;0;'Ti'};
   {'Chl_chl_in_water';'CHL';0.;24; 1;					2; 1;0;'Ti'};
   {'Chl_chl_in_water';'CHL';0.;24; 1;					3; 1;0;'Ti'};
-  {'Chl_chl_in_water';'CHL';0.;24; 1;					4; 1;0;'Ti'};
+%  {'Chl_chl_in_water';'CHL';0.;24; 1;					4; 1;0;'Ti'};
 %  {'Chl_chl_in_water';'CHL';0.;12; 1;					3; 1;0;'Ti'};
-  {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0;1.; 1.;	5; 1;0;'Ti'};
+  {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0;1.; 1.;	4; 1;0;'Ti'};  {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0;1.; 1.;	5; 1;0;'Ti'};
 %  {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0;0.8; 1.;	6; 1;0;'Ti'};
 %  {'Chl_chl_in_water';'CHL';0.;24; 1;					4; 1;0;'Ti'};
 %  {'Chl_chl_in_water';'CHL';0.;24; 1;					3; 1;0;'Ti'};
