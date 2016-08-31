@@ -387,14 +387,6 @@ module netcdf_input_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-    call ESMF_AttributeSet(gridComp, 'filename', trim(fileName), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_AttributeSet(gridComp, 'check_file', checkFile, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
     ! For multiprocessor applications, try to read cpu-specific input first, default
     ! back to overall file
     if (petCount>0) then
@@ -403,6 +395,14 @@ module netcdf_input_component
       inquire(file=trim(petFileName), exist=isPresent)
       if (isPresent) fileName=trim(petFileName)
     endif
+
+    call ESMF_AttributeSet(gridComp, 'filename', trim(fileName), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeSet(gridComp, 'check_file', checkFile, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     inquire(file=trim(fileName), exist=isPresent)
 
