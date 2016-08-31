@@ -788,51 +788,10 @@ module netcdf_input_component
           endif
         enddo
 
-        if (nc%variables(i)%rank == 2 .and. .not.hasTimeDim) then
-          gridRank = 2
-        elseif (nc%variables(i)%rank == 3 .and. .not.hasTimeDim) then
-          gridRank = 3
-        elseif (nc%variables(i)%rank == 4 .and. hasTimeDim) then
-          gridRank = 3
-        elseif (nc%variables(i)%rank == 3 .and. hasTimeDim) then
-          gridRank = 2
-        else
-          write(message,'(A,I1)') trim(name)//' mismatch from'
-          call MOSSCO_MessageAdd(message,' '//trim(nc%name)//'::'//trim(nc%variables(i)%name))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-          write(message,'(A,I1,A)') '  rank ',nc%variables(i)%rank,' /= grid '
-          call MOSSCO_FieldString(field, message, rc=localrc)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-          cycle
+        fieldRank = nc%variables(i)%rank
+        if (hasTimeDim) then
+          fieldRank = fieldRank - 1
         endif
-
-        !! Make sure varRank>=fieldRank>=gridRank
-
-        ! if (any(nc%variables(i)%dimids==udimid)) then
-        !   if (fieldRank /= nc%variables(i)%rank-1) then
-        !     write(message,'(A,I1)') trim(name)//' mismatch from'
-        !     call MOSSCO_MessageAdd(message,' '//trim(nc%name)//'::'//trim(nc%variables(i)%name))
-        !     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-        !     write(message,'(A,I1,A)') '  rank ',nc%variables(i)%rank-1,' /= field '
-        !     call MOSSCO_FieldString(field, message, rc=localrc)
-        !     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-        !
-        !     cycle
-        !     !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        !   endif
-        ! else
-        !   if (fieldRank /= nc%variables(i)%rank) then
-        !     write(message,'(A,I1)') trim(name)//' mismatch from'
-        !     call MOSSCO_MessageAdd(message,' '//trim(nc%name)//'::'//trim(nc%variables(i)%name))
-        !     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-        !     write(message,'(A,I1,A)') '  rank ',nc%variables(i)%rank-1,' /= field '
-        !     call MOSSCO_FieldString(field, message, rc=localrc)
-        !     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-        !
-        !     cycle
-        !     !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        !   endif
-        ! endif
 
         !> @todo: test if varGrid conforms to grid
         if (gridRank==2) then
