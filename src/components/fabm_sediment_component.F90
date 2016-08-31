@@ -931,7 +931,7 @@ module fabm_sediment_component
     type(ESMF_StateItem_Flag)      :: itemtype
     type(ESMF_Field)               :: field, exportField
 
-    rc=ESMF_SUCCESS
+    rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
       importState=importState, exportState=exportState, rc=localrc)
@@ -987,7 +987,8 @@ module fabm_sediment_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      !! Need to get shape from exportState field of same name to constrain the indices of the conc field
+      !! Need to get shape from exportState field of same name to constrain the indices
+      !! of the conc field
       call ESMF_StateGet(exportState, trim(varname), itemType=itemType, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -996,7 +997,8 @@ module fabm_sediment_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_FieldGetBounds(exportField, exclusiveUbound=exportUbnd, exclusiveLbound=exportLbnd, rc=localrc)
+      call ESMF_FieldGetBounds(exportField, exclusiveUbound=exportUbnd, &
+        exclusiveLbound=exportLbnd, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
