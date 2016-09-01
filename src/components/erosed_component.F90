@@ -343,33 +343,37 @@ contains
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        if (rank /= 3) then
-          write(message, '(A)') trim(name)//' foreign grid must be of rank 3'
-          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-          call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
-        end if
+     if (rank==2) then
 
-        write(message, '(A)') trim(name)//' uses foreign grid from field'
+        call ESMF_GridGet(grid,ESMF_STAGGERLOC_CENTER,0,                   &
+                          exclusiveLBound=lbnd2,exclusiveUBound=ubnd2, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        inum=ubnd2(1)-lbnd2(1)+1
+        jnum=ubnd2(2)-lbnd2(2)+1
+        knum=30 ! default value
+      endif
+
+      if (rank==3) then
+
+        write(message,*) trim(name)//' uses foreign grid from field'
         call MOSSCO_FieldString(field, message, rc=localrc)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
         call ESMF_FieldGet(field, grid=grid3, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        call ESMF_FieldGetBounds(field, exclusiveLBound=lbnd3, exclusiveUBound=ubnd3, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_FieldGetBounds(field, exclusiveLBound=lbnd3,exclusiveUBound=ubnd3, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         inum=ubnd3(1)-lbnd3(1)+1
         jnum=ubnd3(2)-lbnd3(2)+1
         knum=ubnd3(3)-lbnd3(3)+1
 
-        !> Internally, erosed is a 2D component (but needs the 3D water column grid
-        !> for velocity profile)
         grid = MOSSCO_GridCreateFromOtherGrid(grid3, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      endif
 
       endif
 
