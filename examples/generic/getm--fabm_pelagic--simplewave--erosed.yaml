@@ -1,3 +1,7 @@
+# getm/fabm_pel/erosed/wave coupling
+# - including rivers and boundaries
+# - including restart
+
 dependencies:
   - erosed:
     - component: getm
@@ -8,11 +12,43 @@ dependencies:
   - simplewave:
     - component: getm
       grid: water_depth_at_soil_surface
+  - boundary_input:
+    - component: getm
+      grid: temperature_in_water
+  - river_input:
+    - component: getm
+      grid: temperature_in_water
+  - restart_bed:
+    - component: erosed
+      grid: sediment_mass_in_bed
+  - restart_water:
+    - component: getm
+      grid: temperature_in_water
 
 instances:
   - mossco_gfwe: netcdf
+  - boundary_input: netcdf_input
+  - river_input: netcdf_input
+  - restart_bed: netcdf_input
+  - restart_water: netcdf_input
 
 coupling:
+  - components:
+     - restart_bed
+     - erosed
+    interval: none
+  - components:
+     - restart_water
+     - fabm_pelagic
+    interval: none
+  - components:
+     - river_input
+     - fabm_pelagic
+    interval: 1 d
+  - components:
+     - boundary_input
+     - fabm_pelagic
+    interval: 1 d
   - components:
      - getm
      - erosed
