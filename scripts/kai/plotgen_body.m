@@ -51,7 +51,7 @@ for ili=1:size(i_loc,1)
        if (dtim>360 & iy==nrow)
         for yi=1:length(years)
           xy=(mean(time(find(year==years(yi))))-t0)/dtim;
-          annotation('textbox',tpos+[xy*dxp -1.09*dyp 0 0],'String',num2str(years(yi)),'Color','k','Fontweight','normal','FontSize',fs-2,'LineStyle','none');
+          annotation('textbox',tpos+[xy*dxp -0.909*dyp 0 0],'String',num2str(years(yi)),'Color','k','Fontweight','normal','FontSize',fs-2,'LineStyle','none');
         end
        end 
      end %if dtim
@@ -263,7 +263,7 @@ for ili=1:size(i_loc,1)
   while length(vars{id,iv})>0 
 %   fprintf('%s:%s\n',varshort0,vars{id,iv});
    if strcmpi(vars{id,iv},varshort0)
-     dval = data{id,iv}*cell2mat(var{i}(5));
+     dval = squeeze(data{id,iv})*cell2mat(var{i}(5));
      indd  = find(~isnan(dval));
      if length(indd)>0
  %      fprintf('%s: %d\t%1.1f %1.1f \n',varshort0,length(indd),datime(indd(1)),datime(indd(end)));

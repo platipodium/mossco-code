@@ -31,7 +31,7 @@ fi
 echo 'retrieve meta-info from ' $fname
 
 # cd $outdir
-
+$SCRDIR/catnml
 # run cutting and averaging in parallel mode
 
 # retrieve final time-step

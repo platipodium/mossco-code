@@ -545,7 +545,7 @@ contains
 !      end do
 
     else
-      Write (0,*) 'Error: sedparams.txt for use in erosed does not exit.!!'
+      Write (0,*) 'Error: sedparams.txt for use in erosed does not exist.!!'
       stop
     end if
 
@@ -2021,6 +2021,11 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    call MOSSCO_CompExit(gridComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    return
 #ifdef DEBUG
     close (unit707)
 #endif
@@ -2086,7 +2091,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (associated(relative_thickness_of_layers)) deallocate (relative_thickness_of_layers)
     if (associated(sigma_midlayer)) deallocate (sigma_midlayer)
     if (associated(sediment_mass)) deallocate (sediment_mass)
-    
+
     call ESMF_GridCompGet(gridComp, configIsPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -2111,7 +2116,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_DestroyOwn(importState, trim(name), rc=localrc)
+    !call MOSSCO_DestroyOwn(importState, trim(name), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -2123,7 +2128,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_DestroyOwn(exportState, trim(name), rc=localrc)
+    !call MOSSCO_DestroyOwn(exportState, trim(name), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 

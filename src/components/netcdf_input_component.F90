@@ -214,10 +214,6 @@ module netcdf_input_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_AttributeSet(importState, 'check_file', checkFile, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
       call ESMF_ConfigFindLabel(config, label='interpolation:', isPresent=labelIsPresent, rc = localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -391,14 +387,6 @@ module netcdf_input_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-    call ESMF_AttributeSet(importState, 'filename', trim(fileName), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_AttributeSet(importState, 'check_file', checkFile, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
     ! For multiprocessor applications, try to read cpu-specific input first, default
     ! back to overall file
     if (petCount>0) then
@@ -407,6 +395,14 @@ module netcdf_input_component
       inquire(file=trim(petFileName), exist=isPresent)
       if (isPresent) fileName=trim(petFileName)
     endif
+
+    call ESMF_AttributeSet(gridComp, 'filename', trim(fileName), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeSet(gridComp, 'check_file', checkFile, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     inquire(file=trim(fileName), exist=isPresent)
 
@@ -792,51 +788,10 @@ module netcdf_input_component
           endif
         enddo
 
-        if (nc%variables(i)%rank == 2 .and. .not.hasTimeDim) then
-          gridRank = 2
-        elseif (nc%variables(i)%rank == 3 .and. .not.hasTimeDim) then
-          gridRank = 3
-        elseif (nc%variables(i)%rank == 4 .and. hasTimeDim) then
-          gridRank = 3
-        elseif (nc%variables(i)%rank == 3 .and. hasTimeDim) then
-          gridRank = 2
-        else
-          write(message,'(A,I1)') trim(name)//' mismatch from'
-          call MOSSCO_MessageAdd(message,' '//trim(nc%name)//'::'//trim(nc%variables(i)%name))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-          write(message,'(A,I1,A)') '  rank ',nc%variables(i)%rank,' /= grid '
-          call MOSSCO_FieldString(field, message, rc=localrc)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-          cycle
+        fieldRank = nc%variables(i)%rank
+        if (hasTimeDim) then
+          fieldRank = fieldRank - 1
         endif
-
-        !! Make sure varRank>=fieldRank>=gridRank
-
-        ! if (any(nc%variables(i)%dimids==udimid)) then
-        !   if (fieldRank /= nc%variables(i)%rank-1) then
-        !     write(message,'(A,I1)') trim(name)//' mismatch from'
-        !     call MOSSCO_MessageAdd(message,' '//trim(nc%name)//'::'//trim(nc%variables(i)%name))
-        !     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-        !     write(message,'(A,I1,A)') '  rank ',nc%variables(i)%rank-1,' /= field '
-        !     call MOSSCO_FieldString(field, message, rc=localrc)
-        !     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-        !
-        !     cycle
-        !     !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        !   endif
-        ! else
-        !   if (fieldRank /= nc%variables(i)%rank) then
-        !     write(message,'(A,I1)') trim(name)//' mismatch from'
-        !     call MOSSCO_MessageAdd(message,' '//trim(nc%name)//'::'//trim(nc%variables(i)%name))
-        !     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-        !     write(message,'(A,I1,A)') '  rank ',nc%variables(i)%rank-1,' /= field '
-        !     call MOSSCO_FieldString(field, message, rc=localrc)
-        !     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-        !
-        !     cycle
-        !     !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        !   endif
-        ! endif
 
         !> @todo: test if varGrid conforms to grid
         if (gridRank==2) then
@@ -1041,13 +996,13 @@ module netcdf_input_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> We can safely assume that the filename is present
-    call ESMF_AttributeGet(importState, 'filename', value=fileName, rc=localrc)
+    call ESMF_AttributeGet(gridComp, 'filename', value=fileName, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     inquire(file=trim(fileName), exist=isPresent)
     if (.not.isPresent) then
-      call ESMF_AttributeGet(importState, 'check_file', value=checkFile, rc=localrc)
+      call ESMF_AttributeGet(gridComp, 'check_file', value=checkFile, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 

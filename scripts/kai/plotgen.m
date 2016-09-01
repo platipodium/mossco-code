@@ -5,16 +5,17 @@
 %
 clear all;close all;
 addpath('~/tools/m_map');  % map-toolbox needed for 2D plots
-show_data=1; Is1D=0; IsNOAH=0; 
+show_data=0; Is1D=1; IsNOAH=0; 
 datf='~/data/DeutscheBucht/stations.nc';
+datm='~/data/DeutscheBucht/esacci_2003_2013.mat';
 %% settings
 % locations; at least one site-name (locs) should be given 
 %loc =[]; 
-loc =[[54.18,7.86];[55.,8.3];[53.7,7.2];[52.3,4.3];[52.56,3.5];[53.42,5.15];];%[53.92,4.6];[55.0,8.0];[54.6,8.4];[54.0,8.7];[55.2,5.0];[54.1,6.3];[54.2,7.5];]; 
+loc =[[54.18,7.86];];%[55.,8.3];[53.7,7.2];[52.3,4.3];[52.56,3.5];[53.42,5.15]; [54.6,8.4];[54.0,8.7];[55.2,5.0];[54.1,6.3];[54.2,7.5];[53.92,4.6];[55.0,8.0];]; 
 % %[54.96,8.4]; 
 %  % 17 m 28 m
 % Noordwijk-10 Noordwijk-70
-locs={'Helgoland';'Sylt'; 'Nordeney';'NOORDWK10';'NOORDWK70';'TERSLG4';'TERSLG70';'T8';'SAmrum';'Norderelbe';'T2'  ;'T22'; 'T26';}; %
+locs={'Helgoland';'Sylt'; 'Norderney';'NOORDWK10';'NOORDWK70';'TERSLG4';'SAmrum';'Norderelbe';'T2' ;'T22'; 'T26';'TERSLG70';'T8';}; %
 %'Helgoland'; 'Sylt';    'SAmrum';'Norderelbe';'Nordeney',
 %  'T36';     'T26' ;    'T41';   'T8'  ;      'T2';
 %  'T22';     'T5';      'T12';   'T11'
@@ -22,58 +23,68 @@ locs={'Helgoland';'Sylt'; 'Nordeney';'NOORDWK10';'NOORDWK70';'TERSLG4';'TERSLG70
 %[53.7,6.4];[54.2,7.5];[54.0,8.1];[55.0,8.0];[55.2,5.0];
 %[54.1,6.3];[55.0,6.3];[54.7,7.4];[54.7,6.9];
 if IsNOAH
- loc =[[53.989,6.237];	[53.987,6.870];	[54.070,8.019];	[54.173,7.962];	[54.092,7.357];	[54.439,7.425];	[54.468,6.193];	[55.038,6.403];	[54.830,5.575];	[55.257,4.746];	[55.502,4.168];	[54.685,6.737];	[54.688,7.510];	[54.194,7.234]];
- locs={'NOAH-A-permeable';	'NOAH-B';	'NOAH-C-imperm';	'NOAH-CCPG';	'NOAH-D';	'NOAH-E';	'NOAH-F';	'NOAH-G';	'NOAH-H';	'NOAH-CCPJ';	'NOAH-I';	'NOAH-NSB3';	'NOAH-NSB2';	'NOAH-DB';};	
+ loc =[[54.18,7.86];[53.989,6.237];	[53.987,6.870];	[54.070,8.019];	[54.173,7.962];	[54.092,7.357];	[54.439,7.425];	[54.468,6.193];	[55.038,6.403];	[54.830,5.575];	[55.257,4.746];	[55.502,4.168];	[54.685,6.737];	[54.688,7.510];	[54.194,7.234]];
+ locs={'Helgoland';'NOAH-A-permeable';	'NOAH-B';	'NOAH-C-imperm';	'NOAH-CCPG';	'NOAH-D';	'NOAH-E';	'NOAH-F';	'NOAH-G';	'NOAH-H';	'NOAH-CCPJ';	'NOAH-I';	'NOAH-NSB3';	'NOAH-NSB2';	'NOAH-DB';};	
 end
 % load and prepare data
-if show_data, read_stations_nc; 
+if show_data, read_stations_nc;  
 else show_dati=zeros(size(loc,1)); end;
+
 %tags={'_a';'_b'};%'_c';'_3';'_0';tags={'_4';};%'_2';'_3';
 %tags={'';'_Zmort';'_n'};%;};%'_0';'_1';'exu';'Ndep';
-ncol = 3; nrow = 2; 	% number of columns in fig
+nrow  = 2; ncol  = 3; 	% number of columns in fig
 nrowm = 4; ncolm = 6;
 if Is1D 
   locs={'Helgoland'};
   loc =[54.18,7.82];
-  spath= '/home/wirtz/mossco/setups/hr/';%/local';hrres/
-%  spath= '/local/home/wirtz/mossco/mossco-setups/hrres/'
-%tags = {'ref';'phi_agg0.0004';'phi_agg0.002';};%'agg_doc0.01';'mort_zoo0.015';'PAds0';'rnit140';'Nqual0.';'vS_det15';};
-%tags = {'ref';'mort_zoo0.015';'mort_zoo0.025';};%'agg_doc0.01';'PAds0';'rnit140';'Nqual0.';'vS_det15';};
-%tags = {'ref';'vir_loss0.0';'vir_loss1.2';};%'rnit140';'Nqual0.';'vS_det15';};
-% tags ={'';};% {'_0';'_1';};%'phi_agg5E-4';'agg_doc0.01';'vir_loss0.';};
-tags = {'_0';'_2';};
-%tags = {'ref';'Nqual0.';'rnit150';'PAds0';};%'sinking_factor_min0.5';'remNP0.';'remNP-0.2';'Nqual0';
-%tags = {'ref';'agg_doc0.01';'agg_doc0.2';};
-%tags = {'ref';'AffP0.05';'hydrol0.02';};
+%  spath= '/home/wirtz/mossco/setups/hr/';%/local';hrres/
+  spath= '/local/home/wirtz/mossco/mossco-setups/hr/'
+%tags = {'ref';'mort_zoo0.02';'mort_zoo0.03';'zm_fa_delmax1';};
+%tags = {'ref';'vS_det30';'vS_phy0.';'hydrol0.01';'remin0.03';'phi_agg0.001';'phi_agg0.01';};
+%tags = {'ref';'V_NC_max0.9';'rFast0.06';'a_water0.8';'phi_agg0.003';'syn_nut-4.6';};
+    %'PAds1';'ksNO3denit7.';'rSlow0.001';};'vir_phyC0.5';'vir_spor_C0.00001';
+%'mort_zoo0.017';'mort_zoo0.32';'zm_fa_delmax2.5';'zm_fa_inf0.02';'zm_fa_inf0.2';
+%'QN_phy_max0.17';'QN_phy_max0.26';'alpha0.22';'AffN0.15';'AffP0.05';
+%tags = {'ref';'zm_fa_inf0.01';'zm_fa_inf2';};%'zm_fa_delmax1';'zm_fa_delmax9';%%'vir_infect0.001';'vir_infect0.0035';'vir_loss0.1';'rnit140';'Nqual0.';'vS_det15';};'vir_spor_C0.002';'vir_phyC0.1';'vir_phyC2.';
+%tags ={'ref';'vsphy';};% {'_0';'_1';};%'phi_agg5E-4';'agg_doc0.01';'vir_loss0.';};'_2';
+tags = {'_0';'_1';};%'_2';
+%};%'vir_loss0.02';'vir_loss0.2';vir_phyC0.1';'vir_phyC8.0';'vir_phyC80';'vir_spor_C0.00001';'vir_spor_C0.01';'vir_mu0.003';'vir_mu0.01';'vir_loss0.3';'vir_loss0.8';
+%tags = {'ref';'vir_spor_r0.12';'vir_spor_r0.18';};
+%    'vir_spor_r0.16';'vir_mu0.003';};'_vir_mu3.5';'_vir_loss1.0';};
+%tags = {'ref';'AffP0.05';};
 ntags=length(tags);
   ncf0 = 'mossco_1d'; % base file name of input netcdf
   setvar_1D  % defines variables to show - and where/how to do it 
-  ncol = 4; nrow = 2; 	% number of columns in fig
+  ncol = 3; nrow = 2; 	% number of columns in fig
 else
+if show_data, load(datm);[m_lon,m_lat] = meshgrid(lons,lats); end
 %  loc =[54.18,7.82];
-%tags ={'_vS_phy0.P50';'_vS_phy0.';'_vS_phy0.6';'_vS_phy1.2';'_vS_phy1.8';'_vS_phy2.4';};%
+tags ={'';};%'_del2';
 %tags ={'_sinking_factor_min0.03';'_sinking_factor_min0.15';'_sinking_factor_min0.27';'_sinking_factor_min0.39';};
-%tags ={'ResAmpl.01';'ResAmpl.19';'ResAmpl.37';'ResAmpl.55';};'_rSlow0.0001';
- tags = {'';};
-%'_agg_doc0.001';'_alpha0.26';'_mort_zoo0.025';'_Nqual0.1';'_remin0.1';
+%tags ={'ResAmpl.01';'ResAmpl.19';'ResAmpl.37';'ResAmpl.55';};'_rSlow0.0001';_vir_spor_C0.003
+%'_rFast0.01';'_remin0.005';'_vir_spor_C0.003';'_vir_spor_r0.12';'_vir_mu0.05';'_vir_loss0.3';
+%tags = {'';'_a_water1.6';'_vS_phy6';};%'_vr0.18';'0';'_zoo0';'';'_vir';''; '_vir_spor_C0.003';'_ju';'_att';
+%'_phi_agg0.003';'_remin0.1';'_vir_loss1.0';'_vir_mu3.5';'_genMeth14';'_mort_zoo0.035';
+%bash-4.2$'_mort_zoo0.008';'_alpha0.1';'_remin0.05';'_vir_mu0.025';
+
  ntags=length(tags);
  spath= '/local/home/wirtz/sns/';%  
-%%  spath  ='/data/wirtz/';%'/ocean-data/wirtz/';
-%% ncfile = fullfile(spath,['sns' tag '/cut/sns' tag '.nc']);
+ %spath= '~/jureca/';%   
+%%spath  ='/ocean-data/wirtz/';%'/ocean-data/wirtz/';
   ncf0 = 'sns'; 
   if IsNOAH
     setvar_o2flux  % defines variables to show - and where/how to do it %setvar  
-    nrowm = 1; ncolm = 1;
-    ncol = 3; nrow = 1; 	% number of columns in fig
+   %% nrowm = 1; ncolm = 1;
+ %%   ncol = 2; nrow = 1; 	% number of columns in fig
   else
-    setvar_sns  % defines variables to show - and where/how to do it %setvar  
+    setvar_sns  %Data defines variables to show - and where/how to do it %setvar  
   end
 end
 
 dxp = 0.82/(ncol+0.05); dyp = 0.83/(nrow +0.05);
 dxpm = 0.86/( ncolm +0.05); dypm= 0.86/(nrowm+0.05);
 compn ={'water';'soil'};
-fs = 16; colp=prism(5);colj=colp([1 4:5 2:3],:); coljj=jet(11); colt='kw';
+fs = 16; colp=prism(5);colj=colp([1 4:5 2:3 1:2],:); coljj=jet(11); colt='kw';
 i0=10;coljm=ones(256,3); coljm(i0+1:256,:)=jet(256-i0);
 
 linw=[3 2*ones(1,14)]; lins=['- '; repmat('- ',14,1);]; 
@@ -85,8 +96,6 @@ if exist(tagfile)
 else
   tagn=0;
 end
-% load and prepare data
-if show_data, read_stations_nc; end;
 
 %% open all figures
 for np=1:nfig+nfigm, figure(np); set(gcf,'Position',[0 0 1680 850],'Visible','off','Color','w'); end
@@ -99,12 +108,15 @@ for ns=1:ntags %% loop over scenarios/stations/layers
  %% read model output
  tag=cell2mat(tags(ns));
  ncfile = fullfile(spath,[ncf0 tag '.nc']);
-%% ncfile = fullfile(spath,[ncf0 tag '/cut/' ncf0 tag '.nc']);
+ %%ncfile = fullfile(spath,[ncf0 tag '/cut/' ncf0 tag '.nc']);
 
  read_nc_time_layers
  t0=time(1); t1=time(end);
-% t0 = datenum('2003-06-01','yyyy-mm-dd')-1;
-% t1 = datenum('2003-11-04','yyyy-mm-dd')-1;
+% t0 = datenum('1962-03-01','yyyy-mm-dd')-1;
+% t0 = datenum('1961-02-01','yyyy-mm-dd')-1;
+%t0 = datenum('2012-01-01','yyyy-mm-dd')-1;
+%t1 = datenum('2013-11-01','yyyy-mm-dd')-1;
+%t1 = datenum('2005-11-28','yyyy-mm-dd')-1;
 
  ind=find(time>= t0 & time<=t1);
  toffm = min(find(time>= t0))-1;
@@ -152,8 +164,10 @@ for ns=1:ntags %% loop over scenarios/stations/layers
  end
 end %ns scneario tags
 
-%% create directory (name) for utput
-figdir = fullfile(spath,'plots');
+%% create directory (name) for output
+tagnam=sprintf('%s%s',cell2mat(tags(1)),cell2mat(tags(end)));
+figdir = fullfile('~/sns',['plots' tagnam]);
+%figdir = fullfile(spath,'plots');
 if ~exist(figdir),  mkdir(figdir); end;
 
 %% plot each figure as EPS & PNG
@@ -171,11 +185,11 @@ for np=1:nfig+nfigm+nfigc
     li=floor(np/nfig0);
     annotation('textbox',[0.45 0.95 0.2 0.045],'String',locs{li},'Color','k','Fontweight','bold','FontSize',fs+2,'LineStyle','none');
 %% create base file name
-    fnam0=sprintf('%s%s%s_%d',locs{li},cell2mat(tags(1)),cell2mat(tags(end)),np);
+    fnam0=sprintf('%d_%s%s',np,locs{li},tagnam);
   else if(np<=nfig+nfigm) 
-     fnam0=sprintf('map_%s_%d',min(np-nfig,length(vt)),np);
+     fnam0=sprintf('%d_map_%s',np,vt{min(np-nfig,length(vt))});
       else
-     fnam0=sprintf('mapc%s%s_%d',cell2mat(tags(1)),cell2mat(tags(end)),np);    
+     fnam0=sprintf('%d_mapc%s%s',np,cell2mat(tags(1)),cell2mat(tags(end)));    
     end 
   end
 %  fnam=fullfile(figdir,[fnam0 '.eps']);

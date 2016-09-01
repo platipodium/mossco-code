@@ -10,12 +10,13 @@ show_data=1; nice=0; Is1D=0; datf='~/data/DeutscheBucht/stations.nc';
 % locations; at least one site-name (locs) should be given 
 loc =[]; 
 %loc =[[54.18,7.82];[54.96,8.4];[54.1,6.3];[54.2,7.5];]; % 
-locs={'Tsns_13-03_0';}; % 'T1'; 
+locs={'Tsns_2012_12-06_0';}; % 'T1'; 
 
 tags={'';};%_new'_res';'_att';
 ntags=length(tags);
-spath  ='/home/wirtz/sns/';%spath  ='/ocean-data/wirtz/';
+%spath  ='/home/wirtz/sns/';%spath  ='/ocean-data/wirtz/';
 %spath  ='/media/archiv/'
+spath= '~/jureca/sns_2012/cut/';%   
 setvar_trans;  % defines variables to show - and where/how to do it %setvar  
 %setvar_1D  % defines variables to show - and where/how to do it 
 %% graph settings
@@ -121,7 +122,7 @@ for np=1:nfig
      annotation('textbox',[0.45 0.95 0.2 0.045],'String',locs{li},'Color','k','Fontweight','bold','FontSize',fs+2,'LineStyle','none','Interpreter','none');
   end
 %% create base file name
-  fnam0=sprintf('trans%s_%s%s_%d',locs{li},vt{np},cell2mat(tags(1)),np);%varshort0
+  fnam0=sprintf('trans%s_%s%s_%d',locs{li},vt{min(np,length(vt))},cell2mat(tags(1)),np);%varshort0
 %  fnam=fullfile(figdir,[fnam0 '.eps']);
 %  fprintf('save EPS in %s ...\n',fnam);
 %  print(gcf,'-depsc',fnam);
