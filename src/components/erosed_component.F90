@@ -2133,7 +2133,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     ! Nullify the pointers within fields
 
-    if (allocated(size_classes_of_upward_flux_of_pim_at_bottom))
+    if (allocated(size_classes_of_upward_flux_of_pim_at_bottom)) then
       do i = 1, nfrac
         if (associated (size_classes_of_upward_flux_of_pim_at_bottom(i)%ptr)) &
           nullify (size_classes_of_upward_flux_of_pim_at_bottom(i)%ptr)
