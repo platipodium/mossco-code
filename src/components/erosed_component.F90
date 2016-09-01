@@ -323,24 +323,24 @@ contains
       call ESMF_GridGet(grid, rank=rank, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (rank<2 .or. rank>3) then
-        write(message,*) 'foreign grid must be of rank 2 or 3'
+      if (rank/=3) then
+        write(message,*) 'foreign grid must be of rank 3'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
       end if
 
-      if (rank==2) then
+  !    if (rank==2) then
 
-        call ESMF_GridGet(grid,ESMF_STAGGERLOC_CENTER,0,                                   &
+  !      call ESMF_GridGet(grid,ESMF_STAGGERLOC_CENTER,0,                                   &
                           exclusiveLBound=lbnd2,exclusiveUBound=ubnd2, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  !      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        inum=ubnd2(1)-lbnd2(1)+1
-        jnum=ubnd2(2)-lbnd2(2)+1
-        knum=30 ! default value
-      endif
+  !      inum=ubnd2(1)-lbnd2(1)+1
+  !      jnum=ubnd2(2)-lbnd2(2)+1
+  !      knum=30 ! default value
+  !    endif
 
-      if (rank==3) then
+  !    if (rank==3) then
 
         write(message,*) trim(name)//' uses foreign grid from field'
         call MOSSCO_FieldString(field, message, rc=localrc)
@@ -359,7 +359,7 @@ contains
         grid = MOSSCO_GridCreateFromOtherGrid(grid3, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      endif
+ !     endif
     endif
       call ESMF_GridCompSet(gridComp, grid=grid, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
