@@ -1369,34 +1369,34 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     call MOSSCO_CompEntry(gridComp, clock, name=name, currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
     if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-  & call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompGet(gridComp, petCount=petCount,localPet=localPet,clock=clock, rc=localrc)
     if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-  & call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_ClockGet(clock,currTime=currTime, advanceCount=advanceCount, &
-         runTimeStepCount=runTimeStepCount, timeStep=timeStep, rc=localrc)
-    if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-  & call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      runTimeStepCount=runTimeStepCount, timeStep=timeStep, rc=localrc)
+      if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_TimeIntervalGet(timestep,s_r8=dt,rc=localrc)
     if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-  & call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
        !> get import state
     if (forcing_from_coupler) then
 
        !> get spm concentrations, particle sizes and density
       call ESMF_StateGet(importState,'concentration_of_SPM_in_water',fieldBundle,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_FieldBundleGet(fieldBundle,fieldCount=n,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if(n .eq. 0) then
+      if (n .eq. 0) then
         !> run without SPM forcing from pelagic component
 !#ifdef DEBUG
         call ESMF_LogWrite( &
@@ -1407,18 +1407,22 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
         if (allocated(fieldlist)) deallocate(fieldlist)
         allocate(fieldlist(n))
+
         call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         do n=1,size(fieldlist)
 
           field = fieldlist(n)
           call ESMF_AttributeGet(field,'external_index', isPresent=isPresent, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           if (isPresent) then
             call ESMF_AttributeGet(field,'external_index',external_index, rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+            if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           else
             write(message,'(A)')  trim(name)//' did not find "external_index" attribute in field '
             call MOSSCO_FieldString(field, message, rc=localrc)
@@ -1428,11 +1432,13 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           endif
 
           call ESMF_AttributeGet(field,'mean_particle_diameter', isPresent=isPresent, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           if (isPresent) then
             call ESMF_AttributeGet(field,'mean_particle_diameter',sedd50(nfrac_by_external_idx(external_index)), rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+            if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           else
             sedd50(nfrac_by_external_idx(external_index))=0.0
             write(message,'(A)')  trim(name)//' did not find "mean_particle_diameter" attribute in field '
@@ -1441,11 +1447,13 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           endif
 
           call ESMF_AttributeGet(field,'particle_density', isPresent=isPresent, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           if (isPresent) then
             call ESMF_AttributeGet(field,'particle_density',rhosol(nfrac_by_external_idx(external_index)), rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+            if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           else
             rhosol(nfrac_by_external_idx(external_index))=0.0
             write(message,'(A)')  trim(name)//' did not find "rhosol" attribute in field. It has bee set to zero'
@@ -1454,9 +1462,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           endif
 
           call ESMF_FieldGet(field,farrayPtr=ptr_f3,exclusiveLBound=lbnd, &
-          & exclusiveUBound=ubnd,TotalLBound=tlbnd,TotalUBound=tubnd,rc=localrc)
+            exclusiveUBound=ubnd,TotalLBound=tlbnd,TotalUBound=tubnd,rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          &   call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
            !> @todo proper bounds checking with eLBound required here
 !          if (.not. ( all(lbound(ptr_f3)== lbnd).and. all(ubound(ptr_f3)==ubnd ) ) ) then
 !            write(message, '(A)') trim(name)//' invalid field bounds in field'
@@ -1481,28 +1489,35 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
 
           call ESMF_FieldGet(field, grid=grid,rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          & call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           !> get z-positions of vertical layer interfaces
           call ESMF_GridGetCoord(grid, coordDim=3, staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
            farrayPtr=layers_height, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          & call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+           if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         end do
 
         !> get sinking velocities
         call ESMF_StateGet(importState,'concentration_of_SPM_z_velocity_in_water',fieldBundle,rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
         call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
         do n=1,size(fieldlist)
           call ESMF_FieldGet(fieldlist(n), farrayPtr=ptr_f3,rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           call ESMF_AttributeGet(fieldlist(n),'external_index',isPresent=isPresent, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
           if (.not.isPresent) then
             write(message,'(A)') trim(name)//' external_index attribute is missing from field '
             call MOSSCO_FieldString(fieldList(n), message)
@@ -1510,7 +1525,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
             external_index = n
           else
             call ESMF_AttributeGet(fieldlist(n),'external_index',external_index, rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+            if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
           endif
 
           do j=1,jnum
@@ -1644,7 +1661,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if ( associated(microTau) ) BioEffects%TauEffect = BioEffects%TauEffect * microTau(1:inum,1:jnum)
     if ( associated(macroTau) ) BioEffects%TauEffect = BioEffects%TauEffect * macroTau(1:inum,1:jnum)
 
-
    ! filtering missing values (land)
     do j = 1, jnum
          do i = 1, inum
@@ -1678,7 +1694,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
                 & tper   , teta   , spm_concentration , BioEffects     , nybot       , sigma_midlayer, &
                 & u_bot  , v_bot  , u2d      , v2d    , h0   , mask    , advancecount, taubn,eq_conc, &
                 & relative_thickness_of_layers, kmaxsd, taubmax )
-  n =0
+
+    n = 0
+
     do l = 1, nfrac
       do nm = nmlb, nmub
 !                rn(l,nm) = r0(l,nm) ! explicit
@@ -1691,7 +1709,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
              kmx=1
         else
             kmx = kmaxsd
-
         end if
 
         !> Changed by cl to avoid calculation on land (mask == 0) and at
@@ -1908,46 +1925,46 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 !#ifdef DEBUG
 
     if (bedmodel) then
-    call ESMF_StateGet(exportState,'sediment_mass_in_bed', itemType=itemType,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_StateGet(exportState,'sediment_mass_in_bed', itemType=itemType,rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (itemType /= ESMF_STATEITEM_FIELD) then
-      write(message, '(A)') trim(name)//' did not find field sediment_mass_in_bed'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    endif
+      if (itemType /= ESMF_STATEITEM_FIELD) then
+        write(message, '(A)') trim(name)//' did not find field sediment_mass_in_bed'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
-    call ESMF_StateGet(exportState, 'sediment_mass_in_bed', field=field,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_StateGet(exportState, 'sediment_mass_in_bed', field=field,rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_FieldGet(field, status=status, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_FieldGet(field, status=status, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+      if (status /= ESMF_FIELDSTATUS_COMPLETE) then
+        write(message, '(A)') trim(name)//' received incomplete field'
+        call MOSSCO_FieldString(field, message, rc=localrc)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
-    if (status /= ESMF_FIELDSTATUS_COMPLETE) then
-      write(message, '(A)') trim(name)//' received incomplete field'
-      call MOSSCO_FieldString(field, message, rc=localrc)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    endif
+      call ESMF_FieldGet(field, farrayPtr=sediment_mass,exclusiveLBound=exclusiveLBound3, &
+        exclusiveUBound=exclusiveUBound3, totalLBound=totalLBound3, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_FieldGet(field, farrayPtr=sediment_mass,exclusiveLBound=exclusiveLBound3, &
-      exclusiveUBound=exclusiveUBound3, totalLBound=totalLBound3, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !> @todo proper bounds checking with eLBound required here
 
-    !> @todo proper bounds checking with eLBound required here
-
-    do j=1,jnum
-      do i= 1, inum
-        sediment_mass(i,j,:) = mass(:,inum*(j -1)+i)
-    !    write (0,*) ' sediment_mass(i,j,:)',i,j,sediment_mass(i,j,:)
+      do j=1,jnum
+        do i= 1, inum
+          sediment_mass(i,j,:) = mass(:,inum*(j -1)+i)
+       !    write (0,*) ' sediment_mass(i,j,:)',i,j,sediment_mass(i,j,:)
+        end do
       end do
-    end do
-    end if
+
+    end if ! bedmodel
 !#endif
 
     call ESMF_StateGet(exportState,'depth_average_concentration_of_SPM_in_water', itemType=itemType,rc=localrc)
