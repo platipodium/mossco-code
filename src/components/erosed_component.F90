@@ -292,84 +292,84 @@ contains
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     else
 
-    call ESMF_AttributeGet(importState, name='foreign_grid_field_name', isPresent=isPresent, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (.not.isPresent) then
-      inum=1
-      jnum = 1
-      knum = 30
-      grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), &
-                   maxIndex=(/inum,jnum/), &
-                   regDecomp=(/1,1/), &
-                   coordSys=ESMF_COORDSYS_SPH_DEG, &
-                   indexflag=ESMF_INDEX_DELOCAL,  &
-                   name="erosed", &
-                   coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/), &
-                   coorddep2=(/2/),rc=localrc)
+      call ESMF_AttributeGet(importState, name='foreign_grid_field_name', isPresent=isPresent, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_GridAddCoord(grid, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (.not.isPresent) then
+        inum=1
+        jnum = 1
+        knum = 30
+        grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), &
+                     maxIndex=(/inum,jnum/), &
+                     regDecomp=(/1,1/), &
+                     coordSys=ESMF_COORDSYS_SPH_DEG, &
+                     indexflag=ESMF_INDEX_DELOCAL,  &
+                     name="erosed", &
+                     coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/), &
+                     coorddep2=(/2/),rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      write(message,'(A)') trim(name)//' uses a dummy 1x1x30 grid'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        call ESMF_GridAddCoord(grid, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    else
+        write(message,'(A)') trim(name)//' uses a dummy 1x1x30 grid'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
 
-      call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
-        value=foreignGridFieldName, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      else
 
-      foreignGridIsPresent=.true.
+        call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
+          value=foreignGridFieldName, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_StateGet(importState, trim(foreignGridFieldName), field, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        foreignGridIsPresent=.true.
 
-      write(message, '(A)') trim(name)//' uses foreign grid from field'
-      call MOSSCO_FieldString(field, message, rc=localrc)
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+        call ESMF_StateGet(importState, trim(foreignGridFieldName), field, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_FieldGet(field, grid=grid, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        write(message, '(A)') trim(name)//' uses foreign grid from field'
+        call MOSSCO_FieldString(field, message, rc=localrc)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
-      call ESMF_GridGet(grid, rank=rank, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_FieldGet(field, grid=grid, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (rank /= 3) then
-        write(message, '(A)') trim(name)//' foreign grid must be of rank 3'
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
-      end if
+        call ESMF_GridGet(grid, rank=rank, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      write(message, '(A)') trim(name)//' uses foreign grid from field'
-      call MOSSCO_FieldString(field, message, rc=localrc)
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+        if (rank /= 3) then
+          write(message, '(A)') trim(name)//' foreign grid must be of rank 3'
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+          call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
+        end if
 
-      call ESMF_FieldGet(field, grid=grid3, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        write(message, '(A)') trim(name)//' uses foreign grid from field'
+        call MOSSCO_FieldString(field, message, rc=localrc)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
-      call ESMF_FieldGetBounds(field, exclusiveLBound=lbnd3, exclusiveUBound=ubnd3, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_FieldGet(field, grid=grid3, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      inum=ubnd3(1)-lbnd3(1)+1
-      jnum=ubnd3(2)-lbnd3(2)+1
-      knum=ubnd3(3)-lbnd3(3)+1
+        call ESMF_FieldGetBounds(field, exclusiveLBound=lbnd3, exclusiveUBound=ubnd3, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      !> Internally, erosed is a 2D component (but needs the 3D water column grid
-      !> for velocity profile)
-      grid = MOSSCO_GridCreateFromOtherGrid(grid3, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        inum=ubnd3(1)-lbnd3(1)+1
+        jnum=ubnd3(2)-lbnd3(2)+1
+        knum=ubnd3(3)-lbnd3(3)+1
+
+        !> Internally, erosed is a 2D component (but needs the 3D water column grid
+        !> for velocity profile)
+        grid = MOSSCO_GridCreateFromOtherGrid(grid3, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       endif
 
