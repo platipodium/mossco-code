@@ -87,7 +87,7 @@ module erosed_component
     real(fp)                                    :: rhow         ! density of water [kg/m3]
     real(fp)    , dimension(:)  , allocatable   :: cdryb        ! dry bed density [kg/m3]
     real(fp)    , dimension(:)  , allocatable   :: chezy        ! Chezy coefficient for hydraulic roughness [m(1/2)/s]
-    real(fp)    , dimension(:)  , allocatable, save   :: h0           ! water depth old time level [m]
+    real(fp)    , dimension(:)  , allocatable   :: h0           ! water depth old time level [m]
     real(fp)    , dimension(:)  , allocatable   :: h1           ! water depth new time level [m]
     real(fp)    , dimension(:)  , allocatable   :: rhosol       ! specific sediment density [kg/m3]
     real(fp)    , dimension(:)  , allocatable   :: sedd50       ! 50% diameter sediment fraction [m]
@@ -97,7 +97,7 @@ module erosed_component
     real(fp)    , dimension(:)  , allocatable   :: u_bot        ! velocity at the (center of the) bottom cell in u-direction
     real(fp)    , dimension(:)  , allocatable   :: v_bot        ! velocity at the (center of the) bottom cell in v-direction
 
-    real(fp)    , dimension(:,:), allocatable,save   :: mass         ! sediment mass in bottom layer as an ideally mixed single bed layer, [kg/m2]
+    real(fp)    , dimension(:,:), allocatable   :: mass         ! sediment mass in bottom layer as an ideally mixed single bed layer, [kg/m2]
     real(fp)    , dimension(:,:), allocatable   :: massfluff    ! change in sediment composition of fluff layer [kg/m2]
     real(fp)    , dimension(:,:), allocatable   :: sink         ! sediment sink flux [m/s]
     real(fp)    , dimension(:,:), allocatable   :: sinkf        ! sediment sink flux fluff layer [m/s]
