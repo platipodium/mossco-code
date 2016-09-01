@@ -2116,11 +2116,13 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     ! Nullify the pointers within fields
 
-    do i = 1, nfrac
-      if (associated (size_classes_of_upward_flux_of_pim_at_bottom(i)%ptr)) &
+    if (allocated(size_classes_of_upward_flux_of_pim_at_bottom))
+      do i = 1, nfrac
+        if (associated (size_classes_of_upward_flux_of_pim_at_bottom(i)%ptr)) &
           nullify (size_classes_of_upward_flux_of_pim_at_bottom(i)%ptr)
-    end do
-    if (allocated(size_classes_of_upward_flux_of_pim_at_bottom)) deallocate (size_classes_of_upward_flux_of_pim_at_bottom)
+      end do
+      deallocate (size_classes_of_upward_flux_of_pim_at_bottom)
+    end if
     if (associated(spm_concentration)) nullify (spm_concentration)
     if (associated(depth_avg_spm_concentration)) nullify (depth_avg_spm_concentration)
     if (associated(sum_depth_avg_spm_concentration)) nullify (sum_depth_avg_spm_concentration)
