@@ -957,12 +957,13 @@ end subroutine MOSSCO_FieldCopy
 
       if (.not.isPresent) cycle
 
-      if (MOSSCO_FieldAttributeIsSameValue(importField, exportField, attributeName, rc=localrc)) cycle
+      if (MOSSCO_FieldAttributeIsSameValue(importField, exportField, attributeName, &
+        rc=localrc)) cycle
 
-#ifdef DEBUG
+!#ifdef DEBUG
       call ESMF_FieldGet(importField, name=message)
-      write(0,*) 'non-matching attribute ',trim(attributeName),' in field ',trim(message)
-#endif
+      write(0,*) '  non-matching ',trim(message),':',trim(attributeName)
+!#endif
 
       differCount = differCount + 1
 
@@ -1694,6 +1695,7 @@ end subroutine MOSSCO_FieldCopy
     integer(ESMF_KIND_I4)               :: rc_, localrc, fieldCount, index_, i
     integer(ESMF_KIND_I4), allocatable  :: matchScore(:)
     character(len=ESMF_MAXSTR)          :: name, message, fieldName
+
 
     rc_ = ESMF_SUCCESS
     if (present(kwe)) rc_ = ESMF_SUCCESS
