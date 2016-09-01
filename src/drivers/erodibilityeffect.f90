@@ -2,7 +2,7 @@ module Bio_erodibility
 !Effect of biota on the sediment erodibility is defined here as functions.
 !For each species a function is defined within this module.
 
-use BioTypes
+!use BioTypes
 use macrofauna_class
 implicit none
 
