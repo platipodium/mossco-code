@@ -810,6 +810,8 @@ masking: if ( mask(i,j) .gt. 0 ) then
     call sandmud_arguments%finalize()
     call bedbc1993_arguments%finalize()
     call soursin3d_arguments%finalize()
+    call compbsskin_arguments%finalize()
+
 end subroutine erosed
 
 
