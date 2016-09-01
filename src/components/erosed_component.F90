@@ -2158,7 +2158,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (associated(thickness_of_layers)) deallocate (thickness_of_layers)
     if (associated(relative_thickness_of_layers)) deallocate (relative_thickness_of_layers)
     if (associated(sigma_midlayer)) deallocate (sigma_midlayer)
-    if (associated(sediment_mass)) deallocate (sediment_mass)
+    if (associated(sediment_mass)) nullify (sediment_mass)
 
     call ESMF_GridCompGet(gridComp, configIsPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
