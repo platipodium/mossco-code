@@ -5,7 +5,7 @@
 dependencies:
   - erosed:
     - component: getm
-      grid: temperature_at_soil_surface
+      grid: temperature_in_water
   - fabm_pelagic:
     - component: getm
       grid: temperature_in_water
@@ -17,7 +17,7 @@ dependencies:
       grid: temperature_in_water
   - river_input:
     - component: getm
-      grid: temperature_in_water
+      grid: temperature_at_soil_surface
   - restart_bed:
     - component: erosed
       grid: sediment_mass_in_bed
