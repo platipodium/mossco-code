@@ -47,8 +47,9 @@ coupling:
     interval: 1 d
   - components:
      - boundary_input
+     - nudge_connector
      - fabm_pelagic
-    interval: 1 d
+    interval: 30 m
   - components:
      - getm
      - erosed
