@@ -746,7 +746,46 @@ contains
 
     call ESMF_StateAdd(exportState,(/fieldBundle/),rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (bedmodel) then
+
+      field = ESMF_FieldCreate(grid, &
+                         typekind=ESMF_TYPEKIND_R8, &
+                         name='sediment_mass_in_bed',&
+                         staggerloc=ESMF_STAGGERLOC_CENTER, &
+                         ungriddedLBound=(/1/),ungriddedUBound=(/nfrac/), &
+                         gridToFieldMap=(/1,2/), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_AttributeSet(field,'units', trim('kg'),rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+!        call ESMF_AttributeSet(field,'missing_value',sed%missing_value,rc=localrc)
+!        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+!          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_FieldGet(field=field, farrayPtr=sediment_mass,rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !    sediment_mass(:,:,:)= 0.0_fp
+      do j=1,jnum
+         do i= 1, inum
+          sediment_mass(i,j,:) = mass(:,inum*(j -1)+i)
+         end do
+      end do
+
+      call ESMF_StateAdd(exportState,(/field/), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU,ESMF_CONTEXT,rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    end if
 
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -1114,40 +1153,6 @@ contains
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 !#ifdef DEBUG
-    if (bedmodel) then
-
-     field = ESMF_FieldCreate(grid, &
-                         typekind=ESMF_TYPEKIND_R8, &
-                         name='sediment_mass_in_bed',&
-                         staggerloc=ESMF_STAGGERLOC_CENTER, &
-                         ungriddedLBound=(/1/),ungriddedUBound=(/nfrac/), &
-                         gridToFieldMap=(/1,2/), rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        call ESMF_AttributeSet(field,'units',trim('Kg'),rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-!        call ESMF_AttributeSet(field,'missing_value',sed%missing_value,rc=localrc)
-!        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
-!          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        call ESMF_FieldGet(field=field, farrayPtr=sediment_mass,rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    !    sediment_mass(:,:,:)= 0.0_fp
-        do j=1,jnum
-         do i= 1, inum
-          sediment_mass(i,j,:) = mass(:,inum*(j -1)+i)
-         end do
-        end do
-
-        call ESMF_StateAdd(exportState,(/field/), rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU,ESMF_CONTEXT,rcToReturn=rc)) &
-         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    end if
 
      field = ESMF_FieldCreate(grid, &
                          typekind=ESMF_TYPEKIND_R8, &
