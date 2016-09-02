@@ -623,29 +623,29 @@ contains
     importList( 2)%name  = 'layer_height_at_soil_surface'
     importList( 2)%units = 'm'
     importList( 3)%name  = 'depth_averaged_x_velocity_in_water'
-    importList( 3)%units = 'm s**-1'
+    importList( 3)%units = 'm.s-1'
     importList( 4)%name  = 'depth_averaged_y_velocity_in_water'
-    importList( 4)%units = 'm s**-1'
+    importList( 4)%units = 'm.s-1'
     importList( 5)%name  = 'x_velocity_at_soil_surface'
-    importList( 5)%units = 'm s**-1'
+    importList( 5)%units = 'm.s-1'
     importList( 6)%name  = 'y_velocity_at_soil_surface'
-    importList( 6)%units = 'm s**-1'
+    importList( 6)%units = 'm.s-1'
     importList( 7)%name  = 'turbulent_diffusivity_of_momentum_at_soil_surface'
-    importList( 7)%units = 'm**2 s**-1'
+    importList( 7)%units = 'm2.s-1'
     importList( 8)%name  = 'maximum_bottom_stress'
     importList( 8)%units = 'Pa'
     importList( 8)%optional = .true.
     importList( 9)%name  = 'Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface'
-    importList( 9)%units = '-'
+    importList( 9)%units = '1'
     importList( 9)%optional = .true.
     importList(10)%name  = 'Effect_of_MPB_on_sediment_erodibility_at_soil_surface'
-    importList(10)%units = '-'
+    importList(10)%units = '1'
     importList(10)%optional = .true.
     importList(11)%name  = 'Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface'
-    importList(11)%units = '-'
+    importList(11)%units = '1'
     importList(11)%optional = .true.
     importList(12)%name  = 'Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface'
-    importList(12)%units = '-'
+    importList(12)%units = '1'
     importList(12)%optional = .true.
 
     if (wave) then
@@ -654,13 +654,14 @@ contains
        importList(14)%name  = 'wave_period'
        importList(14)%units = 's'
        importList(15)%name  = 'wave_number'
-       importList(15)%units = 'm**-1'
+       importList(15)%units = 'm-1'
        importList(16)%name  = 'wave_direction'
        importList(16)%units = 'rad'
     end if
 
-    do i=1,size(importList)
+    do i = 1, ubound(importList,1)
 
+      !> Skip foreign grid field as this has already been read
       if (foreignGridIsPresent) then
         if (trim(importList(i)%name) == foreignGridFieldName) cycle
       end if
@@ -1198,7 +1199,7 @@ contains
         call MOSSCO_FieldString(field, message, rc=localrc)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
-        call ESMF_AttributeSet(field,'units',trim('g m**-3'),rc=localrc)
+        call ESMF_AttributeSet(field,'units',trim('g.m-3'),rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU,ESMF_CONTEXT,rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
