@@ -182,7 +182,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call link_fields_and_fieldbundles_in_states(importState, exportState, rc)
+    call link_fields_and_fieldbundles_in_states(cplComp, importState, exportState, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -247,8 +247,9 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "link_fields_and_fieldbundles_in_states"
-  subroutine  link_fields_and_fieldbundles_in_states(importState, exportState, rc)
+  subroutine  link_fields_and_fieldbundles_in_states(cplComp, importState, exportState, rc)
 
+    type(ESMF_CplComp), intent(in)  :: cplComp
     type(ESMF_State), intent(in)    :: importState
     type(ESMF_State), intent(inout) :: exportState
     integer, intent(out), optional  :: rc
@@ -257,7 +258,8 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     integer(ESMF_KIND_I4)       :: i, itemCount, exportItemCount, importItemCount
     integer(ESMF_KIND_I4)       :: exportfieldCount, importfieldCount
     character (len=ESMF_MAXSTR) :: message, creatorName
-    type(ESMF_Time)             :: currTime
+    type(ESMF_Time)             :: currTime, startTime
+    type(ESMF_Clock)            :: clock
     character(len=ESMF_MAXSTR), dimension(:), allocatable :: itemNameList, differList
     type(ESMF_StateItem_Flag),  dimension(:), allocatable :: itemTypeList
     type(ESMF_Field)            :: importField, exportField
@@ -268,9 +270,18 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     logical                     :: isPresent, isConformable = .false.
     type(ESMF_Grid)             :: importGrid, exportGrid
     type(ESMF_GeomType_Flag)    :: importgeomType, exportGeomType
+    character(len=ESMF_MAXSTR)  :: name
 
     rc_ = ESMF_SUCCESS
     if (present(rc)) rc = rc_
+
+    call ESMF_CplCompGet(cplComp, name=name, clock=clock, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_ClockGet(clock, startTime=startTime, currTime=currTime, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -302,7 +313,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         if (importItemCount /= 1) then
-          write(message,'(A)') '  skipped multiple item '//trim(itemNameList(i))
+          write(message,'(A)') trim(name)//' skipped multiple item '//trim(itemNameList(i))
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
           cycle
         endif
@@ -644,7 +655,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
         call ESMF_StateGet(exportState, trim(itemNameList(i)), exportField, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) Then
-          write(message, '(A)') '  hint: check your item name '//trim(itemNameList(i))//' for invalid characters.'
+          write(message, '(A)') trim(name)//' hint: check your item name '//trim(itemNameList(i))//' for invalid characters.'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
           cycle
         endif
@@ -655,7 +666,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
         !! don't deal with complete fields here
         if (exportFieldStatus .eq. ESMF_FIELDSTATUS_COMPLETE) then
-          write(message, '(A)') '  skipped complete field'
+          write(message, '(A)') trim(name)//' skipped complete field'
           call MOSSCO_FieldString(exportField, message)
           !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
           cycle
@@ -667,7 +678,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         if (importItemCount < 1) then
-          write(message, '(A)') '  skipped non-matched field'
+          write(message, '(A)') trim(name)//' skipped non-matched field'
           call MOSSCO_FieldString(exportField, message)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
           cycle
@@ -698,10 +709,10 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
           if (currTime == startTime) then
             if (MOSSCO_FieldAttributesIdentical(importField, exportField, &
               differList=differList, rc=localrc) > 0) then
-              write(message,'(A)') '  some field attributes not identical for item '//trim(itemNameList(i))
+              write(message,'(A)') trim(name)//' some field attributes not identical for item '//trim(itemNameList(i))
               call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
               do j = lbound(differList,1), ubound(differList,1)
-                write(message,'(A)') '    '//trim(differList(j))
+                write(message,'(A)') '  '//trim(differList(j))
                 call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
               enddo
               deallocate(differList)
@@ -731,7 +742,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
                 call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
               if (.not.isConformable) then
-                write(message,'(A)') '   skipped non-conforming grid in '
+                write(message,'(A)') trim(name)//' skipped non-conforming grid in '
                 call MOSSCO_messageAdd(message,trim(itemNameList(i)))
                 call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
                 cycle
