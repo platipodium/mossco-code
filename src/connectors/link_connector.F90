@@ -506,7 +506,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       ! Nothing todo if both items are identical
-      if (exportFieldBundle /= importFieldBundle) cycle
+      if (exportFieldBundle == importFieldBundle) cycle
 
       allocate(importFieldList(importFieldCount), stat=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
