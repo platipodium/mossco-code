@@ -69,11 +69,11 @@ function usage {
 # Function for selecting the queue on SGE system
 function select_sge_queue {
   QSMALL=$(qstat -g c |grep small.q | awk '{print $5}')
-  if [[ ${QSMALL} -ge  $1 ]] ; then
-    echo small.q
-  else
+  #if [[ ${QSMALL} -ge  $1 ]] ; then
+  #  echo small.q
+  #else
     echo all.q
-  fi
+  #fi
 }
 
 # Function for predicting simulation time (adjusted for slurm)
