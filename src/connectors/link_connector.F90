@@ -128,15 +128,15 @@ module link_connector
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call link_foreign_grid_or_needed_field_in_states(importState, exportState, rc=localrc)
+    call link_foreign_grid_or_needed_field_in_states(cplComp, importState, exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !call link_foreign_grid_or_needed_field_in_states(exportState, importState, rc)
+    !call link_foreign_grid_or_needed_field_in_states(cplComp, exportState, importState, rc)
     !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
     !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call link_empty_fields_and_fieldbundles_in_states(importState, exportState, rc)
+    call link_empty_fields_and_fieldbundles_in_states(cplComp, importState, exportState, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -193,7 +193,10 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (stopTime>currTime) call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=localrc)
+    if (stopTime > currTime) then
+      call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=localrc)
+    endif
+
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -568,8 +571,9 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 !> This routine looks at all incomplete fields and fieldBundles in exportState,
 !> If a corresponding field is available in importState, replace the one in export.
 
-  subroutine  link_empty_fields_and_fieldbundles_in_states(importState, exportState, rc)
+  subroutine  link_empty_fields_and_fieldbundles_in_states(cplComp, importState, exportState, rc)
 
+    type(ESMF_CplComp), intent(in)   :: cplComp
     type(ESMF_State), intent(in)     :: importState
     type(ESMF_State), intent(inout)  :: exportState
     integer, intent(out), optional   :: rc
@@ -579,8 +583,8 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     integer(ESMF_KIND_I4)       :: rank
     integer(ESMF_KIND_I4),allocatable :: totalcount(:)
     character (len=ESMF_MAXSTR) :: message, creatorName, name
-    type(ESMF_Time)             :: currTime
-    character(len=ESMF_MAXSTR), dimension(:), allocatable :: itemNameList, fieldNameList
+    type(ESMF_Time)             :: currTime, startTime
+    character(len=ESMF_MAXSTR), dimension(:), allocatable :: itemNameList, fieldNameList, differList
     type(ESMF_StateItem_Flag),  dimension(:), allocatable :: itemTypeList
     type(ESMF_Field),  allocatable :: fieldList(:)
     type(ESMF_Field)            :: importField, exportField
@@ -588,13 +592,20 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     type(ESMF_GeomType_Flag)    :: importGeomType
     type(ESMF_Grid)             :: importGrid,exportGrid
     type(ESMF_StateItem_Flag)   :: itemType
-    logical                     :: isPresent
+    logical                     :: isPresent, isConformable
     type(ESMF_FieldStatus_Flag) :: fieldStatus, exportFieldStatus
+    type(ESMF_Clock)            :: clock
 
     rc_ = ESMF_SUCCESS
     if (present(rc)) rc = rc_
 
-    name='link_connector'
+    call ESMF_CplCompGet(cplComp, name=name, clock=clock, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_ClockGet(clock, startTime=startTime, currTime=currTime, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_StateGet(exportState, itemCount=itemCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -886,8 +897,9 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "link_foreign_grid_field_in_states"
-  subroutine  link_foreign_grid_or_needed_field_in_states(importState, exportState, rc)
+  subroutine  link_foreign_grid_or_needed_field_in_states(cplComp, importState, exportState, rc)
 
+    type(ESMF_CplComp), intent(in)  :: cplComp
     type(ESMF_State), intent(in)    :: importState
     type(ESMF_State), intent(inout) :: exportState
     integer, intent(out), optional  :: rc
@@ -895,7 +907,6 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     integer(ESMF_KIND_I4)       :: localrc, rc_
     integer(ESMF_KIND_I4)       :: i, j, itemCount, exportItemCount, importItemCount, fieldCount, count, len
     character (len=ESMF_MAXSTR) :: message, creatorName, name, fieldName, attributeName, stateName
-    type(ESMF_Time)             :: currTime
     type(ESMF_Field)            :: importField, exportField
     type(ESMF_FieldBundle)      :: importFieldBundle, exportFieldBundle
     type(ESMF_StateItem_Flag)   :: itemType
@@ -904,7 +915,10 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     type(ESMF_TypeKind_Flag)    :: typekind
 
     rc_ = ESMF_SUCCESS
-    name='link_connector'
+
+    call ESMF_CplCompGet(cplComp, name=name, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_AttributeGet(exportState, count=count, attcountflag=ESMF_ATTGETCOUNT_ATTRIBUTE, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
