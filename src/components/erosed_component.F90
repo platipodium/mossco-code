@@ -1422,7 +1422,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     integer                  :: petCount, localPet
     character(ESMF_MAXSTR)   :: name, message
     logical                  :: isPresent
-    type(ESMF_Time)          :: currTime
+    type(ESMF_Time)          :: currTime, nextTime
     type(ESMF_Clock)         :: clock
     integer(ESMF_KIND_I8)    :: external_index
     logical                  :: First_entry = .true.
@@ -1438,7 +1438,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 !#define DEBUG
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, clock, name=name, currTime=currTime, importState=importState, &
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
     if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1452,6 +1452,12 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    call ESMF_ClockGetNextTime(parentclock, nextTime, rc=localrc)
+    if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+     timestep=nextTime-currtime
+  
     call ESMF_TimeIntervalGet(timestep,s_r8=dt,rc=localrc)
     if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1791,9 +1797,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
            entrainment_rate = sour(l,nm)
 
           if (bedmodel) then
-             dt = 120._fp
-              !@ToDO timestep just hardcoded, but should be corrected as soon as
-              !possible
               call update_sediment_mass (mass(l,nm), dt,deposition_rate,entrainment_rate, area(i,j))
           end if
 
