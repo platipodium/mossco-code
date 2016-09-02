@@ -351,13 +351,18 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
               call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-            if (MOSSCO_FieldAttributesIdentical(importField, exportField, &
-              differList=differList, rc=localrc) > 0) then
-              do j = lbound(differList,1), ubound(differList,1)
-                call ESMF_LogWrite(trim(differList(j)), ESMF_LOGMSG_WARNING)
-                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-              enddo
-              call MOSSCO_Reallocate(differList, 0, rc=localrc)
+            !> Only log the message at start time of simulation
+            if (currTime == startTime) then
+              if (MOSSCO_FieldAttributesIdentical(importField, exportField, &
+                differList=differList, rc=localrc) > 0) then
+                write(message,'(A)') '  some field attributes not identical for item '//trim(itemNameList(i))
+                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+                do j = lbound(differList,1), ubound(differList,1)
+                  write(message,'(A)') '    '//trim(differList(j))
+                  call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+                enddo
+                deallocate(differList)
+              endif
             endif
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
               call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
