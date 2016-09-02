@@ -493,7 +493,7 @@ EOT
 #!/bin/bash
 
 #$ -N ${TITLE}
-#$ -pe orte $NPROC
+#$ -pe orte_rr $NPROC
 #$ -m beas
 #$ -M ${EMAIL}
 #$ -cwd
