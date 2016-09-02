@@ -499,11 +499,11 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
 
       !> Find item in exportFieldList that best matches the fieldList(i) item
       call MOSSCO_FieldMatchFields(fieldlist(i), exportFieldList, index=matchIndex, &
-        score=matchScore, rc=localrc)
+        score=matchScore, owner=trim(name), rc=localrc)
       if (matchIndex > 0) then
 
         call MOSSCO_FieldWeightField(exportFieldList(matchIndex), fieldList(i), &
-          weight, tagOnly=tagOnly_, rc=localrc)
+          weight, tagOnly=tagOnly_, owner=trim(name), rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 

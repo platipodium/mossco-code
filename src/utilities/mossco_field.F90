@@ -1101,12 +1101,14 @@ end subroutine MOSSCO_FieldCopy
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_FieldWeightField"
-  subroutine MOSSCO_FieldWeightField(exportField, importField, weight, kwe, tagOnly, rc)
+  subroutine MOSSCO_FieldWeightField(exportField, importField, weight, kwe, &
+    owner, tagOnly, rc)
 
     type(ESMF_Field), intent(inout)        :: exportField
     type(ESMF_Field), intent(in)           :: importField
     real(ESMF_KIND_R8), intent(in)         :: weight
     type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+    character(len=*), intent(in), optional :: owner
     logical, intent(in), optional          :: tagOnly
     integer(ESMF_KIND_I4), optional        :: rc
 
@@ -1130,7 +1132,6 @@ end subroutine MOSSCO_FieldCopy
 
     integer(ESMF_KIND_I4)                  :: localrc, rc_, gridRank
     type(ESMF_Grid)                        :: grid
-
 
     rc_ = ESMF_SUCCESS
     if (present(rc)) rc = rc_
@@ -1165,7 +1166,12 @@ end subroutine MOSSCO_FieldCopy
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (rank /= exportRank) then
-      write(message,'(A)')  '  rank mismatch in '
+      if (present(owner)) then
+        write(message,'(A)')  trim(owner)//' rank mismatch in '
+      else
+        write(message,'(A)')  '  rank mismatch in '
+      endif
+
       call MOSSCO_FieldString(exportField, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       if (present(rc)) rc = ESMF_RC_ARG_INCOMP
@@ -1194,7 +1200,11 @@ end subroutine MOSSCO_FieldCopy
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (any(exportLbnd - lbnd > 0) .or. any(exportUbnd - ubnd > 0))  then
+      if (present(owner)) then
+        write(message,'(A)')  trim(owner)//' exclusive bounds mismatch in '
+      else
         write(message,'(A)')  '  exclusive bounds mismatch in '
+      endif
         call MOSSCO_FieldString(exportField, message)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         if (present(rc)) rc = ESMF_RC_ARG_INCOMP
@@ -1444,7 +1454,12 @@ end subroutine MOSSCO_FieldCopy
       endselect
 
       !if (numChanged>0) then
-        write(message,'(A,ES9.2,A,I5.5,A)') '  weight ', weight_, ' changed ', numChanged, ' cells '
+        if (present(owner)) then
+          write(message,'(A)') trim(owner)//' weight'
+        else
+          write(message,'(A)') '  weight'
+        endif
+        write(message,'(A,ES9.2,A,I5.5,A)') trim(message), weight_, ' changed ', numChanged, ' cells '
         call MOSSCO_FieldString(exportField, message)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       !endif
