@@ -345,7 +345,7 @@ contains
 
      if (rank==2) then
 
-        call ESMF_GridGet(grid,ESMF_STAGGERLOC_CENTER,0,                   &
+        call ESMF_GridGet(grid, ESMF_STAGGERLOC_CENTER, 0,                   &
                           exclusiveLBound=lbnd2,exclusiveUBound=ubnd2, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 

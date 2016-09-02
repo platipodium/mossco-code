@@ -384,7 +384,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
                 call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
               if (fieldstatus /= ESMF_FIELDSTATUS_COMPLETE)  then
-                write(message,'(A)') '  skipped incomplete '
+                write(message,'(A)') trim(name)//' skipped incomplete '
                 call MOSSCO_FieldString(importField, message)
                 call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
                 cycle
@@ -395,7 +395,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
                 call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
               if (importGeomType /= ESMF_GEOMTYPE_GRID) then
-                write(message,'(A)') '    not implemented: non-grid geometry in field'
+                write(message,'(A)') trim(name)//' not implemented non-grid geometry in field'
                 call MOSSCO_FieldString(importField, message)
                 call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
                 cycle
@@ -431,8 +431,9 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
                     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
                   if (.not.isConformable) then
-                    write(message,'(A)') '   skipped non-conforming grid in '
-                    call MOSSCO_messageAdd(message,trim(itemNameList(i)))
+                    write(message,'(A)') '   skipped non-conforming grids'
+                    call MOSSCO_GridString(importGrid, message)
+                    call MOSSCO_GridString(exportGrid, message)
                     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
                     cycle
                   endif
@@ -742,8 +743,9 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
                 call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
               if (.not.isConformable) then
-                write(message,'(A)') trim(name)//' skipped non-conforming grid in '
-                call MOSSCO_messageAdd(message,trim(itemNameList(i)))
+                write(message,'(A)') trim(name)//' skipped non-conforming grids '
+                call MOSSCO_GridString(importGrid, message)
+                call MOSSCO_GridString(exportGrid, message)
                 call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
                 cycle
               endif
