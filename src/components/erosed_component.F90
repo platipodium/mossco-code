@@ -634,7 +634,6 @@ contains
     importList( 7)%units = 'm2.s-1'
     importList( 8)%name  = 'maximum_bottom_stress'
     importList( 8)%units = 'Pa'
-    importList( 8)%optional = .true.
     importList( 9)%name  = 'Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface'
     importList( 9)%units = '1'
     importList( 9)%optional = .true.
