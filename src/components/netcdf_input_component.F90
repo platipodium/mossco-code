@@ -409,7 +409,7 @@ module netcdf_input_component
     if (.not.isPresent) then
       write(message,'(A)') trim(name)//' file '//trim(fileName)//' does not exist'
       if (checkFile) then
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         rc = ESMF_RC_NOT_FOUND
       else
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
