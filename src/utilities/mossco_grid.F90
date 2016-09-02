@@ -573,6 +573,10 @@ subroutine MOSSCO_GridString(grid, message, kwe, length, rc)
   rc_ = ESMF_SUCCESS
   if (present(kwe)) rc_ = ESMF_SUCCESS
 
+  call ESMF_GridGet(grid, name=name, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
   call ESMF_AttributeGet(grid, name='creator', isPresent=isPresent, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -591,7 +595,7 @@ subroutine MOSSCO_GridString(grid, message, kwe, length, rc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-  if (len_trim(message) + 7 <=len(message)) write(message,'(A,I1)') trim(message)//' rank',rank
+  if (len_trim(message) + 7 <=len(message)) write(message,'(A,X,I1)') trim(message)//' rank',rank
   allocate(ubnd(rank))
   allocate(lbnd(rank))
 
@@ -898,6 +902,11 @@ subroutine MOSSCO_GridIsConformable(gridA, gridB, isConformable, rc)
   if (present(rc))  rc = rc_
   isConformable = .false.
 
+  if (gridA == gridB) then
+    isConformable = .true.
+    return
+  endif
+
   call ESMF_GridGet(gridA, rank=rankA, coordSys=coordSysA, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -910,10 +919,10 @@ subroutine MOSSCO_GridIsConformable(gridA, gridB, isConformable, rc)
   if (rankA /= rankB) return
 
   ! Grids with different may be conformable, but print a warning
-  if ( (coordSysA /= coordSysB)) then
+  if ((coordSysA /= coordSysB)) then
     write(message, '(A)') '  compares grids with different coordinate systems'
     call MOSSCO_GridString(gridA, message)
-    call MOSSCO_GridSTring(gridB, message)
+    call MOSSCO_GridString(gridB, message)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
   endif
 
@@ -932,7 +941,8 @@ subroutine MOSSCO_GridIsConformable(gridA, gridB, isConformable, rc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-  if (all(ubndA - lbndA == ubndB - ubndB)) isConformable = .true.
+  !write(0,*) 'gridbounds: ',lbndA,':',ubndA,' .ne. ',lbndB,':',ubndB
+  if (all(ubndA - lbndA == ubndB - lbndB)) isConformable = .true.
 
 end subroutine MOSSCO_GridIsConformable
 
