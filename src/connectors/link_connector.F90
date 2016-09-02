@@ -24,6 +24,7 @@ module link_connector
   use mossco_field
   use mossco_component
   use mossco_strings
+  use mossco_grid
 
   implicit none
 
@@ -264,7 +265,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     type(ESMF_FieldBundle)      :: importFieldBundle, exportFieldBundle
     type(ESMF_StateItem_Flag)   :: itemType
     type(ESMF_FieldStatus_Flag) :: fieldstatus, exportFieldStatus
-    logical                     :: isPresent
+    logical                     :: isPresent, isConformable = .false.
     type(ESMF_Grid)             :: importGrid, exportGrid
     type(ESMF_GeomType_Flag)    :: importgeomType, exportGeomType
 
@@ -408,12 +409,17 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
                 if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
                   call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-                !> @todo check for conforming grids (dimensions, rank, coordinate values)
                 if (importGrid /= exportGrid) then
-                  write(message,'(A)') '   warning: grids do not match for '
-                  call MOSSCO_messageAdd(message,trim(itemNameList(i)))
-                  call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-                  !cycle
+                  call MOSSCO_GridIsConformable(importGrid, exportGrid, isConformable, rc=localrc)
+                  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+                    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+                  if (.not.isConformable) then
+                    write(message,'(A)') '   skipped non-conforming grid in '
+                    call MOSSCO_messageAdd(message,trim(itemNameList(i)))
+                    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+                    cycle
+                  endif
                 end if
               endif
 
@@ -704,15 +710,19 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
               call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-            if (importGrid .ne. exportGrid) then
-              write(message,'(A)') trim(name)//' grids do not match for '
-              call MOSSCO_FieldString(importField, message)
-              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-              write(message,'(A)') trim(name)//' thus skipped '
-              call MOSSCO_FieldString(exportField, message)
-              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-              cycle
+            if (importGrid /= exportGrid) then
+              call MOSSCO_GridIsConformable(importGrid, exportGrid, isConformable, rc=localrc)
+              if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+                call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+              if (.not.isConformable) then
+                write(message,'(A)') '   skipped non-conforming grid in '
+                call MOSSCO_messageAdd(message,trim(itemNameList(i)))
+                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+                cycle
+              endif
             end if
+
           end if
 
           call MOSSCO_FieldCopyAttributes(importField, exportField, rc=localrc)
