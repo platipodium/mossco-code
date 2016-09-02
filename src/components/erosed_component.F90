@@ -931,41 +931,68 @@ contains
    endif
 
 !   Complete Import Fields
-    do i=1,size(importList)
-      call ESMF_StateGet(importState,trim(importList(i)%name),field)
-      call ESMF_FieldGet(field,status=status)
-      if (status.eq.ESMF_FIELDSTATUS_GRIDSET) then
+    do i = 1, ubound(importList,1)
+      call ESMF_StateGet(importState, trim(importList(i)%name), field, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_FieldGet(field, status=status, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (status .eq. ESMF_FIELDSTATUS_GRIDSET) then
+
         if ( importList(i)%optional ) cycle
-        call ESMF_LogWrite(' import from internal field '//trim(importList(i)%name),ESMF_LOGMSG_INFO)
-        allocate(importList(i)%data(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)))
-        call ESMF_FieldEmptyComplete(field,importList(i)%data,ESMF_INDEX_DELOCAL)
+
+        write(message, '(A)') trim(name)//' import from internal  '
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+        allocate(importList(i)%data(exclusiveLBound(1):exclusiveUBound(1), &
+          exclusiveLBound(2):exclusiveUBound(2)), stat=localrc)
+
+        call ESMF_FieldEmptyComplete(field, importList(i)%data, ESMF_INDEX_DELOCAL, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
         importList(i)%data = 0.0d0
-      else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
-        call ESMF_LogWrite(' import from external field '//trim(importList(i)%name),ESMF_LOGMSG_INFO)
-        call ESMF_FieldGet(field,farrayPtr=importList(i)%data,rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
+
+      elseif (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
+
+        write(message, '(A)') trim(name)//' import from external  '
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+        call ESMF_FieldGet(field, farrayPtr=importList(i)%data, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
         if (.not. (    (      all(lbound(importList(i)%data) .eq. totalLBound    )           &
                         .and. all(ubound(importList(i)%data) .eq. totalUBound    ) )         &
                    .or.(      all(lbound(importList(i)%data) .eq. exclusiveLBound)           &
                         .and. all(ubound(importList(i)%data) .eq. exclusiveUBound) ) ) ) then
-          call ESMF_LogWrite('invalid field bounds',ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
+
+          write(message, '(A)') trim(name)//' invalid field bounds in '
+          call MOSSCO_FieldString(field, message)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
           call ESMF_Finalize(endflag=ESMF_END_ABORT)
         end if
       else
-        call ESMF_LogWrite('empty field: '//trim(importList(i)%name),ESMF_LOGMSG_ERROR, &
-                           line=__LINE__,file=__FILE__,method='InitializeP2()')
+        write(message, '(A)') trim(name)//' erroneously obtained empty '
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       end if
     end do
 
-
-
   !> first try to get "external_index" from "concentration_of_SPM" fieldBundle in import State
     call ESMF_StateGet(importState,"concentration_of_SPM_in_water",fieldBundle,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_FieldBundleGet(fieldBundle,fieldCount=fieldCount,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (fieldCount==1 .and. nfrac>1) then
       write(message,'(A)') trim(name)//' mapped all fractions to one SPM fraction.'
