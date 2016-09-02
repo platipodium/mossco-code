@@ -652,7 +652,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         if (exportFieldStatus .eq. ESMF_FIELDSTATUS_COMPLETE) then
           write(message, '(A)') '  skipped complete field'
           call MOSSCO_FieldString(exportField, message)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
           cycle
         endif
 
@@ -689,10 +689,20 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
             cycle
           endif
 
-          if (MOSSCO_FieldAttributesIdentical(importField, exportField, rc=localrc) > 0) then
-            write(message,'(A)') 'Field attributes are not identical for item '//trim(itemNameList(i))
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+          !> Only log the message at start time of simulation
+          if (currTime == startTime) then
+            if (MOSSCO_FieldAttributesIdentical(importField, exportField, &
+              differList=differList, rc=localrc) > 0) then
+              write(message,'(A)') '  some field attributes not identical for item '//trim(itemNameList(i))
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+              do j = lbound(differList,1), ubound(differList,1)
+                write(message,'(A)') '    '//trim(differList(j))
+                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+              enddo
+              deallocate(differList)
+            endif
           endif
+
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
