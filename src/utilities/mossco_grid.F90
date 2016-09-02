@@ -879,6 +879,64 @@ subroutine MOSSCO_GridGetDepth(grid, kwe, depth, height, interface, rc)
 end subroutine MOSSCO_GridGetDepth
 
 #undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_GridIsConformable"
+subroutine MOSSCO_GridIsConformable(gridA, gridB, isConformable, rc)
+
+  type(ESMF_Grid), intent(in)           :: gridA
+  type(ESMF_Grid), intent(in)           :: gridB
+  logical, intent(out)                  :: isConformable
+  integer(ESMF_KIND_I4),  intent(out), optional  :: rc
+
+  integer(ESMF_KIND_I4), allocatable, dimension(:)  :: ubndA, lbndA, ubndB, lbndB
+
+  integer(ESMF_KIND_I4)          :: rc_, localrc, i, rankA, rankB
+  character(len=ESMF_MAXSTR)     :: message
+
+  type(ESMF_CoordSys_Flag)       :: coordSysA, coordSysB
+
+  rc_ = ESMF_SUCCESS
+  if (present(rc))  rc = rc_
+  isConformable = .false.
+
+  call ESMF_GridGet(gridA, rank=rankA, coordSys=coordSysA, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  call ESMF_GridGet(gridB, rank=rankB, coordSys=coordSysB, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  ! Grids with different rank are not conformable
+  if (rankA /= rankB) return
+
+  ! Grids with different may be conformable, but print a warning
+  if ( (coordSysA /= coordSysB)) then
+    write(message, '(A)') '  compares grids with different coordinate systems'
+    call MOSSCO_GridString(gridA, message)
+    call MOSSCO_GridSTring(gridB, message)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+  endif
+
+  allocate(lbndA(rankA), stat=localrc)
+  allocate(lbndB(rankA), stat=localrc)
+  allocate(ubndA(rankA), stat=localrc)
+  allocate(ubndB(rankA), stat=localrc)
+
+  call ESMF_GridGet(gridA, staggerloc=ESMF_STAGGERLOC_CENTER, &
+    localDe=0, exclusiveLBound=lbndA, exclusiveUBound=ubndA, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  call ESMF_GridGet(gridB, staggerloc=ESMF_STAGGERLOC_CENTER, &
+    localDe=0, exclusiveLBound=lbndB, exclusiveUBound=ubndB, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  if (all(ubndA - lbndA == ubndB - ubndB)) isConformable = .true.
+
+end subroutine MOSSCO_GridIsConformable
+
+#undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_GridGetWidth"
 subroutine MOSSCO_GridGetWidth(grid, kwe, xwidth, ywidth, rc)
 
