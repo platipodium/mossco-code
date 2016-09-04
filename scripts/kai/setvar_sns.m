@@ -14,7 +14,7 @@
 var={
   {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';0.4;90; 1.0;	1; 1;1;'L0'};
   {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';1.;70; 1.0;	1; 1;1;'L1'};
-{'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0.;1.8; 1.;	1; 2;1;'LM'};
+{'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0.;2.0; 1.;	1; 2;1;'LM'};
   {'Phytplankton_Carbon_phyC_in_water';'PhyC';4;200; 1.0;		1; 1;2;'N'};
   {'Chl_chl_in_water';'chl';0.7;40; 1;					1; 1;2;'L1'};
  {'Chl_chl_in_water';'chl';0.7;40; 1;					1; 1;2;'L0'};
@@ -22,6 +22,7 @@ var={
   {'Chl_chl_in_water';'CHL';0.5;20; 2;					1; 1;0;'Mi'};
   {'Chl_chl_in_water';'CHL';0.5;20; 2;					2; 1;0;'Mi'};
   {'Chl_chl_in_water';'CHL';0.5;20; 2;                                  3; 1;0;'Mi'};
+  {'Chl_chl_in_water';'CHL';0.5;20; 2;                                  4; 1;0;'Mi'};
 %  {'Chl_chl_in_water';'CHL';0.5;20; 2;                                  4; 1;0;'Mi'};
 %%  {'Chl_chl_in_water';'CHL';0.5;20; 2;                                  5; 1;0;'Mi'};
 %%  {'Chl_chl_in_water';'CHL';0.5;20; 2;                                  3; 1;0;'Mi'};
@@ -30,14 +31,14 @@ var={
 %  {'Chl_chl_in_water';'CHL';0.5;16; 2;					 ; 1;0;'Mi'};
 %  {'Chl_chl_in_water';'CHL';0.5;16; 2;					5; 1;0;'Mi'};
  %%  {'Chl_chl_in_water';'CHL';0.5;20; 2;					5; 1;0;'Mi'};
-  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';1;50; 2;	4; 1;0;'Mi'};
-  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';1;50; 2;	5; 1;0;'Mi'};
-  {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0.;1.2; 2.; 6; 1;0;'Mi'};
-  {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0.;1.2; 2.; 7; 1;0;'Mi'};
-   {'Zooplankton_Carbon_zooC_in_water';'ZooC';0;12; 1;			1; 2;2;'LM'};
+%  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';1;70; 2;	5; 1;0;'Mi'};
+%  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';1;50; 2;	6; 1;0;'Mi'};
+%%  {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0.;1.2; 2.; 5; 1;0;'Mi'};
+%%  {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0.;1.2; 2.; 6; 1;0;'Mi'};
+   {'Zooplankton_Carbon_zooC_in_water';'ZooC';0;11; 1;			1; 2;2;'LM'};
    {'Detritus_Carbon_detC_in_water';'DetC';0;8; 0.02;			1; 2;2;'L0'};
    {'Virus_C_density_in_cells_vir_in_water';'VirC';0;2; 1.;		1; 2;2;'N'};
-   {'c VirC./(PhyC+1E-2)';'vir';0;5; 1;				1; 2;2;'L1'};
+   {'c VirC./(PhyC+1E-2)';'vir';0;5; 2;				1; 2;2;'L1'};
    {'NC';'N2C';0.08;0.24; 1.0;						1; 2;3;'L1'};
    {'PC';'P2C';0;0.3; 16;						1; 2;3;'L1'};
    {'c N2C./P2C';'N:P';0;0.3; 0.01;					1; 2;3;'L1'};
