@@ -1363,7 +1363,7 @@ contains
     if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_FieldGet(exportFieldList(1), farrayPtr=farrayPtr3, exclusiveLBound=lbnd, &
+    call ESMF_FieldGet(exportFieldList(1), farrayPtr=sediment_mass, exclusiveLBound=lbnd, &
       exclusiveUBound=ubnd, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -2086,7 +2086,11 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     do i = 1, ubnd(1)
      do j= 1, ubnd(2)
-      depth_avg_spm_concentration (i,j,:)= depth_avg_spm_concentration (i,j,:)/depth (i,j)
+      if (depth (i,j)==0.0_fp) then
+       depth_avg_spm_concentration (i,j,:)= 0.0_fp
+       cycle 
+      end if
+       depth_avg_spm_concentration (i,j,:)= depth_avg_spm_concentration (i,j,:)/depth (i,j)
      end do
     end do
 
