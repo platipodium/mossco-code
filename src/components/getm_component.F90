@@ -71,12 +71,12 @@ module getm_component
   real(ESMF_KIND_R8),pointer :: U2D (:,:)  =>NULL(),V2D (:,:)  =>NULL()
   real(ESMF_KIND_R8),pointer :: U3D (:,:,:)=>NULL(),V3D (:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: Ubot(:,:)  =>NULL(),Vbot(:,:)  =>NULL()
-  real(ESMF_KIND_R8),pointer :: Tbot(:,:)=>NULL()
-  real(ESMF_KIND_R8),pointer :: T3D(:,:,:)=>NULL()
-  real(ESMF_KIND_R8),pointer :: S3D(:,:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: T3D  (:,:,:)=>NULL(),Tbot  (:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: S3D  (:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: swr(:,:)=>NULL()
-  real(ESMF_KIND_R8),pointer :: numbot(:,:)=>NULL(),tkebot(:,:)=>NULL(),epsbot(:,:)=>NULL()
-  real(ESMF_KIND_R8),pointer :: tke3D(:,:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: num3D(:,:,:)=>NULL(),numbot(:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: tke3D(:,:,:)=>NULL(),tkebot(:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: epsbot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: windU(:,:)=>NULL(),windV(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: waveH(:,:)=>NULL(),waveT(:,:)=>NULL(),waveK(:,:)=>NULL(),waveDir(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: taubmax(:,:)=>NULL()
@@ -393,6 +393,9 @@ module getm_component
     end if
     if (associated(swr)) then
       call getmCmp_StateAddPtr("surface_downwelling_photosynthetic_radiative_flux",swr,exportState,"W m-2",name)
+    end if
+    if (associated(num3D)) then
+      call getmCmp_StateAddPtr("turbulent_diffusivity_of_momentum_in_water",num3D,exportState,"m2 s-1",name)
     end if
     if (associated(numbot)) then
       call getmCmp_StateAddPtr("turbulent_diffusivity_of_momentum_at_soil_surface",numbot,exportState,"m2 s-1",name)
@@ -998,8 +1001,8 @@ module getm_component
       if (runtype .eq. 1) then
       else
 #ifndef NO_3D
-         allocate(h3D(I3DFIELD))
-         allocate(numbot(I2DFIELD))
+         allocate(h3D   (I3DFIELD))
+         allocate(num3D (I3DFIELD))
          allocate(tkebot(I2DFIELD))
          allocate(epsbot(I2DFIELD))
 #ifdef FOREIGN_GRID
@@ -1073,8 +1076,8 @@ module getm_component
 #ifndef NO_3D
          h3D => hn
 #if 1
-!        turbulent quantities still without target attribute in getm
-         allocate(numbot (I2DFIELD))
+!        some turbulent quantities still without target attribute in getm
+         allocate(num3D (I3DFIELD))
          allocate(tkebot(I2DFIELD))
          allocate(epsbot(I2DFIELD))
 #ifdef FOREIGN_GRID
@@ -1084,20 +1087,19 @@ module getm_component
 #endif
 #else
 #if 0
-         numbot (imin-HALO:,jmin-HALO:) => num(:,:,1)
          tkebot(imin-HALO:,jmin-HALO:) => tke(:,:,1)
          epsbot(imin-HALO:,jmin-HALO:) => eps(:,:,1)
 #else
-         p2d => num(:,:,1)
-         numbot (imin-HALO:,jmin-HALO:) => p2d
          p2d => tke(:,:,1)
          tkebot(imin-HALO:,jmin-HALO:) => p2d
          p2d => eps(:,:,1)
          epsbot(imin-HALO:,jmin-HALO:) => p2d
 #endif
 #ifdef FOREIGN_GRID
-         tke3d => tke
+         num3D => num
+         tke3D => tke
 #else
+         num3D => num(imin:imax,jmin:jmax,1:kmax)
          tke3D => tke(imin:imax,jmin:jmax,1:kmax)
 #endif
 #endif
@@ -1138,7 +1140,12 @@ module getm_component
    if (runtype .eq. 1) then
       hbot => depth
    else
-      p2d => h3D(:,:,1) ; hbot(imin-HALO:,jmin-HALO:) => p2d
+      p2d => h3D  (:,:,1) ; hbot  (imin-HALO:,jmin-HALO:) => p2d
+#ifdef FOREIGN_GRID
+      p2d => num3D(:,:,1) ; numbot(imin-HALO:,jmin-HALO:) => p2d
+#else
+      p2d => num3D(:,:,1) ; numbot(imin     :,jmin     :) => p2d
+#endif
    end if
 
    select case (grid_type)
@@ -2089,7 +2096,7 @@ module getm_component
 #ifndef NO_3D
       if (runtype .gt. 1) then
          h3D    = hn
-         numbot  = num(:,:,1)
+         num3D  = num
          tkebot = tke(:,:,1)
          epsbot = eps(:,:,1)
 #ifdef FOREIGN_GRID
@@ -2126,9 +2133,9 @@ module getm_component
       end if
    else
 #if 1
-!     turbulent quantities still without target attribute in getm
+!     some turbulent quantities still without target attribute in getm
       if (runtype .gt. 1) then
-         numbot  = num(:,:,1)
+         num3D  = num
          tkebot = tke(:,:,1)
          epsbot = eps(:,:,1)
 #ifdef FOREIGN_GRID
