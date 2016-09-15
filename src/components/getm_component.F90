@@ -75,6 +75,7 @@ module getm_component
   real(ESMF_KIND_R8),pointer :: S3D  (:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: swr(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: SS3D (:,:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: NN3D (:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: num3D(:,:,:)=>NULL(),numbot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: nuh3D(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: tke3D(:,:,:)=>NULL(),tkebot(:,:)=>NULL()
@@ -398,6 +399,9 @@ module getm_component
     end if
     if (associated(SS3D)) then
       call getmCmp_StateAddPtr("shear_frequency_squared_in_water",SS3D,exportState,"s-2",name,StaggerLoc=ESMF_STAGGERLOC_CENTER_VFACE)
+    end if
+    if (associated(NN3D)) then
+      call getmCmp_StateAddPtr("buoyancy_frequency_squared_in_water",NN3D,exportState,"s-2",name,StaggerLoc=ESMF_STAGGERLOC_CENTER_VFACE)
     end if
     if (associated(num3D)) then
       call getmCmp_StateAddPtr("turbulent_diffusivity_of_momentum_in_water",num3D,exportState,"m2 s-1",name,StaggerLoc=ESMF_STAGGERLOC_CENTER_VFACE)
@@ -939,7 +943,7 @@ module getm_component
    use variables_3d   ,only: hn,SS,num,nuh,tke,eps
 #ifndef NO_BAROCLINIC
    use m3d            ,only: calc_temp,calc_salt
-   use variables_3d   ,only: T,S
+   use variables_3d   ,only: T,S,NN
 #endif
 #endif
    use meteo          ,only: metforcing,met_method,calc_met
@@ -1019,6 +1023,7 @@ module getm_component
          allocate(tke3D (I3DFIELD))
          allocate(eps3D (I3DFIELD))
 #ifndef NO_BAROCLINIC
+         allocate(NN3D  (I3DFIELD))
          if (calc_temp) then
             allocate(Tbot(I2DFIELD))
 #ifdef FOREIGN_GRID
@@ -1087,11 +1092,17 @@ module getm_component
 #if 1
 !        some turbulent quantities still without target attribute in getm
          allocate(SS3D  (I3DFIELD))
+#ifndef NO_BAROCLINIC
+         allocate(NN3D  (I3DFIELD))
+#endif
          allocate(num3D (I3DFIELD))
          allocate(tke3D (I3DFIELD))
          allocate(eps3D (I3DFIELD))
 #else
          SS3D  => SS
+#ifndef NO_BAROCLINIC
+         NN3D  => NN
+#endif
          num3D => num
          tke3D => tke
          eps3D => eps
@@ -2045,7 +2056,7 @@ module getm_component
    use variables_3d   ,only: taubmax_3d
 #ifndef NO_BAROCLINIC
    use m3d            ,only: calc_temp,calc_salt
-   use variables_3d   ,only: T,S
+   use variables_3d   ,only: T,S,NN
 #endif
 #endif
    use m2d            ,only: dtm
@@ -2094,6 +2105,7 @@ module getm_component
          tke3D  = tke
          eps3D  = eps
 #ifndef NO_BAROCLINIC
+         NN3D   = NN
          if (calc_temp) then
             Tbot = T(:,:,1)
 #ifdef FOREIGN_GRID
@@ -2125,6 +2137,9 @@ module getm_component
 !     some turbulent quantities still without target attribute in getm
       if (runtype .gt. 1) then
          SS3D   = SS
+#ifndef NO_BAROCLINIC
+         NN3D   = NN
+#endif
          num3D  = num
          tke3D  = tke
          eps3D  = eps
