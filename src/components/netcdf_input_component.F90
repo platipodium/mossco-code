@@ -407,7 +407,8 @@ module netcdf_input_component
     inquire(file=trim(fileName), exist=isPresent)
 
     if (.not.isPresent) then
-      write(message,'(A)') trim(name)//' file '//trim(fileName)//' does not exist'
+      write(message,'(A)') trim(name)//' file '
+      call MOSSCO_MessageAdd(message,trim(fileName)//' does not exist')
       if (checkFile) then
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         rc = ESMF_RC_NOT_FOUND
