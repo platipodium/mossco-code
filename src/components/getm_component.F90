@@ -400,14 +400,14 @@ module getm_component
     if (associated(numbot)) then
       call getmCmp_StateAddPtr("turbulent_diffusivity_of_momentum_at_soil_surface",numbot,exportState,"m2 s-1",name)
     end if
+    if (associated(tke3D)) then
+      call getmCmp_StateAddPtr("turbulent_kinetic_energy_in_water",tke3D,exportState,"m2 s-2",name,StaggerLoc=ESMF_STAGGERLOC_CENTER_VFACE)
+    end if
     if (associated(tkebot)) then
       call getmCmp_StateAddPtr("turbulent_kinetic_energy_at_soil_surface",tkebot,exportState,"m2 s-2",name)
     end if
     if (associated(epsbot)) then
       call getmCmp_StateAddPtr("dissipation_of_tke_at_soil_surface",epsbot,exportState,"m2 s-3",name)
-    end if
-    if (associated(tke3D)) then
-      call getmCmp_StateAddPtr("turbulent_kinetic_energy_in_water",tke3D,exportState,"m2 s-2",name,StaggerLoc=ESMF_STAGGERLOC_CENTER_VFACE)
     end if
 
     select case (met_method)
@@ -1003,13 +1003,9 @@ module getm_component
 #ifndef NO_3D
          allocate(h3D   (I3DFIELD))
          allocate(num3D (I3DFIELD))
+         allocate(tke3D (I3DFIELD))
          allocate(tkebot(I2DFIELD))
          allocate(epsbot(I2DFIELD))
-#ifdef FOREIGN_GRID
-         allocate(tke3D(I3DFIELD))
-#else
-         allocate(tke3D(imin:imax,jmin:jmax,1:kmax))
-#endif
 #ifndef NO_BAROCLINIC
          if (calc_temp) then
             allocate(Tbot(I2DFIELD))
@@ -1078,13 +1074,9 @@ module getm_component
 #if 1
 !        some turbulent quantities still without target attribute in getm
          allocate(num3D (I3DFIELD))
+         allocate(tke3D (I3DFIELD))
          allocate(tkebot(I2DFIELD))
          allocate(epsbot(I2DFIELD))
-#ifdef FOREIGN_GRID
-         allocate(tke3D (I3DFIELD))
-#else
-         allocate(tke3D (imin:imax,jmin:jmax,1:kmax))
-#endif
 #else
 #if 0
          tkebot(imin-HALO:,jmin-HALO:) => tke(:,:,1)
@@ -1095,13 +1087,8 @@ module getm_component
          p2d => eps(:,:,1)
          epsbot(imin-HALO:,jmin-HALO:) => p2d
 #endif
-#ifdef FOREIGN_GRID
          num3D => num
          tke3D => tke
-#else
-         num3D => num(imin:imax,jmin:jmax,1:kmax)
-         tke3D => tke(imin:imax,jmin:jmax,1:kmax)
-#endif
 #endif
 #ifndef NO_BAROCLINIC
          if (calc_temp) then
@@ -1141,11 +1128,7 @@ module getm_component
       hbot => depth
    else
       p2d => h3D  (:,:,1) ; hbot  (imin-HALO:,jmin-HALO:) => p2d
-#ifdef FOREIGN_GRID
       p2d => num3D(:,:,1) ; numbot(imin-HALO:,jmin-HALO:) => p2d
-#else
-      p2d => num3D(:,:,1) ; numbot(imin     :,jmin     :) => p2d
-#endif
    end if
 
    select case (grid_type)
@@ -2097,13 +2080,9 @@ module getm_component
       if (runtype .gt. 1) then
          h3D    = hn
          num3D  = num
+         tke3D  = tke
          tkebot = tke(:,:,1)
          epsbot = eps(:,:,1)
-#ifdef FOREIGN_GRID
-         tke3D = tke
-#else
-         tke3D = tke(imin:imax,jmin:jmax,1:kmax)
-#endif
 #ifndef NO_BAROCLINIC
          if (calc_temp) then
             Tbot = T(:,:,1)
@@ -2136,13 +2115,9 @@ module getm_component
 !     some turbulent quantities still without target attribute in getm
       if (runtype .gt. 1) then
          num3D  = num
+         tke3D  = tke
          tkebot = tke(:,:,1)
          epsbot = eps(:,:,1)
-#ifdef FOREIGN_GRID
-         tke3D = tke
-#else
-         tke3D = tke(imin:imax,jmin:jmax,1:kmax)
-#endif
       end if
 #endif
 !     Note (KK): update pointer because of pointer swap within GETM
