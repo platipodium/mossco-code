@@ -75,6 +75,7 @@ module getm_component
   real(ESMF_KIND_R8),pointer :: S3D  (:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: swr(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: num3D(:,:,:)=>NULL(),numbot(:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: nuh3D(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: tke3D(:,:,:)=>NULL(),tkebot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: epsbot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: windU(:,:)=>NULL(),windV(:,:)=>NULL()
@@ -399,6 +400,9 @@ module getm_component
     end if
     if (associated(numbot)) then
       call getmCmp_StateAddPtr("turbulent_diffusivity_of_momentum_at_soil_surface",numbot,exportState,"m2 s-1",name)
+    end if
+    if (associated(nuh3D)) then
+      call getmCmp_StateAddPtr("turbulent_diffusivity_of_heat_in_water",nuh3D,exportState,"m2 s-1",name,StaggerLoc=ESMF_STAGGERLOC_CENTER_VFACE)
     end if
     if (associated(tke3D)) then
       call getmCmp_StateAddPtr("turbulent_kinetic_energy_in_water",tke3D,exportState,"m2 s-2",name,StaggerLoc=ESMF_STAGGERLOC_CENTER_VFACE)
@@ -925,7 +929,7 @@ module getm_component
    use initialise     ,only: runtype
    use variables_2d   ,only: D
 #ifndef NO_3D
-   use variables_3d   ,only: hn,num,tke,eps
+   use variables_3d   ,only: hn,num,nuh,tke,eps
 #ifndef NO_BAROCLINIC
    use m3d            ,only: calc_temp,calc_salt
    use variables_3d   ,only: T,S
@@ -1003,6 +1007,7 @@ module getm_component
 #ifndef NO_3D
          allocate(h3D   (I3DFIELD))
          allocate(num3D (I3DFIELD))
+         allocate(nuh3D (I3DFIELD))
          allocate(tke3D (I3DFIELD))
          allocate(epsbot(I2DFIELD))
 #ifndef NO_BAROCLINIC
@@ -1069,7 +1074,8 @@ module getm_component
       if (runtype .eq. 1) then
       else
 #ifndef NO_3D
-         h3D => hn
+         h3D   => hn
+         nuh3D => nuh
 #if 1
 !        some turbulent quantities still without target attribute in getm
          allocate(num3D (I3DFIELD))
@@ -2028,7 +2034,7 @@ module getm_component
    use initialise     ,only: runtype
    use variables_2d   ,only: zo,z,D,Dvel,U,DU,V,DV
 #ifndef NO_3D
-   use variables_3d   ,only: dt,ho,hn,hvel,uu,hun,vv,hvn,ww,num,tke,eps
+   use variables_3d   ,only: dt,ho,hn,hvel,uu,hun,vv,hvn,ww,num,nuh,tke,eps
    use variables_3d   ,only: taubmax_3d
 #ifndef NO_BAROCLINIC
    use m3d            ,only: calc_temp,calc_salt
@@ -2076,6 +2082,7 @@ module getm_component
       if (runtype .gt. 1) then
          h3D    = hn
          num3D  = num
+         nuh3D  = nuh
          tke3D  = tke
          epsbot = eps(:,:,1)
 #ifndef NO_BAROCLINIC
