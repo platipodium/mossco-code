@@ -77,7 +77,7 @@ module getm_component
   real(ESMF_KIND_R8),pointer :: num3D(:,:,:)=>NULL(),numbot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: nuh3D(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: tke3D(:,:,:)=>NULL(),tkebot(:,:)=>NULL()
-  real(ESMF_KIND_R8),pointer :: epsbot(:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: eps3D(:,:,:)=>NULL(),epsbot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: windU(:,:)=>NULL(),windV(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: waveH(:,:)=>NULL(),waveT(:,:)=>NULL(),waveK(:,:)=>NULL(),waveDir(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: taubmax(:,:)=>NULL()
@@ -409,6 +409,9 @@ module getm_component
     end if
     if (associated(tkebot)) then
       call getmCmp_StateAddPtr("turbulent_kinetic_energy_at_soil_surface",tkebot,exportState,"m2 s-2",name)
+    end if
+    if (associated(eps3d)) then
+      call getmCmp_StateAddPtr("dissipation_of_tke_in_water",eps3D,exportState,"m2 s-3",name,StaggerLoc=ESMF_STAGGERLOC_CENTER_VFACE)
     end if
     if (associated(epsbot)) then
       call getmCmp_StateAddPtr("dissipation_of_tke_at_soil_surface",epsbot,exportState,"m2 s-3",name)
@@ -1009,7 +1012,7 @@ module getm_component
          allocate(num3D (I3DFIELD))
          allocate(nuh3D (I3DFIELD))
          allocate(tke3D (I3DFIELD))
-         allocate(epsbot(I2DFIELD))
+         allocate(eps3D (I3DFIELD))
 #ifndef NO_BAROCLINIC
          if (calc_temp) then
             allocate(Tbot(I2DFIELD))
@@ -1080,16 +1083,11 @@ module getm_component
 !        some turbulent quantities still without target attribute in getm
          allocate(num3D (I3DFIELD))
          allocate(tke3D (I3DFIELD))
-         allocate(epsbot(I2DFIELD))
+         allocate(eps3D (I3DFIELD))
 #else
-#if 0
-         epsbot(imin-HALO:,jmin-HALO:) => eps(:,:,1)
-#else
-         p2d => eps(:,:,1)
-         epsbot(imin-HALO:,jmin-HALO:) => p2d
-#endif
          num3D => num
          tke3D => tke
+         eps3D => eps
 #endif
 #ifndef NO_BAROCLINIC
          if (calc_temp) then
@@ -1131,6 +1129,7 @@ module getm_component
       p2d => h3D  (:,:,1) ; hbot  (imin-HALO:,jmin-HALO:) => p2d
       p2d => num3D(:,:,1) ; numbot(imin-HALO:,jmin-HALO:) => p2d
       p2d => tke3D(:,:,1) ; tkebot(imin-HALO:,jmin-HALO:) => p2d
+      p2d => eps3D(:,:,1) ; epsbot(imin-HALO:,jmin-HALO:) => p2d
    end if
 
    select case (grid_type)
@@ -2084,7 +2083,7 @@ module getm_component
          num3D  = num
          nuh3D  = nuh
          tke3D  = tke
-         epsbot = eps(:,:,1)
+         eps3D  = eps
 #ifndef NO_BAROCLINIC
          if (calc_temp) then
             Tbot = T(:,:,1)
@@ -2118,7 +2117,7 @@ module getm_component
       if (runtype .gt. 1) then
          num3D  = num
          tke3D  = tke
-         epsbot = eps(:,:,1)
+         eps3D  = eps
       end if
 #endif
 !     Note (KK): update pointer because of pointer swap within GETM
