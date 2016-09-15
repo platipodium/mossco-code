@@ -1004,7 +1004,6 @@ module getm_component
          allocate(h3D   (I3DFIELD))
          allocate(num3D (I3DFIELD))
          allocate(tke3D (I3DFIELD))
-         allocate(tkebot(I2DFIELD))
          allocate(epsbot(I2DFIELD))
 #ifndef NO_BAROCLINIC
          if (calc_temp) then
@@ -1075,15 +1074,11 @@ module getm_component
 !        some turbulent quantities still without target attribute in getm
          allocate(num3D (I3DFIELD))
          allocate(tke3D (I3DFIELD))
-         allocate(tkebot(I2DFIELD))
          allocate(epsbot(I2DFIELD))
 #else
 #if 0
-         tkebot(imin-HALO:,jmin-HALO:) => tke(:,:,1)
          epsbot(imin-HALO:,jmin-HALO:) => eps(:,:,1)
 #else
-         p2d => tke(:,:,1)
-         tkebot(imin-HALO:,jmin-HALO:) => p2d
          p2d => eps(:,:,1)
          epsbot(imin-HALO:,jmin-HALO:) => p2d
 #endif
@@ -1129,6 +1124,7 @@ module getm_component
    else
       p2d => h3D  (:,:,1) ; hbot  (imin-HALO:,jmin-HALO:) => p2d
       p2d => num3D(:,:,1) ; numbot(imin-HALO:,jmin-HALO:) => p2d
+      p2d => tke3D(:,:,1) ; tkebot(imin-HALO:,jmin-HALO:) => p2d
    end if
 
    select case (grid_type)
@@ -2081,7 +2077,6 @@ module getm_component
          h3D    = hn
          num3D  = num
          tke3D  = tke
-         tkebot = tke(:,:,1)
          epsbot = eps(:,:,1)
 #ifndef NO_BAROCLINIC
          if (calc_temp) then
@@ -2116,7 +2111,6 @@ module getm_component
       if (runtype .gt. 1) then
          num3D  = num
          tke3D  = tke
-         tkebot = tke(:,:,1)
          epsbot = eps(:,:,1)
       end if
 #endif
