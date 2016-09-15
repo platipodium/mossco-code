@@ -75,7 +75,7 @@ module getm_component
   real(ESMF_KIND_R8),pointer :: T3D(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: S3D(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: swr(:,:)=>NULL()
-  real(ESMF_KIND_R8),pointer :: nybot(:,:)=>NULL(),tkebot(:,:)=>NULL(),epsbot(:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: numbot(:,:)=>NULL(),tkebot(:,:)=>NULL(),epsbot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: tke3D(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: windU(:,:)=>NULL(),windV(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: waveH(:,:)=>NULL(),waveT(:,:)=>NULL(),waveK(:,:)=>NULL(),waveDir(:,:)=>NULL()
@@ -394,8 +394,8 @@ module getm_component
     if (associated(swr)) then
       call getmCmp_StateAddPtr("surface_downwelling_photosynthetic_radiative_flux",swr,exportState,"W m-2",name)
     end if
-    if (associated(nybot)) then
-      call getmCmp_StateAddPtr("turbulent_diffusivity_of_momentum_at_soil_surface",nybot,exportState,"m2 s-1",name)
+    if (associated(numbot)) then
+      call getmCmp_StateAddPtr("turbulent_diffusivity_of_momentum_at_soil_surface",numbot,exportState,"m2 s-1",name)
     end if
     if (associated(tkebot)) then
       call getmCmp_StateAddPtr("turbulent_kinetic_energy_at_soil_surface",tkebot,exportState,"m2 s-2",name)
@@ -999,7 +999,7 @@ module getm_component
       else
 #ifndef NO_3D
          allocate(h3D(I3DFIELD))
-         allocate(nybot(I2DFIELD))
+         allocate(numbot(I2DFIELD))
          allocate(tkebot(I2DFIELD))
          allocate(epsbot(I2DFIELD))
 #ifdef FOREIGN_GRID
@@ -1074,7 +1074,7 @@ module getm_component
          h3D => hn
 #if 1
 !        turbulent quantities still without target attribute in getm
-         allocate(nybot (I2DFIELD))
+         allocate(numbot (I2DFIELD))
          allocate(tkebot(I2DFIELD))
          allocate(epsbot(I2DFIELD))
 #ifdef FOREIGN_GRID
@@ -1084,12 +1084,12 @@ module getm_component
 #endif
 #else
 #if 0
-         nybot (imin-HALO:,jmin-HALO:) => num(:,:,1)
+         numbot (imin-HALO:,jmin-HALO:) => num(:,:,1)
          tkebot(imin-HALO:,jmin-HALO:) => tke(:,:,1)
          epsbot(imin-HALO:,jmin-HALO:) => eps(:,:,1)
 #else
          p2d => num(:,:,1)
-         nybot (imin-HALO:,jmin-HALO:) => p2d
+         numbot (imin-HALO:,jmin-HALO:) => p2d
          p2d => tke(:,:,1)
          tkebot(imin-HALO:,jmin-HALO:) => p2d
          p2d => eps(:,:,1)
@@ -2089,7 +2089,7 @@ module getm_component
 #ifndef NO_3D
       if (runtype .gt. 1) then
          h3D    = hn
-         nybot  = num(:,:,1)
+         numbot  = num(:,:,1)
          tkebot = tke(:,:,1)
          epsbot = eps(:,:,1)
 #ifdef FOREIGN_GRID
@@ -2128,7 +2128,7 @@ module getm_component
 #if 1
 !     turbulent quantities still without target attribute in getm
       if (runtype .gt. 1) then
-         nybot  = num(:,:,1)
+         numbot  = num(:,:,1)
          tkebot = tke(:,:,1)
          epsbot = eps(:,:,1)
 #ifdef FOREIGN_GRID
