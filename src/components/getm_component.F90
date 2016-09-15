@@ -74,6 +74,7 @@ module getm_component
   real(ESMF_KIND_R8),pointer :: T3D  (:,:,:)=>NULL(),Tbot  (:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: S3D  (:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: swr(:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: SS3D (:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: num3D(:,:,:)=>NULL(),numbot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: nuh3D(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: tke3D(:,:,:)=>NULL(),tkebot(:,:)=>NULL()
@@ -395,6 +396,9 @@ module getm_component
     if (associated(swr)) then
       call getmCmp_StateAddPtr("surface_downwelling_photosynthetic_radiative_flux",swr,exportState,"W m-2",name)
     end if
+    if (associated(SS3D)) then
+      call getmCmp_StateAddPtr("shear_frequency_squared_in_water",SS3D,exportState,"s-2",name,StaggerLoc=ESMF_STAGGERLOC_CENTER_VFACE)
+    end if
     if (associated(num3D)) then
       call getmCmp_StateAddPtr("turbulent_diffusivity_of_momentum_in_water",num3D,exportState,"m2 s-1",name,StaggerLoc=ESMF_STAGGERLOC_CENTER_VFACE)
     end if
@@ -410,7 +414,7 @@ module getm_component
     if (associated(tkebot)) then
       call getmCmp_StateAddPtr("turbulent_kinetic_energy_at_soil_surface",tkebot,exportState,"m2 s-2",name)
     end if
-    if (associated(eps3d)) then
+    if (associated(eps3D)) then
       call getmCmp_StateAddPtr("dissipation_of_tke_in_water",eps3D,exportState,"m2 s-3",name,StaggerLoc=ESMF_STAGGERLOC_CENTER_VFACE)
     end if
     if (associated(epsbot)) then
@@ -932,7 +936,7 @@ module getm_component
    use initialise     ,only: runtype
    use variables_2d   ,only: D
 #ifndef NO_3D
-   use variables_3d   ,only: hn,num,nuh,tke,eps
+   use variables_3d   ,only: hn,SS,num,nuh,tke,eps
 #ifndef NO_BAROCLINIC
    use m3d            ,only: calc_temp,calc_salt
    use variables_3d   ,only: T,S
@@ -1009,6 +1013,7 @@ module getm_component
       else
 #ifndef NO_3D
          allocate(h3D   (I3DFIELD))
+         allocate(SS3D  (I3DFIELD))
          allocate(num3D (I3DFIELD))
          allocate(nuh3D (I3DFIELD))
          allocate(tke3D (I3DFIELD))
@@ -1081,10 +1086,12 @@ module getm_component
          nuh3D => nuh
 #if 1
 !        some turbulent quantities still without target attribute in getm
+         allocate(SS3D  (I3DFIELD))
          allocate(num3D (I3DFIELD))
          allocate(tke3D (I3DFIELD))
          allocate(eps3D (I3DFIELD))
 #else
+         SS3D  => SS
          num3D => num
          tke3D => tke
          eps3D => eps
@@ -2033,7 +2040,8 @@ module getm_component
    use initialise     ,only: runtype
    use variables_2d   ,only: zo,z,D,Dvel,U,DU,V,DV
 #ifndef NO_3D
-   use variables_3d   ,only: dt,ho,hn,hvel,uu,hun,vv,hvn,ww,num,nuh,tke,eps
+   use variables_3d   ,only: dt,ho,hn,hvel,uu,hun,vv,hvn,ww
+   use variables_3d   ,only: SS,num,nuh,tke,eps
    use variables_3d   ,only: taubmax_3d
 #ifndef NO_BAROCLINIC
    use m3d            ,only: calc_temp,calc_salt
@@ -2080,6 +2088,7 @@ module getm_component
 #ifndef NO_3D
       if (runtype .gt. 1) then
          h3D    = hn
+         SS3D   = SS
          num3D  = num
          nuh3D  = nuh
          tke3D  = tke
@@ -2115,6 +2124,7 @@ module getm_component
 #if 1
 !     some turbulent quantities still without target attribute in getm
       if (runtype .gt. 1) then
+         SS3D   = SS
          num3D  = num
          tke3D  = tke
          eps3D  = eps
