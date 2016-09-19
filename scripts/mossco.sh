@@ -450,11 +450,17 @@ EOT
 
     if [  $(echo $(hostname) | grep -q mlogin) ]; then
       # These are instructions for mistral
-      if [ ${QUEUE} == undefined ]; then QUEUE=compute; fi
+      if [ ${QUEUE} == undefined ]; then QUEUE=compute2; fi
 
       echo \#SBATCH --account=$(groups | cut -d" " -f1) >> slurm.sh
       echo \#SBATCH --partition=${QUEUE}  >> slurm.sh
       echo \#SBATCH --nodes=${NODES}  >> slurm.sh
+
+      echo export I_MPI_FABRICS=shm:dapl >> slurm.sh
+      echo export I_MPI_FALLBACK=disable  >> slurm.sh
+      echo export I_MPI_SLURM_EXT=1  >> slurm.sh
+      echo export I_MPI_LARGE_SCALE_THRESHOLD=8192  >> slurm.sh
+
     else
       # This is tested on jureca
       if [ ${QUEUE} == undefined ]; then QUEUE=batch; fi
