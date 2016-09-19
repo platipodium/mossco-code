@@ -430,11 +430,11 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
                   call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
                 if (.not.isConformable) then
-                  write(message,'(A)') trim(name)//' skipped non-conforming grids'
+                  write(message,'(A)') trim(name)//' might contain non-conforming grids'
                   call MOSSCO_GridString(importGrid, message)
                   call MOSSCO_GridString(exportGrid, message)
                   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-                  cycle
+                  !cycle
                 endif
               endif
 
