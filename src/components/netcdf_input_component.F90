@@ -227,7 +227,7 @@ module netcdf_input_component
         call MOSSCO_MessageAdd(message,' '//trim(configFileName)//' interpolation: '//trim(interpolationMethod))
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       else
-        interpolationMethod='recent'
+        interpolationMethod='linear'
       endif
 
       call ESMF_AttributeGet(importState, 'interpolation_method', isPresent=isPresent, rc=localrc)
