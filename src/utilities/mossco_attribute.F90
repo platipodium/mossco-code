@@ -75,9 +75,12 @@ contains
     logical, intent(in)              :: value
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
-    integer(ESMF_KIND_I4)                :: localrc
+    integer(ESMF_KIND_I4)                :: localrc, rc_
 
     call ESMF_AttributeSet(state, trim(label), value=value, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     if (present(rc)) rc=localrc
 
   end subroutine MOSSCO_StateAttributeSetLogical
