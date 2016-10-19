@@ -1,0 +1,1 @@
+ncks -O -d level,0,4 -d level,5,6  -d level,5,6  -d level,7,8 -d level,7,8 -d level,9,11  -d level,9,11  -d level,12,13 -d level,12,14 -d level,15,19 bdy_3d_bio_ecoham_2000-2010_linear_ref_20SigmaL_MWNasis.nc bdy_ecoham_30.nc

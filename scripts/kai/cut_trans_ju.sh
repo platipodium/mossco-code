@@ -86,7 +86,7 @@ declare -a gd=(1 1 2 2)
 # ---------------------
 # User configuration
 # Declare a list of variables to extract
-declare -a vn=("Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water" "Chl_chl_in_water" "Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water" "Detritus_Carbon_detC_in_water" "Zooplankton_Carbon_zooC_in_water" "Phytplankton_Phosphorus_phyP_in_water" "Phytplankton_Nitrogen_phyN_in_water" )
+declare -a vn=("Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water" "Chl_chl_in_water" "Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water" "Detritus_Carbon_detC_in_water" "Zooplankton_Carbon_zooC_in_water" "Phytplankton_Phosphorus_phyP_in_water" "Phytplankton_Nitrogen_phyN_in_water" "Phytplankton_Carbon_phyC_in_water" "Virus_C_density_in_cells_vir_in_water")
 #    "mole_concentration_of_nitrate_in_soil" "Detritus_Carbon_detC_in_water" "Detritus_Nitrogen_detN_in_water" "Phytplankton_Carbon_phyC_in_water"  
 #tb='denitrification_rate_in_soil,layer_height_in_soil,fast_detritus_C_in_soil,detritus-P_in_soil,mole_concentration_of_nitrate_in_soil,mole_concentration_of_phosphate_in_soil,dissolved_oxygen_in_soil,dissolved_oxygen_upward_flux_at_soil_surface,dissolved_reduced_substances_upward_flux_at_soil_surface'
 

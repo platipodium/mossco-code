@@ -25,12 +25,12 @@ soil=0
 
 #prefix=netcdf_getm_fabm_pelagic.  # Prefix of files to process
 if [ -z ${prefix+x} ]; then prefix=mossco_gfbfrr. ; fi  # Prefix of files to process
-dt=5         # slicing of time dimension; 20 gives monthly means at 36h-output
-dt1=1   # creates high res output that is averaged 
-##dt1=$dt    # only cuts every dt time slice
+dt=3         # slicing of time dimension; 20 gives monthly means at 36h-output
+#dt1=1   # creates high res output that is averaged 
+dt1=$dt    # only cuts every dt time slice
 dlat=1        # slicing of lat dimension
 dlon=1        # slicing of lon dimension
-dz=18         # slicing of vertical dimension; 18 retrieves upper and lower layer for N=20
+dz=28         # slicing of vertical dimension; 18 retrieves upper and lower layer for N=20
 # ---------------------
 dt2=$[$dt-$dt1]
 
@@ -85,6 +85,7 @@ for p in $(seq -f $form $n1 $dn $nproc); do
   fname=${prefix}$p'.nc'
   outname=$outdir'/cut1_'$p'.nc'
   outname2=$outdir'/cut_'$p'.nc'
+  outnamec=$outdir'/cutc_'$p'.nc'
   outnamez=$outdir'/cutz_'$p'.nc'
 
   if ! [[ -f $fname ]] ; then
@@ -105,9 +106,20 @@ for p in $(seq -f $form $n1 $dn $nproc); do
 	-d getmGrid2D_getm_2,1,,${dlat} \
 	-d getmGrid3D_getm_1,1,,${dlon} \
 	-d getmGrid3D_getm_2,1,,${dlat} \
-	-d getmGrid3D_getm_3,1,,${dz} \
+	-d getmGrid3D_getm_3,1 \
+	-d getmGrid3D_getm_3,$[${dz}-1],$[${dz}+1] \
         -d ungridded00015,1,,13 \
 	-d time,$Nstart,$N,$dt1 $fname $outname2
+
+
+#  ncks -F -O -v Chl_chl_in_water \
+#	-d getmGrid2D_getm_1,1,,${dlon} \
+#	-d getmGrid2D_getm_2,1,,${dlat} \
+#	-d getmGrid3D_getm_1,1,,${dlon} \
+#	-d getmGrid3D_getm_2,1,,${dlat} \
+#	-d getmGrid3D_getm_3,$[${dz}-1],$[${dz}+1] \
+#	-d time,$Nstart,$N,$dt1 $fname $outnamec
+
 #    ncap -O -s "O2flux=dissolved_oxygen_upward_flux_at_soil_surface"  $outname2 $outname
 #    ncap -O -s "NC=Phytplankton_Nitrogen_phyN_in_water/(Phytplankton_Carbon_phyC_in_water+0.001)"  $outname $outname2
    ncap2 -O -s 'N2r=denitrification_rate_in_soil*layer_height_in_soil'  $outname2 $outname
