@@ -9,13 +9,13 @@
 %             N : not shown but stored		P : profiles   	C : Depth-time countours
 %	long name				short name  min max fac	fig row col type
 %	1					2	    3   4   5	6   7	8   9
-var={{'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';0;64; 1.0;	1; 1;1;'L9'};
-  {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0;1.8; 15;	1; 1;1;'L9'};
+var={{'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';0;34; 1.0;	1; 1;1;'L9'};
+  {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0;1.2; 15;	1; 1;1;'L9'};
 %  {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0;1.4; 1;	1; 2;1;'L0'};
 %%  {'Detritus_Phosphorus_detP_in_water';'POP';0.;1.8; 1;			1; 1;3;'L9'};
 %  {'Dissolved_Organic_Phosphorus_domP_in_water';'DOP';0.;2; 1;		1; 2;1;'L9'};
   {'Phytplankton_Phosphorus_phyP_in_water';'PhyP';0;2.5; 1.0;		1; 1;3;'N'};
-  {'Chl_chl_in_water';'CHL';0.5;35; 1;				1; 1;2;'L9'};
+  {'Chl_chl_in_water';'CHL';0.5;25; 1;				1; 1;2;'L9'};
 %  {'Chl_chl_in_water';'CHL';0.5;18; 1;				1; 1;2;'L9'};
 %%  {'Chl_chl_in_water';'CHL';0.;15; 1;				1; 3;2;'P0123456789'};
 %  {'Chl_chl_in_water';'CHL';0.;8; 1;				1; 2;4;'P579'};

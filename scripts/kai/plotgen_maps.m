@@ -1,19 +1,25 @@
 ytl=[1E-5 1E-4 1E-3 0.01 0.1 0.3 1 3 10 20 50 100 1E3 1E4 1E5 1E6];  
 ili=1; 
 ntagm=ntags+(exist('datat') & strcmp(varshort0,'CHL'));
- 
+
+if(~strcmp(varshort,varshortm0))
+   moff=moffs; mofc=0;
+else
+   mofc=mofc+1;
+end
+varshortm0=varshort;
 if isstrprop(ptag(2), 'xdigit') 
   vli=2:length(ptag); mode='s';
-else
-  vli=0:nrowm*ncolm-1; mode='v';
+elseif 1==0
+  vli=0:nrowm*ncolm-1; mode='c';
   moffs=moffs+1;
-  if(~strcmp(varshort,varshortm0))
-    moff=moffs; mofc=0;
-  else
-    mofc=mofc+1;
-  end
-  varshortm0=varshort;
+else
+  iig=find(timeg>=t0 & timeg<=t1);
+  vli=0:min(nrowm*ncolm,length(iig)-mofc*(nrowm*ncolm))-1; 
+  moffs=moffs+1;
+  mode='v';
 end
+
 
 di = cell2mat(var{i}(5)); %depth index
 
@@ -38,10 +44,17 @@ for im=1:length(vli)
   ti=it(zi);
   if strfind(tag,'P') ti=it(end-1); end
 
+ elseif mode=='c'
+  ix = 1+mod(im-1,ncolm);
+  iy = 1+floor((im-1)/ncolm);
+  ti = toffm+((cell2mat(var{i}(6))-moff)*(nrowm*ncolm)+im)*2;   
  else
   ix = 1+mod(im-1,ncolm);
   iy = 1+floor((im-1)/ncolm);
-  ti = toffm+((cell2mat(var{i}(6))-moff)*(nrowm*ncolm)+im)*2;     
+  [mdv mdi]=min(abs(timeg(iig(im+mofc*(nrowm*ncolm)))-int32(time)));
+  ti =mdi+toffm;
+%%  fprintf('%d/%d\t%d %d\t%d %d\n',im,length(vli),ti,mdi,timeg(iig(im+moff*(nrowm*ncolm))),int32(time(mdi)));
+
  end
  if ti-toffm<=length(ind)
 % goes to new figure (if required)
@@ -68,7 +81,7 @@ for im=1:length(vli)
   end
 
   indn=find(~isnan(value));
-  fprintf('%d %s/%s\t np=%d/%d mofc=%d im=%d i=%d %d\tmean=%1.2f\n',i,varshort,varn,np,cell2mat(var{i}(6)),mofc,im,ix,iy,mean(mean(value(indn))));
+  fprintf('%d %s/%s\t np=%d/%d mofc=%d im=%d/%d ixy=%d %d/%1.2f\tmean=%1.2f\t%d %d\n',i,varshort,varn,np,cell2mat(var{i}(6)),mofc,im,length(vli),ix,iy,y0,mean(mean(value(indn))),timeg(iig(im)),int32(time(mdi)));
 
 %% process min-max value
   minval = cell2mat(var{i}(3)); maxVal = cell2mat(var{i}(4)); 
@@ -151,20 +164,28 @@ for im=1:length(vli)
   figc=[figc npc];
     % geometry of sub-plot
   x0=0.06+(ix-1)*1.15*dxpm; y0=0.1+(iy-1)*1.03*dypm;
-  fprintf('im=%d ix=%d iy=%d %1.2f npc=%d\t%d\n',im,ix,iy,y0,npc,mofc);
+  fprintf('copy im=%d ix=%d iy=%d %1.2f npc=%d\t%d\n',im,ix,iy,y0,npc,mofc);
   ax_cmp=subplot('Position',[x0 y0 dxpm dypm]);hold on
   copyaxes(axs,ax_cmp,true );  
 
 
 %% plot satellite map for comparison  
-  if(ntagm~=ntags)
+  if(ntagm~=ntags & im0<length(iig))
     % find best date of data
-    ii=find(yearg==year(ti-toffm));
-    [mdv mdi]=min(abs(doyg(ii)-doy(ti-toffm)));
-    if(mdv < 32)
-     iy = max(nrowm-ntags-0,0);
-     plotdatamap;
+    if mode=='v'
+      ii=iig;
+      mdi=im+mofc*(nrowm*ncolm);mdv=0;
+    else
+      ii=find(yearg==year(ti-toffm));
+      [mdv mdi]=min(abs(doyg(ii)-doy(ti-toffm)));
     end
+    if(mdv < 21)
+     iy = max(nrowm-ntags-0,0);
+ %%  fprintf('data im=%d iy=%d \t%d %d\n',im,iy,mdi,ii(mdi));
+     plotdatamap;
+     im0=im0+1;
+    end
+
   end   
 
   % colormap(ssec); 

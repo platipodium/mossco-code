@@ -31,7 +31,7 @@ for id=0:ndvar-1
     data{is,iv} = netcdf.getVar(ncid,id);
    %dimv(id+1)= natts-2;
    %if (ismember(id,vid_tshow))  
- %%   fprintf('%d %s found %d values\n',is,(vars{is,iv}),length(find(~isnan(data{is,iv}))));
+    fprintf('%d %s found %d values\n',is,(vars{is,iv}),length(find(~isnan(data{is,iv}))));
    %end
     iv=iv+1;
     vars{id,iv}='';
@@ -63,13 +63,16 @@ for i=1:is
 end
 
 % connect station and variable name to data index
-for li=1:size(loc,1) 
-  show_dati(li)=0;
-  for i=1:is
+if size(loc,1) ==1
+  show_dati(1)=1;
+else
+ for li=1:size(loc,1) 
+   show_dati(li)=0;
+   for i=1:is
     if strcmpi(locs{li},statn{i})
       show_dati(li)=i;
       break;
     end
-  end
+   end
+ end
 end
-

@@ -3,7 +3,7 @@
 %
 % kai wirtz Nov2015
 %
-clear all;close all;
+clear all;close all;surf=0;
 addpath('~/tools/m_map');  % map-toolbox needed for 2D plots
 show_data=1; nice=0; Is1D=0; datf='~/data/DeutscheBucht/stations.nc';
 %% settings
