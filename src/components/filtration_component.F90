@@ -260,7 +260,7 @@ module filtration_component
         call MOSSCO_MessageAdd(message, diagNameList, rc=localrc)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       else ! provide default diagnostic names
-        call MOSSCO_Reallocate(diagNameList, 6, keep=.false., rc=localrc)
+        call MOSSCO_Reallocate(diagNameList, 7, keep=.false., rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
