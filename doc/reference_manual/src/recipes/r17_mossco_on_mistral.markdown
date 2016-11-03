@@ -6,11 +6,12 @@ Mistral is a RedHat6 Linux system with 1500 nodes with each 2x12 core processors
 
 ## Preparing your toolchain
 
-This recipe gives instructions for the intel14/openmpi toolchain.  On mistral, there are many more compilers (gcc4, gcc5, nag) and MPI installations (bull, intel, mvapich, openmpi) available.
+This recipe gives instructions for the intel14/openmpi toolchain.  On mistral, there are many more or more recent compilers (gcc4, gcc5, nag, intel16) and MPI installations (bull, intel, mvapich, openmpi) available.
 
         module purge
         module load openmpi/1.8.4-intel14
-        module load python
+        module load intel/14.0.3
+        module load nco ncview python
 
 ## Downloading MOSSCO and obtaining external sources
 
@@ -36,19 +37,36 @@ This recipe also assumes that you have downloaded or `git clone`d MOSSCO into a 
 
 Note that aliases don't reliably work  for `nf-config`, so we use soft links here.
 
-## Installing ESMF
+## Using a preinstalled ESMF or installing it yourself
 
-Use the script `$MOSSCO_DIR/scripts/installation/install_esmf_versions.sh`.  Edit
+### Using a preinstalled ESMF
+
+If you are part of the ecosystem modeling HPC group at DKRZ, then you will have read rights
+to the installation located at
+
+        export ESMFMKFILE=/pf/g/g260077/opt/lib/libg/Linux.intel.64.openmpi.ESMF_7_1_0_beta_snapshot_00/esmf.mk
+
+### Installing ESMF yourself
+
+To install ESMF, use the script `$MOSSCO_DIR/scripts/installation/install_esmf_versions.sh`.  Edit
 the entries for `COMPILER` and `COMM` to `intel` and `openmpi`, respectively.
 
         export ESMF_DIR=/my/path/to/esmf
         cd $ESMF_DIR;
         $MOSSCO_DIR/scripts/installation/install_esmf_versions.sh
 
+        export ESMFMKFILE=$HOME/opt/lib/libg/Linux.intel.64.openmpi.ESMF_7_0_0_beta_snapshot_49/esmf.mk
 
-## Installing py-yaml
+## Installing or using py-yaml
 
-Download and install py-yaml
+### Using a preinstalled py-yaml
+
+If you are part of the ecosystem modeling HPC group at DKRZ, then you will have read rights
+to the installation located at
+
+        export PYTHONPATH=$PYTHONPATH:/pf/g/g260077/opt/lib/python2.7/site-packages
+
+### Download and install py-yaml
 
         mkdir -p $HOME/opt/PYTHON/
         cd $HOME/opt/PYTHON/
@@ -57,13 +75,12 @@ Download and install py-yaml
         cd PyYAML-3.11
         python setup.py install --prefix=$HOME/opt
 
-## Last steps
-
         export PYTHONPATH=$PYTHONPATH:$HOME/opt/lib/python2.7/site-packages
-        export ESMFMKFILE=$HOME/opt/lib/libg/Linux.intel.64.openmpi.ESMF_7_0_0_beta_snapshot_49/esmf.mk
+
+## Last steps
 
         export NETCDF=NETCDF4
         export NETCDF_VERSION=$NETCDF
         export FORTRAN_COMPILER=IFORT
 
-Now you're ready to build and run MOSSCO applications by continuing with the [using_mossco_sh] recipe
+Now you're ready to build and run MOSSCO applications by continuing with the [[using_mossco_sh]] recipe

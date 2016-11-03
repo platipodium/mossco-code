@@ -33,7 +33,7 @@ The code is available via @c git for read-only access. If you don't have @c git,
 
 > If you are a developer and registered as a participant of the MOSSCO project, you may use a modified version of this command to gain write access.
 
-> If you do not have @c git, you may also download a zipped version of the source code from the "Files" section at [sf.net/projects/mossco/files](https://sourceforge.net/projects/mossco/files/). Note, however, that these snapshots may be outdated at the time of your download.  Download the file to the directory where $MOSSCO_DIR points to, then unzip it.
+> If you do not have @c git, you may also download a zipped version of the source code from the "Files" section at [sf.net/projects/mossco/files](https://sf.net/p/mossco/files/). Note, however, that these snapshots may be outdated at the time of your download.  Download the file to the directory where $MOSSCO_DIR points to, then unzip it.
 
 @section installing Installing MOSSCO
 
@@ -160,7 +160,7 @@ To create the documentation (the file you're reading right now), issue
 make doc
 ~~~~
 
-(don't worry too much about the warning messages that occur with outdated doxygen version.  Also, some of the heading and table markup may not render correctly with old doxygen versions). If you do not have doxygen installed, you can alternatively consult the fairly recent online documentation at [www.mossco.de/doc](http://www.mossco.de/doc "Mossco Online Documentation"), or download a - probably outdated -  pdf of the documentation from [sf.net/projects/mossco/files/Reference%20Manual/](https://sourceforge.net/projects/mossco/files/Reference%20Manual/).
+(don't worry too much about the warning messages that occur with outdated doxygen version.  Also, some of the heading and table markup may not render correctly with old doxygen versions). If you do not have doxygen installed, you can alternatively consult the fairly recent online documentation at [www.mossco.de/doc](http://www.mossco.de/doc "Mossco Online Documentation"), or download a - probably outdated -  pdf of the documentation from [sf.net/projects/mossco/files/Reference%20Manual/](https://sf.net/p/mossco/files/Reference%20Manual/).
 
 To create the examples and test your installation, issue
 
@@ -195,7 +195,7 @@ For `csh` you would, in a similar fashion, say
 
 @section reporting Reporting errors
 
-Bugs as well as annoyances and feature requests are collected in a bug tracker located at https://sourceforge.net/projects/mossco/tickets/.  Please search for an existing ticket before reporting a new one.
+Bugs as well as annoyances and feature requests are collected in a bug tracker located at https://sf.net/p/mossco/tickets/.  Please search for an existing ticket before reporting a new one.
 
 Do report any issue that you observe, even if this later turns out to be a problem related to your local computing environment and not to the MOSSCO code itself.  We encourage to document any problem that you encountered during the installation of MOSSCO: someone else might have the same issue and could profit from your experience.
 
