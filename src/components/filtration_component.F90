@@ -370,7 +370,7 @@ module filtration_component
         = itemNameList(:)
 
     !> Create export states for all variables above index 5,  add diagnostic variables
-    do i = 1, ubound(diagNameList,1)
+    do i = 6, ubound(diagNameList,1)
       !> Create export states for diagnostic, filter and co-filter items
       if (i < ubound(diagNameList,1)-size(itemNameList)) then
         field = ESMF_FieldEmptyCreate(name=trim(diagNameList(i)), rc=localrc)
