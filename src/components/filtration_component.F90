@@ -1105,7 +1105,7 @@ module filtration_component
 
       !> Bottom shear stress translates to shear velocity with the square root:
       !> $$ u^* = \sqrt\left(\frac{\tau}{\rho}\right)
-      ustar(RANGE2D,lbound(speed,3)) = sqrt(bottomShearStress/1000)
+      ustar(RANGE2D,lbound(speed,3)) = sqrt(bottomShearStress(RANGE2D)/1000)
     endif
 
     !> Finally, apply law of the wall to estimate the boundary speed at distance
