@@ -136,7 +136,7 @@ module filtration_component
 
     character(ESMF_MAXSTR)  :: name, message, configfilename
     type(ESMF_Time)         :: currTime
-    integer(ESMF_KIND_I4)   :: localrc, rank, otherCount, i
+    integer(ESMF_KIND_I4)   :: localrc, rank, otherCount, i, diagCount
     type(ESMF_Field)        :: field
     type(ESMF_FieldBundle)  :: fieldBundle
     type(ESMF_Config)       :: config
@@ -259,24 +259,26 @@ module filtration_component
         write(message,'(A)') trim(name)//' found diagnostic:'
         call MOSSCO_MessageAdd(message, diagNameList, rc=localrc)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      else ! provide default diagnostic names
-        call MOSSCO_Reallocate(diagNameList, 7, keep=.false., rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        diagNameList(1) = 'mussel_abundance_in_water'
-        diagNameList(2) = 'layer_height_in_water'
-        diagNameList(3) = 'potential_clearance_rate'
-        diagNameList(4) = 'boundary_layer_speed'
-        diagNameList(5) = 'maximum_filtration_rate'
-        diagNameList(6) = 'fractional_filtration_rate'
-        diagNameList(7) = 'shear_speed'
+      ! else ! provide default diagnostic names
+      !   call MOSSCO_Reallocate(diagNameList, 7, keep=.false., rc=localrc)
+      !   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      !     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !
+      !   diagNameList(1) = 'mussel_abundance_in_water'
+      !   diagNameList(2) = 'layer_height_in_water'
+      !   diagNameList(3) = 'potential_clearance_rate'
+      !   diagNameList(4) = 'boundary_layer_speed'
+      !   diagNameList(5) = 'maximum_filtration_rate'
+      !   diagNameList(6) = 'fractional_filtration_rate'
+      !   diagNameList(7) = 'shear_speed'
 
       endif
 
-      call MOSSCO_AttributeSet(gridComp, 'diagnostic_variables', diagNameList, localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (allocated(diagNameList)) then
+        call MOSSCO_AttributeSet(gridComp, 'diagnostic_variables', diagNameList, localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
     endif
 
@@ -356,7 +358,10 @@ module filtration_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
 
-    call MOSSCO_Reallocate(diagNameList, ubound(itemNameList,1)+size(diagNameList), &
+    diagCount = 0
+    if (allocated(diagNameList)) diagCount = size(diagNameList)
+
+    call MOSSCO_Reallocate(diagNameList, ubound(itemNameList,1) + diagCount, &
       keep=.true., rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1121,13 +1126,13 @@ module filtration_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_AttributeAdd(fieldList(1), 'units', 'mmol m-3 s-1', rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_AttributeAdd(fieldList(1), 'creator', trim(name), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      ! call ESMF_AttributeAdd(fieldList(1), 'units', 'mmol m-3 s-1', rc=localrc)
+      ! if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      !   call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !
+      ! call ESMF_AttributeAdd(fieldList(1), 'creator', trim(name), rc=localrc)
+      ! if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      !   call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     else
       allocate(potentialClearanceRate(RANGE3D), stat=localrc)
