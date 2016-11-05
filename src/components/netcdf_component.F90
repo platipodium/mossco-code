@@ -474,11 +474,13 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           if (ismatch) exit
         enddo
 
-        if (isMatch .and. advanceCount < 1) then
-          write(message,'(A)') trim(name)//' excluded'
-          call MOSSCO_MessageAdd(message, ' '//trim(itemNameList(i))//' from pattern ')
-          call MOSSCO_MessageAdd(message, ' '//trim(filterExcludeList(j)))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        if (isMatch) then
+          if (advanceCount < 1) then
+            write(message,'(A)') trim(name)//' excluded'
+            call MOSSCO_MessageAdd(message, ' '//trim(itemNameList(i))//' from pattern ')
+            call MOSSCO_MessageAdd(message, ' '//trim(filterExcludeList(j)))
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          endif
           cycle
         endif
       endif
@@ -491,10 +493,12 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           if (ismatch) exit
         enddo
-        if (.not.ismatch  .and. advanceCount < 1) then
-          write(message,'(A)') trim(name)//' did not include '
-          call MOSSCO_MessageAdd(message,' '//itemNameList(i))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        if (.not.ismatch) then
+          if (advanceCount < 1) then
+            write(message,'(A)') trim(name)//' did not include '
+            call MOSSCO_MessageAdd(message,' '//itemNameList(i))
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          endif
           cycle
         endif
       endif
