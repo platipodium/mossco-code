@@ -1052,6 +1052,7 @@ module filtration_component
     !> with the equivalent sand roughness 30 times the surface roughness
     !> $k_s$ = 30 z_0$.
     if (.not.allocated(frictionCoefficient)) allocate(frictionCoefficient(RANGE2D))
+    surfaceRoughness = 0.0044
     sandRoughness = 30 * surfaceRoughness
     frictionCoefficient(RANGE2D) = - 2.03 * log10(sandRoughness &
       / 14.84 / hydraulicRadius(RANGE2D))
