@@ -236,6 +236,7 @@ module getm_component
 #define ESMF_METHOD "InitializeP1"
   subroutine InitializeP1(gridComp,importState,exportState,clock,rc)
 
+    use time, only : init_time
     use time, only : getm_time_start => start, getm_time_stop => stop
     use time, only : getm_time_timestep => timestep
     use initialise , only: init_model,init_initialise,do_initialise

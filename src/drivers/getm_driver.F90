@@ -10,12 +10,6 @@
 ! !DESCRIPTION:
 !
 ! !USES:
-   use initialise
-!  these variables are needed in init_time(), but cannot be included there
-!  because of name-clash with NML
-   use time, only: start,stop,timestep,days_in_mon
-   use time, only: jul0,secs0,juln,secsn,julianday,secondsofday,simtime
-   use time, only: String2JulSecs,time_diff,write_time_string,update_time
    IMPLICIT NONE
 
    interface
@@ -34,7 +28,6 @@
    private
 !
 ! !PUBLIC DATA MEMBERS:
-   public init_time
    public do_transport,do_transport_3d
    public zero_gradient_3d_bdy
 !
@@ -46,147 +39,6 @@
 
    contains
 
-!-----------------------------------------------------------------------
-!BOP
-!
-! !IROUTINE: init_time - initialise the time system in getm
-!
-! !INTERFACE:
-   subroutine init_time(MinN,MaxN,start_external,stop_external)
-!
-! USES:
-!   use time, only: start,stop,timestep,days_in_mon
-!   use time, only: jul0,secs0,juln,secsn,julianday,secondsofday,simtime
-!   use time, only: String2JulSecs,time_diff,write_time_string,update_time
-   IMPLICIT NONE
-!
-! !INPUT PARAMETERS:
-   character(len=19),intent(in),optional :: start_external,stop_external
-!
-! !INPUT/OUTPUT PARAMETERS:
-!
-! !OUTPUT PARAMETERS:
-   integer, intent(out)                  :: MinN,MaxN
-!
-! !DESCRIPTION:
-!  Reads the namelist and makes calls to the init functions of the
-!  various model components.
-!
-! !REVISION HISTORY:
-!  Original author(s): Karsten Bolding & Hans Burchard
-!
-! !LOCAL VARIABLES:
-   logical                   :: use_external
-   logical                   :: HasRealTime=.true.
-   integer                   :: timefmt=1
-   integer                   :: jul1,secs1,jul2,secs2
-   integer                   :: ndays,nsecs
-   integer                   :: nfirst,nlast
-   namelist /time/ timestep,timefmt,nlast,start,stop
-!
-!EOP
-!-------------------------------------------------------------------------
-!BOC
-#ifdef DEBUG
-   integer, save :: Ncall = 0
-   Ncall = Ncall+1
-   write(debug,*) 'init_time() # ',Ncall
-#endif
-   days_in_mon(0,:) = (/31,28,31,30,31,30,31,31,30,31,30,31/)
-   days_in_mon(1,:) = (/31,29,31,30,31,30,31,31,30,31,30,31/)
-
-   use_external = ( present(start_external) .and. present(stop_external) )
-
-!
-!  Read time specific things from the namelist.
-!
-   LEVEL1 'init_time'
-   READ(NAMLST,NML=time)
-
-   if (use_external) then
-      timefmt = 2
-      start = start_external
-      stop = stop_external
-   end if
-
-!
-!  Calculate MaxN -> MinN is 1 if not changed by HotStart
-!
-   MinN = 1
-   MaxN = nlast
-   LEVEL2 'Time step:      ',timestep,' seconds'
-   LEVEL2 'Time format:    ',timefmt
-   select case (timefmt)
-      case (0)
-!KBK
-         LEVEL2 'Hopefully we will get the time from the hot start file'
-      case (1)
-         HasRealTime=.false.
-         LEVEL2 '# of timesteps: ',MaxN
-         start='2000-01-01 00:00:00'
-
-         call String2JulSecs(start,jul1,secs1)
-
-         nsecs = nint(MaxN*timestep) + secs1
-         ndays = nsecs/86400
-         jul2  = jul1 + ndays
-         secs2 = mod(nsecs,86400)
-         call write_time_string(jul2,secs2,stop)
-
-         LEVEL2 'Fake start:     ',start
-         LEVEL2 'Fake stop:      ',stop
-      case (2)
-         LEVEL2 'Start:          ',start
-         LEVEL2 'Stop:           ',stop
-
-         call String2JulSecs(start,jul1,secs1)
-         call String2JulSecs(stop,jul2,secs2)
-
-         nsecs = time_diff(jul2,secs2,jul1,secs1)
-         MaxN  = nint(nsecs/timestep)
-
-         ndays = jul2-jul1
-         if (nsecs .lt. 86400 .and. jul1 .ne. jul2) ndays = ndays-1
-         nsecs = nsecs - 86400*ndays
-         STDERR '        ==> ',ndays,' day(s) and ',nsecs,' seconds ==> ',MaxN,' micro time steps'
-      case (3)
-         LEVEL2 'Start:          ',start
-         LEVEL2 '# of timesteps: ',MaxN
-
-         call String2JulSecs(start,jul1,secs1)
-
-         nsecs = nint(MaxN*timestep) + secs1
-         ndays = nsecs/86400
-         jul2  = jul1 + ndays
-         secs2 = mod(nsecs,86400)
-
-         call write_time_string(jul2,secs2,stop)
-         LEVEL2 'Stop:           ',stop
-      case default
-         STDERR 'Fatal error: A non valid input format has been chosen'
-         stop 'init_time'
-   end select
-
-   jul0  = jul1
-   secs0 = secs1
-
-   juln  = jul2
-   secsn = secs2
-
-   julianday    = jul0
-   secondsofday = secs0
-
-   simtime = timestep*(MaxN-MinN+1)
-
-   call update_time(0)
-
-#ifdef DEBUG
-   write(debug,*) 'Leaving init_time()'
-   write(debug,*)
-#endif
-   return
-   end subroutine init_time
-!EOC
 !-----------------------------------------------------------------------
 !BOP
 !
