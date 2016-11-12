@@ -783,7 +783,7 @@ module getm_component
   subroutine Run(gridComp,importState,exportState,clock,rc)
 
     use initialise ,only: runtype,dryrun
-    use integration,only: MinN
+    use integration,only: time_step,MinN
     use m3d, only: M
 
     implicit none
