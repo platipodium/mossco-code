@@ -238,7 +238,8 @@ module getm_component
 
     use time, only : getm_time_start => start, getm_time_stop => stop
     use time, only : getm_time_timestep => timestep
-    use initialise,  only: init_model,dryrun
+    use initialise , only: init_model,init_initialise,do_initialise
+    use initialise , only: dryrun
     use integration, only: MinN,MaxN
     use meteo      ,only: met_method,METEO_CONST,METEO_FROMFILE,METEO_FROMEXT
     use waves      ,only: waveforcing_method,WAVES_FROMWIND,WAVES_FROMFILE,WAVES_FROMEXT
@@ -318,10 +319,10 @@ module getm_component
       call ESMF_TimeGet(stopTime,timeStringISOFrac=stop_external, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call preinit_model(datestr,timestr)
+      call init_initialise(datestr,timestr)
       call init_time(MinN,MaxN,start_external=start_external, &
                      stop_external=stop_external)
-      call postinit_model()
+      call do_initialise()
 
       ! use internal GETM time step
       call ESMF_TimeIntervalSet(timeInterval,s_r8=getm_time_timestep, rc=localrc)
