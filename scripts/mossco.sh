@@ -311,15 +311,14 @@ if [[ ${NPROC} == ${NP} ]]; then
   PPN=${NPROC}
   NODES=1
 else
-  PPN=$(echo ${NP} | cut -d':' -f2 | cut -d'x' -f1)
-  NODES=$(echo ${NP} | -d'x' -f2)
+  PPN=$(echo ${NP} | cut -d':' -f2 |cut -d 'x' -f1)
+  NODES=$(echo ${NP} | cut -d':' -f2 |cut -d 'x' -f2)
   if [[ ${NODES} == ${NP} ]]; then
     NODES=1
   fi
 fi
 
 NP=${NPROC}
-#echo $NPROC $PPN $NODES
 
 if [[ "${NP}" ==  "${NODES}" ]]; then
   case ${SYSTEM} in
@@ -343,7 +342,9 @@ if [[ "${NP}" ==  "${NODES}" ]]; then
 fi
 NP=$(expr ${NODES} \* ${PPN})
 
-if [[ ${NPROC} > ${NP} ]]; then
+#echo np=$NP nodes=$NODES ppn=$PPN
+
+if [[ ${NPROC} -gt ${NP} ]]; then
   echo "Illegal to specify more processors than resources requested (${NPROC} > ${NODES}x${PPN})"
   exit 1
 fi
@@ -448,7 +449,7 @@ EOT
 #SBATCH --job-name=${TITLE}
 EOT
 
-    if [  $(echo $(hostname) | grep -q mlogin) ]; then
+    if [  $(echo $HOSTNAME |grep -c mlogin) == 1 ]; then
       # These are instructions for mistral
       if [ ${QUEUE} == undefined ]; then QUEUE=compute2; fi
 
