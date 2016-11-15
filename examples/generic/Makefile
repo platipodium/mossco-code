@@ -44,4 +44,4 @@ links: $(shell ls *--*.yaml)
 
 extraclean: Makefile.coupling
 	$(MAKE) -f Makefile.coupling $@
-	$(RM) Makefile.coupling toplevel_component.F90 toplevel.component.o $(EXAMPLES)
+	$(RM) Makefile.coupling toplevel_component.F90 toplevel_component.o $(EXAMPLES)
