@@ -1036,8 +1036,10 @@ module filtration_component
     if (.not.allocated(hydraulicRadius)) allocate(hydraulicRadius(RANGE2D))
     diameter = 3
     distance = 250
-    hydraulicRadius = ((distance - diameter) * depthAtSoil(RANGE2D)) &
-      / (distance - diameter + 2 * depthAtSoil(RANGE2D))
+    where(depthAtSoil(RANGE2D) > 0)
+      hydraulicRadius = ((distance - diameter) * depthAtSoil(RANGE2D)) &
+        / (distance - diameter + 2 * depthAtSoil(RANGE2D))
+    endwhere
 
     !> The Colebrook-White resistance law
     !> $$
@@ -1054,10 +1056,15 @@ module filtration_component
     if (.not.allocated(frictionCoefficient)) allocate(frictionCoefficient(RANGE2D))
     surfaceRoughness = 0.0044
     sandRoughness = 30 * surfaceRoughness
-    frictionCoefficient(RANGE2D) = - 2.03 * log10(sandRoughness &
-      / 14.84 / hydraulicRadius(RANGE2D))
-    frictionCoefficient(RANGE2D) = 1 / (frictionCoefficient(RANGE2D) &
-      * frictionCoefficient(RANGE2D))
+    where(hydraulicRadius(RANGE2D) > 0) 
+      frictionCoefficient(RANGE2D) = - 2.03 * log10(sandRoughness &
+        / 14.84 / hydraulicRadius(RANGE2D))
+    endwhere
+
+    where(frictionCoefficient > 0)
+      frictionCoefficient(RANGE2D) = 1 / (frictionCoefficient(RANGE2D) &
+        * frictionCoefficient(RANGE2D))
+    endwhere
 
     !> For typical valus of z0 = 4.4 mm and the hydraulic radius of 25, the
     !> friction coefficient is 1 / 50 = 0.02
@@ -1229,7 +1236,8 @@ module filtration_component
       maxval(-lossRate(RANGE3D),mask=mask(RANGE3D)),' mmol m-3 s-1'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-    ! For diagnostics and co-filtration of other species, calculate the fractional loss rate
+    ! For diagnostics and co-filtration of other species, calculate the fractional loss rate 
+    fractionalLossrate = 0.0
     where (concentration(RANGE3D) > 0)
       fractionalLossRate(RANGE3D) = lossRate(RANGE3D) / concentration(RANGE3D)
     endwhere
