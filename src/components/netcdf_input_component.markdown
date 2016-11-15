@@ -61,7 +61,14 @@ period (beginning with the first time in the data) that should be repeatedly use
 
 - The `interpolation`: string is one of "recent, nearest, next, linear". The first three
 report the data at the nearest recent, nearest, or nearest next time data point,
-the latter interpolates linearly between the two nearest time data points.
+the latter interpolates linearly between the two nearest time data points. The default is
+"recent".
+
+### Usage recommendations
+
+- We recommend to make sure that the "recent" interpolation method (default) is set when
+reading river inflow data.  This ensures consistency at least with the GETM ocean model, and
+it allows for the consideration of closure times of weirs. 
 
 ### History
 
