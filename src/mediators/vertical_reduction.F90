@@ -259,6 +259,7 @@ module vertical_reduction
     integer(ESMF_KIND_I4)   :: localrc
 
     rc=ESMF_SUCCESS
+    return ! todo
 
     call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -330,10 +331,10 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     type(ESMF_State)                       :: importState, exportState
     integer(ESMF_KIND_I4), optional        :: rc
 
-    type(ESMF_Field), allocatable          :: importfieldList(:), exportFieldList(:)
+    type(ESMF_Field), allocatable          :: importfieldList(:), exportFieldList(:), fieldList(:)
     character(ESMF_MAXSTR)                 :: message, itemName, name, operator
     integer(ESMF_KIND_I4)                  :: i, j, jj, rank
-    integer(ESMF_KIND_I4)                  :: importFieldCount, exportFieldCount
+    integer(ESMF_KIND_I4)                  :: importFieldCount, exportFieldCount, fieldCount
 
     logical                                 :: isPresent, tagOnly_, isMatch
     character(len=ESMF_MAXSTR), allocatable :: filterExcludeList(:), filterIncludeList(:)
@@ -449,15 +450,18 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
         endif
       endif
 
-      call MOSSCO_StateGetFieldList(importState, importFieldList, fieldCount=importFieldCount, &
+      !> @todo add later capability for field bundles, for now
+      !> get a temporary fieldList with all items mathcing itemName
+      call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
         itemSearch=trim(itemName), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      !> if not found, or if multiple fields with the same name, then skip this, also skip
-      !> on empty fields
-      !> @todo add later capability for field bundles
-      if (importFieldCount /= 1) cycle
+      call MOSSCO_Reallocate(fieldList, 0,  rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (fieldCount /= 1) cycle
 
       call ESMF_FieldGet(importFieldList(i), status=fieldStatus, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -486,6 +490,10 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
       if (exportFieldCount < 1) then
         call MOSSCO_CreateVerticallyReducedField(importFieldList(i), exportField, operator=operator, &
           scale=scale, offset=offset, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call ESMF_StateAddReplace(exportState, (/exportField/), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
