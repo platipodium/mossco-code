@@ -822,6 +822,7 @@ module filtration_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     else
       allocate(abundance(RANGE3D), stat=localrc)
+      abundance(RANGE3D) = 0.0
     endif
 
     ! Get mussel abundance to import
@@ -890,6 +891,12 @@ module filtration_component
         abundance(RANGE2D,ubnd(3)) = abundanceAtSurface(RANGE2D) &
           / layerHeight(RANGE2D,ubnd(3))
       endwhere
+      write(message,'(A,ES10.3,A)') trim(name)//' max surface abundance is ', &
+          maxval(abundanceAtSurface(RANGE2D)),' m-2'
+      !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      write(message,'(A,ES10.3,A)') trim(name)//' min upper layer height is ', &
+          minval(layerHeight(RANGE2D,ubnd(3))),' m'
+      !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       write(message,'(A,ES10.3,A)') trim(name)//' max upper layer abundance is ', &
           maxval(abundance(RANGE2D,ubnd(3))),' m-3'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
@@ -900,6 +907,12 @@ module filtration_component
         abundance(RANGE2D,lbnd(3)) = abundanceAtSoil(RANGE2D) &
           / layerHeight(RANGE2D,lbnd(3))
       endwhere
+      write(message,'(A,ES10.3,A)') trim(name)//' max bottom abundance is ', &
+          maxval(abundanceAtSoil(RANGE2D)),' m-2'
+      !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      write(message,'(A,ES10.3,A)') trim(name)//' min lowest layer height is ', &
+          minval(layerHeight(RANGE2D,lbnd(3))),' m'
+      !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       write(message,'(A,ES10.3,A)') trim(name)//' max lowest layer abundance is ', &
           maxval(abundance(RANGE2D,lbnd(3))),' m-3'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
@@ -1242,8 +1255,8 @@ module filtration_component
       fractionalLossRate(RANGE3D) = lossRate(RANGE3D) / concentration(RANGE3D)
     endwhere
 
-    write(message,'(A,ES10.3,A)') trim(name)//' is filtering up to ', &
-        maxval(-lossRate(RANGE3D),mask=mask(RANGE3D)),' mmol m-3 s-1'
+    write(message,'(A,ES10.3)') trim(name)//' is filtering up to fraction ', &
+        maxval(-fractionalLossRate(RANGE3D),mask=mask(RANGE3D))
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     call MOSSCO_AttributeGet(gridComp, 'filter_other_species', filterSpeciesList, rc=localrc)
@@ -1261,12 +1274,12 @@ module filtration_component
 
       ! Get cofiltered flux species, be careful to look at the creator attribute to choose
       ! the right one
-      call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
+      call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
         itemSearch=trim(fluxName), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      do j=1, fieldCount
+      do j=1, fieldCount 
         call ESMF_AttributeGet(fieldList(j), 'creator', creatorName, defaultValue='none', rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1280,7 +1293,7 @@ module filtration_component
       if (fieldCount /= 1) then
         write(message,'(A)') trim(name)//' did not find complete field with name '//trim(fluxName)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-        call MOSSCO_StateLog(importState)
+        call MOSSCO_StateLog(exportState)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
@@ -1322,7 +1335,7 @@ module filtration_component
         lossRate(RANGE3D) = fractionalLossRate(RANGE3D) * concentration(RANGE3D) ! mmol s-1 m-3
       endwhere
 
-      write(message,'(A,ES10.3,A)') trim(name)//' is filtering up to ', &
+      write(message,'(A,ES10.3,A)') trim(name)//' is co-filtering up to ', &
           maxval(-lossRate(RANGE3D),mask=mask(RANGE3D)),' XXX s-1'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
