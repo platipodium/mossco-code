@@ -19,7 +19,7 @@ EXTRA_DIST=README
 TARGETS=
 ifeq ($(MOSSCO_ESMF),true)
 TARGETS += libremtc  libxgridcoupler libredistcoupler
-TARGETS += libcopycoupler libregridcoupler libinoutcoupler
+TARGETS += libcopycoupler libregridcoupler libinoutcoupler libverticalreduction
 ifeq ($(MOSSCO_FABM),true)
 TARGETS += liboceansedimentcoupler
 TARGETS += pelagicbenthiccoupler
@@ -49,6 +49,7 @@ endif
 
 libpelagicbenthic_mediator: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(pelagic_benthic_mediator.o)
 
+libverticalreduction: prefix $(MOSSCO_LIBRARY_PATH)/libverticalreduction.a
 libinoutcoupler: prefix $(MOSSCO_LIBRARY_PATH)/libinoutcoupler.a
 libxgridcoupler: prefix $(MOSSCO_LIBRARY_PATH)/libxgridcoupler.a
 libcopycoupler: prefix $(MOSSCO_LIBRARY_PATH)/libcopycoupler.a
@@ -77,6 +78,9 @@ $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(pelagic_benthic_mediator.o): pelagic
 
 $(MOSSCO_LIBRARY_PATH)/libregridcoupler.a: regrid_coupler.o
 	$(AR) cruvs $@ regrid_coupler.o
+
+$(MOSSCO_LIBRARY_PATH)/libverticalreduction.a: vertical_reduction.o
+	$(AR) cruvs $@ $<
 
 $(MOSSCO_LIBRARY_PATH)/libinoutcoupler.a: inout_coupler.o
 	$(AR) cruvs $@ inout_coupler.o
