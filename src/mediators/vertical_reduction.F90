@@ -17,6 +17,9 @@
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "vertical_reduction.F90"
 
+#define RANGE2D lbnd(1):ubnd(1),lbnd(2):ubnd(2)
+#define RANGE3D lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)
+
 module vertical_reduction
 
   use esmf
@@ -525,7 +528,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
 
     type(ESMF_Field), allocatable          :: importfieldList(:), exportFieldList(:)
     character(ESMF_MAXSTR)                 :: message, itemName, name, operator
-    integer(ESMF_KIND_I4)                  :: i, importFieldCount, exportFieldCount
+    integer(ESMF_KIND_I4)                  :: i, j, importFieldCount, exportFieldCount
 
     logical                                 :: isPresent
     character(len=ESMF_MAXSTR), allocatable :: filterExcludeList(:), filterIncludeList(:)
@@ -537,8 +540,8 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     type(ESMF_Time)                        :: startTime, currTime
     type(ESMF_TimeInterval)                :: timeStep
 
-    integer(ESMF_KIND_I4), allocatable     :: exportUbnd(:), importUbnd(:)
-    integer(ESMF_KIND_I4), allocatable     :: exportLbnd(:), importLbnd(:)
+    integer(ESMF_KIND_I4), allocatable     :: exportUbnd(:), exportLbnd(:)
+    integer(ESMF_KIND_I4), allocatable     :: lbnd(:), ubnd(:)
     integer(ESMF_KIND_I4)                  :: exportRank, exportGridRank, importRank
     integer(ESMF_KIND_I4)                  :: importGridRank
     type(ESMF_Grid)                        :: importGrid, exportGrid
@@ -547,6 +550,8 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     integer(ESMF_KIND_I4),dimension(:,:,:), pointer :: mask => null()
     real(ESMF_KIND_R8), pointer, dimension(:,:,:) :: farrayPtr3 => null()
     real(ESMF_KIND_R8), pointer, dimension(:,:)   :: farrayPtr2 => null()
+    real(ESMF_KIND_R8), pointer, dimension(:,:,:)   :: depth_at_cell_face => null()
+    real(ESMF_KIND_R8), allocatable, dimension(:,:,:)   :: weight, layer_height
     character(len=ESMF_MAXSTR)             :: importItemName
     type(ESMF_TypeKind_Flag)               :: typeKind
 
@@ -659,51 +664,81 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (exportGridRank == 2 .and. exportRank == 2 .and. importRank == 3 &
-          .and. importGridRank == 3) then
+      if (.not.importRank == 3) cycle
+      allocate(lbnd(3), stat=localrc)
+      allocate(ubnd(3), stat=localrc)
+
+      if (.not.importGridRank == 3) cycle
+
+      call ESMF_FieldGet(importFieldList(1),  localDe=0, farrayPtr=farrayPtr3, exclusiveLbound=lbnd, &
+        exclusiveUbound=ubnd, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      !> Get the 3D mask from the grid
+      call ESMF_GridGetItem(importGrid, ESMF_GRIDITEM_MASK, farrayPtr=mask, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      !> Predefine the weight for vertically summing of layers as 1
+      if (allocated(layer_height)) deallocate(layer_height)
+      allocate(layer_height(RANGE3D), stat=localrc)
+      layer_height(RANGE3D) = 0.0
+      where(mask(RANGE3D) > 0)
+        layer_height(RANGE3D) = 1.0
+      endwhere
+
+      !> Get the vertical (3rd coordinate) layer vface depths to calculate the weights
+      !> for vertical averaging
+      !> @todo what happens if this coordinate info is not present?
+      call ESMF_GridGetCoord(importGrid, coordDim=3, staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
+        farrayPtr=depth_at_cell_face, rc=localrc)
+      if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (associated(depth_at_cell_face)) then
+        layer_height(RANGE3D) = depth_at_cell_face(RANGE3D)! -  depth_at_cell_face(RANGE2D, lbnd(3)-1:ubnd(3)-1)
+      endif
+
+      if (allocated(weight)) deallocate(weight)
+      allocate(weight(RANGE3D), stat=localrc)
+      weight(RANGE3D) = 0.0
+
+      do j = lbnd(3), ubnd(3)
+        where ( mask(RANGE2D,j) > 0 .and. layer_height(RANGE2D,j) > 0)
+          weight(RANGE2D,j) = layer_height(RANGE2D,j)/sum(layer_height(RANGE3D), dim=3)
+        endwhere
+      enddo
+
+      if (exportGridRank == 2 .and. exportRank == 2) then
 
         allocate(exportLbnd(2), stat=localrc)
         allocate(exportUbnd(2), stat=localrc)
-        allocate(importLbnd(3), stat=localrc)
-        allocate(importUbnd(3), stat=localrc)
 
         call ESMF_FieldGet(exportFieldList(i), localDe=0, farrayPtr=farrayPtr2, exclusiveLbound=exportLbnd, &
           exclusiveUbound=exportUbnd, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        call ESMF_FieldGet(importFieldList(1),  localDe=0, farrayPtr=farrayPtr3, exclusiveLbound=importLbnd, &
-          exclusiveUbound=importUbnd, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        call ESMF_GridGetItem(importGrid, ESMF_GRIDITEM_MASK, farrayPtr=mask, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        if (any(importUbnd(1:2) - importLbnd(1:2) /= exportUbnd(1:2) - exportLbnd(1:2))) cycle
+        if (any(ubnd(1:2) - lbnd(1:2) /= exportUbnd(1:2) - exportLbnd(1:2))) cycle
 
         select case(trim(operator))
         case ('total')
           farrayPtr2(exportLbnd(1):exportUbnd(1),exportLbnd(2):exportUbnd(2)) = &
-            sum(farrayPtr3(importLbnd(1):importUbnd(1),importLbnd(2):importUbnd(2),importLbnd(3):importUbnd(3)), dim=3, &
-            mask=(mask(importLbnd(1):importUbnd(1),importLbnd(2):importUbnd(2),importLbnd(3):importUbnd(3))>0))
+            sum(farrayPtr3(RANGE3D) * layer_height(RANGE3D), dim=3, mask=(mask(RANGE3D)>0))
+        case ('average')
+          farrayPtr2(exportLbnd(1):exportUbnd(1),exportLbnd(2):exportUbnd(2)) = &
+            sum(farrayPtr3(RANGE3D) * weight(RANGE3D), dim=3, mask=(mask(RANGE3D)>0))
         case ('minimum' )
           farrayPtr2(exportLbnd(1):exportUbnd(1),exportLbnd(2):exportUbnd(2)) = &
-            minval(farrayPtr3(importLbnd(1):importUbnd(1),importLbnd(2):importUbnd(2),importLbnd(3):importUbnd(3)), dim=3, &
-            mask=(mask(importLbnd(1):importUbnd(1),importLbnd(2):importUbnd(2),importLbnd(3):importUbnd(3))>0))
+            minval(farrayPtr3(RANGE3D) * weight(RANGE3D), dim=3, mask=(mask(RANGE3D)>0))
         case ('maximum' )
           farrayPtr2(exportLbnd(1):exportUbnd(1),exportLbnd(2):exportUbnd(2)) = &
-            maxval(farrayPtr3(importLbnd(1):importUbnd(1),importLbnd(2):importUbnd(2),importLbnd(3):importUbnd(3)), dim=3, &
-            mask=(mask(importLbnd(1):importUbnd(1),importLbnd(2):importUbnd(2),importLbnd(3):importUbnd(3))>0))
-        !case ('norm')
-        case ('product' )
-          farrayPtr2(exportLbnd(1):exportUbnd(1),exportLbnd(2):exportUbnd(2)) = &
-            product(farrayPtr3(importLbnd(1):importUbnd(1),importLbnd(2):importUbnd(2),importLbnd(3):importUbnd(3)), dim=3, &
-            mask=(mask(importLbnd(1):importUbnd(1),importLbnd(2):importUbnd(2),importLbnd(3):importUbnd(3))>0))
+            maxval(farrayPtr3(RANGE3D) * weight(RANGE3D), dim=3, mask=(mask(RANGE3D)>0))
+        !case ('norm', 'product')
         case default
-          rc = ESMF_RC_ARG_BAD
-          call ESMF_LogWrite(trim(name)//' invalid operator '//trim(operator), ESMF_LOGMSG_ERROR)
+          rc = ESMF_RC_NOT_IMPL
+          call ESMF_LogWrite(trim(name)//' operator '//trim(operator)//' not implemented', ESMF_LOGMSG_ERROR)
           return
         end select
       else
@@ -720,6 +755,9 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
+      if (allocated(layer_height)) deallocate(layer_height)
+      if (allocated(weight)) deallocate(weight)
+      nullify(depth_at_cell_face)
       nullify(mask)
       nullify(farrayPtr3)
       nullify(farrayPtr2)
@@ -730,8 +768,8 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
 
       deallocate(exportLbnd, stat=localrc)
       deallocate(exportUbnd, stat=localrc)
-      deallocate(importLbnd, stat=localrc)
-      deallocate(importLbnd, stat=localrc)
+      deallocate(lbnd, stat=localrc)
+      deallocate(lbnd, stat=localrc)
 
     enddo
 
