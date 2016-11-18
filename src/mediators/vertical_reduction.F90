@@ -235,10 +235,6 @@ module vertical_reduction
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_CreateVerticallyReducedExportFields(cplComp, importState, exportState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
     call MOSSCO_CompExit(cplComp, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -249,7 +245,7 @@ module vertical_reduction
 #define ESMF_METHOD "Run"
   subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
-    type(ESMF_cplComp)     :: cplComp
+    type(ESMF_cplComp)      :: cplComp
     type(ESMF_State)        :: importState, exportState
     type(ESMF_Clock)        :: parentClock
     integer, intent(out)    :: rc
@@ -258,8 +254,7 @@ module vertical_reduction
     type(ESMF_Time)         :: currTime
     integer(ESMF_KIND_I4)   :: localrc
 
-    rc=ESMF_SUCCESS
-    return ! todo
+    rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -615,7 +610,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (itemName(1:5) /= 'vred_') cycle
-      importItemName = itemName(5:len_trim(itemName))
+      importItemName = itemName(6:len_trim(itemName))
 
       !> Find the name of the variable on which the reduction shall be applied
       !call ESMF_AttributeGet(exportFieldList(i), name='source', isPresent=isPresent, rc=localrc)
@@ -633,35 +628,20 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+      !call ESMF_LogWrite(trim(name)//' in loop'//trim(importItemName), ESMF_LOGMSG_INFO)
+
       !> if not found, or if multiple fields with the same name, then skip this
       !> @todo add later capability for field bundles
       if (importFieldCount /= 1) cycle
+
+      !call ESMF_LogWrite(trim(name)//' importfielCount', ESMF_LOGMSG_INFO)
 
       !> Complete the field if it is gridset
       call ESMF_FieldGet(exportFieldList(i), status=exportFieldStatus,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (exportFieldStatus == ESMF_FIELDSTATUS_GRIDSET) then
-
-        call ESMF_FieldGet(importfieldList(1), status=importFieldStatus,rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        if (importFieldStatus /= ESMF_FIELDSTATUS_COMPLETE) cycle
-
-        call ESMF_FieldGet(importFieldList(1), typeKind=typeKind, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        call ESMF_FieldEmptyComplete(exportFieldList(i), typeKind=typeKind, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        call MOSSCO_FieldInitialize(exportFieldList(i), rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
+      if (exportfieldStatus /= ESMF_FIELDSTATUS_COMPLETE) cycle
 
       call ESMF_FieldGet(exportFieldList(i), grid=exportGrid, rank=exportRank, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -685,7 +665,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
         allocate(exportLbnd(2), stat=localrc)
         allocate(exportUbnd(2), stat=localrc)
         allocate(importLbnd(3), stat=localrc)
-        allocate(importLbnd(3), stat=localrc)
+        allocate(importUbnd(3), stat=localrc)
 
         call ESMF_FieldGet(exportFieldList(i), localDe=0, farrayPtr=farrayPtr2, exclusiveLbound=exportLbnd, &
           exclusiveUbound=exportUbnd, rc=localrc)
@@ -701,25 +681,43 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+        if (any(importUbnd(1:2) - importLbnd(1:2) /= exportUbnd(1:2) - exportLbnd(1:2))) cycle
+
         select case(trim(operator))
         case ('total')
-          farrayPtr2 = sum(farrayPtr3(importLbnd(1):importUbnd(1),importLbnd(2):importLbnd(2),importLbnd(3):importUbnd(3)), dim=3, mask=(mask>0))
+          farrayPtr2(exportLbnd(1):exportUbnd(1),exportLbnd(2):exportUbnd(2)) = &
+            sum(farrayPtr3(importLbnd(1):importUbnd(1),importLbnd(2):importUbnd(2),importLbnd(3):importUbnd(3)), dim=3, &
+            mask=(mask(importLbnd(1):importUbnd(1),importLbnd(2):importUbnd(2),importLbnd(3):importUbnd(3))>0))
         case ('minimum' )
-          farrayPtr2 = minval(farrayPtr3(importLbnd(1):importUbnd(1),importLbnd(2):importLbnd(2),importLbnd(3):importUbnd(3)), dim=3, mask=(mask>0))
+          farrayPtr2(exportLbnd(1):exportUbnd(1),exportLbnd(2):exportUbnd(2)) = &
+            minval(farrayPtr3(importLbnd(1):importUbnd(1),importLbnd(2):importUbnd(2),importLbnd(3):importUbnd(3)), dim=3, &
+            mask=(mask(importLbnd(1):importUbnd(1),importLbnd(2):importUbnd(2),importLbnd(3):importUbnd(3))>0))
         case ('maximum' )
-          farrayPtr2 = maxval(farrayPtr3(importLbnd(1):importUbnd(1),importLbnd(2):importLbnd(2),importLbnd(3):importUbnd(3)), dim=3, mask=(mask>0))
+          farrayPtr2(exportLbnd(1):exportUbnd(1),exportLbnd(2):exportUbnd(2)) = &
+            maxval(farrayPtr3(importLbnd(1):importUbnd(1),importLbnd(2):importUbnd(2),importLbnd(3):importUbnd(3)), dim=3, &
+            mask=(mask(importLbnd(1):importUbnd(1),importLbnd(2):importUbnd(2),importLbnd(3):importUbnd(3))>0))
         !case ('norm')
-        !  farrayPtr2 = norm2(farrayPtr3(importLbnd(1):importUbnd(1),importLbnd(2):importLbnd(2),importLbnd(3):importUbnd(3)), dim=3, mask=(mask>0))
         case ('product' )
-          farrayPtr2 = product(farrayPtr3(importLbnd(1):importUbnd(1),importLbnd(2):importLbnd(2),importLbnd(3):importUbnd(3)), dim=3, mask=(mask>0))
+          farrayPtr2(exportLbnd(1):exportUbnd(1),exportLbnd(2):exportUbnd(2)) = &
+            product(farrayPtr3(importLbnd(1):importUbnd(1),importLbnd(2):importUbnd(2),importLbnd(3):importUbnd(3)), dim=3, &
+            mask=(mask(importLbnd(1):importUbnd(1),importLbnd(2):importUbnd(2),importLbnd(3):importUbnd(3))>0))
         case default
           rc = ESMF_RC_ARG_BAD
+          call ESMF_LogWrite(trim(name)//' invalid operator '//trim(operator), ESMF_LOGMSG_ERROR)
           return
         end select
       else
         if (advanceCount < 2) then
           write(message, '(A)') trim(name)//' could not reduce non-rank 3 item '//trim(itemName)
         endif
+      endif
+
+      if (advanceCount < 2) then
+        write(message,'(A)') trim(name)//' reduced '
+        call MOSSCO_FieldString(importFieldList(1), message)
+        call MOSSCO_MessageAdd(message,' to ')
+        call MOSSCO_FieldString(exportFieldList(i), message)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
       nullify(mask)
@@ -781,7 +779,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) return
+    if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) return
 
     call ESMF_FieldGet(importField, grid=importGrid, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -806,8 +804,6 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     call ESMF_FieldEmptySet(exportField, exportGrid, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) return
 
     call ESMF_FieldGet(importField, typeKind=typeKind, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
