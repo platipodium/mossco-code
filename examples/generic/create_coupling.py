@@ -1563,7 +1563,16 @@ fid.write('''
           do l=1, ubound(cplCompNameList,1)
               !write(0,*) l,trim(cplCompNameList(l))//' ?= '//trim(cplName)//'_connector'
               if (trim(cplCompNameList(l))==trim(cplName)//'_connector') exit
+              if (trim(cplCompNameList(l))==trim(cplName)//'_mediator') exit
+              if (trim(cplCompNameList(l))==trim(cplName)) exit
           enddo
+
+          !! Exit if the name of the connector/mediator was not found
+          if (l > ubound(cplCompNameList,1)) then
+            write(message,'(A)') trim(myName)//' could not match '//trim(cplName)//' and '//trim(cplCompNameList(l))
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+            call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
+          endif
 
           !call ESMF_GridCompGet(gridCompList(k), importState=expState, rc=localrc)
           expState=gridImportStateList(k)
