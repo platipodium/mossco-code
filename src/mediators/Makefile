@@ -30,9 +30,6 @@ endif
 ifeq ($(MOSSCO_SQLITE),true)
 TARGETS += soilpelagicmediator
 endif
-ifeq ($(MOSSCO_GOTM),true)
-TARGETS += libverticalmeancoupler
-endif
 endif
 
 SUBDIRS=
@@ -57,7 +54,6 @@ libredistcoupler: prefix $(MOSSCO_LIBRARY_PATH)/libredistcoupler.a
 libregridcoupler: prefix $(MOSSCO_LIBRARY_PATH)/libregridcoupler.a
 libremtc: prefix $(MOSSCO_LIBRARY_PATH)/libremtc.a(remtc_atmos_ocean_coupler.o)
 liboceansedimentcoupler: prefix $(MOSSCO_LIBRARY_PATH)/liboceansedimentcoupler.a
-libverticalmeancoupler: prefix $(MOSSCO_LIBRARY_PATH)/libverticalmeancoupler.a
 libsurfacescoupler: prefix $(MOSSCO_LIBRARY_PATH)/libsurfacescoupler.a(surfaces_coupler.o)
 pelagicbenthiccoupler: libmossco_util $(MOSSCO_LIBRARY_PATH)/libpelagicbenthiccoupler.a(pelagic_benthic_coupler.o)
 pelagicsoilconnector: libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(pelagic_soil_connector.o)
@@ -100,9 +96,6 @@ $(MOSSCO_LIBRARY_PATH)/libremtc.a: remtc_atmos_ocean_coupler.o
 $(MOSSCO_LIBRARY_PATH)/liboceansedimentcoupler.a: ocean_sediment_coupler.o
 	$(AR) cruvs $@ ocean_sediment_coupler.o
 
-$(MOSSCO_LIBRARY_PATH)/libverticalmeancoupler.a: vertical_mean_coupler.o
-	$(AR) cruvs $@ vertical_mean_coupler.o
-
 $(MOSSCO_LIBRARY_PATH)/libsurfacescoupler.a(surfaces_coupler.o): surfaces_coupler.o
 
 $(MOSSCO_LIBRARY_PATH)/libpelagicbenthiccoupler.a: pelagic_benthic_coupler.o benthic_pelagic_coupler.o pelagic_soil_connector.o soil_pelagic_connector.o
@@ -130,7 +123,7 @@ extraclean:
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libregridcoupler.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libremtc.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/liboceansedimentcoupler.a
-	@rm -f $(MOSSCO_LIBRARY_PATH)/libverticalmeancoupler.a
+	@rm -f $(MOSSCO_LIBRARY_PATH)/libverticalreduction.a
 	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done
 
 test: test_regrid_coupler

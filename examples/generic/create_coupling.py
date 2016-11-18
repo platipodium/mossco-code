@@ -13,7 +13,7 @@ import os
 
 # Define a generic iterable ver list or dict
 def sequential_iterator(obj):
-  return obj if isinstance(obj, dict) else xrange(len(obj))
+    return obj if isinstance(obj, dict) else xrange(len(obj))
 
 try:
     import yaml
@@ -2151,6 +2151,7 @@ libs = {'gotm'       : ['solver', 'mossco_gotm'] ,
 #        'pelagic_benthic_mediator' : ['mossco_mediator'],
         'pelagic_soil_connector' : ['mossco_mediator'],
         'soil_pelagic_connector' : ['mossco_mediator'],
+        'vertical_reduction' : ['verticalreduction'],
         'pelagic_benthic_coupler' : ['pelagicbenthiccoupler'],
         'benthic_pelagic_coupler' : ['pelagicbenthiccoupler'],
         'xgrid_coupler' : ['xgridcoupler'],
@@ -2194,6 +2195,7 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'soil_pelagic_connector' : ['libmossco_mediator'],
         'pelagic_benthic_coupler' : ['libpelagicbenthiccoupler'],
         'benthic_pelagic_coupler' : ['libpelagicbenthiccoupler'],
+        'vertical_reduction' : ['libverticalreduction'],
         'xgrid_coupler' : ['libxgridcoupler'],
         'link_connector' : ['libmossco_connector'],
         'nudge_connector' : ['libmossco_connector'],
@@ -2282,13 +2284,13 @@ libmossco_info libmossco_test libmossco_river libmossco_hamsom libmossco_locatio
 libmossco_sediment:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
-libsurfacescoupler libaocoupler liblinkcoupler libxgridcoupler libregridcoupler libcopycoupler libmossco_coupler:
+libsurfacescouplerlibaocoupler liblinkcoupler libxgridcoupler libregridcoupler libcopycoupler libmossco_coupler:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
 libmossco_connector:
 	$(MAKE) -C $(MOSSCO_DIR)/src/connectors $@
 
-libmossco_mediator:
+libmossco_mediator libverticalreduction:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
 libremtc:
