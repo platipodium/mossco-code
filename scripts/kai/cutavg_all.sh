@@ -19,6 +19,7 @@ else
   nproc=$1
 fi
 prefix=mossco_gfbfrr.
+
 outdir=${PWD##*/}    # simulation set-up folder
 echo $outdir
 if [[ $nproc -lt 100 ]]; then
@@ -43,7 +44,7 @@ echo 'cutting until time step ' $N
 
 # here for 178-cpu setup using 6 processors; 
 for ((a=0;a<6;a++)); do $SCRDIR/cut_avg_surf.sh $nproc cut $a 6 $N & done
-
+#for ((a=0;a<6;a++)); do $SCRDIR/cut_avg_phygetm.sh $nproc cut $a 6 $N & done
 wait
 #check for completeness;
 
@@ -51,11 +52,11 @@ wait
 
 cd cut
 fname='*tmp*.nc'
-rm $fname
+#rm $fname
 fname='cut1_*.nc'
-rm $fname
+#rm $fname
 fname='cut2_*.nc'
-rm $fname
+#rm $fname
 
 
 # stitch the pieces
@@ -64,9 +65,9 @@ python  $SCRDIR/stitch_tiles.py cut_\*.nc $outdir'.nc'
 #python  $SCRDIR/stitch_tiles.py cutm_\*.nc $outdir'_m.nc'  #monthly maximum
 
 fname='cut_*.nc'
-rm $fname
+#rm $fname
 fname='cutm_*.nc'
-rm $fname
+#rm $fname
 
 # view results
 ncview $outdir'.nc' &

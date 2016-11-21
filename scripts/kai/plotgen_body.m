@@ -16,7 +16,7 @@ for ili=1:size(i_loc,1)
 % goes to new figure if required
   np=cell2mat(var{i}(6)) + nfig0*(ili-1);
   figure(np); 
-  set(gcf,'visible','on');
+  set(gcf,'visible',vis);
   oldfig=np; hold on
   axs=subplot('Position',[x0 y0 dxp dyp]);
   hold on

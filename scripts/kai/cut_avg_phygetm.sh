@@ -14,18 +14,18 @@
 # User configuration
 # Declare a list of variables to extract
 #declare -a vn=("Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water" "Chl_chl_in_water" "Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water"  "Phytplankton_Phosphorus_phyP_in_water" "Phytplankton_Nitrogen_phyN_in_water"  "Detritus_Carbon_detC_in_water" "Phytplankton_Carbon_phyC_in_water" "Zooplankton_Carbon_zooC_in_water" "Dissolved_Organic_Carbon_domC_in_water" "denitrification_rate_in_soil" "dissolved_oxygen_upward_flux_at_soil_surface" "dissolved_reduced_substances_upward_flux_at_soil_surface" "layer_height_in_soil" "detritus-P_in_soil" "mole_concentration_of_phosphate_in_soil" "fraction_of_Rubisco_Rub_in_water" "Detritus_Phosphorus_detP_in_water" "Detritus_Nitrogen_detN_in_water" "Virus_C_density_in_cells_vir_in_water" "_datt_in_water")
-declare -a vn=("Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water" "Chl_chl_in_water" "Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water"  "Detritus_Carbon_detC_in_water" "Phytplankton_Carbon_phyC_in_water" "Zooplankton_Carbon_zooC_in_water" "_datt_in_water" "x_velocity_in_water" "y_velocity_in_water" "wind_x_velocity_at_10m" "turbulent_kinetic_energy_at_soil_surface"  "turbulent_kinetic_energy_in_water" "turbulent_diffusivity_of_momentum_at_soil_surface" "temperature_in_water" "salinity_in_water" "maximum_bottom_stress" "layer_height_in_water" "dissipation_of_tke_at_soil_surface")
+declare -a vn=("x_velocity_in_water" "y_velocity_in_water" "wind_x_velocity_at_10m" "turbulent_kinetic_energy_at_soil_surface"  "turbulent_kinetic_energy_in_water" "water_depth_at_soil_surface" "turbulent_diffusivity_of_momentum_at_soil_surface" "temperature_in_water" "salinity_in_water" "maximum_bottom_stress" "layer_height_in_water" "dissipation_of_tke_at_soil_surface" "wave_height" "wave_period")
 #  "mole_concentration_of_nitrate_in_soil" "Detritus_Phosphorus_detP_in_water""dissolved_oxygen_in_soil" "Phytplankton_Phosphorus_phyP_in_water" "Phytplankton_Nitrogen_phyN_in_water" "fraction_of_Rubisco_Rub_in_water""detritus-P_in_soil" "temperature_in_water""Phytplankton_Phosphorus_phyP_in_water" "Phytplankton_Nitrogen_phyN_in_water"    "N\:C_ratio__QN_in_water" "P\:C_ratio__QP_in_water" "Rubisco_fract._allocation__fracR_in_water" "chlorophyll_to_carbon_ratio_in_water" "water_depth_at_soil_surface" "denitrification_rate_in_soil" "mole_concentration_of_nitrate_in_soil  "mole_concentration_of_phosphate_in_soil"
 # 
-tb='denitrification_rate_in_soil,layer_height_in_soil,fast_detritus_C_in_soil,detritus-P_in_soil,mole_concentration_of_nitrate_in_soil,mole_concentration_of_phosphate_in_soil,dissolved_oxygen_in_soil,dissolved_oxygen_upward_flux_at_soil_surface,dissolved_reduced_substances_upward_flux_at_soil_surface'
 model=''   # FABM model name, e.g. hzg_maecs
 n1=0       # starting domain-no of loop
 dn=1       # increment in domain-no of loop
-Nstart=1  # initial time-step; skips trailer 
+Nstart=20  # initial time-step; skips trailer 
 soil=0
 
 #prefix=netcdf_getm_fabm_pelagic.  # Prefix of files to process
 if [ -z ${prefix+x} ]; then prefix=mossco_gfbfrr. ; fi  # Prefix of files to process
+prefix=mossco_gfw.
 dt=1         # slicing of time dimension; 20 gives monthly means at 36h-output
 dt1=1   # creates high res output that is averaged 
 dt1=$dt    # only cuts every dt time slice
@@ -86,7 +86,6 @@ for p in $(seq -f $form $n1 $dn $nproc); do
   fname=${prefix}$p'.nc'
   outname=$outdir'/cut1_'$p'.nc'
   outname2=$outdir'/cut_'$p'.nc'
-  outnamez=$outdir'/cutz_'$p'.nc'
 
   if ! [[ -f $fname ]] ; then
       echo "File $fname does not exist"
@@ -99,7 +98,7 @@ for p in $(seq -f $form $n1 $dn $nproc); do
   if [[ $soil == 1 ]]; then
      ncks -O -v $tg,$tb -d time,$Nstart,$N $fname $outname2 
      ncap2 -O -s 'N2r=denitrification_rate_in_soil*layer_height_in_soil'  $outname2 $outname
-     ncap2 -O -s 'N2flux=N2r.total($ungridded00015)'  $outname $outnamez
+
   fi
   ncks -F -O -v $tg,$ts \
 	-d getmGrid2D_getm_1,1,,${dlon} \
@@ -107,7 +106,6 @@ for p in $(seq -f $form $n1 $dn $nproc); do
 	-d getmGrid3D_getm_1,1,,${dlon} \
 	-d getmGrid3D_getm_2,1,,${dlat} \
 	-d getmGrid3D_getm_3,1,,${dz} \
-        -d ungridded00015,1,,13 \
 	-d time,$Nstart,$N,$dt1 $fname $outname2
 ##    ncap -O -s "O2flux=dissolved_oxygen_upward_flux_at_soil_surface"  $outname2 $outname
 ##    ncap -O -s "NC=Phytplankton_Nitrogen_phyN_in_water/(Phytplankton_Carbon_phyC_in_water+0.001)"  $outname $outname2
@@ -131,10 +129,7 @@ for p in $(seq -f $form $n1 $dn $nproc); do
 #      nn=$[$nn + $nn/72]
       outname1=$na'-'$p'tmp.nc'
       outname1m=$na'-'$p'tmp_max.nc'
-      if [[ $soil == 1 ]]; then
-        outname1z=$na'-'$p'tmp_z.nc'
-        ncra -F -O -d time,$[$nn-$dt2],$nn  '../'$outnamez $outname1z
-      fi
+
 ##      echo $p $[$nn-$dt+1] $nn $outname1
     # calculate mean and macimum in time slice  -v $tg,$ts
 

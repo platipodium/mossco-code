@@ -16,8 +16,8 @@ if ! [[ -f $fname ]] ; then
    exit 1
 fi
 
-rP=0.8
-rN=0.8
+rP=0.7
+rN=0.7
 nname=$(basename $fname .nc)'_rN'$rN'rP'$rP'.nc'
 
 # "Chl_chl_in_water" "Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water"  "Phytplankton_Phosphorus_phyP_in_water" "Phytplankton_Nitrogen_phyN_in_water"  

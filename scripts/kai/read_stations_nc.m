@@ -1,6 +1,6 @@
 %offdatime=[datenum('01-Feb-0000')  datenum('21-May-0001')];
 
-if ~exist(datf,'file') warning('File %s does not exist, skipped',datf); continue; end
+if ~exist(datf,'file') warning('File %s does not exist, skipped',datf); exit; end
 
 ncid=netcdf.open(datf,'NC_NOWRITE');
 [ndim ndvar natt udimid] = netcdf.inq(ncid); 

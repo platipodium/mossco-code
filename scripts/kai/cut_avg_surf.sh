@@ -13,10 +13,11 @@
 # ---------------------
 # User configuration
 # Declare a list of variables to extract
-declare -a vn=("Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water" "Chl_chl_in_water" "Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water"  "Phytplankton_Phosphorus_phyP_in_water" "Phytplankton_Nitrogen_phyN_in_water"  "Detritus_Carbon_detC_in_water" "Phytplankton_Carbon_phyC_in_water" "Zooplankton_Carbon_zooC_in_water" "Dissolved_Organic_Carbon_domC_in_water" "denitrification_rate_in_soil" "dissolved_oxygen_upward_flux_at_soil_surface" "dissolved_reduced_substances_upward_flux_at_soil_surface" "layer_height_in_soil" "detritus-P_in_soil" "mole_concentration_of_phosphate_in_soil" "fraction_of_Rubisco_Rub_in_water" "Detritus_Phosphorus_detP_in_water" "Detritus_Nitrogen_detN_in_water" "Virus_C_density_in_cells_vir_in_water" "_datt_in_water")
-#  "mole_concentration_of_nitrate_in_soil" "Detritus_Phosphorus_detP_in_water""dissolved_oxygen_in_soil" "Phytplankton_Phosphorus_phyP_in_water" "Phytplankton_Nitrogen_phyN_in_water" "fraction_of_Rubisco_Rub_in_water""detritus-P_in_soil" "temperature_in_water""Phytplankton_Phosphorus_phyP_in_water" "Phytplankton_Nitrogen_phyN_in_water"    "N\:C_ratio__QN_in_water" "P\:C_ratio__QP_in_water" "Rubisco_fract._allocation__fracR_in_water" "chlorophyll_to_carbon_ratio_in_water" "water_depth_at_soil_surface" "denitrification_rate_in_soil" "mole_concentration_of_nitrate_in_soil  "mole_concentration_of_phosphate_in_soil"
+declare -a vn=("Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water" "Chl_chl_in_water" "Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water"  "Phytplankton_Phosphorus_phyP_in_water" "Phytplankton_Nitrogen_phyN_in_water"  "Detritus_Carbon_detC_in_water" "Phytplankton_Carbon_phyC_in_water" "Zooplankton_Carbon_zooC_in_water" "Dissolved_Organic_Carbon_domC_in_water" "denitrification_rate_in_soil"  "layer_height_in_soil" "detritus-P_in_soil" "mole_concentration_of_phosphate_in_soil" "fraction_of_Rubisco_Rub_in_water" "Detritus_Phosphorus_detP_in_water" "Detritus_Nitrogen_detN_in_water" "Virus_C_density_in_cells_vir_in_water" "_datt_in_water")
+# "dissolved_oxygen_upward_flux_at_soil_surface" "dissolved_reduced_substances_upward_flux_at_soil_surface" "mole_concentration_of_nitrate_in_soil" "Detritus_Phosphorus_detP_in_water""dissolved_oxygen_in_soil" "Phytplankton_Phosphorus_phyP_in_water" "Phytplankton_Nitrogen_phyN_in_water" "fraction_of_Rubisco_Rub_in_water""detritus-P_in_soil" "temperature_in_water""Phytplankton_Phosphorus_phyP_in_water" "Phytplankton_Nitrogen_phyN_in_water"    "N\:C_ratio__QN_in_water" "P\:C_ratio__QP_in_water" "Rubisco_fract._allocation__fracR_in_water" "chlorophyll_to_carbon_ratio_in_water" "water_depth_at_soil_surface" "denitrification_rate_in_soil" "mole_concentration_of_nitrate_in_soil  "mole_concentration_of_phosphate_in_soil"
 # 
-tb='denitrification_rate_in_soil,layer_height_in_soil,fast_detritus_C_in_soil,detritus-P_in_soil,mole_concentration_of_nitrate_in_soil,mole_concentration_of_phosphate_in_soil,dissolved_oxygen_in_soil,dissolved_oxygen_upward_flux_at_soil_surface,dissolved_reduced_substances_upward_flux_at_soil_surface'
+#tb='denitrification_rate_in_soil,layer_height_in_soil,fast_detritus_C_in_soil,detritus-P_in_soil,mole_concentration_of_nitrate_in_soil,mole_concentration_of_phosphate_in_soil,dissolved_oxygen_in_soil,dissolved_oxygen_upward_flux_at_soil_surface,dissolved_reduced_substances_upward_flux_at_soil_surface'
+tb='denitrification_rate_in_soil,layer_height_in_soil,fast_detritus_C_in_soil,detritus-P_in_soil,mole_concentration_of_nitrate_in_soil,mole_concentration_of_phosphate_in_soil,dissolved_oxygen_in_soil'
 model=''   # FABM model name, e.g. hzg_maecs
 n1=0       # starting domain-no of loop
 dn=1       # increment in domain-no of loop
@@ -25,7 +26,7 @@ soil=0
 
 #prefix=netcdf_getm_fabm_pelagic.  # Prefix of files to process
 if [ -z ${prefix+x} ]; then prefix=mossco_gfbfrr. ; fi  # Prefix of files to process
-dt=3         # slicing of time dimension; 20 gives monthly means at 36h-output
+dt=1         # slicing of time dimension; 20 gives monthly means at 36h-output
 #dt1=1   # creates high res output that is averaged 
 dt1=$dt    # only cuts every dt time slice
 dlat=1        # slicing of lat dimension
