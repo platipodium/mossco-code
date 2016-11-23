@@ -211,19 +211,23 @@ module filtration_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call MOSSCO_ConfigGet(config, label='roughness_length', value=roughnessLength, rc = localrc)
+      call MOSSCO_ConfigGet(config, label='roughness_length', value=roughnessLength, &
+        defaultValue=roughnessLength, rc = localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call MOSSCO_ConfigGet(config, label='form_factor', value=formFactor, rc = localrc)
+      call MOSSCO_ConfigGet(config, label='form_factor', value=formFactor, &
+        defaultValue=formFactor, rc = localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call MOSSCO_ConfigGet(config, label='mussel_length_scale', value=musselLengthScale, rc = localrc)
+      call MOSSCO_ConfigGet(config, label='mussel_length_scale', value=musselLengthScale, &
+        defaultValue=musselLengthScale, rc = localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call MOSSCO_ConfigGet(config, label='minimum_food_flux', value=minimumFoodFlux, rc = localrc)
+      call MOSSCO_ConfigGet(config, label='minimum_food_flux', value=minimumFoodFlux, &
+        defaultValue=minimumFoodFlux, rc = localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
