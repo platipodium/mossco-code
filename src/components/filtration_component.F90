@@ -1328,8 +1328,8 @@ module filtration_component
       if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
         write(message,'(A)') trim(name)//' received incomplete field'
         call MOSSCO_FieldString(field, message, rc=localrc)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        cycle
       endif
 
       call ESMF_FieldGet(field, farrayPtr=concentration,  rc=localrc)
