@@ -646,6 +646,10 @@ module netcdf_input_component
 
         write(message,'(A)') trim(name)//' uses climatology with period '//trim(timeString)
 
+        call ESMF_TimeSet(ncTime, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
         call nc%timeGet(ncTime, searchIndex=1, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
