@@ -1261,11 +1261,13 @@ module filtration_component
       fractionalLossRate(RANGE3D) = lossRate(RANGE3D) / concentration(RANGE3D)
     endwhere
 
-    ! Cap the fractional loss rate at 30% of integration_timestep.
-    if (any(fractionalLossRate > 0.3/integration_timestep)) then
+    ! Cap the fractional loss rate at 30% of integration_timestep. Then correct
+    ! also the absolute loss rate
+    if (any(-fractionalLossRate(RANGE3D) * integration_timestep > 0.3)) then
 
-      where (fractionalLossRate(RANGE3D) * integration_timestep > 0.3)
-        fractionalLossRate(RANGE3D) = 0.3/integration_timestep
+      where (-fractionalLossRate(RANGE3D) * integration_timestep > 0.3)
+        fractionalLossRate(RANGE3D) = -0.3/integration_timestep
+        lossRate(RANGE3D) = fractionalLossRate(RANGE3D) * concentration(RANGE3D)
       endwhere
 
       write(message,'(A,ES10.3,A)') trim(name)//' is filtering (capped) up to ', &
@@ -1275,15 +1277,15 @@ module filtration_component
       write(message,'(A,ES10.3)') trim(name)//' is filtering (capped) up to fraction ', &
           maxval(-fractionalLossRate(RANGE3D),mask=mask(RANGE3D))
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    else
+      write(message,'(A,ES10.3,A)') trim(name)//' is filtering up to ', &
+        maxval(-lossRate(RANGE3D),mask=mask(RANGE3D)),' mmol m-3 s-1'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      write(message,'(A,ES10.3)') trim(name)//' is filtering up to fraction ', &
+          maxval(-fractionalLossRate(RANGE3D),mask=mask(RANGE3D))
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     endif
-
-    write(message,'(A,ES10.3,A)') trim(name)//' is filtering up to ', &
-      maxval(-lossRate(RANGE3D),mask=mask(RANGE3D)),' mmol m-3 s-1'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-    write(message,'(A,ES10.3)') trim(name)//' is filtering up to fraction ', &
-        maxval(-fractionalLossRate(RANGE3D),mask=mask(RANGE3D))
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     call MOSSCO_AttributeGet(gridComp, 'filter_other_species', filterSpeciesList, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
