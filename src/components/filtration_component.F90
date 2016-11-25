@@ -706,7 +706,7 @@ module filtration_component
     real(ESMF_KIND_R8)      :: surfaceRoughness, diameter, distance
     real(ESMF_KIND_R8)      :: minimumFoodFlux, musselMass, crossSection, sandRoughness
     real(ESMF_KIND_R8)      :: roughnessLength, musselLengthScale
-    real(ESMF_KIND_R8)      :: karman
+    real(ESMF_KIND_R8)      :: karman, integration_timestep
     real(ESMF_KIND_R8)      :: missingValue, mmolPermg, mgPermmol
     integer(ESMF_KIND_I4), allocatable   :: ubnd(:), lbnd(:)
     integer(ESMF_KIND_I4)                :: ubndZ(3), lbndZ(3)
@@ -781,6 +781,12 @@ module filtration_component
     allocate(lbnd(3), stat=localrc)
 
     call ESMF_FieldGet(fieldList(1), farrayPtr=concentration, exclusiveUbound=ubnd, exclusiveLbound=lbnd, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    ! The default value for maximum integration timestep is 1 hour (3600 s)
+    call ESMF_AttributeGet(fieldList(1), 'integration_timestep', integration_timestep, &
+      defaultValue=3600.0D0, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1073,7 +1079,7 @@ module filtration_component
     if (.not.allocated(frictionCoefficient)) allocate(frictionCoefficient(RANGE2D))
     surfaceRoughness = 0.0044
     sandRoughness = 30 * surfaceRoughness
-    where(hydraulicRadius(RANGE2D) > 0) 
+    where(hydraulicRadius(RANGE2D) > 0)
       frictionCoefficient(RANGE2D) = - 2.03 * log10(sandRoughness &
         / 14.84 / hydraulicRadius(RANGE2D))
     endwhere
@@ -1203,7 +1209,7 @@ module filtration_component
     ! This typically yields 250E-6
     maximumFiltrationRate(RANGE3D) = maximumFiltrationRate(RANGE3D) / (300.0 * 3600.0)
 
-    write(message,'(A,ES10.3,A)') trim(name)//' max filtration max rate is ', &
+    write(message,'(A,ES10.3,A)') trim(name)//' max max filtration rate is ', &
         maxval(maximumFiltrationRate(RANGE3D), mask=mask),' mg mg-1 s-1'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
@@ -1249,15 +1255,31 @@ module filtration_component
     ! and convert from mg to mmol
       * mmolPermg
 
-    write(message,'(A,ES10.3,A)') trim(name)//' is filtering up to ', &
-      maxval(-lossRate(RANGE3D),mask=mask(RANGE3D)),' mmol m-3 s-1'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-    ! For diagnostics and co-filtration of other species, calculate the fractional loss rate 
+    ! For diagnostics and co-filtration of other species, calculate the fractional loss rate
     fractionalLossrate = 0.0
     where (concentration(RANGE3D) > 0)
       fractionalLossRate(RANGE3D) = lossRate(RANGE3D) / concentration(RANGE3D)
     endwhere
+
+    ! Cap the fractional loss rate at 30% of integration_timestep.
+    if (any(fractionalLossRate > 0.3/integration_timestep)) then
+
+      where (fractionalLossRate(RANGE3D) * integration_timestep > 0.3)
+        fractionalLossRate(RANGE3D) = 0.3/integration_timestep
+      endwhere
+
+      write(message,'(A,ES10.3,A)') trim(name)//' is filtering (capped) up to ', &
+        maxval(-lossRate(RANGE3D),mask=mask(RANGE3D)),' mmol m-3 s-1'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      write(message,'(A,ES10.3)') trim(name)//' is filtering (capped) up to fraction ', &
+          maxval(-fractionalLossRate(RANGE3D),mask=mask(RANGE3D))
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    endif
+
+    write(message,'(A,ES10.3,A)') trim(name)//' is filtering up to ', &
+      maxval(-lossRate(RANGE3D),mask=mask(RANGE3D)),' mmol m-3 s-1'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     write(message,'(A,ES10.3)') trim(name)//' is filtering up to fraction ', &
         maxval(-fractionalLossRate(RANGE3D),mask=mask(RANGE3D))
@@ -1283,7 +1305,7 @@ module filtration_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      do j=1, fieldCount 
+      do j=1, fieldCount
         call ESMF_AttributeGet(fieldList(j), 'creator', creatorName, defaultValue='none', rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
