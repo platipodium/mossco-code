@@ -142,6 +142,7 @@ module filtration_component
     type(ESMF_Config)       :: config
     logical                 :: configIsPresent, fileIsPresent, labelIsPresent
     real(ESMF_KIND_R8)      :: musselMass, minimumFoodFlux, formFactor
+    real(ESMF_KIND_R8)      :: maximumRelativeChange
     real(ESMF_KIND_R8)      :: musselLengthScale, roughnessLength
 
     character(len=ESMF_MAXSTR)  :: filterSpecies, xVelocity, yVelocity
@@ -172,6 +173,9 @@ module filtration_component
 
     ! Geometric parameter for organisms in water (reduction of flow)
     formFactor = 0.35
+
+    ! Numeric limits
+    maximumRelativeChange = 0.1
 
     !! Make sure that a local clock exists, and that the call to this procedure
     !! is written to the log file
@@ -218,6 +222,11 @@ module filtration_component
 
       call MOSSCO_ConfigGet(config, label='form_factor', value=formFactor, &
         defaultValue=formFactor, rc = localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      
+      call MOSSCO_ConfigGet(config, label='maximum_relative_change', value=maximumRelativeChange, &
+        defaultValue=maximumRelativeChange, rc = localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -291,6 +300,10 @@ module filtration_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_AttributeSet(gridComp, 'mussel_length_scale', musselLengthScale, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeSet(gridComp, 'maximum_relative_change', maximumRelativeChange, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -706,6 +719,7 @@ module filtration_component
     real(ESMF_KIND_R8)      :: surfaceRoughness, diameter, distance
     real(ESMF_KIND_R8)      :: minimumFoodFlux, musselMass, crossSection, sandRoughness
     real(ESMF_KIND_R8)      :: roughnessLength, musselLengthScale
+    real(ESMF_KIND_R8)      :: formFactor, maximumRelativeChange
     real(ESMF_KIND_R8)      :: karman, integration_timestep
     real(ESMF_KIND_R8)      :: missingValue, mmolPermg, mgPermmol
     integer(ESMF_KIND_I4), allocatable   :: ubnd(:), lbnd(:)
@@ -744,6 +758,16 @@ module filtration_component
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
+
+    call ESMF_AttributeGet(gridComp, name='form_factor', &
+      value=formFactor, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeGet(gridComp, name='maximum_relative_change', &
+      value=maximumRelativeChange, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_AttributeGet(gridComp, name='mussel_mass', &
       value=musselMass, rc=localrc)
@@ -1263,10 +1287,10 @@ module filtration_component
 
     ! Cap the fractional loss rate at 30% of integration_timestep. Then correct
     ! also the absolute loss rate
-    if (any(-fractionalLossRate(RANGE3D) * integration_timestep > 0.3)) then
+    if (any(-fractionalLossRate(RANGE3D) * integration_timestep > maximumRelativeChange)) then
 
-      where (-fractionalLossRate(RANGE3D) * integration_timestep > 0.3)
-        fractionalLossRate(RANGE3D) = -0.3/integration_timestep
+      where (-fractionalLossRate(RANGE3D) * integration_timestep > maximumRelativeChange)
+        fractionalLossRate(RANGE3D) = - maximumRelativeChange / integration_timestep
         lossRate(RANGE3D) = fractionalLossRate(RANGE3D) * concentration(RANGE3D)
       endwhere
 
