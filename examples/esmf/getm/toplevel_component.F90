@@ -1,8 +1,7 @@
 !> @brief Implementation of an ESMF toplevel coupling
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014, Helmholtz-Zentrum Geesthacht
-!> @author Carsten Lemmen, <carsten.lemmen@hzg.de>
+!> @author Knut Klingbeil
 
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -52,9 +51,9 @@ module toplevel_component
     integer,intent(out) :: rc
 
     type(ESMF_Clock)        :: getmClock
-    type(ESMF_Time)         :: startTime,stopTime
     type(ESMF_TimeInterval) :: runDuration
-    logical                 :: ClockIsPresent
+    integer                 :: phase,phase0,phaseCount
+    logical                 :: ClockIsPresent,phaseZeroFlag
 
     call ESMF_LogWrite("Toplevel component initializing ... ",ESMF_LOGMSG_TRACE)
 
@@ -64,34 +63,40 @@ module toplevel_component
 !   Create child components
     if (ClockIsPresent) then
       call ESMF_GridCompGet(topCmp,clock=topClock)
+      ClockIsPresent = ESMF_ClockIsCreated(topClock)
+    end if
+
+    if (ClockIsPresent) then
       getmClock = ESMF_ClockCreate(topClock)
-      call ESMF_ClockSet(getmClock,name="getmClock")
-      getmCmp = ESMF_GridCompCreate(name="getmCmp",clock=getmClock)
+      call ESMF_ClockSet(getmClock,name="mossco_getmClock")
+      getmCmp = ESMF_GridCompCreate(name="mossco_getmCmp",clock=getmClock)
     else
-      topClock = ESMF_ClockCreate(pClock)
-      call ESMF_ClockSet(topClock,name="topClock")
-      call ESMF_GridCompSet(topCmp,clock=topClock)
-      getmCmp = ESMF_GridCompCreate(name="getmCmp")
+      getmCmp = ESMF_GridCompCreate(name="mossco_getmCmp")
     end if
     call ESMF_GridCompSetServices(getmCmp,SetServices)
-    getmImportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name="getmImportState")
-    getmExportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name="getmExportState")
-    call ESMF_GridCompInitialize(getmCmp,clock=topClock,      &
-                                 importState=getmImportState, &
-                                 exportState=getmExportState)
+    getmImportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name="mossco_getmImportState")
+    getmExportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name="mossco_getmExportState")
+
+    call ESMF_GridCompGetEPPhaseCount(getmCmp,ESMF_METHOD_INITIALIZE,  &
+                                      phaseCount,phaseZeroFlag)
+    phase0=1
+    if (phaseZeroFlag) phase0=0
+
+    do phase=phase0,phaseCount
+      call ESMF_GridCompInitialize(getmCmp,clock=pClock,               &
+                                   importState=getmImportState,        &
+                                   exportState=getmExportState,        &
+                                   phase=phase)
+    end do
 
     if (.not. ClockIsPresent) then
-      call ESMF_GridCompGet(getmCmp,clockIsPresent=ClockIsPresent)
-      if (ClockIsPresent) then
-!       adapt clock
-        call ESMF_GridCompGet(getmCmp,clock=getmClock)
-        call ESMF_ClockGet(getmClock,startTime=startTime, &
-                           stopTime=stopTime,runDuration=runDuration)
-        call ESMF_ClockSet(topClock,startTime=startTime, &
-                           stopTime=stopTime,timeStep=runDuration, &
-                           currTime=startTime)
-      end if
+      call ESMF_GridCompGet(getmCmp,clock=getmClock)
+      topClock = ESMF_ClockCreate(getmClock)
+      call ESMF_ClockSet(topClock,name="topClock")
+      call ESMF_GridCompSet(topCmp,clock=topClock)
     end if
+    call ESMF_ClockGet(getmClock,runDuration=runDuration)
+    call ESMF_ClockSet(topClock,timeStep=runDuration)
 
     call ESMF_LogWrite("Toplevel component initialized",ESMF_LOGMSG_TRACE)
 
