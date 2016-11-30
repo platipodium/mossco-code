@@ -705,10 +705,10 @@ module filtration_component
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: abundance => null()
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: lossRate => null()
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: layerHeight => null()
-    real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: potentialClearanceRate, ustar, speed
-    real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: maximumFiltrationRate, fractionalLossRate
-    real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: interfaceDepth, xVelocity, yVelocity
-    real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: concentration
+    real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: potentialClearanceRate => null(), ustar => null(), speed=> null()
+    real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: maximumFiltrationRate=> null(), fractionalLossRate=> null()
+    real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: interfaceDepth=> null(), xVelocity=> null(), yVelocity=> null()
+    real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: concentration=> null()
     real(ESMF_KIND_R8), allocatable, dimension(:,:):: depthAtSoil, frictionCoefficient
     real(ESMF_KIND_R8), allocatable, dimension(:,:):: hydraulicRadius
 
@@ -986,7 +986,6 @@ module filtration_component
       endif
 
       !> The typical range for abundance is 0 to 1E5 m-3 in mussel beds
-
       if (allocated(mask)) deallocate(mask)
       allocate(mask(ubnd(1)-lbnd(1)+1, ubnd(2)-lbnd(2)+1, ubnd(3)-lbnd(3)+1), stat=localrc)
       mask(RANGE3D) = (abundance(RANGE3D) /= missingValue)
@@ -1053,6 +1052,7 @@ module filtration_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+
       call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
         itemSearch='y_velocity_in_water', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -1092,7 +1092,6 @@ module filtration_component
       !> $$
       !> 1 / \sqrt\lambda = -2.03\cdot\log_10(k_s/(14.84\cdot r_{hy}))
       !> $$
-
       !> The hydraulic radius $r_{hy}$ is calculated as the ratio of the channel width
       !> (space between windpiles) times water depth divided by the wetted circumference
       !> interspace + 2 * water depth.  For typical values of diameter 3 m, distance 250 m,
