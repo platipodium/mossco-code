@@ -804,7 +804,7 @@ module getm_component
     call ESMF_GridCompFinalize(getmComp,clock=clock,importState=importState, &
                                exportState=exportState)
 
-    call ESMF_GridCompDestroy(getmComp)
+    !call ESMF_GridCompDestroy(getmComp)
 
     call ESMF_ClockDestroy(controlClock)
 
