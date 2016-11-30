@@ -270,7 +270,6 @@ ifdef GETMDIR
   MOSSCO_GETM=true
   ifdef MOSSCO_GETMDIR
     # We have full control over GETM compilation
-    export GETM_ESMF=true
     ifeq ($(MOSSCO_MPI),true)
       export GETM_PARALLEL?=true
       ifeq ($(ESMF_COMM),openmpi)
@@ -355,7 +354,7 @@ endif
 ifeq ($(MOSSCO_GETM),true)
   export GETM_LIBRARY_PATH=$(GETMDIR)/lib/$(FORTRAN_COMPILER)
   GETM_LINKDIRS = -L$(GETM_LIBRARY_PATH) -L$(GOTM_LIBRARY_PATH)
-  GETM_LIBS := -lgetm_esmf_prod -lgetm_prod  -loutput_prod -lmeteo_prod
+  GETM_LIBS := -lgetm_prod  -loutput_prod -lmeteo_prod
   ifneq ($(GETM_NO_3D),true)
     GETM_LIBS += -l3d_prod
   endif
