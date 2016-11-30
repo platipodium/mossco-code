@@ -1786,12 +1786,17 @@ module fabm_pelagic_component
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           endif
         elseif (rank==3) then
+          !> this should have been handled by integrate_fluxes_in_water
           call ESMF_FieldGet(importFieldList(i), farrayPtr=ratePtr3, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           farrayPtr3(RANGE3D) = farrayPtr3(RANGE3D)  + ratePtr3(RANGE3D) * dt
+          write (message,'(A,ES10.3,A)') trim(name)//' added ',maxval(ratePtr3(RANGE3D) * dt),' from '
+          call MOSSCO_FieldString(importFieldList(i),message)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         endif
+
       enddo
 
       ! clip concentrations that are below minimum
@@ -1884,7 +1889,7 @@ module fabm_pelagic_component
     integer(ESMF_KIND_I8)          :: external_index
     integer(kind=ESMF_KIND_I4)     :: ubnd(2),lbnd(2),ubnd3(3),lbnd3(3), rank
     character(len=ESMF_MAXSTR)     :: message, varname, name, units, fluxunits
-    real(ESMF_KIND_R8), pointer    :: ratePtr2(:,:), ratePtr3(:,:,:)
+    real(ESMF_KIND_R8), pointer    :: ratePtr2(:,:) => null(), ratePtr3(:,:,:) =>null()
     integer(ESMF_KIND_I8)          :: advanceCount
     type(ESMF_Clock)               :: clock
     logical                        :: isEqual
@@ -1902,13 +1907,21 @@ module fabm_pelagic_component
     ubnd3 = ubound(pel%layer_height)
     lbnd3 = lbound(pel%layer_height)
 
+    !> Deal with volume changes first
     if (.not.(associated(pel%cell_column_fraction))) then
       allocate(pel%cell_column_fraction(RANGE2D,lbnd3(3):ubnd3(3)))
       pel%cell_column_fraction = 0.0d0
     end if
 
-    if (.not.(associated(pel%volume_change))) allocate(pel%volume_change(RANGE2D,lbnd3(3):ubnd3(3)))
-    if (.not.(associated(pel%column_height))) allocate(pel%column_height(RANGE2D))
+    if (.not.(associated(pel%volume_change))) then
+      allocate(pel%volume_change(RANGE2D,lbnd3(3):ubnd3(3)))
+      pel%volume_change = 0.0d0
+    endif
+
+    if (.not.(associated(pel%column_height))) then
+      allocate(pel%column_height(RANGE2D))
+      pel%column_height=1.0
+    endif
 
     do k=1,pel%knum
       if (any((pel%layer_height(RANGE2D,k) <= 0).and.(.not.pel%mask(RANGE2D,k)))) then
@@ -1935,40 +1948,45 @@ module fabm_pelagic_component
       varname = trim(pel%export_states(n)%standard_name)
       units = trim(pel%model%state_variables(n)%units)
 
-      pel%volume_change(RANGE2D,lbnd3(3):ubnd3(3)) = 0.0d0
-
-      if (associated(pel%volume_flux)) then
-          if (.not.(pel%model%state_variables(n)%no_river_dilution)) then
-            do k=1, pel%knum
-              !> river dilution
-              !> New formulation with Hassan 7 June 2016
-              pel%volume_change(RANGE2D,k) = dt * pel%volume_flux(RANGE2D) &
-                * pel%cell_column_fraction(RANGE2D,k)
-
-              if (any(pel%volume_change(RANGE2D,k) &
-                / (pel%layer_height(RANGE2D,k) * pel%column_area(RANGE2D)) > 0.5d0)) then
-
-                write(message,'(A)') trim(name)//' cfl for volume flux exceeded'
-                write(0,*) k,' pel%volume_flux=',pel%volume_flux(RANGE2D)
-                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-                call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-              endif
-
-              pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
-                * pel%layer_height(RANGE2D,k)*pel%column_area(RANGE2D) &
-                / (pel%layer_height(RANGE2D,k)*pel%column_area(RANGE2D) &
-                + pel%volume_change(RANGE2D,k))
-            enddo
-          endif
-      endif
-
       call MOSSCO_StateGetFieldList(importState, fieldList, &
         itemSearch=trim(varname)//'_flux_in_water', fieldCount=fieldCount, &
         fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+      !> If the item is not found, return
       if (fieldCount == 0) cycle
+
+      if (associated(pel%volume_flux)) then
+        if (.not.(pel%model%state_variables(n)%no_river_dilution)) then
+          do k=1, pel%knum
+            !> river dilution
+            !> New formulation with Hassan 7 June 2016
+            pel%volume_change(RANGE2D,k) = dt * pel%volume_flux(RANGE2D) &
+              * pel%cell_column_fraction(RANGE2D,k)
+
+              if (any(pel%volume_change(RANGE2D,k) &
+                / (pel%layer_height(RANGE2D,k) * pel%column_area(RANGE2D)) > 0.5d0)) then
+
+                write(message,'(A)') trim(name)//' CFL for volume flux exceeded'
+                write(0,*) k,' pel%volume_flux=',pel%volume_flux(RANGE2D)
+                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+                if (present(rc)) rc = ESMF_RC_ARG_BAD
+                return
+              endif
+
+
+            where (.not.pel%mask(RANGE2D,k))
+
+              pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
+                * pel%layer_height(RANGE2D,k)*pel%column_area(RANGE2D) &
+                / (pel%layer_height(RANGE2D,k)*pel%column_area(RANGE2D) &
+                + pel%volume_change(RANGE2D,k))
+            endwhere
+          enddo
+        endif
+      endif
+
 
       call MOSSCO_Reallocate(tempList, fieldCount, keep=.false., rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -2048,13 +2066,6 @@ module fabm_pelagic_component
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
-!!        write(0,*) __LINE__
-
-        if (advanceCount < 2) then
-          write(message,'(A)') trim(name)//' integrates'
-          call MOSSCO_FieldString(field, message, rc=localrc)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        endif
 
         !> vertically homogeneous flux in water (e.g. rivers)
         if (rank == 2) then
@@ -2071,22 +2082,30 @@ module fabm_pelagic_component
           !> which is equal to dt*mass_river[g/s]* (diluted_volume(k)/total_diluted_volume)/diluted_volume(k)
           !> which is equal to dt*mass_river[g/s]/total_diluted_volume [g/m**3]
           if (associated(pel%volume_flux)) then
-          do k=1, pel%knum
-            pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
-            + dt * ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) &
+            do k=1, pel%knum
+              pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
+                + dt * ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) &
 !! correction by kw: add column-fractional mass divided by column-FRACTIONAL (=box) volume
-             / (pel%column_height(RANGE2D) * pel%column_area(RANGE2D) + &
-                dt * pel%volume_flux(RANGE2D))
-          end do
+                / (pel%column_height(RANGE2D) * pel%column_area(RANGE2D) &
+                + dt * pel%volume_flux(RANGE2D))
+            end do
           else
-          do k=1, pel%knum
-            pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
-            + dt * ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) &
+            do k=1, pel%knum
+              pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
+                + dt * ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) &
 !! correction by kw: add column-fractional mass divided by column-FRACTIONAL (=box) volume
-             / (pel%column_height(RANGE2D) * pel%column_area(RANGE2D))
-          end do
+                / (pel%column_height(RANGE2D) * pel%column_area(RANGE2D))
+            end do
           endif
+
+          if (advanceCount < 2000) then
+            write(message,'(A)') trim(name)//' integrated 2D column-averaged flux '
+            call MOSSCO_FieldString(field, message, rc=localrc)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          endif
+
         elseif (rank == 3) then
+          !> point source fluxes
           call ESMF_FieldGet(field, farrayPtr=ratePtr3, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -2096,7 +2115,17 @@ module fabm_pelagic_component
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           !> If the flux is in concentration units, then the following is correct
-          pel%conc(RANGE3D,n) = pel%conc(RANGE3D,n) + dt * ratePtr3(RANGE3D)
+          !> Carefully exclude masked items and (for negative fluxes) a CFL-like maximum halving
+          where (.not.pel%mask(RANGE3D) .and. pel%conc(RANGE3D,n) + 2 * dt * ratePtr3(RANGE3D) > 0.0 )
+            pel%conc(RANGE3D,n) = pel%conc(RANGE3D,n) + dt * ratePtr3(RANGE3D)
+          endwhere
+
+          !> @todo reduce output
+          if (advanceCount < 2000) then
+            write(message,'(A)') trim(name)//' integrated 3D point source '
+            call MOSSCO_FieldString(field, message, rc=localrc)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          endif
 
           !> If, however, the flux is in powder units (mg s-1 or mmol s-1) then, we
           !> have an alternative formulation
