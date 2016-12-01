@@ -743,13 +743,15 @@ module getm_component
       if (localrc .eq. ESMF_RC_NOT_SET) return
     end if
 
-    do while (currTime + 0.5d0*timeStep < nextTime )
+    do while (currTime < nextTime )
+    !do while (currTime + 0.5d0*timeStep < nextTime )
 
-      if (ESMF_ClockIsStopTime(myClock)) then
-        call ESMF_LogWrite('already exceeded stopTime',ESMF_LOGMSG_ERROR, &
-                            line=__LINE__,file=__FILE__,method='Run()')
-        call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      end if
+      ! MOSSCO's toplevel time stepping mixes up with myClock%stopTime
+      !if (ESMF_ClockIsStopTime(myClock)) then
+      !  call ESMF_LogWrite('already exceeded stopTime',ESMF_LOGMSG_ERROR, &
+      !                      line=__LINE__,file=__FILE__,method='Run()')
+      !  call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      !end if
 
 !     optional Run of child components
       if (allocated(transport_conc)) then
@@ -757,7 +759,7 @@ module getm_component
                               importState=importState,                 &
                               exportState=exportState,                 &
                               userRc=localrc)
-        if (localrc .eq. ESMF_RC_NOT_SET) return
+        if (localrc .eq. ESMF_RC_NOT_SET) exit
 !       Update information about boundary conditions
         call update_use_boundary_data(importState, advanceCount=advanceCount, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
