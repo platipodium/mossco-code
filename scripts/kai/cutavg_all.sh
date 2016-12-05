@@ -19,6 +19,8 @@ else
   nproc=$1
 fi
 prefix=mossco_gfbfrr.
+#prefix=mossco_gw.
+export prefix
 
 outdir=${PWD##*/}    # simulation set-up folder
 echo $outdir
@@ -38,7 +40,7 @@ $SCRDIR/catnml
 # retrieve final time-step
 N=$(ncdump -h $fname |grep '= UNLIMITED' |cut -f2 -d'(' |cut -f1 -d' ')
 N=$[$N - 1]
-echo 'cutting until time step ' $N
+#echo 'cutting until time step ' $N
 ##N=30
 echo 'cutting until time step ' $N
 

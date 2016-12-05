@@ -69,9 +69,7 @@ if show_data
     im0=0;
     timeg = timeg  + datenum('1970-01-01','yyyy-mm-dd');- datenum('2000-01-01','yyyy-mm-dd'); %days after 1/1/2000
 end
-
-%;'_vir_phyC8';'_vir_infect3';'_vir_spor_r0.5';'_vir_spor_r2';
-tags ={'';'_vir_mu-0.4';'_vir_mu-0.05';};%'_vir_mu-0.5';'_vir_mu-0.02';;
+tags ={'';};%'_2';'_a1.5';'_2010';'_att';'';'_30_0';'_30_1';'_del2';'';'_genMeth12';
 %tags ={'';'_2';};%t'_sinking_factor_min0.03';'_sinking_factor_min0.27';'_sinking_factor_min0.39';};
 %tags ={'ResAmpl.01';'ResAmpl.19';'ResAmpl.37';'ResAmpl.55';};'_rSlow0.0001';_vir_spor_C0.003
 %'_phi_agg0.003';'_remin0.1';'_vir_loss1.0';'_vir_mu3.5';'_mort_zoo0.035';
@@ -80,6 +78,12 @@ tags ={'';'_vir_mu-0.4';'_vir_mu-0.05';};%'_vir_mu-0.5';'_vir_mu-0.02';;
  %spath= '~/jureca/sns/cut';%   %%spath  ='/ocean-data/wirtz/';%%%sns/cut
  spath='/data/wirtz/';
   ncf0 = 'sns'; ntags=length(tags);
+ ntags=length(tags);
+ % spath= '/local/home/wirtz/sns/';% 
+  spath= '/work/gg0877/Results/cut/';
+ %spath= '~/jureca/sns/cut';%   %%spath  ='/ocean-data/wirtz/';%%%spath='/data/wirtz/sns/cut';
+ % ncf0 = 'sns';   
+ ncf0 = 'Results'; 
   if IsNOAH
     setvar_o2flux  % defines variables to show - and where/how to do it %setvar  
    %% nrowm = 1; ncolm = 1;
@@ -117,6 +121,8 @@ for ns=1:ntags %% loop over scenarios/stations/layers
  tag=cell2mat(tags(ns));
 % ncfile = fullfile(spath,[ncf0 tag '.nc']);
  ncfile = fullfile(spath,[ncf0 tag '/cut/' ncf0 tag '.nc']);
+% ncfile = fullfile(spath,[ncf0 tag '.nc']);
+% ncfile = fullfile(spath,[ncf0 tag '/cut/' ncf0 tag '.nc']);
 
  read_nc_time_layers
  t0=time(1);
@@ -130,7 +136,6 @@ for ns=1:ntags %% loop over scenarios/stations/layers
 % t0 = datenum('1962-03-01','yyyy-mm-dd')-1;
 % t0 = datenum('1961-02-01','yyyy-mm-dd')-1;
 %t0 = datenum('2004-02-01','yyyy-mm-dd')-1;
-%t1 = datenum('2004-12-30','yyyy-mm-dd')-1;
 %t1 = datenum('2004-03-20','yyyy-mm-dd')-1;
 
  ind=find(time>= t0 & time<=t1);
