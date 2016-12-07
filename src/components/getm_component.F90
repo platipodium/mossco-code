@@ -1716,5 +1716,5 @@ module getm_component
    end module getm_component
 
 !-----------------------------------------------------------------------
-! Copyright (C) 2013 - Knut Klingbeil                                  !
+! Copyright (C) 2013 - Knut Klingbeil (IOW)                            !
 !-----------------------------------------------------------------------
