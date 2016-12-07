@@ -1,0 +1,4 @@
+<?xml version="1.0" ?>
+<!-- this converter is currently an empty placeholder, but it is needed to tell xmlstore that direct conversion is permitted. -->
+<converter source="mossco-0.1" target="mossco"/>
+

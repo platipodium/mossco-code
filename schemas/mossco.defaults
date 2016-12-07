@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<scenario version="mossco-latest" >
+<scenario version="mossco" >
 	<mossco_run>
 		<mossco_run>
 			<title>
