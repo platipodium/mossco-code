@@ -387,6 +387,10 @@ module grid_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    call ESMF_FieldEmptyComplete(field, typeKind=ESMF_TYPEKIND_I4, totalUWidth=(/2,2/), totalLWidth=(/2,2/), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -439,7 +443,6 @@ module grid_component
       if (allocated(ubnd)) deallocate(ubnd)
 
     enddo
-
 
 
     if (allocated(ungriddedUbnd)) deallocate(ungriddedUbnd)
