@@ -1,6 +1,14 @@
 # Recipe #15: working with GitHub
 
-We use GitHub (https://github.com) for hosting an alternate copy of the `mossco/code` repository.  Development on GitHub differs from SourceForge's approach
+We use GitHub (https://github.com) for hosting an alternate copy of the `mossco/code` repository.
+
+## Warning
+
+Updates on github usually lag behind the sourceforge site. Do not use this repository if not for a very good reason
+
+## GitHub philosophy
+
+ Development on GitHub differs from SourceForge's approach
 
 1. users "fork" existing projects into their own user space on GitHub
 2. users pull/push from and to their own GitHub repository.

@@ -139,7 +139,7 @@ module grid_component
     character(len=ESMF_MAXSTR) :: geomName
     type(ESMF_Config)          :: config
 
-    integer(ESMF_KIND_I4)      :: itemCount, i, j, nlayer
+    integer(ESMF_KIND_I4)      :: itemCount, i, j, nlayer, halo
     integer(ESMF_KIND_I4)      :: fieldRank, gridRank
     integer(ESMF_KIND_I4), allocatable    :: ungriddedUbnd(:), ungriddedLbnd(:)
     integer(ESMF_KIND_I4), allocatable    :: decompositionList(:), dimList(:)
@@ -159,6 +159,7 @@ module grid_component
     hasGrid = .false.
     fileFormat = 'SCRIP'
     nlayer = 0
+    halo = 2
     gridFileName = 'grid.nc'
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
@@ -217,6 +218,10 @@ module grid_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+      call MOSSCO_ConfigGet(config, label='halo', value=halo, defaultValue=2, rc = localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       call MOSSCO_ConfigGet(config, label='dimensions', value=dimList, rc = localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -250,6 +255,10 @@ module grid_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_AttributeSet(gridComp, 'number_of_vertical_layers', nlayer, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeSet(gridComp, 'width_of_halo', halo, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -387,7 +396,8 @@ module grid_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_FieldEmptyComplete(field, typeKind=ESMF_TYPEKIND_I4, totalUWidth=(/2,2/), totalLWidth=(/2,2/), rc=localrc)
+    call ESMF_FieldEmptyComplete(field, typeKind=ESMF_TYPEKIND_I4, &
+      totalUWidth=(/halo,halo/), totalLWidth=(/halo,halo/), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
