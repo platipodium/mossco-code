@@ -1184,7 +1184,7 @@ module netcdf_input_component
 
         call MOSSCO_MessageAdd(message, ' to '//trim(timeString))
 
-        write(addString,'(A,F4.2)') ', w=',weight
+        write(addString,'(A,F5.2)') ', w=',weight
         call MOSSCO_MessageAdd(message, trim(addString))
       else
         call ESMF_TimeGet(climatologyTime, timeString=timeString, rc=localrc)
