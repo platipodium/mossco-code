@@ -42,7 +42,7 @@ program main
   type(ESMF_VM)              :: vm
   integer(ESMF_KIND_I4)      :: localPet, petCount
   logical                    :: ClockIsPresent
-  character(len=ESMF_MAXSTR) :: message, formatstring
+  character(len=ESMF_MAXSTR) :: message, formatstring, pidString
   type(ESMF_LogMsg_Flag), allocatable :: logMsgList(:)
   type(ESMF_LogKind_Flag)    :: logKindFlag
   logical                    :: fileIsPresent, labelIsPresent
@@ -85,10 +85,16 @@ program main
     endif
   endif
 
+  !> Get the process id for tagging the PET log
+#ifndef NO_ISO_FORTRAN_ENV
+  write(pidString,'(I20)') getpid()
+#endif
+
   !> @todo assess how to read the title before calling Initialize()
   ! substitute slash and space characters in title string
   call replace_character(title,'/','-')
   call replace_character(title,' ','_')
+  write(title,'(A,A)') trim(title), '-'//trim(adjustl(pidString))
 
   !> Find out what kind of log to write, the default is MULTI
   if (logKind == 'none') then
