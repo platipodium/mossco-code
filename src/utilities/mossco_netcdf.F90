@@ -984,7 +984,7 @@ module mossco_netcdf
     real(ESMF_KIND_R8)               :: maxSeconds
     real(ESMF_KIND_R8), allocatable  :: time(:)
 
-    type(ESMF_Time)                  :: refTime
+    type(ESMF_Time)                  :: refTime, wallTime
     type(ESMF_TimeInterval)          :: timeInterval
     integer(ESMF_KIND_I4)            :: doy
     character(ESMF_MAXSTR)           :: timeString, refTimeISOString
@@ -1129,6 +1129,42 @@ module mossco_netcdf
       ncStatus = nf90_put_var(self%ncid, varid, timeString(1:19), start=(/1,dimlen+1/))
       if (ncStatus /= NF90_NOERR) then
         write(message,'(A)') '  '//trim(nf90_strerror(ncStatus))//', cannot write variable date_string'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        if (present(rc)) then
+          rc = ESMF_RC_FILE_WRITE
+          return
+        else
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
+      endif
+
+      ncStatus = nf90_inq_varid(self%ncid, 'wallclock_time', varid)
+      if (ncStatus /= NF90_NOERR) then
+        write(message,'(A)') '  '//trim(nf90_strerror(ncStatus))//', cannot find variable wallclock_time'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        if (present(rc)) then
+          rc = ESMF_RC_NOT_FOUND
+          return
+        else
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
+      endif
+
+      call ESMF_TimeSet(wallTime, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_TimeSyncToRealTime(wallTime, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_TimeGet(wallTime, timeStringISOFrac=timeString, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      ncStatus = nf90_put_var(self%ncid, varid, timeString(1:19), start=(/1,dimlen+1/))
+      if (ncStatus /= NF90_NOERR) then
+        write(message,'(A)') '  '//trim(nf90_strerror(ncStatus))//', cannot write variable wallclock_time'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         if (present(rc)) then
           rc = ESMF_RC_FILE_WRITE
@@ -1604,6 +1640,66 @@ module mossco_netcdf
     endif
 
     localrc = nf90_put_att(self%ncid, varid, 'mossco_name', 'date_string')
+    if (localrc /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot put attribute in file '//trim(self%name), ESMF_LOGMSG_ERROR)
+      if (present(rc)) then
+        rc = ESMF_RC_FILE_WRITE
+        return
+      else
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+    endif
+
+    localrc = nf90_def_var(self%ncid, 'wallclock_time', NF90_CHAR, (/dimId, self%timeDimId/), varid)
+    if (localrc==NF90_ENAMEINUSE) then
+      rc_ = MOSSCO_NC_EXISTING
+    elseif (localrc /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot define variable wallclock_time in file '//trim(self%name), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    endif
+
+    localrc = nf90_put_att(self%ncid, varid, 'units', '')
+    if (localrc /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot put attribute in file '//trim(self%name), ESMF_LOGMSG_ERROR)
+      if (present(rc)) then
+        rc = ESMF_RC_FILE_WRITE
+        return
+      else
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+    endif
+
+    localrc = nf90_put_att(self%ncid, varid, 'mossco_name', 'wallclock_time')
+    if (localrc /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot put attribute in file '//trim(self%name), ESMF_LOGMSG_ERROR)
+      if (present(rc)) then
+        rc = ESMF_RC_FILE_WRITE
+        return
+      else
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+    endif
+
+    localrc = nf90_def_var(self%ncid, 'speedup', NF90_FLOAT, (/self%timeDimId/), varid)
+    if (localrc==NF90_ENAMEINUSE) then
+      rc_ = MOSSCO_NC_EXISTING
+    elseif (localrc /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot define variable speedup in file '//trim(self%name), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    endif
+
+    localrc = nf90_put_att(self%ncid, varid, 'units', '1')
+    if (localrc /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot put attribute in file '//trim(self%name), ESMF_LOGMSG_ERROR)
+      if (present(rc)) then
+        rc = ESMF_RC_FILE_WRITE
+        return
+      else
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+    endif
+
+    localrc = nf90_put_att(self%ncid, varid, 'mossco_name', 'speedup')
     if (localrc /= NF90_NOERR) then
       call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot put attribute in file '//trim(self%name), ESMF_LOGMSG_ERROR)
       if (present(rc)) then
