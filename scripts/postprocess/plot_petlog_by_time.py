@@ -2,8 +2,8 @@
 # This script is is part of MOSSCO. It creates from an ESMF Log file output
 # timing diagrams for all components
 #
-# @copyright (C) 2014, 2015 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen
+# @copyright (C) 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -32,7 +32,8 @@ lines=fid.readlines()
 fid.close()
 
 timingdict={}
-mintime=-1
+mintime=-1.0
+nextday = 0
 
 for line in lines:
   if not line.__contains__(' TRACE '):
@@ -44,14 +45,19 @@ for line in lines:
   pet=words[i-4]
   stage=words[i-1]
   component=words[i-3]
-  if component == 'PET0': 
+  if component == 'PET0':
     print line
-    continue     
+    continue
   time=words[1]
-  
-  msecs=float(time[0:2])*3600000 + float(time[2:4])*60000 + float(time[4:6])*1000 + float(time[7:10])
+  date=words[0]
+
+  msecs=float(time[0:2])*3600000.0 + float(time[2:4])*60000.0 + float(time[4:6])*1000.0 + float(time[7:10])
+  #print time, float(time[0:2])*3600000.0, float(time[2:4])*60000.0, float(time[4:6])*1000.0, float(time[7:10])
   if mintime<0 :
     mintime=msecs
+
+  # advance to next day
+  while (msecs-mintime) < 0: msecs = msecs + 24 * 3600000.0
 
   if not timingdict.has_key(component):
     timingdict[component]={}
@@ -59,6 +65,7 @@ for line in lines:
     timingdict[component][stage]=[]
 
   timingdict[component][stage].append(msecs-mintime)
+  #timingdict[component][stage].append(msecs)
 
 maxtime=msecs
 
@@ -78,71 +85,73 @@ i=0
 for key,value in timingdict.iteritems():
   if value.has_key('initialized'):
     n=len(value['initialized'])
-    if (len(value['initializing'])<n or len(value['initializing']) > n+1 ): 
+    if (len(value['initializing'])<n or len(value['initializing']) > n+1 ):
       print i,key,'has unbalanced initialize phase, skipped.'
       continue
-    timediffs=np.array(value['initialized'][0:n])-np.array(value['initializing'][0:n])   
+    timediffs=np.array(value['initialized'][0:n])-np.array(value['initializing'][0:n])
     ax.bar(left=value['initializing'][0:n],height=np.multiply(value['initializing'][0:n],0.0)+0.8,
-           width=timediffs,bottom=1.1+i,color=colors[i], edgecolor=colors[i])  
+           width=timediffs,bottom=1.1+i,color=colors[i], edgecolor=colors[i])
     print i,key,'spent',np.sum(timediffs),'ms in ',len(timediffs),'initialize calls'
 
     totals[i] = totals[i] + np.sum(timediffs)
     if key != 'toplevel':
       ax.bar(left=value['initializing'][0:n],height=np.multiply(value['initialized'][0:n],0.0)+0.8,
-           width=timediffs,bottom=0.1,color=colors[i], edgecolor=colors[i])  
+           width=timediffs,bottom=0.1,color=colors[i], edgecolor=colors[i])
 
   else:
     print i,key,'has no init phase'
-   
+
   if value.has_key('readrestarted'):
     n=len(value['readrestarted'])
-    if (len(value['readrestarting'])<n or len(value['readrestarting']) > n+1 ): 
+    if (len(value['readrestarting'])<n or len(value['readrestarting']) > n+1 ):
       print i,key,'has unbalanced readrestart phase, skipped.'
       continue
-    timediffs=np.array(value['readrestarted'][0:n])-np.array(value['readrestarting'][0:n])   
+    timediffs=np.array(value['readrestarted'][0:n])-np.array(value['readrestarting'][0:n])
     ax.bar(left=value['readrestarting'][0:n],height=np.multiply(value['readrestarting'][0:n],0.0)+0.8,
-           width=timediffs,bottom=1.1+i,color=colors[i], edgecolor=colors[i])  
+           width=timediffs,bottom=1.1+i,color=colors[i], edgecolor=colors[i])
     print i,key,'spent',np.sum(timediffs),'ms in ',len(timediffs),'readrestart calls'
 
     totals[i] = totals[i] + np.sum(timediffs)
     if key != 'toplevel':
       ax.bar(left=value['readrestarting'][0:n],height=np.multiply(value['readrestarting'][0:n],0.0)+0.8,
-           width=timediffs,bottom=0.1,color=colors[i], edgecolor=colors[i])  
+           width=timediffs,bottom=0.1,color=colors[i], edgecolor=colors[i])
 
   else:
     print i,key,'has no readrestart phase'
-   
+
   if value.has_key('finalized'):
     n=len(value['finalized'])
-    if (len(value['finalizing'])<n or len(value['finalizing']) > n+1 ): 
+    if (len(value['finalizing'])<n or len(value['finalizing']) > n+1 ):
       print i,key,'has unbalanced finalize phase, skipped.'
       continue
     timediffs=np.array(value['finalized'][0:n])-np.array(value['finalizing'][0:n] )
     ax.bar(left=value['finalizing'][0:n],height=np.multiply(value['finalizing'][0:n],0.0)+0.8,
-           width=timediffs,bottom=1.1+i,color=colors[i], edgecolor=colors[i])  
+           width=timediffs,bottom=1.1+i,color=colors[i], edgecolor=colors[i])
     print i,key,'spent',np.sum(timediffs),'ms in ',len(timediffs),'finalize calls'
     if key != 'toplevel':
       ax.bar(left=value['finalizing'][0:n],height=np.multiply(value['finalizing'][0:n],0.0)+0.8,
-           width=timediffs,bottom=0.1,color=colors[i], edgecolor=colors[i])  
+           width=timediffs,bottom=0.1,color=colors[i], edgecolor=colors[i])
     totals[i] = totals[i] + np.sum(timediffs)
   else:
     print i,key,'has no finalize phase'
 
   if value.has_key('ran'):
     n=len(value['ran'])
-    if (len(value['running'])<n or len(value['running']) > n+1 ): 
+    if (len(value['running'])<n or len(value['running']) > n+1 ):
       print i,key,'has unbalanced run phase, skipped.'
       continue
-  
+
     timediffs=np.array(value['ran'][0:n])-np.array(value['running'][0:n] )
+    #print value['ran'][0:n], value['running'][0:n]
+
     ax.bar(left=value['running'][0:n],height=np.multiply(value['running'][0:n],0.0)+0.8,
-           width=timediffs,bottom=1.1+i,color=colors[i], edgecolor=colors[i])  
+           width=timediffs,bottom=1.1+i,color=colors[i], edgecolor=colors[i])
     print i,key,'spent',np.sum(timediffs),'ms in ',len(timediffs),'run calls'
     totals[i] = totals[i] + np.sum(timediffs)
 
     if key != 'toplevel':
       ax.bar(left=value['running'][0:n],height=np.multiply(value['running'][0:n],0.0)+0.8,
-           width=timediffs,bottom=0.1,color=colors[i], edgecolor=colors[i])  
+           width=timediffs,bottom=0.1,color=colors[i], edgecolor=colors[i])
   else:
     print i,key,'has no run phase'
 
@@ -150,9 +159,9 @@ for key,value in timingdict.iteritems():
 
 i=0
 for key in timingdict.keys():
-    
+
   string="%5.1f %% (" % (totals[i]*100/dtime)
-    
+
   if totals[i] < 1000:
     string += "%3.0f ms)" % (totals[i])
   elif  totals[i] < 1000*1000:
@@ -162,7 +171,7 @@ for key in timingdict.keys():
   else:
     string += "%3.0f h )" % (totals[i]/1000.0/3600)
 
-    
+
   ax.text(dtime*1.02,1.5+i,string,verticalalignment='center',
           horizontalalignment='left')
   i=i+1
