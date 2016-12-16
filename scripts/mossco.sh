@@ -283,7 +283,7 @@ case ${SYSTEM} in
                 ;;
   SGE)    MPI_PREFIX="mpirun"
                 ;;
-  SLURM)  MPI_PREFIX="srun"
+  SLURM)  MPI_PREFIX="srun --propagate=STACK"
                 ;;
   *)  MPI_PREFIX="mpirun"
                 ;;
@@ -450,7 +450,7 @@ EOT
 EOT
 
     if [  $(echo $HOSTNAME |grep -c mlogin) == 1 ]; then
-      # These are instructions for mistral
+      # These are instructions for mistral.dkrz.de
       if [ ${QUEUE} == undefined ]; then QUEUE=compute2; fi
 
       echo \#SBATCH --account=$(groups | cut -d" " -f1) >> slurm.sh
