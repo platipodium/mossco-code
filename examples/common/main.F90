@@ -94,7 +94,7 @@ program main
   ! substitute slash and space characters in title string
   call replace_character(title,'/','-')
   call replace_character(title,' ','_')
-  write(title,'(A,A)') trim(title), '-'//trim(adjustl(pidString))
+  !write(title,'(A,A)') trim(title), '-'//trim(adjustl(pidString))
 
   !> Find out what kind of log to write, the default is MULTI
   if (logKind == 'none') then
