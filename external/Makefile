@@ -89,7 +89,7 @@ sqlite-zip:
 
 fabm_clone fabm_update:
 ifeq ($(wildcard $(external_FABMDIR)/src/fabm.F90),)
-	$(GIT) clone http://git.code.sf.net/p/fabm/code $(external_FABMDIR)
+	$(GIT) clone https://github.com/fabm-model/fabm.git $(external_FABMDIR)
 else
 	( cd $(external_FABMDIR) && $(GIT) pull )
 endif
