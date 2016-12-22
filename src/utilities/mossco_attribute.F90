@@ -848,7 +848,7 @@ contains
     real(ESMF_KIND_R4)                   :: real4
     integer(ESMF_KIND_I8)                :: int8
     type(ESMF_TypeKind_Flag)             :: typeKind
-    character(len=ESMF_MAXSTR)           :: message
+    character(len=ESMF_MAXSTR)           :: message, fieldName
     logical                              :: bool
 
     localrc = ESMF_SUCCESS
@@ -857,6 +857,10 @@ contains
     if (present(rc)) rc = localrc
     convert_ = .true.
     if (present(convert)) convert_ = convert
+
+    call ESMF_FieldGet(field, name=fieldName, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_AttributeGet(field, name=trim(label), isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -877,7 +881,21 @@ contains
 
       if (typeKind == ESMF_TYPEKIND_R8) then
         call ESMF_AttributeGet(field, trim(label), real8, rc=localrc)
-        read(value,*) real8
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        read(value,*,iostat=localrc) real8
+        if (localRc /= ESMF_SUCCESS) then
+          write(message,'(A)')  '  attribute '//trim(label)//' conversion to real8 failed'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+          write(message,'(A,ES10.3,A)')  '  '//trim(label)//' = ',real8,' from field '//trim(fieldName)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+          if (present(rc)) then 
+            rc = ESMF_RC_ARG_BAD
+            return
+          else
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          endif
+        endif
       elseif (typeKind == ESMF_TYPEKIND_R4) then
         call ESMF_AttributeGet(field, trim(label), real4, rc=localrc)
         read(value,*) real4
