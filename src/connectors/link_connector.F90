@@ -363,7 +363,9 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
               call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
             !> Only log the message at start time of simulation
-            if (currTime == startTime) then
+            !> @todo
+            if (currTime < startTime) then !hack to disable this call as it causes segfault on ocean
+            !if (currTime == startTime) then
               if (MOSSCO_FieldAttributesIdentical(importField, exportField, &
                 differList=differList, rc=localrc) > 0) then
                 write(message,'(A)') '  some field attributes not identical for item '//trim(itemNameList(i))
