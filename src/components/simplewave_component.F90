@@ -477,10 +477,13 @@ module simplewave_component
         write(message, '(A)') trim(name)//' imports internal field '
         call MOSSCO_FieldString(field, message)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-        allocate(importList(i)%data(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)))
 
-        !> @todo deal with totalUWidth?
-        call ESMF_FieldEmptyComplete(field, importList(i)%data, ESMF_INDEX_DELOCAL, rc=localrc)
+        allocate(importList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
+
+        call ESMF_FieldEmptyComplete(field, importList(i)%data, ESMF_INDEX_DELOCAL, &
+                                     totalLWidth=int(exclusiveLBound-totalLBound),  &
+                                     totalUWidth=int(totalUBound-exclusiveUBound),  &
+                                     rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -495,10 +498,8 @@ module simplewave_component
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        if (.not. (    (      all(lbound(importList(i)%data) .eq. totalLBound    )           &
-                        .and. all(ubound(importList(i)%data) .eq. totalUBound    ) )         &
-                   .or.(      all(lbound(importList(i)%data) .eq. exclusiveLBound)           &
-                        .and. all(ubound(importList(i)%data) .eq. exclusiveUBound) ) ) ) then
+        if (.not. (      all(lbound(importList(i)%data) .eq. totalLBound)          &
+                   .and. all(ubound(importList(i)%data) .eq. totalUBound) ) ) then
           call ESMF_LogWrite('invalid field bounds', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           call ESMF_Finalize(endflag=ESMF_END_ABORT)
         end if
@@ -524,10 +525,12 @@ module simplewave_component
         call MOSSCO_FieldString(field, message)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
-        allocate(exportList(i)%data(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)))
+        allocate(exportList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
 
-        !> @todo deal with totalUWidth?
-        call ESMF_FieldEmptyComplete(field, exportList(i)%data,ESMF_INDEX_DELOCAL, rc=localrc)
+        call ESMF_FieldEmptyComplete(field, exportList(i)%data, ESMF_INDEX_DELOCAL, &
+                                     totalLWidth=int(exclusiveLBound-totalLBound),  &
+                                     totalUWidth=int(totalUBound-exclusiveUBound),  &
+                                     rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -542,10 +545,8 @@ module simplewave_component
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        if (.not. (    (      all(lbound(exportList(i)%data) .eq. totalLBound    )           &
-                        .and. all(ubound(exportList(i)%data) .eq. totalUBound    ) )         &
-                   .or.(      all(lbound(exportList(i)%data) .eq. exclusiveLBound)           &
-                        .and. all(ubound(exportList(i)%data) .eq. exclusiveUBound) ) ) ) then
+        if (.not. (      all(lbound(exportList(i)%data) .eq. totalLBound)          &
+                   .and. all(ubound(exportList(i)%data) .eq. totalUBound) ) ) then
           call ESMF_LogWrite('invalid field bounds', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           call ESMF_Finalize(endflag=ESMF_END_ABORT)
         end if
