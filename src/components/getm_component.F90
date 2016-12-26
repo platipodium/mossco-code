@@ -212,11 +212,13 @@ module getm_component
     !type(ESMF_Grid)       :: grid
     logical               :: clockIsPresent
     type(ESMF_TimeInterval) :: timeInterval
-    integer               :: phase,phase0,phaseCount
+    integer               :: phase,phase0,phaseCount,itemCount,i
     logical                 :: phasezeroflag
     type(ESMF_FieldBundle)  :: fieldBundle
+    type(ESMF_StateItem_Flag),allocatable :: itemTypeList(:)
     integer(ESMF_KIND_I4) :: localrc
     character(ESMF_MAXSTR)  :: name
+    character(ESMF_MAXSTR),allocatable  :: itemNameList(:)
 
     rc=ESMF_SUCCESS
 
@@ -274,6 +276,30 @@ module getm_component
     !call ESMF_GridGet(grid,distgrid=distgrid)
     !getmGrid2D = ESMF_GridCreate(grid,distgrid,name=trim(name)//"Grid2D")
     call ESMF_FieldGet(field,grid=getmGrid2D)
+
+    call ESMF_StateGet(importState,itemCount=itemCount)
+    allocate(itemNameList(itemCount))
+    allocate(itemTypeList(itemCount))
+    call ESMF_StateGet(importState,itemNameList=itemNamelist,itemTypeList=itemTypeList)
+    do i=1,itemCount
+       if (itemTypeList(i) .ne. ESMF_STATEITEM_FIELD) cycle
+       call ESMF_StateGet(importState,itemNameList(i),field)
+       call ESMF_AttributeSet(field,"creator","getm")
+    end do
+    deallocate(itemNameList)
+    deallocate(itemTypeList)
+
+    call ESMF_StateGet(exportState,itemCount=itemCount)
+    allocate(itemNameList(itemCount))
+    allocate(itemTypeList(itemCount))
+    call ESMF_StateGet(exportState,itemNameList=itemNamelist,itemTypeList=itemTypeList)
+    do i=1,itemCount
+       if (itemTypeList(i) .ne. ESMF_STATEITEM_FIELD) cycle
+       call ESMF_StateGet(exportState,itemNameList(i),field)
+       call ESMF_AttributeSet(field,"creator","getm")
+    end do
+    deallocate(itemNameList)
+    deallocate(itemTypeList)
 
     call getmCmp_init_variables()
 
