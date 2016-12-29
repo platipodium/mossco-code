@@ -760,7 +760,7 @@ module getm_component
 
     if (.not. allocated(transport_conc)) then
       timeInterval = nextTime - currTime
-      call ESMF_ClockSet(controlClock,timeStep=timeInterval)
+      call ESMF_ClockSet(controlClock,currTime=currTime,timeStep=timeInterval)
       call ESMF_GridCompRun(getmComp,clock=controlClock,               &
                             importState=importState,                   &
                             exportState=exportState,                   &
