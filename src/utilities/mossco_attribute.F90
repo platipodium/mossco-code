@@ -842,7 +842,7 @@ contains
     logical, intent(in), optional            :: convert
     integer(ESMF_KIND_I4), optional, intent(out) :: rc
 
-    integer(ESMF_KIND_I4)                :: localrc, int4, rc_
+    integer(ESMF_KIND_I4)                :: localrc, int4, rc_, i
     logical                              :: convert_, isPresent
     real(ESMF_KIND_R8)                   :: real8
     real(ESMF_KIND_R4)                   :: real4
@@ -881,30 +881,16 @@ contains
 
       if (typeKind == ESMF_TYPEKIND_R8) then
         call ESMF_AttributeGet(field, trim(label), real8, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        read(value,*,iostat=localrc) real8
-        if (localRc /= ESMF_SUCCESS) then
-          write(message,'(A)')  '  attribute '//trim(label)//' conversion to real8 failed'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-          write(message,'(A,ES10.3,A)')  '  '//trim(label)//' = ',real8,' from field '//trim(fieldName)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-          if (present(rc)) then 
-            rc = ESMF_RC_ARG_BAD
-            return
-          else
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          endif
-        endif
+        write(value,*) real8
       elseif (typeKind == ESMF_TYPEKIND_R4) then
         call ESMF_AttributeGet(field, trim(label), real4, rc=localrc)
-        read(value,*) real4
+        write(value,*) real4
       elseif (typeKind == ESMF_TYPEKIND_I8) then
         call ESMF_AttributeGet(field, trim(label), int8, rc=localrc)
-        read(value,*) int8
+        write(value,*) int8
       elseif (typeKind == ESMF_TYPEKIND_I4) then
         call ESMF_AttributeGet(field, trim(label), int4, rc=localrc)
-        read(value,*) int4
+        write(value,*) int4
       elseif (typeKind == ESMF_TYPEKIND_LOGICAL) then
         call ESMF_AttributeGet(field, trim(label), bool, rc=localrc)
         value = '.false.'
