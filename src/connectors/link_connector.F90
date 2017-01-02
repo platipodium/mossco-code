@@ -255,7 +255,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     integer, intent(out), optional  :: rc
 
     integer(ESMF_KIND_I4)       :: localrc, rc_, j
-    integer(ESMF_KIND_I4)       :: i, itemCount, exportItemCount, importItemCount
+    integer(ESMF_KIND_I4)       :: i, itemCount, exportItemCount, importItemCount, differCount
     integer(ESMF_KIND_I4)       :: exportfieldCount, importfieldCount
     character (len=ESMF_MAXSTR) :: message, creatorName
     type(ESMF_Time)             :: currTime, startTime
@@ -364,8 +364,11 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
             !> Only log the message at start time of simulation
             if (currTime == startTime) then
-              if (MOSSCO_FieldAttributesIdentical(importField, exportField, &
-                differList=differList, rc=localrc) > 0) then
+              differCount = MOSSCO_FieldAttributesIdentical(importField, exportField, &
+                differList=differList, rc=localrc) 
+              if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+                call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+              if (differCount > 0) then
                 write(message,'(A)') '  some field attributes not identical for item '//trim(itemNameList(i))
                 call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
                 do j = lbound(differList,1), ubound(differList,1)
@@ -600,7 +603,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     integer, intent(out), optional   :: rc
 
     integer(ESMF_KIND_I4)       :: localrc, rc_
-    integer(ESMF_KIND_I4)       :: i, j, itemCount, exportItemCount, importItemCount, fieldCount
+    integer(ESMF_KIND_I4)       :: i, j, itemCount, exportItemCount, importItemCount, fieldCount, differCount
     integer(ESMF_KIND_I4)       :: rank
     integer(ESMF_KIND_I4),allocatable :: totalcount(:)
     character (len=ESMF_MAXSTR) :: message, creatorName, name
@@ -706,8 +709,12 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
           !> Only log the message at start time of simulation
           if (currTime == startTime) then
-            if (MOSSCO_FieldAttributesIdentical(importField, exportField, &
-              differList=differList, rc=localrc) > 0) then
+            differCount =MOSSCO_FieldAttributesIdentical(importField, exportField, &
+              differList=differList, rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+            if (differCount > 0) then
               write(message,'(A)') trim(name)//' some field attributes not identical for item '//trim(itemNameList(i))
               call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
               do j = lbound(differList,1), ubound(differList,1)
@@ -1487,7 +1494,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
     integer                     :: localrc, rc_
     integer(ESMF_KIND_I4)       :: i, itemCount
-    integer(ESMF_KIND_I4)       :: j, k, fieldCount
+    integer(ESMF_KIND_I4)       :: j, k, fieldCount, differCount
     character (len=ESMF_MAXSTR) :: message
     character(len=ESMF_MAXSTR), dimension(:), allocatable :: itemNameList
     type(ESMF_StateItem_Flag),  dimension(:), allocatable :: itemTypeList
@@ -1576,7 +1583,11 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
           ! Don't do anything if the import field is not complete
           if (importFieldStatus .ne. ESMF_FIELDSTATUS_COMPLETE) cycle
 
-          if (MOSSCO_FieldAttributesIdentical(importFieldList(1), exportFieldList(1), rc=localrc) > 0) then
+          differCount = MOSSCO_FieldAttributesIdentical(importFieldList(1), exportFieldList(1), rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+ 
+          if (differCount > 0) then
             write(message,'(A)') '  field attributes are not identical for '
             call MOSSCO_FieldString(importFieldList(1), message)
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
@@ -1647,8 +1658,14 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
             ! Test for finding a field with identical properties.
             found=.false.
+            differCount = 0
+
             do k=lbound(exportFieldList,1), ubound(exportFieldList,1)
-              if (MOSSCO_FieldAttributesIdentical(importFieldList(j), exportFieldList(k), rc=localrc) == 0) then
+              differCount = MOSSCO_FieldAttributesIdentical(importFieldList(j), exportFieldList(k), rc=localrc)
+              if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+                call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+              if (differCount == 0) then
                 found = .true.
                 exit
               endif
