@@ -364,7 +364,7 @@ contains
       else
         currString=trim(attributeString)
       endif
-      write(attributeString,'(A)') attributeString(j+1:len_trim(attributeString))
+      attributeString = attributeString(j+1:len_trim(attributeString))
 
       j=index(currString,'=')
       if (j>1) then
