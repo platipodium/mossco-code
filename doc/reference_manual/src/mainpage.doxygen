@@ -105,7 +105,7 @@ ESMF_PIO | internal
 See the ESMF manual for a complete list of ESMF environment variables and their relevance.
 
 - build and install ESMF by issuing @c make
-- for MOSSCO and the ESMF tools to work, you need to define the environment variable @c $ESMFMKFKILE, e.g.
+- for MOSSCO and the ESMF tools to work, you need to define the environment variable @c $ESMFMKFILE, e.g.
 
 Environment variable | value
 ---|---
@@ -134,6 +134,8 @@ Variable | Package
 NETCDF_VERSION | GETM
 NETCDF | GOTM
 FORTRAN_COMPILER | GOTM, FABM
+
+Also note that FABM and GOTM have `cmake` as a dependency.
 
 @subsection using-external-programs Using external programs
 
