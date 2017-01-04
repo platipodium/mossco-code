@@ -2083,18 +2083,22 @@ module fabm_pelagic_component
           !> which is equal to dt*mass_river[g/s]/total_diluted_volume [g/m**3]
           if (associated(pel%volume_flux)) then
             do k=1, pel%knum
+              where (.not.pel%mask(RANGE2D,k))
               pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
                 + dt * ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) &
 !! correction by kw: add column-fractional mass divided by column-FRACTIONAL (=box) volume
                 / (pel%column_height(RANGE2D) * pel%column_area(RANGE2D) &
                 + dt * pel%volume_flux(RANGE2D))
+              end where
             end do
           else
             do k=1, pel%knum
+              where (.not.pel%mask(RANGE2D,k))
               pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
                 + dt * ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) &
 !! correction by kw: add column-fractional mass divided by column-FRACTIONAL (=box) volume
                 / (pel%column_height(RANGE2D) * pel%column_area(RANGE2D))
+              end where
             end do
           endif
 
