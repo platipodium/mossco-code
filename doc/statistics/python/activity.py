@@ -11,13 +11,14 @@ from matplotlib import pyplot
 # Map of author names to columns
 
 authorinstitute={'Carsten Lemmen':'HZG','Richard Hofmeister':'HZG',
-  'Ulrich Körner':'HZG','Knut Klingbeil':'IOW','Hassan Nasermoaddeli':'BAW',
+  u'Ulrich Körner':'HZG','Knut Klingbeil':'IOW','Hassan Nasermoaddeli':'BAW',
   'Markus Kreus':'HZG', 'Onur Kerimoglu':'HZG', 'Kai Wirtz':'HZG',
   'Nils Weiher':'HZG'}
 
 authoralias={'Carsten Lemmen':'Carsten Lemmen', 'Richard Hofmeister':
   'Richard Hofmeister','Richard':'Richard Hofmeister','hofmeist':
-  'Richard Hofmeister','Ulrich Koerner':'Ulrich Koerner','Ulrich Körner':
+  'Richard Hofmeister','Richard Hofmeister richard.hofmeister@hzg.de':'Richard Hofmeister',
+  'Ulrich Koerner':'Ulrich Koerner','Ulrich Körner':
   'Ulrich Koerner','mhnaserm':'Hassan Nasermoaddeli','hnaserm':'Hassan Nasermoaddeli',
   'Mohammed Hassan Nasermoaddeli':'Hassan Nasermoaddeli','Hassan Nasermoaddeli':
   'Hassan Nasermoaddeli','Knut':'Knut Klingbeil','Kai Wirtz':'Kai Wirtz',
@@ -192,6 +193,3 @@ for counter in counters:
   pylab.title(titles[counter].capitalize(), bbox={'facecolor':'0.8', 'pad':15})
   #pylab.show()
   pylab.savefig(titles[counter].replace(' ','_') + '.pdf',transparent=True,format='pdf')
-
-
-
