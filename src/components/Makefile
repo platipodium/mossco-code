@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2013, 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 # @author Richard Hofmeister <richard.hofmeister@hzg.de>
 # @author Knut Klingbeil <knut.klingbeil@io-warnemuende.de>
@@ -21,7 +21,7 @@ EXTRA_DIST=README
 
 SUBDIRS=gotm remtc
 
-TARGETS=libempty libconstant libdefault libmossco_grid libmossco_inout
+TARGETS=libmossco_technical libconstant libdefault libmossco_grid
 TARGETS+=libmossco_simplewave libmossco_info libmossco_filtration
 
 ifeq ($(MOSSCO_NETCDF),true)
@@ -57,7 +57,6 @@ all: utilities subdirs $(TARGETS)
 
 libmossco_constant: libconstant libmossco_util
 libmossco_default: libdefault
-libmossco_empty: libempty
 libmossco_info: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_info.a(info_component.o)
 
 libmossco_benthos: libmossco_benthos_driver libmossco_util \
@@ -129,8 +128,11 @@ libmossco_fabm0d: prefix libmossco_fabm0d_driver \
 libmossco_getm: libmossco_getm_driver libmossco_util \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_getm.a(getm_component.o)
 
-libempty: prefix libmossco_util $(MOSSCO_LIBRARY_PATH)/libempty.a(empty_component.o)
-libmossco_inout: prefix libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_inout.a(inout_component.o)
+libmossco_technical: prefix libmossco_util \
+	$(MOSSCO_LIBRARY_PATH)/libempty.a(empty_component.o) \
+	$(MOSSCO_LIBRARY_PATH)/libempty.a(dummy_component.o) \
+	$(MOSSCO_LIBRARY_PATH)/libempty.a(inout_component.o)
+
 libconstant: prefix modtypes $(MOSSCO_LIBRARY_PATH)/libconstant.a(constant_component.o)
 libdefault: prefix modtypes $(MOSSCO_LIBRARY_PATH)/libdefault.a(default_component.o)
 modtypes: prefix $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
@@ -174,13 +176,13 @@ hamsom_component.o: hamsom_component.F90
 	$(F90) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 #	$(F90) $(HAMSOM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) $(HAMSOM_FFLAGS) -c $< -o $@
 
-hamsom_component.F90: empty_component.F90
+hamsom_component.F90: dummy_component.F90
 	@echo "Creating dummy HAMSOM component $@"
-	sed 's/empty/hamsom/g' $< > $@
+	sed 's/dummy/hamsom/g' $< > $@
 
-tracer_component.F90: empty_component.F90
+tracer_component.F90: dummy_component.F90
 	@echo "Creating dummy TRACER component $@"
-	sed 's/empty/tracer/g' $< > $@
+	sed 's/dummy/tracer/g' $< > $@
 
 # KK-TODO: this can be removed when gotm's timestep routine is used
 ifeq ($(MOSSCO_GOTM_FABM),true)
@@ -206,7 +208,7 @@ extraclean:
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libgetm.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libempty.a
-	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_inout.a
+	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_technical.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libconstant.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libdefault.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a
