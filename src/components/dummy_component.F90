@@ -14,9 +14,9 @@
 #define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
 #define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
 #undef ESMF_FILENAME
-#define ESMF_FILENAME "empty_component.F90"
+#define ESMF_FILENAME "dummy_component.F90"
 
-module empty_component
+module dummy_component
 
   use esmf
   use mossco_component
@@ -340,4 +340,4 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
 
   end subroutine Finalize
 
-end module empty_component
+end module dummy_component
