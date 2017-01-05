@@ -2,7 +2,7 @@
 # This script is is part of MOSSCO. It creates from YAML descriptions of
 # couplings a toplevel_component.F90 source file
 #
-# @copyright (C) 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2014,2015,2016,2017 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -2152,8 +2152,9 @@ libs = {'gotm'       : ['solver', 'mossco_gotm'] ,
         'test'       : ['mossco_test'],
         'simplewave' : ['mossco_simplewave'],
         'river'      : ['mossco_river'],
-        'empty'      : ['empty'],
-        'inout'      : ['mossco_inout'],
+        'empty'      : ['mossco_technical'],
+        'dummy'      : ['mossco_technical'],
+        'inout'      : ['mossco_technical'],
         'info'       : ['mossco_info'],
         'fabm0d'     : ['mossco_fabm0d', 'solver', 'airsea',
                         'input', 'util', 'fabm'],
@@ -2191,9 +2192,10 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'netcdf_input'      : ['libmossco_netcdf'],
         'test'       : ['libmossco_test'],
         'info'       : ['libmossco_info'],
-        'empty'      : ['libempty'],
+        'empty'      : ['libmossco_technical'],
         'river'      : ['libmossco_river'],
-        'inout'      : ['libmossco_inout'],
+        'inout'      : ['libmossco_technical'],
+        'dummy'      : ['libmossco_technical'],
         'constant'   : ['libconstant libmossco_util'],
         'default'  : ['libdefault'],
         'gotm'       : ['libmossco_gotm', 'libsolver'],
@@ -2284,7 +2286,7 @@ libmossco_fabm0d libmossco_fabmpelagic libmossco_filtration libmossco_grid \
 libmossco_fabmbenthic:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
-libempty libmossco_inout libmossco_getm libmossco_simplewave libmossco_netcdf libmossco_benthos:
+libmossco_technical libmossco_getm libmossco_simplewave libmossco_netcdf libmossco_benthos:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libmossco_info libmossco_test libmossco_river libmossco_hamsom libmossco_location:
