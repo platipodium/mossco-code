@@ -3,10 +3,9 @@
 !> organisms that reside on the sea floor
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2015, 2016 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, HZG
 
-!
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
 ! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
