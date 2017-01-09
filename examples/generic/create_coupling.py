@@ -1180,16 +1180,25 @@ fid.write('''
 
 for i in range(0,len(couplingList)):
 
-    string = intervals[i].split()
-    number = string[0]
+    unit = 'h' # default unit is hours
+    value = intervals[i]
+
+    if isinstance(value,str):
+      string = value.split()
+      number = string[0]
+      if len(string)>1: unit = string[1]
+
+    elif isinstance(value,int):
+      number = str(value)
+
+    else:
+        print 'Unknown interval specification "' + intervals[i] + '"'
+        sys.exit(1)
+
+      # Special case infinity
     if (number == 'inf') or (number == 'none') or (number == '0'):
         unit = 'yy'
         number = '99999'
-    else:
-      if len(string)>1:
-        unit = string[1]
-      else:
-        unit = 'h'
 
     fid.write('    call ESMF_TimeIntervalSet(alarmInterval, startTime, ' + unit + '=' + number + ' ,rc=localrc)\n')
     fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
