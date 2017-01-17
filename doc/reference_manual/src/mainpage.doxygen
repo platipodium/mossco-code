@@ -47,7 +47,7 @@ Program | Minimum version and alternatives
 --------|----------
 GNU Make | 3.0
 Fortran 2003 Compiler | e.g. GNU  >= 4.8.2, Intel >= 12.0, PGI >= 13.2
-ESMF | 5.2.0rp3, preferably 6.3.0r or 7.X beta versions
+ESMF | ESMF_7_0_1,  or anx more recent 7.X beta versions
 
 @subsubsection optional-system-prereqs Optional system prerequisites
 
@@ -86,10 +86,10 @@ For ESMF, you need both the NetCDF C library and (in later versions of netCDF > 
 
 Decide on a directory where to put the ESMF source, and set the environment variable @c $ESMF_DIR to point to this directory.
 
-- download the git repository of esmf: @code git clone git://git.code.sf.net/p/esmf/esmf $ESMF_DIR @endcode
+- download the git repository of esmf: @code git clone git://esmf.git.sourceforge.net/gitroot/esmf/esmf $ESMF_DIR @endcode
 - change to this directory : @code cd $ESMF_DIR @endcode
-- checkout the ESMF_6_3_0r tagged version: @code git checkout ESMF_6_3_0r @endcode
-- set ESMF's environment variables (these can be a lot, see below)
+- checkout the ESMF_7_0_1 tagged version: @code git checkout ESMF_7_0_1  @endcode
+- set ESMF's environment variables (these can be a lot, see below and consult the ESMF user guide for details)
 
 An example environment for ESMF could look like this:
 Environment variable | value
@@ -98,7 +98,7 @@ ESMF_DIR | $HOME/opt/src/esmf
 ESMF_COMM | mpich2
 ESMF_NETCDF | split
 ESMF_NETCDF_INCLUDE | $HOME/opt/include
-ESMF_NETCDF_LIBPATH | /opt/gcc48/netcdf4/all_libs
+ESMF_NETCDF_LIBPATH | $HOME/opt/lib
 ESMF_LAPACK | netlib
 ESMF_PIO | internal
 
@@ -110,7 +110,6 @@ See the ESMF manual for a complete list of ESMF environment variables and their 
 Environment variable | value
 ---|---
 ESMFMKFILE | $HOME/opt/src/esmf/lib/libg/Linux.gfortran.64.mpich2.default/esmf.mk
-
 
 @subsection installing-gotm-fabm Auto-installing external programs
 
@@ -187,13 +186,13 @@ Sample setting for `bash` could look as follows
 
 		export MOSSCO_DIR=${HOME}/opt/mossco/code
 		export NETCDF_VERSION=NETCDF4
-    export ESMFMKFILE=/opt/esmf/lib/libo/Linux.gfortran.64.openmpi.ESMF_6_3_0rp1_beta_snapshot_09/esmf.mk
+    export ESMFMKFILE=/opt/esmf/lib/libo/Linux.gfortran.64.openmpi.ESMF_7_0_1/esmf.mk
 
 For `csh` you would, in a similar fashion, say
 
 		setenv MOSSCO_DIR ${HOME}/opt/mossco/code
     setenv NETCDF_VERSION NETCDF4
-    setenv ESMFMKFILE /opt/esmf/lib/libo/Linux.gfortran.64.openmpi.ESMF_6_3_0rp1_beta_snapshot_09/esmf.mk
+    setenv ESMFMKFILE /opt/esmf/lib/libo/Linux.gfortran.64.openmpi.ESMF_7_0_1/esmf.mk
 
 @section reporting Reporting errors
 
