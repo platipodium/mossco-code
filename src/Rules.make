@@ -1,6 +1,6 @@
 # This Makefile snippet is part of MOSSCO; definition of MOSSCO-wide make rules
 #
-# Copyright (C) 2013, 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+# Copyright (C) 2013, 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
 # Author Carsten Lemmen
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -10,7 +10,7 @@
 #
 
 # 0. Execute the preamble only if we are calling Rules make for the first time
-# this is detected by the presence of the variabl MOSSCO_PREFIX
+# this is detected by the presence of the variable MOSSCO_PREFIX
 # All variables that should be passed to submakes need to be exported,
 # including all variables that appear in the rules at the end of this file
 
@@ -24,14 +24,10 @@ endif
 
 # System-dependent flags
 ifeq ($(shell hostname),KSEZ8002)
-#ifeq ($(origin ARFLAGS)),default)
-export ARFLAGS=rvU
-export AR=ar
-$(warning use changed ARFLAGS=rvU)
-#endif
+  export ARFLAGS=rvU
+  export AR=ar
+  $(warning use changed ARFLAGS=rvU)
 endif
-
-
 
 MOSSCO_INSTALL_PREFIX?=$(MOSSCO_DIR)
 
@@ -46,7 +42,7 @@ ifndef ESMFMKFILE
   FORTRAN_COMPILER ?= $(shell echo $(F90) | tr a-z A-Z)
   FORTRAN_COMPILER ?= $(shell echo $(FC) | tr a-z A-Z)
   ifeq ("$(FORTRAN_COMPILER)","F77")
-    $(error MOSSCO needs a F2003 fortran compiler, your environment says $$FC=$(FC))
+    $(error MOSSCO needs a F2003 Fortran compiler, your environment says $$FC=$(FC))
   endif
   #$(error Compiling without ESMF support. Comment this line in Rules.make if you want to proceed at your own risk)
   MOSSCO_ESMF=false
@@ -563,8 +559,9 @@ export MOSSCO_BIN_PATH=$(MOSSCO_INSTALL_PREFIX)/bin
 
 # determine the compiler used by FABM/GOTM/GETM
 ifdef FORTRAN_COMPILER
+ifneq ($(FORTRAN_COMPILER),)
 
-  ifeq (${FORTRAN_COMPILER},PGF90)
+  ifeq ($(FORTRAN_COMPILER),PGF90)
     # pgfortran 14.1-0 has a problem compiling benthos_component.F90 (UK 22.05.2014)
     # see $MOSSCO_DIR/src/components/Makefile
     export MOSSCO_BENTHOS=false
@@ -588,6 +585,7 @@ ifdef FORTRAN_COMPILER
 
   export F90 ?= $(shell echo $(FORTRAN_COMPILER) | tr A-Z a-z)
 
+endif
 endif
 
 # Include directories
@@ -616,7 +614,7 @@ ifeq ($(FORTRAN_COMPILER),XLF)
 F90FLAGS += -qmoddir=$(MOSSCO_MODULE_PATH) -qstrict
 EXTRA_CPP=-WF,-DNO_ISO_FORTRAN_ENV
 else
-$(error I don't know where to place modules for FORTRAN_COMPILER=$(FORTRAN_COMPILER).)
+$(error I don't know where to place modules for FORTRAN_COMPILER=$(FORTRAN_COMPILER))
 endif
 endif
 endif
