@@ -246,13 +246,14 @@ module dummy_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_AttributeGet(gridComp, name='wait_time', &
-      value=waittime, defaultValue=0,rc=localrc)
+      value=waittime, defaultValue=0, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (waittime > 0.0) call sleep(waittime)
+!> @todo do we need an #ifdef __GNUC__ here as this is a gnu extension?
+    if (waittime > 0) call sleep(waittime)
 
-    call ESMF_ClockGetNextTime(clock, stopTime, rc=rc)
+    call ESMF_ClockGet(clock, stopTime=stopTime, rc=rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -268,7 +269,8 @@ module dummy_component
 
     !! Finally, log the successful completion of this function
     call MOSSCO_CompExit(gridComp, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Run
 
