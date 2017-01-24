@@ -84,7 +84,7 @@ For ESMF, you need both the NetCDF C library and (in later versions of netCDF > 
 
 @subsection installing-esmf Installing ESMF
 
-Decide on a directory where to put the ESMF source, and set the environment variable @c $ESMF_DIR to point to this directory.
+Decide on a directory where to put the ESMF source, and set the environment variable @c $ESMF_DIR to point to this directory.  Decide on a directory where to put the ESMF installation, and set the environment variable @c ESMF_INSTALL_PREFIX=$HOME/opt`.
 
 - download the git repository of esmf: @code git clone git://esmf.git.sourceforge.net/gitroot/esmf/esmf $ESMF_DIR @endcode
 - change to this directory : @code cd $ESMF_DIR @endcode
@@ -109,7 +109,7 @@ See the ESMF manual for a complete list of ESMF environment variables and their 
 
 Environment variable | value
 ---|---
-ESMFMKFILE | $HOME/opt/src/esmf/lib/libg/Linux.gfortran.64.mpich2.default/esmf.mk
+ESMFMKFILE | $HOME/opt/lib/libg/Linux.gfortran.64.mpich2.default/esmf.mk
 
 @subsection installing-gotm-fabm Auto-installing external programs
 
