@@ -294,13 +294,17 @@ for item in gridCompList:
     sortedGridCompList.append(item)
 gridCompList = sortedGridCompList
 
-if 'rename_connector' in cplCompList:
-  c=cplCompList.pop(cplCompList.index('rename_connector'))
-  cplCompList.insert(0,c)
+#if 'rename_connector' in cplCompList:
+#  c=cplCompList.pop(cplCompList.index('rename_connector'))
+#  cplCompList.insert(0,c)
 
 if 'link_connector' in cplCompList:
   c=cplCompList.pop(cplCompList.index('link_connector'))
   cplCompList.insert(0,c)
+
+for item in cplCompList:
+  if not instanceDict.has_key(item):
+    instanceDict[item]=item
 
 instanceList=list(set(instanceDict.values()))
 print 'Components to process:', componentList
@@ -348,12 +352,12 @@ fid.write('''
 
 for jtem in instanceList:
 
-    if jtem.find('mediator')>0:
+    if jtem.find('_mediator')>0 or jtem.find('_connector')>0:
       fid.write('  use ' + jtem + ', only : ' + jtem + '_SetServices => SetServices \n')
     else: fid.write('  use ' + jtem + '_component, only : ' + jtem + '_SetServices => SetServices \n')
 
-for jtem in cplCompList:
-    fid.write('  use ' + jtem + ', only : ' + jtem + '_SetServices => SetServices \n')
+#for jtem in cplCompList:
+#    fid.write('  use ' + jtem + ', only : ' + jtem + '_SetServices => SetServices \n')
 
 fid.write('\n  implicit none\n\n  private\n\n  public SetServices\n')
 fid.write('''
@@ -721,7 +725,11 @@ fid.write('''
 
 ''')
 for i in range(0,len(cplCompList)):
-    fid.write('    call ESMF_CplCompSetServices(cplCompList(' + str(i+1) + '), ' + cplCompList[i] + '_SetServices, rc=localrc)\n')
+    item = cplCompList[i]
+    if instanceDict.has_key(item):
+            item=instanceDict[item]
+
+    fid.write('    call ESMF_CplCompSetServices(cplCompList(' + str(i+1) + '), ' + item + '_SetServices, rc=localrc)\n')
     fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
     fid.write('      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n')
 
