@@ -15,6 +15,14 @@ endif
 
 include $(MOSSCO_DIR)/src/Rules.make
 
+GIT_CLONE_TARGETS += fabm_clone  gotm_clone  #json_clone
+GIT_UPDATE_TARGETS += fabm_update  gotm_update  #json_update
+CVS_CLONE_TARGTES += flibs-cvs-clone #json_clone
+CVS_UPDATE_TARGTES += flibs-cvs-update
+SVN_CLONE_TARGETS += #erosed-svn-clone
+SVN_UPDATE_TARGETS += #erosed-svn-update
+DISTCLEAN_TARGETS +=  gotm_clean fabm_clean #json_clean
+
 EXTRA_DIST =
 SUBDIRS =
 
@@ -24,53 +32,45 @@ GIT?=$(shell which git)
 PYTHON?=$(shell which python)
 PREFIX?=$(HOME)/opt
 
+include include/*mk
+
 ifeq ($(GIT),)
   $(error "could not find `git´ executable")
-  GIT_CLONE_TARGETS=
-else
-  GIT_CLONE_TARGETS=git-clone
+	GIT_TARGETS=
+	GIT_UPDATE_TARGETS=
+	GIT_CLONE_TARGETS=
 endif
 
 ifeq ($(PYTHON),)
   $(error "could not find `git´ executable")
   PYTHON_CLONE_TARGETS=
 else
-  PYTHON_CLONE_TARGETS=python-clone
+  PYTHON_CLONE_TARGETS+=python-clone
 endif
 
 ifeq ($(SVN),)
   $(warning "could not find `svn´ executable")
   SVN_CLONE_TARGETS=
-else
-  SVN_CLONE_TARGETS=svn-clone
 endif
 
 ifeq ($(CVS),)
   $(warning "could not find `cvs´ executable")
   CVS_CLONE_TARGETS=
-else
-  CVS_CLONE_TARGETS=cvs-clone
 endif
 
 .PHONY: all clean extraclean subdirs $(SUBDIRS) clone update
-.PHONY: fabm_clone  gotm_clone  getm_clone  erosed-svn-clone flibs-cvs-clone json_clone
-.PHONY: fabm_update gotm_update getm_update erosed-svn-update flibs-cvs-update json_update
+.PHONY: fabm_clone  gotm_clone  erosed-svn-clone flibs-cvs-clone json_clone
+.PHONY: fabm_update gotm_update erosed-svn-update flibs-cvs-update json_update
 .PHONY: sqlite-zip sqlite
 
-all: clone
 
-clone: $(GIT_CLONE_TARGETS) $(SVN_CLONE_TARGETS) $(CVS_CLONE_TARGETS)
-
-git-clone: fabm_clone  gotm_clone  getm_clone  #json_clone
-cvs-clone: flibs-cvs-clone #json_clone
-svn-clone: #erosed-svn-clone
-
-update: fabm_update gotm_update getm_update \
-  flibs-cvs-update #json_update #erosed-svn-update
+all: clone update
+clone: $(GIT_CLONE_TARGETS) $(SVN_CLONE_TARGETS) $(CVS_CLONE_TARGETS) $(GIT_TARGETS)
+update: $(GIT_UPDATE_TARGETS) $(SVN_UPDATE_TARGETS) $(CVS_UPDATE_TARGETS) $(GIT_TARGETS)
 
 clean: extraclean
 
-distclean: getm_distclean gotm_clean fabm_clean #json_clean
+distclean: $(DISTCLEAN_TARGETS)
 
 extraclean:
 
@@ -109,24 +109,6 @@ ifeq ($(wildcard $(external_GOTMDIR)/src/CMakeLists.txt),)
 	$(GIT) clone https://github.com/gotm-model/code.git $(external_GOTMDIR)
 else
 	( cd $(external_GOTMDIR) ; $(GIT) pull )
-endif
-
-getm_clone:
-ifeq ($(wildcard $(external_GETMDIR)/src/Makefile),)
-	$(GIT) clone http://git.code.sf.net/p/getm/code $(external_GETMDIR)
-	( cd $(external_GETMDIR) ; $(GIT) checkout -b iow origin/iow )
-else
-	$(MAKE) getm_update
-endif
-
-getm_update:
-ifneq ($(wildcard $(external_GETMDIR)/src/Makefile),)
-	( cd $(external_GETMDIR) ; $(GIT) pull origin iow)
-endif
-
-getm_distclean:
-ifneq ($(wildcard $(external_GETMDIR)/src/Makefile),)
-	( unset FABM ; $(MAKE) -C $(external_GETMDIR) distclean )
 endif
 
 erosed-svn-clone:
