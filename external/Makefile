@@ -22,6 +22,7 @@ CVS_UPDATE_TARGTES += flibs-cvs-update
 SVN_CLONE_TARGETS += #erosed-svn-clone
 SVN_UPDATE_TARGETS += #erosed-svn-update
 DISTCLEAN_TARGETS +=  gotm_clean fabm_clean #json_clean
+VERSION_TARGETS +=
 
 EXTRA_DIST =
 SUBDIRS =
@@ -64,9 +65,10 @@ endif
 .PHONY: sqlite-zip sqlite
 
 
-all: clone update
+all: clone update version
 clone: $(GIT_CLONE_TARGETS) $(SVN_CLONE_TARGETS) $(CVS_CLONE_TARGETS) $(GIT_TARGETS)
 update: $(GIT_UPDATE_TARGETS) $(SVN_UPDATE_TARGETS) $(CVS_UPDATE_TARGETS) $(GIT_TARGETS)
+version: $(VERSION_TARGETS)
 
 clean: extraclean
 

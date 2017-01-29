@@ -19,11 +19,13 @@
 # - $(GETM_CLONE_TARGETS) [append]
 # - $(GETM_UPDATE_TARGETS) [append]
 # - $(DISTCLEAN_TARGETS) [append]
+# - $(VERSION_TARGETS) [append]
 
 .PHONY: getm_clone getm_update getm_distclean
 
 GIT_TARGETS += getm
 DISTCLEAN_TARGETS += getm_distclean
+VERSION_TARGETS += getm_version
 
 getm: getm_clone
 
@@ -43,4 +45,13 @@ endif
 getm_distclean:
 ifneq ($(wildcard $(external_GETMDIR)/src/Makefile),)
 	( unset FABM ; $(MAKE) -C $(external_GETMDIR) distclean )
+endif
+
+getm_version:
+ifneq ($(wildcard $(external_GETMDIR)/src/Makefile),)
+	GETM_VERSION=$(shell cat /Users/lemmen/devel/MOSSCO/code/external/getm/code/VERSION)
+	GETM_GIT_SHA=$(shell cd $(external_GETMDIR) ; $(GIT) log -n 1 |head -1 | cut -d" " -f2)
+
+	@#echo "CPPFLAGS+=-DGETM_VERSION="${GETM_VERSION} >> $(MOSSCO_DIR)/src/include/versions.mk
+	@#echo "CPPFLAGS+=-DGETM_GIT_SHA="${GETM_GIT_SHA} >> $(MOSSCO_DIR)/src/include/versions.mk
 endif
