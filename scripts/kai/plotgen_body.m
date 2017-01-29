@@ -4,13 +4,29 @@ iy=cell2mat(var{i}(7)); ix=cell2mat(var{i}(8));
 ytl=[1E-5 1E-4 1E-3 0.01 0.1 0.3 1 3 10 20 50 100 1E3 1E4 1E5 1E6];  
 % geometry of sub-plot
 x0=0.05+(ix-1)*1.2*dxp; y0=0.1+(nrow-iy)*1.07*dyp;
-
+z0=min(2,size(tmp,3));
 % loop over sites (eg from 3D output)
 for ili=1:size(i_loc,1)
   if size(loc,1) == 0 
     res = squeeze(tmp)*cell2mat(var{i}(5)); 
   else
-    res = squeeze(tmp(i_loc(ili,1),i_loc(ili,2),:,:))*cell2mat(var{i}(5)); 
+    res = squeeze(tmp(i_loc(ili,1),i_loc(ili,2),:,:))*cell2mat(var{i}(5));
+    if neighn(ili)>0
+     if exist('resmini') clear resmini resmaxi; end
+     for ni=1:neighn(ili)
+       tx=i_loc(ili,1)+neighv(ili,ni,1);
+       ty=i_loc(ili,2)+neighv(ili,ni,2);
+       if(ndims(tmp)>3)
+        resmini(ni,:) = min(squeeze(tmp(tx,ty,z0:end,ind)));
+        resmaxi(ni,:) = max(squeeze(tmp(tx,ty,z0:end,ind)));
+       else
+        resmini(ni,:) = min(squeeze(tmp(tx,ty,ind)));
+        resmaxi(ni,:) = max(squeeze(tmp(tx,ty,ind)));
+       end
+     end
+     resmin=min(resmini)'*cell2mat(var{i}(5));
+     resmax=max(resmaxi)'*cell2mat(var{i}(5));
+    end
   end
 
 % goes to new figure if required
@@ -28,7 +44,9 @@ for ili=1:size(i_loc,1)
 %% process min-max value
   minval = cell2mat(var{i}(3)); maxVal = cell2mat(var{i}(4)); 
   if maxVal<-1, maxVal=1.05*max(max(res)); end
-  if minval>0 & maxVal/minval > 20,  set(gca,'YScale','Log','YTick',ytl,'YTicklabel',ytl);  end
+  if minval>0 & maxVal/minval > 20,  set(gca,'YScale','Log','YTick',ytl,'YTicklabel',ytl); 
+
+ end
 
   if(ptag(1)=='P')
     set(axs,'FontSize',fs,'Xlim',[minval maxVal],'box','on');
@@ -53,7 +71,7 @@ for ili=1:size(i_loc,1)
        if (dtim>360 & iy==nrow)
         for yi=1:length(years)
           xy=0.1+(mean(time(find(year==years(yi))))-t0)/dtim;
-          annotation('textbox',tpos+[xy*dxp -0.905*dyp 0 0],'String',num2str(years(yi)),'Color','k','Fontweight','normal','FontSize',fs+2,'LineStyle','none');
+          annotation('textbox',[x0+(xy-0.16)*dxp y0+0.85*dyp-0.905*dyp 0.2*dxp 0.2*dyp],'String',num2str(years(yi)),'Color','k','Fontweight','normal','FontSize',fs+2,'LineStyle','none');
         end
        end 
      end %if dtim
@@ -87,10 +105,22 @@ for ili=1:size(i_loc,1)
   for li=2:length(ptag)  % loop over given depths
      if isstrprop(ptag(li), 'xdigit') 
        zi=1+str2num(ptag(li));  % depth index from tag list
-       % rescale depth index for more than 10 layers
+       % rescale depth index for more than 10 layers/
        if(size(res,1)>10) zi=1+round((zi-1)/9*(size(res,1)-1)); end
        y=res(zi,:);
-       plot(time(it),y(ind(it)),'o','Color',coljj(li-1,:),'MarkerFaceColor',coljj(li-1,:),'MarkerSize',4+2*mod(ns+1,4));
+       if size(neigh,1)>0
+ %%        Xt=[time,fliplr(time)];                %#create continuous x value array for plotting
+ %%        Ym=[resmin-0.5,fliplr(resmax)+2];              %#create y values for out and then back
+ %%        fill(Xt,Ym,'w','Color',ones(3,1)*0.9); 
+         iu=find(resmin>0);
+         hp = patch([time(iu); fliplr(time(iu)')';], [resmin(iu); fliplr(resmax(iu)')';], 'r');
+         set(hp, 'facecolor',ones(3,1)*0.8, 'edgecolor', 'none'); drawnow
+ %%         yvm=0.5*[resmin+resmax]; yve=0.5*[-resmin+resmax];
+ %%         hp=errorbar(time(it),yvm,yve,'Color',coljj(li-1,:)); 
+ %%         hp.CapSize = 2;  %  needs matlab2016b
+
+       end 
+       if(ntags>1) plot(time(it),y(ind(it)),'o','Color',coljj(li-1,:),'MarkerFaceColor',coljj(li-1,:),'MarkerSize',2+ceil(2*mod(ns+1,4))); end
 %%       annotation('textbox',tpos+[0.05*(li-1)*dxp -0.14*dyp 0 0],'String',[num2str(zi) '/' ptag(li)],'Color',coljj(li-1,:),'Fontweight','bold','FontSize',fs-2,'LineStyle','none');
      else
        if(dim==3 && isempty(findstr(varn,'flux')) )
@@ -268,8 +298,8 @@ for ili=1:size(i_loc,1)
      dval = squeeze(data{id,iv})*cell2mat(var{i}(5));
      indd  = find(~isnan(dval));
      if length(indd)>0
- %      fprintf('%s: %d\t%1.1f %1.1f \n',varshort0,length(indd),datime(indd(1)),datime(indd(end)));
-       plot(datime(indd),dval(indd),'+','Color',col,'MarkerSize',13,'LineWidth',1);
+%       fprintf('%s: %d\t%1.1f %1.1f \n',varshort0,length(indd),datime(indd(1)),datime(indd(end)));
+       plot(datime(indd),dval(indd),'+','Color',col,'MarkerFaceColor',col,'MarkerSize',12-(ili==1)*4,'LineWidth',1);
        break;
      end
    end

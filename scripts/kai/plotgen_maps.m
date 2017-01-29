@@ -10,7 +10,7 @@ end
 varshortm0=varshort;
 if isstrprop(ptag(2), 'xdigit') 
   vli=2:length(ptag); mode='s';
-elseif 1==0
+elseif ~exist('timeg') %~strcmp(varshort,'chl')
   vli=0:nrowm*ncolm-1; mode='c';
   moffs=moffs+1;
 else
@@ -47,7 +47,7 @@ for im=1:length(vli)
  elseif mode=='c'
   ix = 1+mod(im-1,ncolm);
   iy = 1+floor((im-1)/ncolm);
-  ti = toffm+((cell2mat(var{i}(6))-moff)*(nrowm*ncolm)+im)*2;   
+  ti = toffm+((cell2mat(var{i}(6))-moff)*(nrowm*ncolm)+im)*10;   
  else
   ix = 1+mod(im-1,ncolm);
   iy = 1+floor((im-1)/ncolm);
@@ -89,7 +89,7 @@ for im=1:length(vli)
   varshortmc0=varshort;
   npc=moffc+npc+mofc*15;
 
-  figure(npc); set(gcf,'Position',[0 0 980 560], 'visible',vis,'Color','w'); hold on
+  figure(npc); set(gcf,'Position',[0 0 920 660], 'visible',vis,'Color','w'); hold on
   figc=[figc npc];
     % geometry of sub-plot
   x0=0.06+(ix-1)*1.15*dxpm; y0=0.1+(iy-1)*1.03*dypm;
@@ -101,7 +101,8 @@ for im=1:length(vli)
     plot_single_map; % repeat plotting
   end
 
-%% plot satellite map for comparison  
+%% plot satellite map for comparison 
+  if(show_data)
   if(ntagm~=ntags & im0<length(iig))
     % find best date of data
     if mode=='v'
@@ -117,7 +118,7 @@ for im=1:length(vli)
      plotdatamap;
      im0=im0+1;
     end
-
+  end
   end   
 
   % colormap(ssec); 

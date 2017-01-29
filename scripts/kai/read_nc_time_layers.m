@@ -10,7 +10,8 @@ time_units = netcdf.getAtt(ncid,varid,'units');
 if Is1D 
   coordn='helgoland3d';
 else
-  coordn='getmGrid3D_getm';
+%  coordn='getmGrid3D_getm';
+  coordn='getmGrid3D';
 end
 
 t_offset = datenum(time_units(15:end),'yyyy-mm-dd HH:MM:SS');
@@ -63,14 +64,17 @@ end
 %for i=nv(1)+1:nv(2)  vinfo = ncinfo(ncfile,[ms var2{i}]);
 %  if length(vinfo.Size) < 4, Is2D(i)=1; end
 %end
-i_loc=[1 1];
+i_loc=[1 1]; 
+neighv=zeros(length(locs),5+4*(surround==1),2)-99;neighn=zeros(length(locs),1);
 if length(locs) >1 | nfigm>0 | (ptag(1)=='T')
  % reading geo-coordinates
- varid=netcdf.inqVarID(ncid,[coordn '_lon']);
-% [id loni]=netcdf.inqDim(ncid,varid);
+ varid=netcdf.inqVarID(ncid,[coordn '_x']);
+% varid=netcdf.inqVarID(ncid,[coordn '_lon']);
+
  lon=netcdf.getVar(ncid,varid);
 
- varid=netcdf.inqVarID(ncid,[coordn '_lat']);
+ varid=netcdf.inqVarID(ncid,[coordn '_y']);
+% varid=netcdf.inqVarID(ncid,[coordn '_lat']);
 % [id lati]=netcdf.inqDim(ncid,varid);
  lat=netcdf.getVar(ncid,varid);
 % limits
@@ -79,20 +83,37 @@ if length(locs) >1 | nfigm>0 | (ptag(1)=='T')
 %lonlimit(1)=lonlimit(1)+1.2; lonlimit(2)=lonlimit(2)-0.0; 
  ig=find(lat>0 & lat<9E9 );
  latlimit=cl_minmax(cl_minmax(lat(ig)));
-%% positioning (Helgoland)
 
+%% positioning of time-series stations or POIs
  if length(loc) >0
 % dr=0.03; [ix_hr iy_hr]=find(abs(lat-54.15)<dr & abs(lon-7.8)<dr);
   for li=1:size(loc,1)
+    neigh=[];
     [m1 i]=min(abs(lat-loc(li,1))+abs(lon-loc(li,2)),[],1);
     [m j]=min(m1);
     i_loc(li,1:2)=[i(j) j];
-    fprintf('%s: lon %1.3f %1.3f\t lat %1.3f %1.3f\t%d %d\n',locs{li},lon(i_loc(li,1),i_loc(li,2)),loc(li,2),lat(i_loc(li,1),i_loc(li,2)),loc(li,1),i_loc(li,1),i_loc(li,2));
-
-%fprintf('dz: %1.2f\t x-+:%1.2f %1.2f\ty-+:%1.2f %1.2f\n',water_dz(i_loc(li,1),i_loc(li,2)),water_dz(i_loc(li,1)-1,i_loc(li,2)),water_dz(i_loc(li,1)+1,i_loc(li,2)),water_dz(i_loc(li,1),i_loc(li,2)-1),water_dz(i_loc(li,1),i_loc(li,2)+1));
-
+ %   fprintf('%s: lon %1.3f %1.3f\t lat %1.3f %1.3f\t%d %d\n',locs{li},lon(i_loc(li,1),i_loc(li,2)),loc(li,2),lat(i_loc(li,1),i_loc(li,2)),loc(li,1),i_loc(li,1),i_loc(li,2));
+    switch surround
+    case 1  % all neighbor cells
+     for ni=0:8  
+       dix=floor(ni/3)-1; diy=mod(ni,3)-1;
+       if ~isnan(water_dz(i_loc(li,1)+dix,i_loc(li,2)+diy)) neigh=[neigh; [dix diy];]; end
+%      fprintf('dz: %d %d  \t%1.2f\tlat=%1.3f lon=%1.3f\n',dix,diy,water_dz(i_loc(li,1)+dix,i_loc(li,2)+diy),lat(i_loc(li,1)+dix,i_loc(li,2)+diy),lon(i_loc(li,1)+dix,i_loc(li,2)+diy));
+     end 
+    case 2 % only bordering neighbor cells
+     for ni=-1:2:1
+       dix=ni; diy=0;
+       if ~isnan(water_dz(i_loc(li,1)+dix,i_loc(li,2)+diy)) neigh=[neigh; [dix diy];]; end
+       dix=0; diy=ni;
+       if ~isnan(water_dz(i_loc(li,1)+dix,i_loc(li,2)+diy)) neigh=[neigh; [dix diy];]; end
+     end
+%      fprintf('dz: %d %d  \t%1.2f\tlat=%1.3f lon=%1.3f\n',dix,diy,water_dz(i_loc(li,1)+dix,i_loc(li,2)+diy),lat(i_loc(li,1)+dix,i_loc(li,2)+diy),lon(i_loc(li,1)+dix,i_loc(li,2)+diy));
+     end  
+%    size(neigh)
+     neighv(li,1:size(neigh,1),:)=neigh; neighn(li)=size(neigh,1);
   end
  end
+
 end %length(locs) >1
 if ptag(1)=='T'
   varid=netcdf.inqDimID(ncid,[coordn '_1']);

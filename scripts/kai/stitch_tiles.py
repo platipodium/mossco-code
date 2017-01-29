@@ -64,15 +64,18 @@ except:
 
 for key, value in nc.variables.iteritems():
   dim=value.dimensions
-  #print key, dim
+  print key, len(value.dimensions)
   if len(value.dimensions) != 1 : continue
-  if key.endswith('_lat'): alat[key]=[]
+  print key, dim
+  if key.endswith('_y'): alat[key]=[]
+  elif key.endswith('_x'): alon[key]=[]
   elif key.endswith('_lon'): alon[key]=[]
+  elif key.endswith('_lat'): alat[key]=[]
   elif key.endswith('_X'): alon[key]=[]
   elif key.endswith('_Y'): alat[key]=[]
-  elif key.endswith('_x'): alon[key]=[]
-  elif key.endswith('_y'): alat[key]=[]
 nc.close()
+
+print alat.keys()
 
 for item in alat.keys():
   print "Found latitude/Y information " + item
@@ -80,7 +83,7 @@ for item in alon.keys():
   print "Found longitude/X information " + item
 
 if len(alon)<1:
-  print "Found no longitude/X information"
+  print "Found no longitude/X information" 
 if len(alat)<1:
   print "Found no latitude/Y information"
 

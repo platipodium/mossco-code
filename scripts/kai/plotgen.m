@@ -7,16 +7,16 @@ clear all;close all;warning ('off','all');
 addpath('~/tools/m_map');  % map-toolbox needed for 2D plots
 addpath('~/tools/export_fig');  % toolbox needed for correct png layout
 show_data=1; Is1D=0; IsNOAH=0; tmp=version; VerMat=num2str(tmp(1:3)); 
-%datf='~/data/DeutscheBucht/Helgoland.nc';
-datf='~/data/DeutscheBucht/stations.nc';
+%datf='~/data/DeutscheBucht/Helgoland_19622014.nc';
+datf='~/data/DeutscheBucht/stations_1960-2015.nc';
 datm='~/data/DeutscheBucht/esacci_2003_2013.mat';
 %% settings
 % locations; at least one site-name (locs) should be given 
 %loc =[]; ];%];%
-loc =[[54.18,7.86];[55.,8.3];[53.7,7.2];[52.3,4.3];[52.56,3.5];[53.42,5.15];[53.76,4.77]; [54.6,8.4];[54.0,8.7];[54.1,6.3];[54.2,7.5];[53.92,4.6];[53.3,2.5];];%;;[55.2,5.0];[55.0,8.0];]; 
-% %[54.96,8.4]; 
+loc =[[54.17,7.88];[55.,8.3];[53.7,7.2];[52.3,4.3];[52.56,3.5];[53.42,5.15];[53.76,4.77]; [54.6,8.4];[54.0,8.7];[53.9,2.9];];%;;[54.1,6.3];[54.2,7.5];[53.92,4.6];;[55.2,5.0];[55.0,8.0];]; 
+% %[54.96,8.4]; ];%
 %  % 17 m 28 m% Noordwijk-10 Noordwijk-70
-locs={'Helgoland';'Sylt'; 'Norderney';'NOORDWK10';'NOORDWK70';'TERSLG4';  'TERSLG50';   'SAmrum';  'Norderelbe'; 'T22';    'T26';  'TERSLG70';'EastAngliaPlume';'T2' ;'T8';}; %
+locs={'Helgoland';'Sylt'; 'Norderney';'NOORDWK10';'NOORDWK70';'TERSLG4';  'TERSLG50';   'SAmrum';  'Norderelbe'; 'EastAngliaPlume';'T22';    'T26';  'TERSLG70';'T2' ;'T8';}; %
 %'Helgoland'; 'Sylt';    'SAmrum';'Norderelbe';'Nordeney',
 %  'T36';     'T26' ;    'T41';   'T8'  ;      'T2';
 %  'T22';     'T5';      'T12';   'T11'
@@ -33,35 +33,27 @@ if (show_data==1)
 else
     show_dati=zeros(size(loc,1));
 end;
-surf=1; vis='off'; % 'Visible' 'on' or 'off'
+surf=0; vis='off'; % 'Visible' 'on' or 'off'
+surround=2;  % show min-max of bordering neighbor cells
 %tags={'_a';'_b'};%'_c';'_3';'_0';tags={'_4';};%'_2';'_3';
 %tags={'';'_Zmort';'_n'};%;};%'_0';'_1';'exu';'Ndep';
-nrow  = 2; ncol  = 2; 	% number of columns in fig
+nrow  = 2; ncol  = 1; 	% number of columns in fig
 %%nrow  = 1; ncol  = 1; 	% number of columns in fig
-nrowm = 4; ncolm = 6;
+nrowm = 4; ncolm = 7;
 %nrowm = 2; ncolm = 3;
 if Is1D 
   locs={'Helgoland'};
   loc =[54.18,7.82];
 %  spath= '/home/wirtz/mossco/setups/hr/';%/local';hrres/
   spath= '/local/home/wirtz/mossco/mossco-setups/hr/'
-%tags = {'ref';'mort_zoo0.02';'mort_zoo0.03';'zm_fa_delmax1';};
-%tags = {'ref';'vS_det30';'vS_phy0.';'hydrol0.01';'remin0.03';'phi_agg0.001';'phi_agg0.01';};
-%tags = {'ref';'V_NC_max0.9';'rFast0.06';'a_water0.8';'phi_agg0.003';'syn_nut-4.6';};
-    %'PAds1';'ksNO3denit7.';'rSlow0.001';};'vir_phyC0.5';'vir_spor_C0.00001';
-%'mort_zoo0.017';'mort_zoo0.32';'zm_fa_delmax2.5';'zm_fa_inf0.02';'zm_fa_inf0.2';
-%'QN_phy_max0.17';'QN_phy_max0.26';'alpha0.22';'AffN0.15';'AffP0.05';
-%tags = {'ref';'zm_fa_inf0.01';'zm_fa_inf2';};%'zm_fa_delmax1';'zm_fa_delmax9';%%'vir_infect0.001';'vir_infect0.0035';'vir_loss0.1';'rnit140';'Nqual0.';'vS_det15';};'vir_spor_C0.002';'vir_phyC0.1';'vir_phyC2.';
-%tags ={'ref';'vsphy';};% {'_0';'_1';};%'phi_agg5E-4';'agg_doc0.01';'vir_loss0.';};'_2';
 tags = {'_0';'_1';};%'_2';
-%};%'vir_loss0.02';'vir_loss0.2';vir_phyC0.1';'vir_phyC8.0';'vir_phyC80';'vir_spor_C0.00001';'vir_spor_C0.01';'vir_mu0.003';'vir_mu0.01';'vir_loss0.3';'vir_loss0.8';
 %tags = {'ref';'vir_spor_r0.12';'vir_spor_r0.18';};
 %    'vir_spor_r0.16';'vir_mu0.003';};'_vir_mu3.5';'_vir_loss1.0';};
 %tags = {'ref';'AffP0.05';};
 ntags=length(tags);
   ncf0 = 'mossco_1d'; % base file name of input netcdf
   setvar_1D  % defines variables to show - and where/how to do it 
-  ncol = 3; nrow = 2; 	% number of columns in fig
+  ncol = 2; nrow = 2; 	% number of columns in fig
 else
 if show_data
     load(datm);
@@ -70,32 +62,32 @@ if show_data
     timeg = timeg  + datenum('1970-01-01','yyyy-mm-dd');- datenum('2000-01-01','yyyy-mm-dd'); %days after 1/1/2000
 end
 
-%;'_vir_phyC8';'_vir_infect3';'_vir_spor_r0.5';'_vir_spor_r2';
-tags ={'';'_vir_mu-0.4';'_vir_mu-0.05';};%'_vir_mu-0.5';'_vir_mu-0.02';;
-%tags ={'';'_2';};%t'_sinking_factor_min0.03';'_sinking_factor_min0.27';'_sinking_factor_min0.39';};
-%tags ={'ResAmpl.01';'ResAmpl.19';'ResAmpl.37';'ResAmpl.55';};'_rSlow0.0001';_vir_spor_C0.003
-%'_phi_agg0.003';'_remin0.1';'_vir_loss1.0';'_vir_mu3.5';'_mort_zoo0.035';
-
- % spath= '/local/home/wirtz/sns/';%   spath= '~/';
+%tags ={'_ju1';'_juv3';};%
+tags ={'';'_getm';};%
+%'_vir_mu-0.08';'_vir_spor_r0.14';'_mort_zoo0.035';'_basal_resp_zoo0.045';'_vS_det24';'_sinking_factor_min0.002';
+ spath= '/local/home/wirtz/sns/cut/';%   spath= '~/';
  %spath= '~/jureca/sns/cut';%   %%spath  ='/ocean-data/wirtz/';%%%sns/cut
- spath='/data/wirtz/';
+ %spath='/data/wirtz/';
   ncf0 = 'sns'; ntags=length(tags);
   if IsNOAH
     setvar_o2flux  % defines variables to show - and where/how to do it %setvar  
    %% nrowm = 1; ncolm = 1;
- %%   ncol = 2; nrow = 1; 	% number of columns in fig
+     ncol = 1; nrow =3; 	% number of columns in fig
   else
-    setvar_sns %Pres Data defines variables to show - and where/how to do it %setvar  
+    setvar_snsPres; % %Data defines variables to show - and where/how to do it %setvar  
   end
 end
 
 dxp = 0.82/(ncol+0.05); dyp = 0.83/(nrow +0.05);
 dxpm = 0.86/( ncolm +0.05); dypm= 0.86/(nrowm+0.05);
 compn ={'water';'soil'};
-fs = 14; colp=prism(5);colj=colp([1 4:5 2:3 1:2],:); coljj=jet(11); colt='kw';
+fs = 14; colp=prism(5);colp=gray(5);colj=colp([3 4:5 2:3 1:2],:); coljj=jet(11); 
+coljj(8,:)=coljj(3,:);coljj(3,:)=coljj(7,:);
+colt='kw';
 i0=10;coljm=ones(256,3); coljm(i0+1:256,:)=jet(256-i0);
 vt{1}='00';
-linw=[3 2*ones(1,14)]; lins=['- '; repmat('- ',14,1);]; 
+linw=[2 2*ones(1,14)]; lins=['- '; repmat('- ',14,1);]; 
+%linw=ones(1,16);
 
 %% check for tag file
 tagfile = fullfile(spath,['tag.lst']);
@@ -106,7 +98,7 @@ else
 end
 
 %% open all figures
-for np=1:nfig+nfigm, figure(np); set(gcf,'Position',[0 0 980 560],'Visible','off','Color','w'); end
+for np=1:nfig+nfigm, figure(np); set(gcf,'Position',[0 0 1280 560],'Visible','off','Color','w'); end
 oldfig=-np; 
 ptag=cell2mat(var{1}(9));
 occ = zeros(nfig,ncol,nrow); occ0=occ+1;
@@ -115,8 +107,8 @@ for ns=1:ntags %% loop over scenarios/stations/layers
  moffs=0;moffc=0;mofc=0;figc=[]; varshortm0='';varshortmc0=''; imc=1;
  %% read model output
  tag=cell2mat(tags(ns));
-% ncfile = fullfile(spath,[ncf0 tag '.nc']);
- ncfile = fullfile(spath,[ncf0 tag '/cut/' ncf0 tag '.nc']);
+ ncfile = fullfile(spath,[ncf0 tag '.nc']);
+% ncfile = fullfile(spath,[ncf0 tag '/cut/' ncf0 tag '.nc']);
 
  read_nc_time_layers
  t0=time(1);
@@ -128,15 +120,14 @@ for ns=1:ntags %% loop over scenarios/stations/layers
    end
  end
 % t0 = datenum('1962-03-01','yyyy-mm-dd')-1;
-% t0 = datenum('1961-02-01','yyyy-mm-dd')-1;
-%t0 = datenum('2004-02-01','yyyy-mm-dd')-1;
-%t1 = datenum('2004-12-30','yyyy-mm-dd')-1;
-%t1 = datenum('2004-03-20','yyyy-mm-dd')-1;
+%t0 = datenum('2004-03-01','yyyy-mm-dd')-1;
+%t0 = datenum('2003-03-01','yyyy-mm-dd')-1
+t1 = datenum('2002-12-23','yyyy-mm-dd')-1;
 
  ind=find(time>= t0 & time<=t1);
  toffm = min(find(time>= t0))-1;
  year=year(ind);time=time(ind); doy=doy(ind); years= unique(year);
- it=round(1+(0:19)*(length(time)-1)/19);% discrete index for plotting symbols
+ it=round(1+(0:29)*(length(time)-1)/29);% iscrete index for plotting symbols
 
 %% loop over all variables to show
   for i=1:nvar
@@ -202,7 +193,8 @@ for np=1:nfig+nfigm+nfigc
   set(gcf,'PaperPositionMode','auto', 'InvertHardCopy', 'off','Visible',vis);%,'Visible','off','Position',1*[0 0 1180 650]
 %% add site name to each figure/page
   if(np<=nfig)
-    li=floor(np/nfig0);
+    li=ceil(np/nfig0);
+    fprintf('np %d/%d=%d\n', np,nfig0,li); %floor ?
     annotation('textbox',[0.45 0.95 0.2 0.045],'String',locs{max(1,li)},'Color','k','Fontweight','bold','FontSize',fs+2,'LineStyle','none');
 %% create base file name
     fnam0=sprintf('%d_%s%s',np,locs{max(1,li)},tagnam);
@@ -221,4 +213,3 @@ for np=1:nfig+nfigm+nfigc
   export_fig(fnam,'-png'); %,'PaperUnits','cm','PaperSize',[30,40],'PaperPosition',[0 0 30 40],'-r300'
 %  print(gcf,'-dpng',fnam);
 end
-
