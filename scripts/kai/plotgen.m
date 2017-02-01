@@ -9,7 +9,8 @@ addpath('~/tools/export_fig');  % toolbox needed for correct png layout
 show_data=1; Is1D=0; IsNOAH=0; tmp=version; VerMat=num2str(tmp(1:3)); 
 %datf='~/data/DeutscheBucht/Helgoland_19622014.nc';
 datf='~/data/DeutscheBucht/stations_1960-2015.nc';
-datm='~/data/DeutscheBucht/esacci_2003_2013.mat';
+datm='~/data/DeutscheBucht/chl_esacci_2003_2013.mat';
+
 %% settings
 % locations; at least one site-name (locs) should be given 
 %loc =[]; ];%];%
@@ -60,10 +61,11 @@ if show_data
     [m_lon,m_lat] = meshgrid(lons,lats);
     im0=0;
     timeg = timeg  + datenum('1970-01-01','yyyy-mm-dd');- datenum('2000-01-01','yyyy-mm-dd'); %days after 1/1/2000
+    timea=timea(2:size(timser,1)+1) + datenum('1970-01-01','yyyy-mm-dd');
 end
 
-%tags ={'_ju1';'_juv3';};%
-tags ={'';'_getm';};%
+tags ={'';'2';};%_a_water1.4_Pmax4'_rFast0.035';'_vir0.05';
+%tags ={'';'_vS_det24';'_sinking_factor_min0.002';};%'_getm';
 %'_vir_mu-0.08';'_vir_spor_r0.14';'_mort_zoo0.035';'_basal_resp_zoo0.045';'_vS_det24';'_sinking_factor_min0.002';
  spath= '/local/home/wirtz/sns/cut/';%   spath= '~/';
  %spath= '~/jureca/sns/cut';%   %%spath  ='/ocean-data/wirtz/';%%%sns/cut
@@ -81,7 +83,7 @@ end
 dxp = 0.82/(ncol+0.05); dyp = 0.83/(nrow +0.05);
 dxpm = 0.86/( ncolm +0.05); dypm= 0.86/(nrowm+0.05);
 compn ={'water';'soil'};
-fs = 14; colp=prism(5);colp=gray(5);colj=colp([3 4:5 2:3 1:2],:); coljj=jet(11); 
+fs = 14; colp=prism(5);colp=gray(5);colj=colp([2:5 2:3 1:2],:); coljj=jet(11); 
 coljj(8,:)=coljj(3,:);coljj(3,:)=coljj(7,:);
 colt='kw';
 i0=10;coljm=ones(256,3); coljm(i0+1:256,:)=jet(256-i0);
@@ -121,8 +123,8 @@ for ns=1:ntags %% loop over scenarios/stations/layers
  end
 % t0 = datenum('1962-03-01','yyyy-mm-dd')-1;
 %t0 = datenum('2004-03-01','yyyy-mm-dd')-1;
-%t0 = datenum('2003-03-01','yyyy-mm-dd')-1
-t1 = datenum('2002-12-23','yyyy-mm-dd')-1;
+t0 = datenum('2002-03-01','yyyy-mm-dd')-1
+t1 = datenum('2002-12-11','yyyy-mm-dd')-1;
 
  ind=find(time>= t0 & time<=t1);
  toffm = min(find(time>= t0))-1;

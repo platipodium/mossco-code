@@ -12,7 +12,8 @@ for ili=1:size(i_loc,1)
   else
     res = squeeze(tmp(i_loc(ili,1),i_loc(ili,2),:,:))*cell2mat(var{i}(5));
     if neighn(ili)>0
-     if exist('resmini') clear resmini resmaxi; end
+%     if exist('resmini') clear resmini resmaxi; end
+     resmini=[];resmaxi=[];
      for ni=1:neighn(ili)
        tx=i_loc(ili,1)+neighv(ili,ni,1);
        ty=i_loc(ili,2)+neighv(ili,ni,2);
@@ -299,12 +300,20 @@ for ili=1:size(i_loc,1)
      indd  = find(~isnan(dval));
      if length(indd)>0
 %       fprintf('%s: %d\t%1.1f %1.1f \n',varshort0,length(indd),datime(indd(1)),datime(indd(end)));
-       plot(datime(indd),dval(indd),'+','Color',col,'MarkerFaceColor',col,'MarkerSize',12-(ili==1)*4,'LineWidth',1);
+       plot(datime(indd),dval(indd),'+','Color',col,'MarkerFaceColor',col,'MarkerSize',12-(ili==1)*4,'LineWidth',2);
        break;
      end
    end
    iv=iv+1;
   end %while
+  if strcmpi('chl',varshort0)
+    indd  = find(~isnan(timser(:,ili)) & timea>= t0 & timea<=t1);
+    if length(indd)>0
+      dval = timser(indd,ili)*cell2mat(var{i}(5));
+%      fprintf('%s: %d\t%1.1f %1.1f \n',varshort0,length(indd),datime(indd(1)),datime(indd(end)));
+      plot(timea(indd),dval,'s','Color',col,'MarkerFaceColor','none','MarkerSize',14,'LineWidth',1);
+    end
+   end
  end % if show
  
 if(cell2mat(var{i}(9)) ~='N'  )

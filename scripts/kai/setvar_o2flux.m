@@ -42,6 +42,7 @@ var={
   {'c ODUflux-O2flux- 0.000';'O2 flux';5;45; 86400;                    2; 1;0;'Mi'};
   {'c ODUflux-O2flux- 0.000';'O2 flux';5;45; 86400;                    3; 1;0;'Mi'};
   {'c ODUflux-O2flux- 0.000';'O2 flux';5;45; 86400;                    4; 1;0;'Mi'};
+  {'c ODUflux-O2flux- 0.000';'O2 flux';5;45; 86400;                    5; 1;0;'Mi'};
 %  {'_datt_in_water';'attenuation';0.1;1.; 1;	5; 1;0;'Mi'};
 %  {'_datt_in_water';'attenuation';0.1;1.; 1;	6; 1;0;'Mi'};
 %  {'denitrification_rate_in_soil';'denit';0;100; 1.0;			1; 3;1;'DC'};

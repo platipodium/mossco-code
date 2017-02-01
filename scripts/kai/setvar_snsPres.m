@@ -70,7 +70,11 @@ var={
 % {'c ODUflux-O2flux';'O2 flux';0;50; 86400; 				3; 2;1;'LM'};
 %  {'slow_detritus_C_in_soil';'TOC slow';5E2;5E4; 1.0; 			1; 3;2;'LM'};
 %%  {'detritus-P_in_soil';'POP';5E2;5E4; 1.0; 			1; 1;3;'L1'};
-%%  {'mole_concentration_of_phosphate_in_soil';'PO4s';5E2;5E4; 1.0; 		1; 1;3;'L0'};
+%%  {'temperature_in_water';'Temw';0;20; 1.0; 		1; 1;1;'N'};
+%%  {'c Temw(:,:,4,:)-Temw(:,:,1,:)';'dTemw';-3;7; 1.0; 		5; 1;0;'Mi'};
+%%  {'c Temw(:,:,4,:)-Temw(:,:,1,:)';'dTemw';-3;7; 1.0; 		6; 1;0;'Mi'};
+%%  {'c Temw(:,:,4,:)-Temw(:,:,1,:)';'dTemw';-3;7; 1.0; 		7; 1;0;'Mi'};
+%%  {'c Temw(:,:,4,:)-Temw(:,:,1,:)';'dTemw';-3;7; 1.0; 		8; 1;0;'Mi'};
 %%  {'mole_concentration_of_phosphate_in_soil';'PO4s';5E2;5E4; 1.0; 		1; 1;3;'L1'};
 %%  {'_datt_in_water';'att';0.1;3; 1.0; 		1; 1;3;'N'};
 %%  {'c 1.89/att';'secchi';0.;10; 1.0; 		1; 1;3;'L1'};
