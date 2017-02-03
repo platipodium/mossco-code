@@ -130,3 +130,10 @@ test: test_regrid_coupler
 
 test_regrid_coupler: regrid_coupler.o
 	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS) -lesmf
+
+ifneq ($(wildcard *.make),)
+  include *.make
+endif
+ifneq ($(wildcard *.mk),)
+  include *mk
+endif
