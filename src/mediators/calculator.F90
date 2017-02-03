@@ -128,7 +128,7 @@ module calculator
     character(len=ESMF_MAXSTR)      :: name, message, configFileName
     type(ESMF_Time)                 :: currTime
 
-    integer(ESMF_KIND_I4)           :: localrc
+    integer(ESMF_KIND_I4)           :: localrc, i, j
 
     type(ESMF_Config)               :: config
     logical                         :: labelIsPresent, isPresent, fileIsPresent

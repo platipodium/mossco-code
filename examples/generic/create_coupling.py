@@ -352,7 +352,7 @@ fid.write('''
 
 for jtem in instanceList:
 
-    if jtem.find('_mediator')>0 or jtem.find('_connector')>0:
+    if jtem.find('_mediator')>0 or jtem.find('_connector')>0 or jtem == 'vertical_reduction' or jtem == 'calculator' :
       fid.write('  use ' + jtem + ', only : ' + jtem + '_SetServices => SetServices \n')
     else: fid.write('  use ' + jtem + '_component, only : ' + jtem + '_SetServices => SetServices \n')
 
@@ -2179,6 +2179,7 @@ libs = {'gotm'       : ['solver', 'mossco_gotm'] ,
         'pelagic_soil_connector' : ['mossco_mediator'],
         'soil_pelagic_connector' : ['mossco_mediator'],
         'vertical_reduction' : ['verticalreduction'],
+        'calculator' : ['mossco_calculator'],
         'pelagic_benthic_coupler' : ['pelagicbenthiccoupler'],
         'benthic_pelagic_coupler' : ['pelagicbenthiccoupler'],
         'xgrid_coupler' : ['xgridcoupler'],
@@ -2223,7 +2224,7 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'soil_pelagic_connector' : ['libmossco_mediator'],
         'pelagic_benthic_coupler' : ['libpelagicbenthiccoupler'],
         'benthic_pelagic_coupler' : ['libpelagicbenthiccoupler'],
-        'vertical_reduction' : ['libverticalreduction'],
+        'calculator' : ['libmossco_calculator'],
         'xgrid_coupler' : ['libxgridcoupler'],
         'link_connector' : ['libmossco_connector'],
         'nudge_connector' : ['libmossco_connector'],
@@ -2318,7 +2319,7 @@ libsurfacescouplerlibaocoupler liblinkcoupler libxgridcoupler libregridcoupler l
 libmossco_connector:
 	$(MAKE) -C $(MOSSCO_DIR)/src/connectors $@
 
-libmossco_mediator libverticalreduction:
+libmossco_mediator libverticalreduction libmossco_calculator:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
 libremtc:
