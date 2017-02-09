@@ -640,6 +640,7 @@ module filtration_component
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: abundance => null()
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: lossRate => null()
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: layerHeight => null()
+    real(ESMF_KIND_R8), allocatable, dimension(:,:,:)  :: layerWeight
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: maximumFiltrationRate=> null(), fractionalLossRate=> null()
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: concentration=> null()
     real(ESMF_KIND_R8), allocatable, dimension(:,:):: depthAtSoil
@@ -650,7 +651,7 @@ module filtration_component
     integer(ESMF_KIND_I4)   :: localrc, i, rank, otherCount, fieldCount, j, k
     real(ESMF_KIND_R8)      :: musselMass, scaleFactor
     real(ESMF_KIND_R8)      :: maximumRelativeChange
-    real(ESMF_KIND_R8)      :: integration_timestep
+    real(ESMF_KIND_R8)      :: integration_timestep, threshold
     real(ESMF_KIND_R8)      :: missingValue, mmolCPermgC, mgCPermmolC
     real(ESMF_KIND_R8)      :: mmolCPermgDW, mgDWPermmolC
     integer(ESMF_KIND_I4), allocatable   :: ubnd(:), lbnd(:)
@@ -843,26 +844,27 @@ module filtration_component
 
       if (isSurface) then
         !> @todo according to Krone, mussels are distributed up to a critical
-        !> depth of 5 m from the surface, this is not implemented yet, but
+        !> depth of 5 m from the surface, and 90% down to a depth of 2.5 m
+        !> this is not implemented yet, but
         !> all mussels are soley applied to the surface layer
 
-        ! if (.not.allocated(layerWeights)) allocate(layerWeights(RANGE3D), stat=localrc)
-        ! call MOSSCO_WeightsFromSurface(layerHeight(RANGE3D), threshold=5.0, &
-        !   weights=layerWeights, rc=localrc)
-        ! if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        !   call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        !
-        ! do i=lbnd(3), ubnd(3)
-        !   where (layerHeight(RANGE2D,i) > 0)
-        !     abundance(RANGE2D, i) = abundanceAtSurface(RANGE2D) * weight(RANGE2D,i) &
-        !   endwhere
-        ! enddo
-        ! if (allocated(layerWeights)) deallocate(layerWeights)
+        call MOSSCO_WeightsFromSurface(layerHeight(RANGE3D), threshold=2.5D0, &
+          weight=layerWeight, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        where (layerHeight(RANGE2D,ubnd(3)) > 0)
-          abundance(RANGE2D,ubnd(3)) = abundanceAtSurface(RANGE2D) &
-            / layerHeight(RANGE2D,ubnd(3))
-        endwhere
+        do i=lbnd(3), ubnd(3)
+          where (layerHeight(RANGE2D,i) > 0)
+            abundance(RANGE2D, i) = abundanceAtSurface(RANGE2D) &
+            * layerWeight(RANGE2D,i)/threshold
+          endwhere
+        enddo
+        if (allocated(layerWeight)) deallocate(layerWeight)
+
+        !where (layerHeight(RANGE2D,ubnd(3)) > 0)
+        !  abundance(RANGE2D,ubnd(3)) = abundanceAtSurface(RANGE2D) &
+        !    / layerHeight(RANGE2D,ubnd(3))
+        !endwhere
         write(message,'(A,ES10.3,A)') trim(name)//' max surface abundance is ', &
           maxval(abundanceAtSurface(RANGE2D)),' m-2'
           !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
@@ -1235,4 +1237,62 @@ module filtration_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Finalize
+
+  subroutine MOSSCO_WeightsFromSurface(height, weight, kwe, threshold, rc)
+
+    real(ESMF_KIND_R8), intent(in)               :: height(:,:,:)
+    real(ESMF_KIND_R8), intent(out), allocatable :: weight(:,:,:)
+    logical, intent(in), optional                :: kwe
+    real(ESMF_KIND_R8), intent(in), optional     :: threshold
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)            :: rc_, localrc, i, ubnd(3), lbnd(3)
+    real(ESMF_KIND_R8)               :: threshold_
+    logical, allocatable             :: mask(:,:,:)
+    real(ESMF_KIND_R8) , allocatable :: uppersum(:,:), lowersum(:,:)
+
+    if (present(rc)) rc = ESMF_SUCCESS
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(threshold)) then
+      threshold_ = threshold
+    else
+      threshold_ = 0.0
+    endif
+
+    lbnd=lbound(height)
+    ubnd=ubound(height)
+
+    if (.not.allocated(weight)) allocate(weight(RANGE3D))
+
+    if (threshold_ == 0.0) then
+      weight = 1.0
+      return
+    endif
+
+    !> By default, assign a weight of one to the surface, normalize later
+    weight(:,:,:) = 0.0
+    weight(:,:,ubound(height,3)) = 1.0
+    allocate(mask(RANGE3D), stat=localrc)
+    allocate(uppersum(RANGE2D), stat=localrc)
+    allocate(lowersum(RANGE2D), stat=localrc)
+
+    !> In all pelagic layers, distribute the weight, assign 1 if completely
+    !> above threshold, otherwise fraction
+    do i=ubound(height,3)-1,lbound(height,3),-1
+      uppersum=sum(height(:,:,i+1:ubound(height,3)), dim=3)
+      lowersum=sum(height(:,:,i:ubound(height,3)), dim=3)
+      where (uppersum <= threshold)
+        weight(:,:,i) = 1.0
+      endwhere
+      where (uppersum > threshold .and. lowersum < threshold)
+        weight(:,:,i) = (threshold - uppersum)/(lowersum - uppersum)
+      endwhere
+    enddo
+
+    if (allocated(mask)) deallocate(mask)
+    if (allocated(uppersum)) deallocate(uppersum)
+    if (allocated(lowersum)) deallocate(uppersum)
+
+  end subroutine MOSSCO_WeightsFromSurface
+
 end module filtration_component
