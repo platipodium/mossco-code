@@ -133,9 +133,9 @@ module filtration_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(ESMF_MAXSTR)  :: name, message, configfilename
+    character(ESMF_MAXSTR)  :: name, message, configfilename, itemName
     type(ESMF_Time)         :: currTime
-    integer(ESMF_KIND_I4)   :: localrc, rank, otherCount, i, diagCount
+    integer(ESMF_KIND_I4)   :: localrc, rank, otherCount, i, j, diagCount
     type(ESMF_Field)        :: field
     type(ESMF_FieldBundle)  :: fieldBundle
     type(ESMF_Config)       :: config
@@ -427,7 +427,7 @@ module filtration_component
     character(len=ESMF_MAXSTR), allocatable :: itemNameList(:), diagNameList(:)
     character(len=ESMF_MAXSTR)              :: itemName
     integer(ESMF_KIND_I4)                   :: itemCount
-    real(ESMF_KIND_R8)                      :: mussel_mass, minimumFoodFlux
+    real(ESMF_KIND_R8)                      :: musselMass, minimumFoodFlux
 
     rc = ESMF_SUCCESS
 
@@ -540,11 +540,11 @@ module filtration_component
     ! get parameters from the gridComp, we can safely assume that they are present
 
     call ESMF_AttributeGet(gridComp, name='mussel_mass', &
-      value=mussel_mass, rc=localrc)
+      value=musselMass, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    write(message,'(A,ES10.3)') trim(name)//' mussel mass is ', mussel_mass
+    write(message,'(A,ES10.3)') trim(name)//' mussel mass is ', musselMass
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     call ESMF_AttributeGet(gridComp, name='filter_species', &
@@ -635,24 +635,20 @@ module filtration_component
     type(ESMF_Time)       :: currTime, stopTime
     type(ESMF_TimeInterval) :: timeStep
 
-    real(ESMF_KIND_R8), allocatable, dimension(:,:)   :: xWidth, yWidth
-    real(ESMF_KIND_R8), allocatable, dimension(:,:,:) :: foodFluxFactor, filtrationRate
-
     real(ESMF_KIND_R8), pointer, dimension(:,:)    :: abundanceAtSurface => null()
     real(ESMF_KIND_R8), pointer, dimension(:,:)    :: abundanceAtSoil => null()
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: abundance => null()
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: lossRate => null()
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: layerHeight => null()
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: maximumFiltrationRate=> null(), fractionalLossRate=> null()
-    real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: interfaceDepth=> null(), xVelocity=> null(), yVelocity=> null()
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: concentration=> null()
-    real(ESMF_KIND_R8), allocatable, dimension(:,:):: depthAtSoil, frictionCoefficient
+    real(ESMF_KIND_R8), allocatable, dimension(:,:):: depthAtSoil
 
     logical, allocatable, dimension(:,:,:)       :: mask
     type(ESMF_Field)        :: field
     type(ESMF_Grid)         :: grid
     integer(ESMF_KIND_I4)   :: localrc, i, rank, otherCount, fieldCount, j, k
-    real(ESMF_KIND_R8)      :: musselMass
+    real(ESMF_KIND_R8)      :: musselMass, scaleFactor
     real(ESMF_KIND_R8)      :: maximumRelativeChange
     real(ESMF_KIND_R8)      :: integration_timestep
     real(ESMF_KIND_R8)      :: missingValue, mmolCPermgC, mgCPermmolC
@@ -979,9 +975,6 @@ module filtration_component
         allocate(fractionalLossRate(RANGE3D), stat=localrc)
       endif
 
-      if (.not.allocated(filtrationRate)) allocate(filtrationRate(RANGE3D), stat=localrc)
-      if (.not.allocated(foodFluxFactor)) allocate(foodFluxFactor(RANGE3D), stat=localrc)
-
       ! The maximum filtration rate is taken from Bayne et al. 1993, who found
       ! an empirical relationship between food TPM and TPM filtration rate, givin
       ! in units of mg TPM DW h-1 per (300 mg) mussel mass.  The organic
@@ -997,14 +990,14 @@ module filtration_component
       ! Metabolic scaling for filtration rate and mass was used by Bayne et al
       ! with the factor 0.67, to arrive at our mussel_mass, we have to scale all
       ! rates with this factor
-      scale_factor = (mussel_mass/0.6)^.0.67
+      scaleFactor = (musselMass / 0.6) ** 0.67
 
       ! Further scaling is required for going from TPM to amountC.  The above
       ! realtions with 56% POM/TPM and mgDWPermmolC then add to the scale factor
-      scale_factor = scale_factor * 0.56 * mmolCPermgDW ! unit mmolC / mg TPM DW
+      scaleFactor = scaleFactor * 0.56 * mmolCPermgDW ! unit mmolC / mg TPM DW
 
       ! Finally, convert the hourly rate to a per-second rate
-      scale_factor = scale_factor / 3600.0 ! unit mmolC mg TPM DW-1 h-1
+      scaleFactor = scaleFactor / 3600.0 ! unit mmolC mg TPM DW-1 h-1
 
       ! There is a lower filtration threshold at around 0.7 mmol C m-3, below
       ! which there is no filtration and mussels close their valves to conserve
@@ -1024,9 +1017,9 @@ module filtration_component
       ! by multiplying the individual filtration rate with the abundance
       ! volume concentration
       lossRate(RANGE3D) = &
-        maximumFiltrationRate(RANGE3D) * abundance(RANGE3D)
+        - maximumFiltrationRate(RANGE3D) * abundance(RANGE3D)
       write(message,'(A,ES10.3,A)') trim(name)//' max loss rate is ', &
-          maxval(filtrationRate(RANGE3D), mask=mask),' mmol C m-3 s-1'
+          -minval(lossRate(RANGE3D), mask=mask),' mmol C m-3 s-1'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       ! For diagnostics and co-filtration of other species, calculate the fractional loss rate
@@ -1044,15 +1037,15 @@ module filtration_component
           lossRate(RANGE3D) = fractionalLossRate(RANGE3D) * concentration(RANGE3D)
         endwhere
 
-        write(message,'(A,ES10.3,A,F5.1,A)') trim(name)//' is filtering (capped) up to ', &
+        write(message,'(A,ES10.3,A,F6.3,A)') trim(name)//' is filtering (capped) up to ', &
           maxval(-lossRate(RANGE3D),mask=mask(RANGE3D)),' mmol m-3 s-1 or ',&
-          maxval(-fractionalLossRate(RANGE3D),mask=mask(RANGE3D))*100,'%'
+          maxval(-fractionalLossRate(RANGE3D),mask=mask(RANGE3D))*100*3600,'% h-1'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       else
-        write(message,'(A,ES10.3,A,F5.1,A)') trim(name)//' is filtering up to ', &
+        write(message,'(A,ES10.3,A,F6.3,A)') trim(name)//' is filtering up to ', &
           maxval(-lossRate(RANGE3D),mask=mask(RANGE3D)),' mmol m-3 s-1 or ',&
-          maxval(-fractionalLossRate(RANGE3D),mask=mask(RANGE3D))*100,'%'
+          maxval(-fractionalLossRate(RANGE3D),mask=mask(RANGE3D))*100*3600,'% h-1'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
@@ -1150,8 +1143,6 @@ module filtration_component
     if (allocated(mask)) deallocate(mask)
     if (allocated(lbnd)) deallocate(lbnd)
     if (allocated(ubnd)) deallocate(ubnd)
-    if (allocated(filtrationRate)) deallocate(filtrationRate)
-    if (allocated(foodFluxFactor)) deallocate(foodFluxFactor)
 
     ! Deallocate the diagnostics only if they are not in the export state, i.e.
     ! if they were allocated locally
@@ -1182,8 +1173,6 @@ module filtration_component
     if ((fieldCount == 0) .and. associated(abundance)) deallocate(abundance)
 
     if (allocated(depthAtSoil)) deallocate(depthAtSoil)
-    if (allocated(hydraulicRadius)) deallocate(hydraulicRadius)
-    if (allocated(frictionCoefficient)) deallocate(frictionCoefficient)
 
     !! This component has no do loop over an internal timestep, it is advanced with the
     !! timestep written into its local clock from a parent component
