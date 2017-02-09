@@ -159,19 +159,8 @@ module filtration_component
     parameters(1)%typeKind=ESMF_TYPEKIND_R8
     !parameters(1)%unit='g'
 
-    ! Mussel parameters from Rijsgaard 2001
-    minimumFoodFlux  = 0.6166697552  ! mmol C s-1 m-3, equiv to 20 mg C
     filterSpecies = 'phytoplankton' ! Main variable to filter
-    xVelocity = 'x_velocity'
-    yVelocity = 'y_velocity'
     musselMass = 0.6 ! g DW / individual
-
-    ! Mussel parameters from van Duren (for mussel bed)
-    roughnessLength = .004 ! typical roughness length
-    musselLengthScale = .05 ! m typical size of mussel
-
-    ! Geometric parameter for organisms in water (reduction of flow)
-    formFactor = 0.35
 
     ! Numeric limits
     maximumRelativeChange = 0.1
@@ -212,30 +201,10 @@ module filtration_component
 
       call ESMF_ConfigLoadFile(config, trim(configfilename), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call MOSSCO_ConfigGet(config, label='roughness_length', value=roughnessLength, &
-        defaultValue=roughnessLength, rc = localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call MOSSCO_ConfigGet(config, label='form_factor', value=formFactor, &
-        defaultValue=formFactor, rc = localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call MOSSCO_ConfigGet(config, label='maximum_relative_change', value=maximumRelativeChange, &
         defaultValue=maximumRelativeChange, rc = localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call MOSSCO_ConfigGet(config, label='mussel_length_scale', value=musselLengthScale, &
-        defaultValue=musselLengthScale, rc = localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call MOSSCO_ConfigGet(config, label='minimum_food_flux', value=minimumFoodFlux, &
-        defaultValue=minimumFoodFlux, rc = localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -278,11 +247,8 @@ module filtration_component
       !
       !   diagNameList(1) = 'mussel_abundance_in_water'
       !   diagNameList(2) = 'layer_height_in_water'
-      !   diagNameList(3) = 'potential_clearance_rate'
-      !   diagNameList(4) = 'boundary_layer_speed'
       !   diagNameList(5) = 'maximum_filtration_rate'
       !   diagNameList(6) = 'fractional_filtration_rate'
-      !   diagNameList(7) = 'shear_speed'
 
       endif
 
@@ -298,15 +264,7 @@ module filtration_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_AttributeSet(gridComp, 'mussel_length_scale', musselLengthScale, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
     call ESMF_AttributeSet(gridComp, 'maximum_relative_change', maximumRelativeChange, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_AttributeSet(gridComp, 'form_factor', formFactor, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -314,41 +272,33 @@ module filtration_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_AttributeSet(gridComp, 'roughness_length', roughnessLength, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_AttributeSet(gridComp, 'minimum_food_flux', minimumFoodFlux, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
     ! Create a list to hold the names of the item to filter, the names of the
     ! velocity fields and shear stress, and the names of other items to co-filter
-    call MOSSCO_Reallocate(itemNameList, 6 + otherCount, keep=.false., rc=localrc)
+    call MOSSCO_Reallocate(itemNameList, 3 + otherCount, keep=.false., rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    itemNameList(1) = trim(xVelocity)
-    itemNameList(2) = trim(yVelocity)
-    itemNameList(3) = 'maximum_shear_stress'
-    itemNameList(4) = 'mussel_abundance'  ! '_at_soil_surface'
-    itemNameList(5) = 'mussel_abundance'  ! '_at_water_surface'
+    itemNameList(1) = 'mussel_abundance'  ! '_at_soil_surface'
+    itemNameList(2) = 'mussel_abundance'  ! '_at_water_surface'
 
-    itemNameList(6) = trim(filterSpecies)
+    itemNameList(3) = trim(filterSpecies)
     do i = 1, othercount
-      itemNameList(6 + i) = trim(filterSpeciesList(i))
+      itemNameList(3 + i) = trim(filterSpeciesList(i))
     enddo
 
     do i = 1, ubound(itemNameList,1)
 
-      if (i < 3 .or. i > 5) then
-        field = ESMF_FieldEmptyCreate(name=trim(itemNameList(i))//'_in_water', rc=localrc)
-      elseif (i == 3) then
-        field = ESMF_FieldEmptyCreate(name=trim(itemNameList(i)), rc=localrc)
-      elseif (i == 4) then
-        field = ESMF_FieldEmptyCreate(name=trim(itemNameList(i))//'_at_water_surface', rc=localrc)
-      elseif (i == 5) then
-        field = ESMF_FieldEmptyCreate(name=trim(itemNameList(i))//'_at_soil_surface', rc=localrc)
+      itemName = trim(itemNameList(i))
+      if (i > 2) then
+        ! items can be specified with or without the '_in_water' postfix
+        ! remove this if present
+        j = index(itemName,'_in_water')
+        if (j>1) itemName = itemName(1:j-1)
+        field = ESMF_FieldEmptyCreate(name=trim(itemName)//'_in_water', rc=localrc)
+      elseif (i == 1) then
+        field = ESMF_FieldEmptyCreate(name=trim(itemName)//'_at_water_surface', rc=localrc)
+      elseif (i == 2) then
+        field = ESMF_FieldEmptyCreate(name=trim(itemName)//'_at_soil_surface', rc=localrc)
       endif
 
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -358,10 +308,8 @@ module filtration_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (i < 3) call ESMF_AttributeSet(field, 'units', 'm s-1', rc=localrc)
-      if (i == 3)  call ESMF_AttributeSet(field, 'units', 'Pa', rc=localrc)
-      if (i == 4 .or. i == 5)  call ESMF_AttributeSet(field, 'units', 'm-2', rc=localrc)
-      if (i > 5)  call ESMF_AttributeSet(field, 'units', 'mmol m-3', rc=localrc)
+      if (i == 1 .or. i == 2)  call ESMF_AttributeSet(field, 'units', 'm-2', rc=localrc)
+      if (i > 2)  call ESMF_AttributeSet(field, 'units', 'mmol m-3', rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -386,7 +334,7 @@ module filtration_component
         = itemNameList(:)
 
     !> Create export states for all variables above index 5,  add diagnostic variables
-    do i = 6, ubound(diagNameList,1)
+    do i = 3, ubound(diagNameList,1)
       !> Create export states for diagnostic, filter and co-filter items
       if (i < ubound(diagNameList,1)-size(itemNameList)) then
         field = ESMF_FieldEmptyCreate(name=trim(diagNameList(i)), rc=localrc)
@@ -591,14 +539,6 @@ module filtration_component
 
     ! get parameters from the gridComp, we can safely assume that they are present
 
-    call ESMF_AttributeGet(gridComp, name='minimum_food_flux', &
-      value=minimumFoodFlux, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    write(message,'(A,ES10.3)') trim(name)//' minimum food flux is ', minimumFoodFlux
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
     call ESMF_AttributeGet(gridComp, name='mussel_mass', &
       value=mussel_mass, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -700,27 +640,23 @@ module filtration_component
 
     real(ESMF_KIND_R8), pointer, dimension(:,:)    :: abundanceAtSurface => null()
     real(ESMF_KIND_R8), pointer, dimension(:,:)    :: abundanceAtSoil => null()
-    real(ESMF_KIND_R8), pointer, dimension(:,:)    :: bottomShearStress => null()
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: abundance => null()
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: lossRate => null()
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: layerHeight => null()
-    real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: potentialClearanceRate => null(), ustar => null(), speed=> null()
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: maximumFiltrationRate=> null(), fractionalLossRate=> null()
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: interfaceDepth=> null(), xVelocity=> null(), yVelocity=> null()
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: concentration=> null()
     real(ESMF_KIND_R8), allocatable, dimension(:,:):: depthAtSoil, frictionCoefficient
-    real(ESMF_KIND_R8), allocatable, dimension(:,:):: hydraulicRadius
 
     logical, allocatable, dimension(:,:,:)       :: mask
     type(ESMF_Field)        :: field
     type(ESMF_Grid)         :: grid
     integer(ESMF_KIND_I4)   :: localrc, i, rank, otherCount, fieldCount, j, k
-    real(ESMF_KIND_R8)      :: surfaceRoughness, diameter, distance
-    real(ESMF_KIND_R8)      :: minimumFoodFlux, musselMass, crossSection, sandRoughness
-    real(ESMF_KIND_R8)      :: roughnessLength, musselLengthScale
-    real(ESMF_KIND_R8)      :: formFactor, maximumRelativeChange
-    real(ESMF_KIND_R8)      :: karman, integration_timestep
-    real(ESMF_KIND_R8)      :: missingValue, mmolPermg, mgPermmol
+    real(ESMF_KIND_R8)      :: musselMass
+    real(ESMF_KIND_R8)      :: maximumRelativeChange
+    real(ESMF_KIND_R8)      :: integration_timestep
+    real(ESMF_KIND_R8)      :: missingValue, mmolCPermgC, mgCPermmolC
+    real(ESMF_KIND_R8)      :: mmolCPermgDW, mgDWPermmolC
     integer(ESMF_KIND_I4), allocatable   :: ubnd(:), lbnd(:)
     integer(ESMF_KIND_I4)                :: ubndZ(3), lbndZ(3)
     type(ESMF_Field), allocatable        :: fieldList(:)
@@ -741,9 +677,15 @@ module filtration_component
     !> equivalent of N and P and that most of biomass is represented by sugar,
     !> i.e. <CH_2O>, such that O and H are added in these ratios, as well.
     !> Lastly, the unit mass of all these elements is weighted and summed.
-    mmolPermg = 0.03083348776
-    mgPermmol = 1./mmolPermg
-    karman = 0.4
+    !> \textrm{POM DW} \approx M_{CNP} + 2M_{H} + M_{O}
+    !>   = \frac{1}{106} (106 M_{C} + 16 M_{N} + M_{P}) + 2M_{H} + M_{O}
+    !>   = (106*12,011 + 16*14,007 + 30,973)/106 + 2*1,008 + 15,999
+    !>   = 32,4324622642 mg-DW mmol-C-1
+
+    mgCpermmolC = 12.011
+    mmolCpermgC = 1/mgCPermmolC
+    mgDWPermmolC = 32.4324622642
+    mmolCPermgDW = 1/mgDWPermmolC
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
       importState=importState,  exportState=exportState, rc=localrc)
@@ -755,28 +697,6 @@ module filtration_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     ! get parameters from the importState, we can safely assume that they are present
-    call ESMF_AttributeGet(gridComp, name='minimum_food_flux', &
-      value=minimumFoodFlux, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (minimumFoodFlux <= 0.0) then
-      write(message,'(A)') trim(name)//' invalid minimum food flux'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    endif
-
-    call ESMF_AttributeGet(gridComp, name='form_factor', &
-      value=formFactor, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (formFactor <= 0.0 .or. formFactor > 1) then
-      write(message,'(A)') trim(name)//' invalid form factor'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    endif
-
     call ESMF_AttributeGet(gridComp, name='maximum_relative_change', &
       value=maximumRelativeChange, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -798,16 +718,6 @@ module filtration_component
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
-
-    call ESMF_AttributeGet(gridComp, name='mussel_length_scale', &
-      value=musselLengthScale, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_AttributeGet(gridComp, name='roughness_length', &
-      value=roughnessLength, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_AttributeGet(gridComp, name='filter_species', &
       value=filterSpecies, rc=localrc)
@@ -1003,6 +913,7 @@ module filtration_component
         cycle
       endif
 
+      !> @todo read unit from field, add this unit in respective export flux
       write(message,'(A,ES10.3,A)') trim(name)//' max food concentration is ', &
         maxval(concentration(RANGE3D), mask=mask),' mmol m-3'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
@@ -1042,172 +953,6 @@ module filtration_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
-        itemSearch='x_velocity_in_water', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_FieldGet(fieldList(1), farrayPtr=xVelocity, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-
-      call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
-        itemSearch='y_velocity_in_water', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_FieldGet(fieldList(1), farrayPtr=yVelocity, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
-        itemSearch='boundary_layer_speed', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (fieldCount > 0) then
-        call ESMF_FieldGet(fieldList(1), farrayPtr=speed, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      else
-        if (associated(speed)) deallocate(speed)
-        allocate(speed(RANGE3D), stat=localrc)
-      endif
-
-      !> Calculate the absolute velocity, i.e. speed (in m s-1)
-      speed(RANGE3D) = sqrt( yVelocity(RANGE3D) ** 2 &
-                           + xVelocity(RANGE3D) **2)
-
-      !> Assume for all layers above the surface layer that the filter feeders grow
-      !> on structures in the water column. Then, the friction stress
-      !> is calculated as $tau = cw \cdot \rho \cdot u^2$, and the shear velocity is
-      !> $u^* = \sqrt(tau/rho) = sqrt(cw) \cdot u.$
-      !> We consider the cylinder to be a long plate and are interested not in the
-      !> normal, but in the tangential (skin) friction stress
-      !> To calculate the skin friction drag coefficient factor $cw$, we first calculate
-      !> the friction coefficient $\lambda$ and then $c_w$ with  $c_w = \lambda/8 $.
-      !> To obtain $\lambda$, we use the turbulent part of the Colebrook-White hypothesis:
-      !> $$
-      !> 1 / \sqrt\lambda = -2.03\cdot\log_10(k_s/(14.84\cdot r_{hy}))
-      !> $$
-      !> The hydraulic radius $r_{hy}$ is calculated as the ratio of the channel width
-      !> (space between windpiles) times water depth divided by the wetted circumference
-      !> interspace + 2 * water depth.  For typical values of diameter 3 m, distance 250 m,
-      !> and depth 40 m, the hydraulic radius is 30 m
-      if (.not.allocated(hydraulicRadius)) allocate(hydraulicRadius(RANGE2D))
-      diameter = 3
-      distance = 250
-      where(depthAtSoil(RANGE2D) > 0)
-        hydraulicRadius = ((distance - diameter) * depthAtSoil(RANGE2D)) &
-          / (distance - diameter + 2 * depthAtSoil(RANGE2D))
-      endwhere
-
-      !> The Colebrook-White resistance law
-      !> $$
-      !> 1 / \sqrt\lambda = -2.03\cdot\log_10(2.51/(Re\cdot\sqrt\lambda) + k_s/(14.84\cdot r_{hy}))
-      !> $$
-      !> is an iterative solver for the friction coefficient $\lambda$ in pipe (and open channel)
-      !> flow.
-      !> It can be simplified for high Reynolds numbers (i.e. turbulent flow)
-      !> $$
-      !> 1 / \sqrt\lambda = -2.03\cdot\log_10(k_s/(14.84\cdot r_{hy}))
-      !> $$
-      !> with the equivalent sand roughness 30 times the surface roughness
-      !> $k_s$ = 30 z_0$.
-      if (.not.allocated(frictionCoefficient)) allocate(frictionCoefficient(RANGE2D))
-      surfaceRoughness = 0.0044
-      sandRoughness = 30 * surfaceRoughness
-      where(hydraulicRadius(RANGE2D) > 0)
-        frictionCoefficient(RANGE2D) = - 2.03 * log10(sandRoughness &
-          / 14.84 / hydraulicRadius(RANGE2D))
-      endwhere
-
-      where(frictionCoefficient > 0)
-        frictionCoefficient(RANGE2D) = 1 / (frictionCoefficient(RANGE2D) &
-          * frictionCoefficient(RANGE2D))
-      endwhere
-
-      !> For typical valus of z0 = 4.4 mm and the hydraulic radius of 25, the
-      !> friction coefficient is 1 / 50 = 0.02
-      !> The friction drag factor $c_w$ is then $\lambda / 8$, and has a typical
-      !> value of 0.0025
-      !> skinFrictionDragCoefficient = frictionCoefficient / 8
-
-      call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
-        itemSearch='shear_speed', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (fieldCount > 0) then
-        call ESMF_FieldGet(fieldList(1), farrayPtr=ustar, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      else
-        allocate(ustar(RANGE3D), stat=localrc)
-      endif
-
-      !> the friction stress $\tau$ is then  $\tau = c_w \cdot \rho \cdot v^2$,
-      !> i.e. for typical velocities of .1 m s-1 it is 0.025 Pa
-      !> The skin friction shear speed u* is then $u* = \sqrt(\tau/rho)$,
-      !> and on the order of 0.005 m s-1
-      do i = lbound(speed,3)+1, ubound(speed,3)
-        ustar(RANGE2D,i) = speed(RANGE2D,i) &
-          * sqrt(frictionCoefficient(RANGE2D)/8)
-      enddo
-
-      !> According to van Duren 2006, typical values for a high-velocity regime
-      !> are z0=4.4 mm, shear velocity u* = 4E-2 m s-1 (we get roughness length from
-      !> the configuration file and assume it is equal at bottom and pile)
-      ustar(RANGE2D,lbound(speed,3))  = 4.0E-2
-
-      ! Alternatively, we can also calculate shear velocity from the ocean model's &
-      ! maximum_bottom_stress, if that is (optionally) provided
-      call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
-        itemSearch='maximum_bottom_stress', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (fieldCount > 0) then
-        call ESMF_FieldGet(fieldList(1), farrayPtr=bottomShearStress, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        !> Bottom shear stress translates to shear velocity with the square root:
-        !> $$ u^* = \sqrt\left(\frac{\tau}{\rho}\right)
-        ustar(RANGE2D,lbound(speed,3)) = sqrt(bottomShearStress(RANGE2D)/1000)
-      endif
-
-      !> Finally, apply law of the wall to estimate the boundary speed at distance
-      !> musselLengthScale, given $u*$ and roughness length $z0$.
-      !> $$
-      !> u = u^* / k \cdot \log_e \frac{z}{z0}
-      !> $$
-      speed(RANGE3D) = ustar(RANGE3D) &
-        / karman * log (musselLengthScale / roughnessLength)
-
-      call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
-        itemSearch='potential_clearance_rate', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (fieldCount > 0) then
-        call ESMF_FieldGet(fieldList(1), farrayPtr=potentialClearanceRate, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        ! call ESMF_AttributeAdd(fieldList(1), 'units', 'mmol m-3 s-1', rc=localrc)
-        ! if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        !   call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        !
-        ! call ESMF_AttributeAdd(fieldList(1), 'creator', trim(name), rc=localrc)
-        ! if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        !   call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      else
-        allocate(potentialClearanceRate(RANGE3D), stat=localrc)
-      endif
-
       call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
         itemSearch='maximum_filtration_rate', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -1238,61 +983,51 @@ module filtration_component
       if (.not.allocated(foodFluxFactor)) allocate(foodFluxFactor(RANGE3D), stat=localrc)
 
       ! The maximum filtration rate is taken from Bayne et al. 1993, who found
-      ! an empirical relationship between TPM and filtration rate, given in
-      ! units of mg PhyC h-1 (300 mg)-1 Mytilus; we convert mmol of concentration to
-      ! mg for this relationship.  Concentrations are around 8 mmol m-3, so this calculation
-      ! yields 250 = .83 * (8 / 0.03083348776)** .983
-      maximumFiltrationRate(RANGE3D) = .83 * (concentration(RANGE3D) * mgPermmol) ** .983
+      ! an empirical relationship between food TPM and TPM filtration rate, givin
+      ! in units of mg TPM DW h-1 per (300 mg) mussel mass.  The organic
+      ! matter fraction POM/TPM in their experiments was consistently
+      ! 0.56, and thus we convert the original formulation to one for food
+      ! C amount
+      ! FR_300 = 0.83*TPM^0.983
+      !        = 0.83*(POM/0.56)^0.983
+      !        = 0.83*(amountC*mgDWPermmolC/1000)^0.983
+      !        = 0.05 amountC^0.983
+      ! with amountC in mmol m-3 and FR_300 in mg DW TPM h-1 300 mg mussel DW-1
 
-      ! Convert unit of maximumFiltrationRate to mg phyC mg-1 Mytilus s-1
-      ! This typically yields 250E-6
-      maximumFiltrationRate(RANGE3D) = maximumFiltrationRate(RANGE3D) / (300.0 * 3600.0)
+      ! Metabolic scaling for filtration rate and mass was used by Bayne et al
+      ! with the factor 0.67, to arrive at our mussel_mass, we have to scale all
+      ! rates with this factor
+      scale_factor = (mussel_mass/0.6)^.0.67
 
-      write(message,'(A,ES10.3,A)') trim(name)//' max max filtration rate is ', &
-          maxval(maximumFiltrationRate(RANGE3D), mask=mask),' mg mg-1 s-1'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      ! Further scaling is required for going from TPM to amountC.  The above
+      ! realtions with 56% POM/TPM and mgDWPermmolC then add to the scale factor
+      scale_factor = scale_factor * 0.56 * mmolCPermgDW ! unit mmolC / mg TPM DW
 
-      ! The potential clearence rate in mmol m-3 s-1 is the product of boundary velocity
-      ! in m s-1, concentration in mmol phyC m-3, and cross-sectional area of the
-      !> individual mussels times abundance
-      !> the cross sectional area is taken as the individual gill area ~20E-4 m2
-      crossSection = 20E-4
-      potentialClearanceRate(RANGE3D) = speed(RANGE3D) * concentration(RANGE3D) &
-        * abundance(RANGE3D) * crossSection
+      ! Finally, convert the hourly rate to a per-second rate
+      scale_factor = scale_factor / 3600.0 ! unit mmolC mg TPM DW-1 h-1
 
-      !> at 1E-2 m s-1 speed, concentration of 25 mmol m-3, cross section area of
-      !> 2E-5 m2, and abundance 200 m-3, the potential clearance rate is
-      !> 1E-2 mmol m-3 s-1
-      write(message,'(A,ES10.3,A)') trim(name)//' max potential clearance rate is ', &
-          maxval(potentialClearanceRate(RANGE3D), mask=mask),' mmol m-3 s-1'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-      ! The food flux factor is a threshold function that limits
-      ! the supply at low rates, it is typically
-      ! minimumFoodFlux  = 0.6166697552  ! mmol C s-1 m-3, equiv to 20 mg C
-      foodFluxFactor(RANGE3D) = 1
-      where(potentialClearanceRate(RANGE3D) < minimumFoodFlux)
-        foodFluxFactor(RANGE3D) = potentialClearanceRate(RANGE3D) / minimumFoodFlux
+      ! There is a lower filtration threshold at around 0.7 mmol C m-3, below
+      ! which there is no filtration and mussels close their valves to conserve
+      ! energy (Riisgard2003)
+      maximumFiltrationRate(RANGE3D) = 0.0
+      where(concentration(RANGE3D) > 0.7)
+        maximumFiltrationRate(RANGE3D) = 0.05 * (concentration(RANGE3D))**.983
       endwhere
 
-      ! The filtration rate is in mg PhyC mg-1 Mytilus s-1 and
-      ! is composed of a concentration-dependent maximum rate and
-      ! a supply-dependent food flux factor.
-      filtrationRate(RANGE3D) = &
-        maximumFiltrationRate(RANGE3D) * foodFluxFactor(RANGE3D)
-      write(message,'(A,ES10.3,A)') trim(name)//' max filtration rate is ', &
-          maxval(filtrationRate(RANGE3D), mask=mask),' mg mg-1 s-1'
+      maximumFiltrationRate(RANGE3D) = scaleFactor * maximumFiltrationRate(RANGE3D)
+
+      write(message,'(A,ES10.3,A)') trim(name)//' max ind filtration rate is ', &
+          maxval(maximumFiltrationRate(RANGE3D), mask=mask),' mmol C s-1 Ind-1'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      ! The loss rate is in mg PhyC m-3 s-1
-      lossRate = &
-      ! and is proportinal to mussel dry mass concentration, calculated
-      ! from abundance m-3 times mussel_mass mg (600 mg default for Mytilus edulis)
-        - abundance(RANGE3D) * musselMass &
-      ! as well as filtration rate in
-        * filtrationRate(RANGE3D) &
-      ! and convert from mg to mmol
-        * mmolPermg
+      ! The loss rate is in mmol PhyC m-3 s-1 and is obtained
+      ! by multiplying the individual filtration rate with the abundance
+      ! volume concentration
+      lossRate(RANGE3D) = &
+        maximumFiltrationRate(RANGE3D) * abundance(RANGE3D)
+      write(message,'(A,ES10.3,A)') trim(name)//' max loss rate is ', &
+          maxval(filtrationRate(RANGE3D), mask=mask),' mmol C m-3 s-1'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       ! For diagnostics and co-filtration of other species, calculate the fractional loss rate
       fractionalLossrate = 0.0
@@ -1309,20 +1044,15 @@ module filtration_component
           lossRate(RANGE3D) = fractionalLossRate(RANGE3D) * concentration(RANGE3D)
         endwhere
 
-        write(message,'(A,ES10.3,A)') trim(name)//' is filtering (capped) up to ', &
-          maxval(-lossRate(RANGE3D),mask=mask(RANGE3D)),' mmol m-3 s-1'
+        write(message,'(A,ES10.3,A,F5.1,A)') trim(name)//' is filtering (capped) up to ', &
+          maxval(-lossRate(RANGE3D),mask=mask(RANGE3D)),' mmol m-3 s-1 or ',&
+          maxval(-fractionalLossRate(RANGE3D),mask=mask(RANGE3D))*100,'%'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-        write(message,'(A,ES10.3)') trim(name)//' is filtering (capped) up to fraction ', &
-            maxval(-fractionalLossRate(RANGE3D),mask=mask(RANGE3D))
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       else
-        write(message,'(A,ES10.3,A)') trim(name)//' is filtering up to ', &
-          maxval(-lossRate(RANGE3D),mask=mask(RANGE3D)),' mmol m-3 s-1'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-        write(message,'(A,ES10.3)') trim(name)//' is filtering up to fraction ', &
-            maxval(-fractionalLossRate(RANGE3D),mask=mask(RANGE3D))
+        write(message,'(A,ES10.3,A,F5.1,A)') trim(name)//' is filtering up to ', &
+          maxval(-lossRate(RANGE3D),mask=mask(RANGE3D)),' mmol m-3 s-1 or ',&
+          maxval(-fractionalLossRate(RANGE3D),mask=mask(RANGE3D))*100,'%'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
@@ -1425,12 +1155,6 @@ module filtration_component
 
     ! Deallocate the diagnostics only if they are not in the export state, i.e.
     ! if they were allocated locally
-    call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
-      itemSearch='potential_clearance_rate', rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    if ((fieldCount == 0) .and. associated(potentialClearanceRate)) &
-      deallocate(potentialClearanceRate)
 
     call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
       itemSearch='maximum_filtration_rate', rc=localrc)
@@ -1438,29 +1162,12 @@ module filtration_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     if ((fieldCount == 0) .and. associated(maximumFiltrationRate)) deallocate(maximumFiltrationRate)
 
-    call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
-      itemSearch='shear_speed', rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    if ((fieldCount == 0) .and. associated(ustar)) deallocate(ustar)
-
-    call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
-      itemSearch='boundary_layer_speed', rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    if ((fieldCount == 0) .and. associated(speed)) deallocate(speed)
 
     call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
       itemSearch='fractional_loss_rate', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     if ((fieldCount == 0) .and. associated(fractionalLossRate)) deallocate(fractionalLossRate)
-
-    call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
-      itemSearch='potential_clearance_rate', rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    if ((fieldCount == 0) .and. associated(potentialClearanceRate)) deallocate(potentialClearanceRate)
 
     call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
       itemSearch='layer_height_in_water', rc=localrc)
