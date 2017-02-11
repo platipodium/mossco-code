@@ -1,7 +1,7 @@
 !> @brief Implementation of additional ESMF Field utilities
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2015, 2016 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !> @author Richard Hofmeister <richard.hofmeister@hzg.de>
 !
@@ -604,16 +604,18 @@ end subroutine MOSSCO_FieldCopy
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_FieldInitialize"
-  subroutine MOSSCO_FieldInitialize(field, kwe, rc)
+  subroutine MOSSCO_FieldInitialize(field, kwe, value, rc)
 
     type(ESMF_Field), intent(inout)                  :: field
     type(ESMF_KeywordEnforcer), intent(in), optional :: kwe ! Keyword enforcer
+    real(ESMF_KIND_R8), intent(in), optional         :: value
     integer(ESMF_KIND_I4), intent(out), optional     :: rc
 
     character(len=ESMF_MAXSTR)               :: message
     integer(ESMF_KIND_I4)                    :: rc_, rank, localrc
     integer(ESMF_KIND_I4), allocatable       :: ubnd(:), lbnd(:)
     type(ESMF_TypeKind_Flag)                 :: typeKind
+    real(ESMF_KIND_R8)                       :: value_
 
     real(ESMF_KIND_R8), pointer  :: farrayPtr1(:), farrayPtr2(:,:)
     real(ESMF_KIND_R8), pointer  :: farrayPtr3(:,:,:), farrayPtr4(:,:,:,:)
@@ -624,6 +626,11 @@ end subroutine MOSSCO_FieldCopy
 
     rc_ = ESMF_SUCCESS
     if (present(kwe)) localrc = ESMF_SUCCESS
+    if (present(value)) then
+      value_ = value
+    else
+      value_ = 0.0D0
+    endif
 
     call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) then
@@ -666,22 +673,22 @@ end subroutine MOSSCO_FieldCopy
       call ESMF_FieldGet(field, localDe=0,  farrayPtr=farrayPtr1, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      farrayPtr1(lbnd(1):ubnd(1)) = 0.0
+      farrayPtr1(lbnd(1):ubnd(1)) = value_
     elseif (rank == 2) then
       call ESMF_FieldGet(field, localDe=0,  farrayPtr=farrayPtr2, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      farrayPtr2(RANGE2D) = 0.0
+      farrayPtr2(RANGE2D) = value_
     elseif (rank == 3) then
       call ESMF_FieldGet(field, localDe=0,  farrayPtr=farrayPtr3, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      farrayPtr3(RANGE3D) = 0.0
+      farrayPtr3(RANGE3D) = value_
     elseif (rank == 4) then
       call ESMF_FieldGet(field, localDe=0,  farrayPtr=farrayPtr4, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      farrayPtr4(RANGE3D,lbnd(4):ubnd(4)) = 0.0
+      farrayPtr4(RANGE3D,lbnd(4):ubnd(4)) = value_
     else
       write(message,'(A)') 'Not yet implemented, initialize rank>7 '
       call MOSSCO_FieldString(field, message, rc=localrc)
