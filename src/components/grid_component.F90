@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF grid input component
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2016 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2016, 2017 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
 !
@@ -15,6 +15,8 @@
 #define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "grid_component.F90"
+
+#define _CATCH_ERROR_ABORT_ if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 module grid_component
 
@@ -159,22 +161,19 @@ module grid_component
     hasGrid = .false.
     fileFormat = 'SCRIP'
     nlayer = 0
-    halo = 2
+    halo = 0
     gridFileName = 'grid.nc'
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
       importState=importState, exportState=exportState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _CATCH_ERROR_ABORT_
 
     call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _CATCH_ERROR_ABORT_
 
-    call ESMF_GridCompGet(gridComp, petCount=petCount, localPet=localPet, name=name, &
-      rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_GridCompGet(gridComp, petCount=petCount, localPet=localPet, &
+      name=name, rc=localrc)
+    _CATCH_ERROR_ABORT_
 
     configfilename=trim(name)//'.cfg'
     inquire(file=trim(configfilename), exist=fileIsPresent)
@@ -185,65 +184,116 @@ module grid_component
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       config = ESMF_ConfigCreate(rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _CATCH_ERROR_ABORT_
 
       call ESMF_ConfigLoadFile(config, trim(configfilename), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _CATCH_ERROR_ABORT_
 
       call MOSSCO_ConfigGet(config, label='filename', value=gridFileName, &
-        defaultValue='grid.nc', rc = localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        defaultValue='grid.nc', isPresent=labelIsPresent, rc = localrc)
+      _CATCH_ERROR_ABORT_
 
-      inquire(file=trim(gridFileName), exist=isPresent)
-      if (.not.isPresent) then
+      if (labelIsPresent) then
+        write(message,'(A)') trim(name)// 'found filename = '//trim(gridFileName)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
+
+      !> Find out whether the label was specified.  If yes, then require
+      !> the file to be present, and return if not found
+      inquire(file=trim(gridFileName), exist=fileIsPresent)
+
+      if (labelIsPresent .and..not. fileIsPresent) then
         write(message, '(A)') trim(name)//' cannot find '//trim(gridFileName)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         rc = ESMF_RC_NOT_FOUND
         return
       endif
 
-      call MOSSCO_ConfigGet(config, label='format', value=fileFormat, &
-        defaultValue='SCRIP', rc = localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !> Alternatively read specifications from configuration without file
+      !> This needs the dimensions and optionally corners specification
+      !> and is @todo not completely implemented
+      if (.not.fileIsPresent) then
 
-      call MOSSCO_ConfigGet(config, label='decomposition', value=decompositionList, rc = localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call MOSSCO_ConfigGet(config, label='dimensions', value=dimList, &
+          isPresent=labelIsPresent, rc = localrc)
+        _CATCH_ERROR_ABORT_
 
-      call MOSSCO_ConfigGet(config, label='layers', value=nlayer, defaultValue=0, rc = localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (labelIsPresent) then
+          write(message,'(A)') trim(name)//' found dimensions'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        endif
 
-      call MOSSCO_ConfigGet(config, label='halo', value=halo, defaultValue=2, rc = localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call MOSSCO_ConfigGet(config, label='corners', value=cornerList, &
+          isPresent=labelIsPresent, rc = localrc)
+        _CATCH_ERROR_ABORT_
 
-      call MOSSCO_ConfigGet(config, label='dimensions', value=dimList, rc = localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (labelIsPresent) then
+          write(message,'(A)') trim(name)//' found corners'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        endif
 
-      call MOSSCO_ConfigGet(config, label='corners', value=cornerList, rc = localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !> Otherwise read the format specification
+      else
+        call MOSSCO_ConfigGet(config, label='format', value=fileFormat, &
+          defaultValue='SCRIP', rc = localrc)
+        _CATCH_ERROR_ABORT_
+
+        if (labelIsPresent) then
+          write(message,'(A)') trim(name)//' found format = '//trim(fileFormat)
+        else
+          write(message,'(A)') trim(name)//' assumes format '//trim(fileFormat)
+        endif
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
+
+      call MOSSCO_ConfigGet(config, label='decomposition', value=decompositionList, isPresent=labelIsPresent, rc = localrc)
+      _CATCH_ERROR_ABORT_
+
+      if (labelIsPresent) then
+        write(message,'(A)') trim(name)//' found decomposition'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
+
+      call MOSSCO_ConfigGet(config, label='layers', value=nlayer, defaultValue=nlayer, isPresent=labelIsPresent, rc = localrc)
+      _CATCH_ERROR_ABORT_
+
+      if (labelIsPresent) then
+        write(message,'(A,I3)') trim(name)//' found layers = ',nlayer
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
+
+      call MOSSCO_ConfigGet(config, label='halo', value=halo, &
+        defaultValue=halo, isPresent=labelisPresent, rc = localrc)
+      _CATCH_ERROR_ABORT_
+
+      if (labelIsPresent) then
+        write(message,'(A,I1)') trim(name)//' found halo = ',halo
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
 
       call ESMF_GridCompSet(gridComp, config=config, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _CATCH_ERROR_ABORT_
     endif
 
     if (.not.allocated(decompositionList)) then
       allocate(decompositionList(2), stat=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _CATCH_ERROR_ABORT_
       decompositionList(:) = (/petCount,1/)
     endif
 
-    !> @todo handle cases where decompositionList exceeds number of processors
+    if (.not.fileIsPresent .and. allocated(cornerList)) then
+      if (ubound(cornerList,1) /= 4 ) then
+        write(message,'(A)') trim(name)//' needs four corners ll-lon ll-lat ur-lon ur-lat'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        rc = ESMF_RC_ARG_BAD
+        return
+      endif
+      call MOSSCO_AttributeSet(gridComp, 'decomposition_list', decompositionList, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
 
+    !> @todo handle cases where decompositionList exceeds number of processors
     if (ubound(decompositionList,1) > 1 ) then
       write(message,'(A)') trim(name)//' creates grid with decomposition '
       write(message,'(A,I3,A,I3)') trim(message)//' ',decompositionList(1),' x ',decompositionList(2)
@@ -330,19 +380,26 @@ module grid_component
       endif
 
       grid3 = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/), &
-        maxIndex=(/dimList(1), dimList(2), 1+nlayer/), &
-        regDecomp=decompositionList, coordSys=ESMF_COORDSYS_SPH_DEG, &
+        maxIndex=(/dimList(1), dimList(2), nlayer/), &
+        coordSys=ESMF_COORDSYS_SPH_DEG, &
         indexflag=ESMF_INDEX_GLOBAL,  &
         name=trim(name), coordTypeKind=ESMF_TYPEKIND_R8, coordDep1=(/1/), &
         coorddep2=(/1/),rc=rc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
 
-      call ESMF_GridAddCoord(grid, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
+      call ESMF_GridAddCoord(grid3, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
 
-      call ESMF_GridGetCoord(grid, coordDim=1, localDE=0, staggerloc=ESMF_STAGGERLOC_CENTER, &
+      call ESMF_GridAddCoord(grid3, staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, rc=rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
+
+      if (.not.allocated(lbnd)) allocate(lbnd(1))
+      if (.not.allocated(ubnd)) allocate(ubnd(1))
+
+      call ESMF_GridGetCoord(grid3, coordDim=1, localDE=0, staggerloc=ESMF_STAGGERLOC_CENTER, &
         exclusiveLBound=lbnd, exclusiveUBound=ubnd, farrayPtr=farrayPtr1, rc=rc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
@@ -351,7 +408,7 @@ module grid_component
         farrayPtr1(i) = cornerList(1) + (i - 0.5) * (cornerList(3)-cornerList(1))
       enddo
 
-      call ESMF_GridGetCoord(grid, coordDim=2, localDE=0, staggerloc=ESMF_STAGGERLOC_CENTER, &
+      call ESMF_GridGetCoord(grid3, coordDim=2, localDE=0, staggerloc=ESMF_STAGGERLOC_CENTER, &
         exclusiveLBound=lbnd, exclusiveUBound=ubnd, farrayPtr=farrayPtr1, rc=rc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
@@ -359,6 +416,29 @@ module grid_component
       do i=lbnd(1), ubnd(1)
         farrayPtr1(i) = cornerList(2) + (i - 0.5) * (cornerList(4)-cornerList(2))
       enddo
+      write(*,*) 'lats = ',farrayPtr1(:)
+
+      call ESMF_GridGetCoord(grid3, coordDim=3, localDE=0, staggerloc=ESMF_STAGGERLOC_CENTER, &
+        exclusiveLBound=lbnd, exclusiveUBound=ubnd, farrayPtr=farrayPtr1, rc=rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
+
+      do i=lbnd(1), ubnd(1)
+        farrayPtr1(i) = i - 0.5
+      enddo
+
+      call ESMF_GridGetCoord(grid3, coordDim=3, localDE=0, staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
+        exclusiveLBound=lbnd, exclusiveUBound=ubnd, farrayPtr=farrayPtr1, rc=rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
+
+      do i=lbnd(1), ubnd(1)
+        farrayPtr1(i) = i - 1
+      enddo
+      write(*,*) 'vfaces = ',farrayPtr1(:)
+
+      if (allocated(lbnd)) deallocate(lbnd)
+      if (allocated(ubnd)) deallocate(ubnd)
 
     endif
 
@@ -397,7 +477,7 @@ module grid_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_FieldEmptyComplete(field, typeKind=ESMF_TYPEKIND_I4, &
-      totalUWidth=(/halo,halo/), totalLWidth=(/halo,halo/), rc=localrc)
+      totalUWidth=(/halo,halo,0/), totalLWidth=(/halo,halo,0/), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
