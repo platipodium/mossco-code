@@ -1,7 +1,7 @@
 !> @brief Implementation of grid utilities
 !!
 !! This computer program is part of MOSSCO.
-!! @copyright Copyright 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+!! @copyright Copyright 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
 !! @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !! @author Hartmut Kapitza <hartmut.kapitza@hzg.de>
 !
@@ -792,84 +792,71 @@ subroutine MOSSCO_GridGetDepth(grid, kwe, depth, height, interface, rc)
   allocate(ifubnd(3), stat=localrc)
   allocate(iflbnd(3), stat=localrc)
 
+  call ESMF_GridGetCoordBounds(grid, coordDim=3, staggerloc=ESMF_STAGGERLOC_CENTER, &
+    exclusiveLBound=lbnd, exclusiveUbound=ubnd, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
   call ESMF_GridGetCoordBounds(grid, coordDim=3, staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
     exclusiveLBound=iflbnd, exclusiveUbound=ifubnd, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  if (ubnd(1) /= ifubnd(1) .or. lbnd(1) /= iflbnd(1) &
+      .or. ubnd(2) /= ifubnd(2) .or. lbnd(2) /= iflbnd(2)) then
+      write(0,*) '  ubnd = ', ubnd
+      write(0,*) 'ifubnd = ', ifubnd
+      write(0,*) '  lbnd = ', lbnd
+      write(0,*) 'iflbnd = ', iflbnd
+      if (ESMF_LogFoundError(ESMF_RC_VAL_ERRBOUND, ESMF_ERR_PASSTHRU, &
+          ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  endif
 
   call ESMF_GridGetCoord(grid, coordDim=3, staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
     farrayPtr=interface_, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-  i = 0
-  j = 0
-
   if (present(height)) then
     if (associated(height)) then
-      ubnd=ubound(height)
-      lbnd=lbound(height)
-      if (ubnd(1) <= ifUbnd(1) .and. lbnd(1) >= ifLbnd(1)) then
-        i = lbnd(1) - iflbnd(1)
-      else
-        rc_ = ESMF_RC_NOT_IMPL
-        if (present(rc)) rc = rc_
-        write(0,*) 'height: ', lbound(height), ubound(height), size(height), shape(height)
-        write(0,*) 'iface: ', lbound(interface_), ubound(interface_), size(interface_), shape(interface_)
-        write(0,*) 'l/ubnd: ',lbnd, ubnd, iflbnd, ifubnd
-        return
-      endif
-      if (ubnd(2) <= ifUbnd(2) .and. lbnd(2) >= ifLbnd(2)) then
-        j = lbnd(2) - iflbnd(2)
-      else
-        rc_ = ESMF_RC_NOT_IMPL
-        if (present(rc)) rc = rc_
-        return
+
+      !> Make sure that allocated height is the same dimensions
+      !> as the grid_center stagger
+      if (any(ubound(height) /= ubnd) .or. any(lbound(height) /= lbnd)) then
+        if (ESMF_LogFoundError(ESMF_RC_VAL_ERRBOUND, ESMF_ERR_PASSTHRU, &
+          ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
     else
-      Ubnd=ifubnd
-      ubnd(3)=ifubnd(3)
-      lbnd=iflbnd(3)+1
       allocate(height(RANGE3D), stat=localrc)
     endif
 
-    !write(0,*) 'height: ', lbound(height), ubound(height), size(height), shape(height)
-    !write(0,*) 'iface: ', lbound(interface_), ubound(interface_), size(interface_), shape(interface_)
     do k = 0, ubnd(3) - lbnd(3)
-      height(RANGE2D,lbnd(3)+k) &
-        = interface_(RANGE2D, lbnd(3) + i) - interface_(RANGE2D, lbnd(3) + i - 1)
+      height(RANGE2D,lbnd(3)+k) =  interface_(RANGE2D, iflbnd(3) + k + 1) &
+        - interface_(RANGE2D, lbnd(3) + k)
     enddo
   endif
 
   if (present(depth)) then
 
     if (associated(depth)) then
-      ubnd=ubound(depth)
-      lbnd=lbound(depth)
-      if (ubnd(1) <= ifUbnd(1) .and. lbnd(1) >= ifLbnd(1)) then
-        i = lbnd(1) - iflbnd(1)
-      else
-        rc_ = ESMF_RC_NOT_IMPL
-        if (present(rc)) rc = rc_
-        return
-      endif
-      if (ubnd(2) <= ifUbnd(2) .and. lbnd(2) >= ifLbnd(2)) then
-        j = lbnd(2) - iflbnd(2)
-      else
-        rc_ = ESMF_RC_NOT_IMPL
-        if (present(rc)) rc = rc_
-        return
+
+      !> Make sure that allocated depth is the same dimensions
+      !> as the grid_center stagger
+      if (any(ubound(depth) /= ubnd) .or. any(lbound(depth) /= lbnd)) then
+        if (ESMF_LogFoundError(ESMF_RC_VAL_ERRBOUND, ESMF_ERR_PASSTHRU, &
+          ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
     else
-      Ubnd=ifubnd
-      ubnd(3)=ifubnd(3)
-      lbnd=iflbnd(3)+1
       allocate(depth(RANGE3D), stat=localrc)
     endif
 
     do k = 0, ubnd(3) - lbnd(3)
-      depth(RANGE2D,lbnd(3)+k) = 0.5  &
-        * (interface_(RANGE2D, lbnd(3) + i) + interface_(RANGE2D, lbnd(3) + i - 1))
+      depth(RANGE2D,lbnd(3)+k) =  0.5 * ( &
+      interface_(RANGE2D, iflbnd(3) + k + 1) &
+        + interface_(RANGE2D, lbnd(3) + k))
     enddo
   endif
 
