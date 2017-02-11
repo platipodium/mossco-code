@@ -4,7 +4,7 @@
 !! MOSSCO pelagic component.
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013, 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2013, 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !> @author Richard Hofmeister <richard.hofmeister@hzg.de>
 !
@@ -316,6 +316,7 @@ module fabm_pelagic_component
     real(ESMF_KIND_R8)    :: background_extinction=0.13
     real(ESMF_KIND_R8)    :: albedo_const=0.78
     integer(ESMF_KIND_I4) :: fieldcount
+    integer(ESMF_KIND_I4), allocatable, dimension(:):: gubnd, glbnd
     integer(ESMF_KIND_I4) :: lbnd2(2),ubnd2(2),lbnd3(3),ubnd3(3)
     integer(ESMF_KIND_I4) :: totallwidth3(3,1), totaluwidth3(3,1)
     integer(ESMF_KIND_I4) :: totallwidth2(2,1), totaluwidth2(2,1)
@@ -995,19 +996,25 @@ module fabm_pelagic_component
           k = 1 ! Longitude is first coordinate in ESMF_COORDSYS_SPH_DEG
           if (trim(pel%horizontal_dependencies(n)%name)=='latitude') k = 2 ! lat coord
 
+          if (allocated(gubnd)) deallocate(gubnd)
+          if (allocated(glbnd)) deallocate(glbnd)
+          allocate(gubnd(coordDimCount(k)))
+          allocate(glbnd(coordDimCount(k)))
+
           if (coordDimCount(k) .eq. 1) then
+
             call ESMF_GridGetCoord(horizontal_grid, staggerloc=ESMF_STAGGERLOC_CENTER, &
-              coorddim=k, farrayptr=coord1d, rc=localrc)
+              coorddim=k, farrayptr=coord1d, computationalUbound=gubnd, computationalLBound=glbnd, rc=localrc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
               call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
             if (k == 1) then ! lon coordinate
               do j = 1, pel%jnum
-                ptr_f2(:,j) = coord1d(:)
+                ptr_f2(:,j) = coord1d(glbnd(1):gubnd(1))
               enddo
             else
               do i = 1, pel%inum
-                ptr_f2(i,:) = coord1d(:)
+                ptr_f2(i,:) = coord1d(glbnd(1):gubnd(1))
               enddo
             endif
           else
