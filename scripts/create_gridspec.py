@@ -3,7 +3,7 @@
 # This script is is part of MOSSCO. It creates from basic grid parameters
 # a GRIDSPEC compliant NetCDF file.
 #
-# @copyright (C) 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2014, 2015, 2016 ,2017 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -32,6 +32,13 @@ if (2==2): ## spherical box / deep lake test case
   ur_lon=1.25
   ll_lat=45.0
   ur_lat=45.25
+if (3==3): ## 1x12 box, mussel experiment
+  delta_lon=0.5
+  delta_lat=1
+  ll_lon=0.0
+  ur_lon=10.0
+  ll_lat=54
+  ur_lat=55
 
 if __name__ == '__main__':
 
