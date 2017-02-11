@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF netcdf output component
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
 !
@@ -131,9 +131,10 @@ module netcdf_component
     character(len=4096)        :: message
     type(ESMF_Time)            :: currTime
     integer(ESMF_KIND_I4)      :: localrc
-    logical                    :: fileIsPresent, configIsPresent
+    logical                    :: fileIsPresent, configIsPresent, labelIsPresent
     type(ESMF_Config)          :: config
-    character(len=ESMF_MAXSTR), allocatable :: filterExcludeList(:), filterIncludeList(:)
+    character(len=ESMF_MAXSTR), allocatable :: filterExcludeList(:)
+    character(len=ESMF_MAXSTR), allocatable :: filterIncludeList(:)
     logical                    :: checkNaN, checkInf
 
     rc  = ESMF_SUCCESS
@@ -212,7 +213,8 @@ module netcdf_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       !> Default value for filterIncludeList is a non-associated pointer
-      call MOSSCO_ConfigGet(config, 'include', value=filterIncludeList, rc=localrc)
+      call MOSSCO_ConfigGet(config, 'include', value=filterIncludeList, &
+        isPresent=labelIsPresent, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
