@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF netcdf output component
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
 !
@@ -281,7 +281,7 @@ module netcdf_input_component
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      call MOSSCO_ConfigGet(config, 'climatology', climatologyList, localrc)
+      call MOSSCO_ConfigGet(config, 'climatology', climatologyList, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -303,7 +303,7 @@ module netcdf_input_component
 
       endif
 
-      call MOSSCO_ConfigGet(config, 'exclude', filterExcludeList, localrc)
+      call MOSSCO_ConfigGet(config, 'exclude', filterExcludeList, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -328,7 +328,7 @@ module netcdf_input_component
 
       endif
 
-      call MOSSCO_ConfigGet(config, 'include', filterIncludeList, localrc)
+      call MOSSCO_ConfigGet(config, 'include', filterIncludeList, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
