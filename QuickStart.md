@@ -6,7 +6,7 @@ MOSSCO. It is really only a quick start, if you or someone else has already inst
 - Python with YAML support (python >= 2.7)
 - Fortran2003 compliant compiler (e.g. PGI > 13.1, Intel > 12.0, GCC >= 4.8.2)
 - CMake (>= 2.8.6)
-- ESMF (The Earth System Modeling Framework) with NetCDF and MPI support (>= 6.3.0)
+- ESMF (The Earth System Modeling Framework) with NetCDF and MPI support (>= 7.0.0)
 
 for you to use at this point. If not, you have to do it now (ESMF cannot be
 installed from the package manager). You will find some help at
@@ -47,7 +47,7 @@ For these models, we will combine several MOSSCO components (you can find them i
 - `fabm_pelagic` (Ecology of FABM running in ocean)
 - `fabm_sediment` (Ecology of FABM running in ocean soil)
 
-# Prepare the environment for MOSSCO
+# Prepare the environment for MOSSCO and download
 
 First, define the directories where MOSSCO should be located on your system, and
 get the codes:
@@ -57,6 +57,11 @@ get the codes:
 
 		git clone git://git.code.sf.net/p/mossco/code $MOSSCO_DIR
 		git clone git://git.code.sf.net/p/mossco/setups $MOSSCO_SETUPDIR
+
+This could take some time, as the complete `git` repositories occupy roughly 170 Mb (code) and 1.6 Gb (setups) of space.  Alternatively, you can obtain a snapshot
+from https://sourceforge.net/projects/mossco/files/Snapshots/ that needs only half the space (we do not recommend this).
+
+# Preparing external programs for use with MOSSCO
 
 For those not already working with their own FABM and GOTM codes, the easiest way
 to obtain and use them within MOSSCO is:
@@ -92,14 +97,22 @@ necessary setup files and execute `mossco` with the name of one of the provided
 examples, e.g.
 
 		cd $MOSSCO_SETUPDIR/helgoland
-		mossco gotm--fabm_pelagic--fabm_sediment--netcdf
+		mossco gotm--fabm_pelagic--fabm_sediment
+
+> Most provided example couplings have an abbreviation, the above, e.g., can also
+> be run with the command `mossco jfs`.  See the directory
+> `$MOSSCO_DIR/examples/generic` for more examples.
 
 You will see some screen output, and at least two files will be written
 
-- `netcdf.nc` (a netcdf file containing all the output)
-- `PET0.Helgoland` (a log file for your simulation)
+- `mossco_jfs.nc` (a netcdf file containing all the output)
+- `PET0.helgoland-1x1-gotm--fabm_pelagic--fabm_sediment` (a log file for your simulation)
 
-# Going further
+Investigate the results file with a netCDF viewer (e.g. Panoply, ncview,
+ParaView, ncBrowse, ...), and have a look at the log file to see how the
+coupling was documented.
+
+# Changing the simple 1D setup
 
 You can see many namelists here, of which the most important ones are
 
@@ -122,3 +135,28 @@ To rebuild and execute your example again.
 
 Should you encounter any errors or should these instructions fail or are
 insufficient we value your feedback in our bug tracker at <http://www.mossco.de/bugs>.
+
+# Going further to 3D
+
+If you downloaded via the `make external` command above, you will also have
+obtained a copy of the General Estuarine Transport Model (GETM), a full
+threedimensional hydrodynamic model.  To use this model, add
+
+		export NETCDF_VERSION=NETCDF4   # for GETM
+
+to your environment and change to the deep_lake example, where you can execute
+a predefined 3D-coupled system like `gfs` in parallel (e.g. 4 processes) with
+the `mossco` command
+
+		cd $MOSSCO_SETUPDIR/deep_lake
+		mossco -n 4 gfs
+
+The results will be written to the files `mossco_gfs.X.nc`, where `X` denotes the
+process number.  These files can be laterally merged with the stitch tool provided in `$MOSSCO_DIR/scripts/postprocess/stitch_tiles.py`. Install and run this python script:
+
+		ln -sf $MOSSCO_DIR/scripts/postprocess/stitch_tiles.py $HOME/opt/bin/stitch
+		stitch mossco_gfs.nc
+
+To obtain the full 3D output in one file, that is likely named
+ `mossco_gfs.nc_stitched.nc`.  Proceed by analysing this output with your
+ preferred netCDF viewer.
