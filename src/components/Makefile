@@ -185,6 +185,10 @@ tracer_component.F90: dummy_component.F90
 	@echo "Creating dummy TRACER component $@"
 	sed 's/dummy/tracer/g' $< > $@
 
+test_component.F90: $(MOSSCO_DIR)/src/config/test_component.yaml $(MOSSCO_DIR)/scripts/create_component.py
+	@echo "Creating $@"
+	python $(MOSSCO_DIR)/scripts/create_component.py $(MOSSCO_DIR)/src/config/test_component.yaml
+
 # KK-TODO: this can be removed when gotm's timestep routine is used
 ifeq ($(MOSSCO_GOTM_FABM),true)
 gotm_component.o: gotm_component.F90
