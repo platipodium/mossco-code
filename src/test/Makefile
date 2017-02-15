@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2013, 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 # @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
 # @author Knut Klingbeil, Institut für Ostseeforschung Warnemünde
@@ -52,7 +52,7 @@ test_ClockDestroy: libmossco_empty
 test_Dictionary test_mossco_netcdf: libmossco_util
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_util $(LIBS)
 
-test_Dictionary test_netcdf:
+test_netcdf:
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) $(LIBS)
 
 test_Solver: libsolver
@@ -70,7 +70,7 @@ test_ConfigTable: test_ConfigTable.F90
 libsolver libmossco_util libmossco_db:
 	make -C $(MOSSCO_DIR)/src/utilities $@
 
-libmossco_empty libmossco_info libmossco_constant:
+libmossco_technical libmossco_info libmossco_constant:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 clean: extraclean

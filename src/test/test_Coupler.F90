@@ -6,7 +6,7 @@
 program test_Coupler
 
 use esmf
-use soil_pelagic_mediator, only : soil_pelagic_connector_SetServices => SetServices
+use soil_pelagic_connector, only : soil_pelagic_connector_SetServices => SetServices
 
 integer                     :: rc
 type(ESMF_State)            :: importState, exportState
@@ -57,7 +57,7 @@ do i=1,size(varnames)
   if (rc /= ESMF_SUCCESS) call ESMF_Finalize(rc=rc, endflag=ESMF_END_ABORT)
   ! initialize with varname index
   ptr_f2(:,:) = 1.0*i
- 
+
   call ESMF_StateAdd(importState, (/field/), rc=rc)
   if (rc /= ESMF_SUCCESS) call ESMF_Finalize(rc=rc, endflag=ESMF_END_ABORT)
 end do
@@ -80,7 +80,7 @@ do i=1,5
   if (rc /= ESMF_SUCCESS) call ESMF_Finalize(rc=rc, endflag=ESMF_END_ABORT)
   ! initialize with negative varname index
   ptr_f2(:,:) = -1.0*i
-  
+
   call ESMF_StateAdd(exportState, (/field/), rc=rc)
   if (rc /= ESMF_SUCCESS) call ESMF_Finalize(rc=rc, endflag=ESMF_END_ABORT)
 end do

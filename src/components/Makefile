@@ -128,9 +128,10 @@ libmossco_fabm0d: prefix libmossco_fabm0d_driver \
 libmossco_getm: libmossco_getm_driver libmossco_util \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_getm.a(getm_component.o)
 
-libmossco_technical: prefix libmossco_util \
+libmossco_technical: prefix libmossco_util test_component.F90 \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_technical.a(empty_component.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_technical.a(dummy_component.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_technical.a(test_component.o)
 	$(MOSSCO_LIBRARY_PATH)/libmossco_technical.a(inout_component.o)
 
 libconstant: prefix modtypes $(MOSSCO_LIBRARY_PATH)/libconstant.a(constant_component.o)
