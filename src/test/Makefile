@@ -44,7 +44,10 @@ libmossco_mediator:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
 test_mossco_strings: test_mossco_strings.F90 libmossco_util
-	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_util
+	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_util $(LIBS)
+
+test_mossco_config: test_mossco_config.F90 libmossco_util
+	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_util $(LIBS)
 
 test_Concurrency: libmossco_constant libmossco_info
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lconstant -lmossco_info -lmossco_util $(LIBS)
