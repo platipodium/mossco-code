@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF coupling between different grids
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014, Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2014, 2017 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, <carsten.lemmen@hzg.de>
 
 !
