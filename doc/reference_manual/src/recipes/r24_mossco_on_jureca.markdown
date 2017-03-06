@@ -1,4 +1,4 @@
-# Recipe #10: MOSSCO on Jureca
+# Recipe #24: MOSSCO on Jureca
 
 Jureca is one of the current supercomputers at FZ Jülich.  You can apply for a testaccount by contacting their support at <dispatch.jsc@fz-juelich.de>.
 
@@ -45,3 +45,17 @@ This example also assumes that you have downloaded or `git clone`ed MOSSCO into 
 
 		mossco -rbn192 getm
 		sbatch slurm.sh
+
+## Getting into the queue faster
+
+We currently automatically only use the `compute2` partition of Jureca.  You can get into the queue faster by adjusting the generated `slurm.sh`
+
+		#!/bin/bash
+		#SBATCH --job-name=my_job
+		#SBATCH --partition=compute,compute2
+
+Make sure that  `--ntasks` is set to a multiple of the cpus on **both** partitions, i.e. 24 and 36.  So 72, 144, 288 would work in this setup.
+
+With the `mossco` script, you can also use the `-q` option to select a queue/partition.
+
+		mossco -n288 -q "compute2,compute" getm
