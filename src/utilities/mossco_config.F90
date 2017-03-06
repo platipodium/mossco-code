@@ -14,6 +14,7 @@
 #define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "mossco_config.F90"
+#define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 module mossco_config
 
@@ -849,49 +850,47 @@ contains
 
     call ESMF_ConfigFindLabel(config, label=trim(label)//'::', &
       isPresent=isPresent_, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (present(isPresent)) isPresent=isPresent_
     if (.not.isPresent_) return
 
     call ESMF_ConfigFindLabel(config, label=trim(label)//'::', rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_ConfigGetDim(config, label=trim(label)//'::', &
       lineCount=rowCount, columnCount=columnCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    ! if (columnCount /= 2) then
-    !   if (present(rc)) rc = ESMF_RC_ARG_BAD
-    !   return
-    ! endif
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     write(message,'(A,I1,A,I1,A)') '  reading table "'//trim(label)//'::" (',rowCount,' x ', columnCount,')'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     if (allocated(value)) deallocate(value)
     allocate(value(rowCount,columnCount), stat=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_ConfigFindLabel(config, label=trim(label)//'::', rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     do i = 1, rowCount
       call ESMF_ConfigNextLine(config, tableEnd=isTableEnd, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       if (isTableEnd) exit
 
       do j = 1, columnCount
+
+        ! Attempt to read the jth item, this can fail if it has
+        ! been omitted by the user, then the default empty string is
+        ! written to the table
         call ESMF_ConfigGetAttribute(config, value(i,j), rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (localrc == ESMF_RC_NOT_FOUND) then
+          value(i,j) = ''
+          localrc = ESMF_SUCCESS
+          cycle
+        endif
+
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
         if (j == 1) then
           write(message, '(A)') '  '//trim(value(i,j))
