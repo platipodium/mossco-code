@@ -354,7 +354,7 @@ contains
     character(len=*), intent(in)                      :: label
     integer(ESMF_KIND_I4), intent(inout), allocatable :: value(:)
     type(ESMF_KeywordEnforcer), optional, intent(in)  :: kwe
-    type(logical), optional, intent(out)              :: isPresent
+    logical, optional, intent(out)              :: isPresent
     integer(ESMF_KIND_I4), intent(out), optional      :: rc
 
     integer(ESMF_KIND_I4)                :: localrc, rc_, i, n
@@ -414,7 +414,7 @@ contains
     character(len=*), intent(in)                      :: label
     real(ESMF_KIND_R4), intent(inout), allocatable    :: value(:)
     type(ESMF_KeywordEnforcer), optional, intent(in)  :: kwe
-    type(logical), optional, intent(out)              :: isPresent
+    logical, optional, intent(out)              :: isPresent
     integer(ESMF_KIND_I4), intent(out), optional      :: rc
 
     integer(ESMF_KIND_I4)                :: localrc, rc_, i, n
@@ -473,7 +473,7 @@ contains
     character(len=*), intent(in)                      :: label
     real(ESMF_KIND_R8), intent(inout), allocatable    :: value(:)
     type(ESMF_KeywordEnforcer), optional, intent(in)  :: kwe
-    type(logical), optional, intent(out)              :: isPresent
+    logical, optional, intent(out)              :: isPresent
     integer(ESMF_KIND_I4), intent(out), optional      :: rc
 
     integer(ESMF_KIND_I4)                :: localrc, rc_, i, n
@@ -533,7 +533,7 @@ contains
     character(len=*), intent(in)                      :: label
     integer(ESMF_KIND_I8), intent(inout), allocatable :: value(:)
     type(ESMF_KeywordEnforcer), optional, intent(in)  :: kwe
-    type(logical), optional, intent(out)              :: isPresent
+    logical, optional, intent(out)              :: isPresent
     integer(ESMF_KIND_I4), intent(out), optional      :: rc
 
     integer(ESMF_KIND_I4)                :: localrc, rc_, i, n
@@ -593,7 +593,7 @@ contains
     character(len=*), intent(in)  :: label
     character(len=*), intent(inout), allocatable :: value(:)
     type(ESMF_KeywordEnforcer), optional, intent(in)  :: kwe
-    type(logical), optional, intent(out)              :: isPresent
+    logical, optional, intent(out)              :: isPresent
     integer(ESMF_KIND_I4), intent(out), optional      :: rc
 
     integer(ESMF_KIND_I4)                :: localrc, rc_, i, n
@@ -645,7 +645,7 @@ contains
     character(len=*), intent(in)  :: label
     character(len=*), intent(inout), allocatable :: value(:)
     type(ESMF_KeywordEnforcer), optional, intent(in)  :: kwe
-    type(logical), optional, intent(out)              :: isPresent
+    logical, optional, intent(out)              :: isPresent
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)                :: localrc, rc_, i, j
@@ -719,7 +719,7 @@ contains
     character(len=*), intent(in)  :: label
     character(len=*), intent(inout), allocatable :: value(:)
     type(ESMF_KeywordEnforcer), optional, intent(in)  :: kwe
-    type(logical), optional, intent(out)              :: isPresent
+    logical, optional, intent(out)              :: isPresent
     integer(ESMF_KIND_I4), intent(out), optional      :: rc
 
     integer(ESMF_KIND_I4)                :: localrc, rc_, i, n
@@ -836,7 +836,7 @@ contains
     character(len=*), intent(in)   :: label
     character(len=ESMF_MAXSTR), intent(out), allocatable :: value(:,:)
     type(ESMF_KeywordEnforcer), optional, intent(in)  :: kwe
-    type(logical), optional, intent(out)              :: isPresent
+    logical, optional, intent(out)              :: isPresent
     integer(ESMF_KIND_I4), intent(out), optional      :: rc
 
     integer(ESMF_KIND_I4)                :: localrc, rc_, i, j
@@ -974,7 +974,7 @@ contains
     character(len=*), intent(in)   :: label
     character(len=ESMF_MAXSTR), intent(out), allocatable :: value(:)
     type(ESMF_KeywordEnforcer), optional, intent(in)  :: kwe
-    type(logical), optional, intent(out)              :: isPresent
+    logical, optional, intent(out)              :: isPresent
     integer(ESMF_KIND_I4), intent(out), optional      :: rc
 
     integer(ESMF_KIND_I4)                :: localrc, rc_, i, rowCount, columnCount
