@@ -674,6 +674,7 @@ module filtration_component
     logical                     :: isSoil, isSurface
     type(ESMF_StateItem_Flag)   :: itemType
     real(ESMF_KIND_R8),parameter:: pi=3.141592653589793d0
+    integer(ESMF_KIND_I8)       :: advanceCount
 
     rc = ESMF_SUCCESS
 
@@ -700,6 +701,11 @@ module filtration_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_ClockGet(clock, currTime=currTime, stopTime=stopTime, &
+      advanceCount=advanceCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1128,9 +1134,11 @@ module filtration_component
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
-          write(message,'(A)') trim(name)//' received incomplete field'
-          call MOSSCO_FieldString(field, message, rc=localrc)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+          if (advanceCount < 2) then
+            write(message,'(A)') trim(name)//' received incomplete field'
+            call MOSSCO_FieldString(field, message, rc=localrc)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+          endif
           cycle
         endif
 
@@ -1193,10 +1201,6 @@ module filtration_component
     !! This component has no do loop over an internal timestep, it is advanced with the
     !! timestep written into its local clock from a parent component
     call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_ClockGet(clock, currTime=currTime, stopTime=stopTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
