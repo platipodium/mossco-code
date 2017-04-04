@@ -50,7 +50,7 @@ endif
 getm_version:
 ifneq ($(wildcard $(external_GETMDIR)/src/Makefile),)
   # git describe --long --tags --dirty --always
-	GETM_VERSION=$(shell cat /Users/lemmen/devel/MOSSCO/code/external/getm/code/VERSION)
+	GETM_VERSION=$(shell cat $(MOSSCO_DIR)/external/getm/code/VERSION)
 	GETM_GIT_SHA=$(shell cd $(external_GETMDIR) ; $(GIT) log -n 1 |head -1 | cut -d" " -f2)
 
 	@#echo "CPPFLAGS+=-DGETM_VERSION="${GETM_VERSION} >> $(MOSSCO_DIR)/src/include/versions.mk
