@@ -81,6 +81,8 @@ Issue the usual
 
         ./configure --prefix=$PREFIX && make -j8 && make check && make install
 
+> You might need the additional option `configure --disable-multilib` to make this work if you system does not have 32 bit libraries.
+
 From now on, *do not* use gcc/gfortran/g++ as your compilers, but *use mpifort/mpicc/mpiCC* as your compilers.  You can tell this to your system
 by setting
 
@@ -92,7 +94,7 @@ by setting
 
 ## Installing netCDF
 
-The current netCDF comes in three packages, one for C, one for Fortran (and one for C++, which is not needed in recent versions of ESMF).  As a requirement for new features of the netCDF-4 standard, the HDF-5 library is required and must be installed first.
+The current netCDF comes in three packages, one for C, one for Fortran (and one for C++, which is *not* needed).  As a requirement for new features of the netCDF-4 standard, the HDF-5 library is required and must be installed first.
 
 To get all the software, issue the following:
 
@@ -104,12 +106,12 @@ To get all the software, issue the following:
         wget ftp://ftp.unidata.ucar.edu/pub/netcdf/netcdf-fortran-4.4.4.tar.gz
         tar xzf netcdf-fortran-4.4.4.tar.gz
 
-Change to the HDF source directory.  Add flags to enable the C++ and Fortran API to be built in your `configure` statement
+Change to the HDF source directory.  Add flags to enable the Fortran API to be built in your `configure` statement
 
-        cd $WORK/hdf5-1.10.0-patch1/configure --prefix=$PREFIX --enable-fortran --enable-fortran2003 --enable-cxx --enable-parallel
+        cd $WORK/hdf5-1.10.0-patch1/configure --prefix=$PREFIX --enable-fortran --enable-fortran2003 --enable-parallel
         make -j8 && make check && make install
 
-> A user reported the additional need for `--enable-unsupported`
+> A user reported the additional need for `--enable-unsupported` when also using `--enable-cxx`.  Errors have also been reported with `make check` s
 
 Then install the netcdf C library first
 
@@ -137,3 +139,7 @@ If you do not have CMake, it is quite easy to install
         git checkout --track -b release origin/release
         ./configure --prefix=$PREFIX
         make && make install
+
+## Continue to install ESMF
+
+See the related recipes "Installing MOSSCO on  ... " for help with ESMF.
