@@ -72,6 +72,8 @@ your new shiny gcc compiler (and also gfortran and other languages) from `$PREFI
 
 ## Installing OpenMPI
 
+For support of parallel computing, the installation of a message passing interface (MPI) is required, which has to be in conjunction with the compiler built in the previous step. We recommend to use the most recent release version of openMPI (v2.1.0 at the time of writing this recipe).
+
         cd $WORK
         wget https://www.open-mpi.org/software/ompi/v2.1/downloads/openmpi-2.1.0.tar.bz2
         tar xpjf openmpi-2.1.0.tar.bz2
@@ -82,7 +84,7 @@ Issue the usual
         ./configure --prefix=$PREFIX
         make -j8 && make check && make install
 
-> You might need the additional option `configure --disable-multilib` to make this work if you system does not have 32 bit libraries.
+> You might need the additional option `--disable-multilib` to make this work if your system does not have 32 bit libraries.
 
 From now on, *do not* use gcc/gfortran/g++ as your compilers, but *use mpifort/mpicc/mpiCC* as your compilers.  You can tell this to your system
 by setting
@@ -107,13 +109,13 @@ To get all the software, issue the following:
         wget ftp://ftp.unidata.ucar.edu/pub/netcdf/netcdf-fortran-4.4.4.tar.gz
         tar xzf netcdf-fortran-4.4.4.tar.gz
 
-Change to the HDF source directory.  Add flags to enable the Fortran API to be built in your `configure` statement
+Change to the HDF source directory.  Add flags to enable the Fortran API to be build in your `configure` statement
 
         cd $WORK/hdf5-1.10.0-patch1
         ./configure --prefix=$PREFIX --enable-fortran --enable-fortran2003 --enable-parallel
         make -j8 && make check && make install
 
-> A user reported the additional need for `--enable-unsupported` when also using `--enable-cxx`.  Errors have also been reported with `make check` s
+> A user reported the additional need for `--enable-unsupported` when also using `--enable-cxx`.  Errors have also been reported with `make check`.
 
 Then install the netcdf C library first
 
@@ -131,7 +133,26 @@ and later the fortran library. Issue
 
 You now have your system ready to be used with ESMF and recent Fortran 2003 requirements.
 
-## Installing CMake
+## Installing ESMF
+
+Decide on a directory where to put the ESMF source, and set the environment variable `ESMF_DIR` to point to this directory. In this example, we chose to download the software to the directory `$WORK/esmf-code` and as the installation should take place in the same directory as was previously defined in `$PREFIX` we set the environment variable `ESMF_INSTALL_PREFIX` accordingly.
+
+        export ESMF_DIR=$WORK/esmf-code
+        export ESMF_INSTALL_PREFIX=$PREFIX
+        git clone git://esmf.git.sourceforge.net/gitroot/esmf/esmf $ESMF_DIR
+        cd $ESMF_DIR
+
+During the installation process, ESMF requires a couple of environment variables to be set. (See the ESMF manual for a complete list of ESMF environment variables and their relevance.) At the time of writing this recipe, we further recommend to check out the tagged version `ESMF_7_1_0_beta_snapshot_22` which has been prooved to fullfil MOSSCO requirements. Both steps have been automated using and adjusting the script `install_esmf_versions.sh`, which comes along with the Mossco-code.
+To install ESMF, just copy this file to `$ESMF_DIR`
+
+        cp $MOSSCO_DIR/scripts/installation/install_esmf_versions.sh .
+
+,edit lines 7, 8 to set `COMPS=gfortran`, `COMMS=openmpi` and invoke
+
+        bash install_esmf_versions.sh
+
+
+## Installing CMake (prerequisite for using FABM component)
 
 Recent versions of FABM require `CMake`,  an alternative to the autotools sytem (`configure`).  GETM, GOTM, and possibly MOSSCO will also move in the future to this configuration program.
 
@@ -143,7 +164,3 @@ If you do not have CMake, it is quite easy to install
         git checkout --track -b release origin/release
         ./configure --prefix=$PREFIX
         make && make install
-
-## Continue to install ESMF
-
-See the related recipes "Installing MOSSCO on  ... " for help with ESMF.
