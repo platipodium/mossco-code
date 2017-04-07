@@ -17,18 +17,18 @@ The instructions below assume, that you have already present in your system the 
 ## Installation directories
 
 These instructions install all the software in the directory `PREFIX=$HOME/opt`, i.e., the libraries in `$PREFIX/lib`, header files in `$PREFIX/include`, and binaries in `$PREFIX/bin`.  Your choice may
-be different.  
+be different.
 
         export PREFIX=$HOME/opt
 
 If you have root access on your system, we recommend to set `PREFIX=/opt/gcc49` or similar, as the installed software will be compiler-specific.  To avoid having to use `sudo` privileges in your installation, you should make sure that the directory `$PREFIX` is owned by your local user.  If not, ensure this with
 
-    sudo chown -R your-user-name $PREFIX
+        sudo chown -R your-user-name $PREFIX
 
 To use the software, please add the binary directory to your search path and the library directory to your library search path
 
-	export PATH=$PREFIX/bin:$PATH
-	export LD_LIBRARY_PATH=$PREFIX/lib:$LD_LIBRARY_PATH
+        export PATH=$PREFIX/bin:$PATH
+        export LD_LIBRARY_PATH=$PREFIX/lib:$LD_LIBRARY_PATH
 
 ## Software versions
 In this tutorial, we chose a working set of software versions; by no means we intend to restrict you to using these specific versions.  You would have to adjust download URLs and paths accordingly, if you chose alternate versions.
@@ -73,13 +73,14 @@ your new shiny gcc compiler (and also gfortran and other languages) from `$PREFI
 ## Installing OpenMPI
 
         cd $WORK
-        wget https://www.open-mpi.org/software/ompi/v1.8/downloads/openmpi-1.8.8.tar.bz2
-        tar xpjf openmpi-1.8.8.tar.bz2
-        cd openmpi-1.8.8
+        wget https://www.open-mpi.org/software/ompi/v2.1/downloads/openmpi-2.1.0.tar.bz2
+        tar xpjf openmpi-2.1.0.tar.bz2
+        cd openmpi-2.1.0
 
 Issue the usual
 
-        ./configure --prefix=$PREFIX && make -j8 && make check && make install
+        ./configure --prefix=$PREFIX
+        make -j8 && make check && make install
 
 > You might need the additional option `configure --disable-multilib` to make this work if you system does not have 32 bit libraries.
 
@@ -108,7 +109,8 @@ To get all the software, issue the following:
 
 Change to the HDF source directory.  Add flags to enable the Fortran API to be built in your `configure` statement
 
-        cd $WORK/hdf5-1.10.0-patch1/configure --prefix=$PREFIX --enable-fortran --enable-fortran2003 --enable-parallel
+        cd $WORK/hdf5-1.10.0-patch1
+        ./configure --prefix=$PREFIX --enable-fortran --enable-fortran2003 --enable-parallel
         make -j8 && make check && make install
 
 > A user reported the additional need for `--enable-unsupported` when also using `--enable-cxx`.  Errors have also been reported with `make check` s
@@ -116,14 +118,16 @@ Change to the HDF source directory.  Add flags to enable the Fortran API to be b
 Then install the netcdf C library first
 
         cd $WORK/netcdf-4.4.1.1
-        ./configure --prefix=$PREFIX && make -j8 && make check && make install
+        ./configure --prefix=$PREFIX
+        make -j8 && make check && make install
 
 > A user reported that she needed to add the `libdl` library at link time
 
 and later the fortran library. Issue
 
         cd $WORK/netcdf-fortran-4.4.4
-        ./configure --prefix=$PREFIX && make -j8 && make check && make install
+        ./configure --prefix=$PREFIX
+        make -j8 && make check && make install
 
 You now have your system ready to be used with ESMF and recent Fortran 2003 requirements.
 
