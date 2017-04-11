@@ -122,12 +122,12 @@ You can see many namelists here, of which the most important ones are
 - `gotmrun.nml` (for controlling the hydrodynamic model)
 
 Depending on your choice of FABM models, you may have to edit or add more namelist
-files, then execute `mossco gotm--fabm_pelagic--fabm_sediment--netcdf` again.
+files, then execute `mossco gotm--fabm_pelagic--fabm_sediment` again.
 
-You can also explore this coupling configuration, which is specified in the file `$MOSSCO_DIR/examples/generic/gotm--fabm_pelagic--fabm_sediment--netcdf.yaml`.
+You can also explore this coupling configuration, which is specified in the file `$MOSSCO_DIR/examples/generic/gotm--fabm_pelagic--fabm_sediment.yaml`.
 After changing this coupling specification, issue
 
-		mossco -r gotm--fabm_pelagic--fabm_sediment--netcdf
+		mossco -r gotm--fabm_pelagic--fabm_sediment
 
 To rebuild and execute your example again.
 
