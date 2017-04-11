@@ -157,7 +157,7 @@ module default_component
 
     type(ESMF_Mesh)                             :: mesh
     real(ESMF_KIND_R8), pointer :: farrayPtr1(:)
-    character(len=ESMF_MAXSTR)                  :: varname, meshname
+    character(len=ESMF_MAXSTR)                  :: varname
     integer, parameter                          :: fileunit=21
     logical                                     :: file_readable=.true.
     integer(ESMF_KIND_I4)                       :: start
@@ -205,14 +205,6 @@ module default_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_ConfigFindLabel(config, label='meshname:', isPresent=labelIsPresent, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_ConfigGetAttribute(config, meshName, rc = rc, default='sediment_surface_mesh')
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
       call ESMF_ConfigFindLabel(config, label='ugrid:', isPresent=labelIsPresent, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -225,7 +217,7 @@ module default_component
       inquire(file=trim(fileName), exist=fileIsPresent)
       if (fileIsPresent .and. trim(foreignGridFieldName) == 'none') then
 
-        mesh = ESMF_MeshCreate(meshname=trim(meshName),filename=trim(fileName), &
+        mesh = ESMF_MeshCreate(filename=trim(fileName), &
 #if ESMF_VERSION_MAJOR > 6
           fileformat=ESMF_FILEFORMAT_UGRID, rc=localrc)
 #else

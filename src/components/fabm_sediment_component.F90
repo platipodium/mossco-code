@@ -4,7 +4,7 @@
 !! MOSSCO sediment component.
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013, 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2013,2014,2015,2016,2017 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
 !
@@ -243,8 +243,7 @@ module fabm_sediment_component
     !> todo: check importState for foreign_grid_field_name
 
     if (sed%grid%type==UGRID) then
-      surface_mesh = ESMF_MeshCreate(meshname='sediment_surface_mesh', &
-                                  filename=ugrid_name, &
+      surface_mesh = ESMF_MeshCreate(                                  filename=ugrid_name, &
 #if ESMF_VERSION_MAJOR > 6
           fileformat=ESMF_FILEFORMAT_UGRID, rc=localrc)
 #else
