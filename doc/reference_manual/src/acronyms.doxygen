@@ -13,8 +13,8 @@ Acronym | Full name | Description
 3D | Three-dimensional | Domain of spatial models along three dimensions
 AGCM | Atmospheric Global Circulation Model | Numerical model of global atmospheric circulation
 AOGCM | Atmosphere-Ocean Global Circulation Model | Numerical model of global atmospheric and ocean circulation
-AWI | Alfred-Wegener Institut | German national research facility [AWI](http://www.awi.de) with multiple campuses 
-BACOSA | Baltic Coastal system analysis and status evaluation | KüNO project [BACOSA](http://www.planeterde.de/Members/huenken/BMBF%20Projekte/bacosa) 
+AWI | Alfred-Wegener Institut | German national research facility [AWI](http://www.awi.de) with multiple campuses
+BACOSA | Baltic Coastal system analysis and status evaluation | KüNO project [BACOSA](http://www.planeterde.de)
 BAW | Bundesanstalt für Wasserbau | National waterways agency [BAW](http://www.baw.de)
 BENTHOS | Benthos | Macrofauna and microflora benthic MOSSCO component
 BFG | Bespoke Framework Generator | Generator for coupling software
@@ -29,7 +29,7 @@ ESM | Earth System Model | Numerical model that includes domains outside AOGCM
 ESMF | Earth System Modeling Framework | Coupling software framework
 ERGOM | | BGC model and FABM submodel to describe explicitly the N cycle, developed at IOW
 EROSED | Erosion-Sedimentation | Erosion-sedimentation software developed by Deltares
-ERSEM | European Regional Seas Ecosystem Model | plankton functional type model 
+ERSEM | European Regional Seas Ecosystem Model | plankton functional type model
 
 ## F-N
 
@@ -45,7 +45,7 @@ GNU | Gnu is Not Unix | Recursive acronym of the GNU operating system
 GOTM | General Ocean Turbulence Model | Watercolumn hydrographic model
 GPL | GNU Public License | Open source copyleft software license
 HPC | High Performance Computing | Parallel or vectorized computing on large computing infrastructure
-HELCOM | Helsinki Commission | Baltic marine environment protection commission 
+HELCOM | Helsinki Commission | Baltic marine environment protection commission
 HLRN | Norddeutscher Verbund für Hoch- und Höchstleistungsrechnen | German HPC facility
 HZG | Helmholtz-Zentrum Geesthacht | German national research facility
 ICE | Internal Compiler Error | Error indicating a problem in the compiler
