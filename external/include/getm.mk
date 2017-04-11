@@ -30,7 +30,7 @@ VERSION_TARGETS += getm_version
 getm: getm_clone
 
 getm_clone:
-ifeq ($(wildcard $(external_GETMDIR)/src/Makefile),)
+ifeq ($(wildcard $(external_GETMDIR)/src/getm/main.F90),)
 	$(GIT) clone http://git.code.sf.net/p/getm/code $(external_GETMDIR)
 	( cd $(external_GETMDIR) ; $(GIT) checkout -b iow origin/iow )
 else
@@ -38,17 +38,17 @@ else
 endif
 
 getm_update:
-ifneq ($(wildcard $(external_GETMDIR)/src/Makefile),)
+ifneq ($(wildcard $(external_GETMDIR)/src/getm/main.F90),)
 	( cd $(external_GETMDIR) ; $(GIT) pull origin iow)
 endif
 
 getm_distclean:
-ifneq ($(wildcard $(external_GETMDIR)/src/Makefile),)
+ifneq ($(wildcard $(external_GETMDIR)/src/getm/main.F90),)
 	( unset FABM ; $(MAKE) -C $(external_GETMDIR) distclean )
 endif
 
 getm_version:
-ifneq ($(wildcard $(external_GETMDIR)/src/Makefile),)
+ifneq ($(wildcard $(external_GETMDIR)/src/getm/main.F90),)
   # git describe --long --tags --dirty --always
 	GETM_VERSION=$(shell cat $(MOSSCO_DIR)/external/getm/code/VERSION)
 	GETM_GIT_SHA=$(shell cd $(external_GETMDIR) ; $(GIT) log -n 1 |head -1 | cut -d" " -f2)
