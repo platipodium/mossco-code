@@ -21,7 +21,7 @@ TESTS = $(shell cat TESTS)
 LIBS := -lesmf  $(LIBS)
 LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS)
 
-.PHONY: libmossco_empty libmossco_constant libmossco_info libmossco_util libmossco_db
+.PHONY: libmossco_technical libmossco_constant libmossco_info libmossco_util libmossco_db
 
 .PHONY: all tests $(TESTS)
 all: tests
@@ -52,8 +52,8 @@ test_mossco_config: test_mossco_config.F90 libmossco_util
 test_Concurrency: libmossco_constant libmossco_info
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lconstant -lmossco_info -lmossco_util $(LIBS)
 
-test_ClockDestroy: libmossco_empty
-	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lempty -lmossco_util $(LIBS)
+test_ClockDestroy: libmossco_technical
+	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_technical -lmossco_util $(LIBS)
 
 test_Dictionary test_mossco_netcdf: libmossco_util
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_util $(LIBS)
