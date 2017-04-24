@@ -60,6 +60,11 @@ else
     ifeq ($(ESMF_COMM),openmpi)
       ESMF_FC:=$(shell $(ESMF_F90COMPILER) --showme:command 2> /dev/null)
       ifeq ($(ESMF_FC),)
+	ifeq ($(ESMF_F90COMPILER),mpifort)
+          ESMF_FC:=$(shell mpif90 --showme:command 2> /dev/null)
+        endif
+      endif
+      ifeq ($(ESMF_FC),)
         $(error $(ESMF_F90COMPILER) is *not* based on $(ESMF_COMM)!)
       endif
       ESMF_CC:=$(shell $(ESMF_CXXCOMPILER) --showme:command 2> /dev/null)
