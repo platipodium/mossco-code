@@ -4,10 +4,44 @@ Mistral is the supercomputer at the German Climate Computing Centre (DKRZ) from 
 
 Mistral is a RedHat6 Linux system with 1500 nodes with each 2x12 core processors (in the "compute" partition), or 2x18 core processors (in the "compute2" partition).
 
-## Preparing your toolchain
+## Setting up the toolchain
 
-This recipe gives instructions for the gcc49/openmpi toolchain.  On mistral, there are many more or more recent compilers (gcc4, gcc5, nag, intel16) and MPI installations (bull, intel, mvapich, openmpi) available, but not with a preinstalled ESMF.  We are waiting for a preinstallation of ESMF with the
-recommended compiler systems intel/bullxmpi and intel/intelmpi.
+The recommended toolchain on Mistral is the `intel` compiler with eiterh `intelmpi` or `bullxmpi`.  We here demonstrate the version with `bullxmpi`.  There is no preinstalled ESMF, so we install it locally here.
+
+        module purge
+        module load intel mxm fca bullxmpi_mlx
+        module load nco ncview
+        module load python/2.7-ve0
+
+        source /opt/mpi/bullxmpi_mlx/1.2.9.2/bin/mpivars.sh
+        export PATH=/sw/rhel6-x64/netcdf/netcdf_fortran-4.4.3-parallel-bullxmpi-intel14/bin:$PATH
+        export PATH=/sw/rhel6-x64/netcdf/netcdf_c-4.4.0-parallel-bullxmpi-intel14/bin:$PATH
+        export MOSSCO_FFLAGS="-I`nf-config --includedir` `nf-config --flibs` -fp-model strict -O2 -xCORE-AVX2 –ftz"
+        export STATIC=" -fp-model strict -O2 -xCORE-AVX2 –ftz"
+
+### Install ESMF
+
+        export ESMF_DIR=$HOME/devel/esmf
+        mkdir -p $ESMF_DIR
+
+Edit the file `$MOSSCO_DIR/scripts/installation/install_esmf_versions.sh` to set
+
+        COMPS="intel"
+        COMMS="openmpi"
+
+and execute it.  `bullxmpi` is based on OpenMPI.
+
+        bash $MOSSCO_DIR/scripts/installation/install_esmf_versions.sh
+
+Kill the script after it starts compiling and review the newly created file `$HOME/.esmf_Linux.intel.64.openmpi.ESMF_7_1_0_beta_snapshot_27`, remove NETCDF lib and include statements.  Then
+
+        cd $ESMF_DIR
+        source $HOME/.esmf_Linux.intel.64.openmpi.ESMF_7_1_0_beta_snapshot_27
+        make -j8 && make install
+
+## Alternative: Using the preinstalled ESMF
+
+This recipe gives instructions for the gcc49/openmpi toolchain.  On mistral, there are many more or more recent compilers (gcc6, nag, intel17) and MPI installations (bull, intel, mvapich, openmpi) available, but not with a preinstalled ESMF. 
 
         module purge
         module load nco ncview python
