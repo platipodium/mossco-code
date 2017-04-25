@@ -818,6 +818,15 @@ subroutine MOSSCO_GridGetDepth(grid, kwe, depth, height, interface, rc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+
+    !write(0,*) lbound(interface_),ubound(interface_)
+    !write(0,*) iflbnd, ifubnd
+    !> @todo something is wrong with iflbnd and ifubnd
+    !> we correct them here to the dimensions of interface_, but really
+    !> this should come from the grid itself
+  iflbnd=lbound(interface_)
+  ifubnd=ubound(interface_)
+
   if (present(height)) then
     if (associated(height)) then
 
@@ -833,8 +842,10 @@ subroutine MOSSCO_GridGetDepth(grid, kwe, depth, height, interface, rc)
     endif
 
     do k = 0, ubnd(3) - lbnd(3)
+      !write(0,*) 'k=',k,'h=',lbound(height,3),ubound(height,3), 'if=',lbound(interface_,3),ubound(interface_,3)
+      !write(0,*) 'h=',lbnd(3)+k, 'if=',iflbnd(3) + k, iflbnd(3) + k + 1
       height(RANGE2D,lbnd(3)+k) =  interface_(RANGE2D, iflbnd(3) + k + 1) &
-        - interface_(RANGE2D, lbnd(3) + k)
+        - interface_(RANGE2D, iflbnd(3) + k)
     enddo
   endif
 
@@ -856,7 +867,7 @@ subroutine MOSSCO_GridGetDepth(grid, kwe, depth, height, interface, rc)
     do k = 0, ubnd(3) - lbnd(3)
       depth(RANGE2D,lbnd(3)+k) =  0.5 * ( &
       interface_(RANGE2D, iflbnd(3) + k + 1) &
-        + interface_(RANGE2D, lbnd(3) + k))
+        + interface_(RANGE2D, iflbnd(3) + k))
     enddo
   endif
 
