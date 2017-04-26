@@ -451,11 +451,11 @@ EOT
 
     if [  $(echo $HOSTNAME |grep -c mlogin) == 1 ]; then
       # These are instructions for mistral.dkrz.de
-      if [ ${QUEUE} == undefined ]; then QUEUE=compute2; fi
+      if [ ${QUEUE} == undefined ]; then QUEUE="compute2,compute"; fi
 
+      echo \#SBATCH --cpus-per-task=2 >> slurm.sh
       echo \#SBATCH --account=$(groups | cut -d" " -f1) >> slurm.sh
       echo \#SBATCH --partition=${QUEUE}  >> slurm.sh
-      echo \#SBATCH --nodes=${NODES}  >> slurm.sh
 
       echo export I_MPI_FABRICS=shm:dapl >> slurm.sh
       echo export I_MPI_FALLBACK=disable  >> slurm.sh
