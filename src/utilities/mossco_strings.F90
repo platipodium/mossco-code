@@ -1,7 +1,7 @@
 !> @brief Implementation of string utilities
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
 !
@@ -54,11 +54,21 @@ contains
 
       !> remove model name
       pos = INDEX(longname, " ")
-!      allocate(character(len=len_trim(longname)-pos)::only_var_name)
+      
       only_var_name = repeat (' ',len_trim(longname)-pos)
       only_var_name = trim(longname(pos+1:))
 
+      !> remove variable description after an equal sign
+      pos = index(longname, "=")
+      if (pos>1) then
+        only_var_name(pos:len(only_var_name)) = ' '
+        only_var_name = trim(longname)
+      endif
+
       call replace_character(only_var_name,' ','_')
+
+      ! ESMF does not allow the slash as a character in a field name
+      call replace_character(only_var_name,'/','_')
    end function only_var_name
 
    !> replace char_old by char_new in string
