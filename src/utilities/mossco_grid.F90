@@ -819,6 +819,14 @@ subroutine MOSSCO_GridGetDepth(grid, kwe, depth, height, interface, rc)
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 
+  !call ESMF_GridValidate(grid, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  !call ESMF_GridPrint(grid) ! interface not implemented (but needed...)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     !write(0,*) lbound(interface_),ubound(interface_)
     !write(0,*) iflbnd, ifubnd
     !> @todo something is wrong with iflbnd and ifubnd
