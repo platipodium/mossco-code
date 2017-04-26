@@ -3342,17 +3342,9 @@ module mossco_netcdf
 
       timeInterval = currTime - refTime
 
-      call ESMF_TimePrint(refTime, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_TimePrint(currTime, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_TimeIntervalPrint(timeInterval, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !call ESMF_TimePrint(refTime, rc=localrc)
+      !call ESMF_TimePrint(currTime, rc=localrc)
+      !call ESMF_TimeIntervalPrint(timeInterval, rc=localrc)
 
       isShort = .false.
 
@@ -3373,7 +3365,7 @@ module mossco_netcdf
         call ESMF_TimeIntervalGet(currTime - refTime, d_i8=ticks, rc=localrc)
         ticks = int(floor(ticks * 12.0 / 365.2425), ESMF_KIND_I8)
 
-        call ESMF_TimeIntervalPrint(timeInterval)
+        !call ESMF_TimeIntervalPrint(timeInterval)
         !call ESMF_TimeIntervalGet(timeInterval, startTime=refTime, mm_i8=ticks, rc=localrc)
 
       elseif (timeUnit(1:4) == 'year') then
