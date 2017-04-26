@@ -1309,7 +1309,7 @@ module filtration_component
 
     if (allocated(mask)) deallocate(mask)
     if (allocated(uppersum)) deallocate(uppersum)
-    if (allocated(lowersum)) deallocate(uppersum)
+    if (allocated(lowersum)) deallocate(lowersum)
 
   end subroutine MOSSCO_WeightsFromSurface
 
