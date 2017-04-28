@@ -6,7 +6,8 @@ Mistral is a RedHat6 Linux system with 1500 nodes with each 2x12 core processors
 
 ## Setting up the toolchain
 
-The recommended toolchain on Mistral is the `intel` compiler with eiterh `intelmpi` or `bullxmpi`.  We here demonstrate the version with `bullxmpi`.  There is no preinstalled ESMF, so we install it locally here.
+The recommended toolchain on Mistral is the `intel` compiler with eiterh `intelmpi` or `bullxmpi`.  We here demonstrate the version with `bullxmpi`.  See the end of this
+recipe for further toolchains. There is no preinstalled ESMF, so we install it locally here.
 
         module purge
         module load intel mxm fca bullxmpi_mlx
@@ -41,7 +42,7 @@ Kill the script after it starts compiling and review the newly created file `$HO
 
 ## Alternative: Using the preinstalled ESMF
 
-This recipe gives instructions for the gcc49/openmpi toolchain.  On mistral, there are many more or more recent compilers (gcc6, nag, intel17) and MPI installations (bull, intel, mvapich, openmpi) available, but not with a preinstalled ESMF. 
+This recipe gives instructions for the gcc49/openmpi toolchain.  On mistral, there are many more or more recent compilers (gcc6, nag, intel17) and MPI installations (bull, intel, mvapich, openmpi) available, but not with a preinstalled ESMF.
 
         module purge
         module load nco ncview python
@@ -106,3 +107,25 @@ to the installation located at
         export PYTHONPATH=$PYTHONPATH:$HOME/opt/lib/python2.7/site-packages
 
 Now you're ready to build and run MOSSCO applications by continuing with the [[using_mossco_sh]] recipe
+
+
+## Alternative toolchains
+
+### Intel-Intelmpi
+
+    module purge
+    module load intel intelmpi
+    module load nco ncview
+    module load python/2.7-ve0
+
+    source mpivars.sh
+
+    export FORTRAN_COMPILER=IFORT
+
+    export PATH=/sw/rhel6-x64/netcdf/netcdf_fortran-4.4.3-parallel-impi2017-intel14/bin/:$PATH
+    export PATH=/sw/rhel6-x64/netcdf/netcdf_c-4.4.0-parallel-impi2017-intel14/bin/:$PATH
+
+    export MOSSCO_FFLAGS="-I`nf-config --includedir` `nf-config --flibs` -fp-model strict -O2 -xCORE-AVX2 –ftz"
+    export EXTRA_FFLAGS="$MOSSCO_FFLAGS"
+
+    source $HOME/.esmf_Linux.intel.64.intelmpi.ESMF_7_1_0_beta_snapshot_27
