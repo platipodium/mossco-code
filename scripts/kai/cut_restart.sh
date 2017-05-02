@@ -37,7 +37,7 @@ done
 #for p in $(seq -f $fg 0 1 $[$ncpu-1]); do ncap -O -s "Dissolved_Organic_Carbon_domC_in_water=2.5*Dissolved_Organic_Carbon_domC_in_water" tmp.$p.nc tmp.$p.nc; done
 
 #echo "Zooplankton_Carbon_zooC_in_water..."
-#for p in $(seq -f $fg 0 1 $[$ncpu-1]); do ncap -O -s "Zooplankton_Carbon_zooC_in_water=0.3+1.5*Zooplankton_Carbon_zooC_in_water" tmp.$p.nc tmp.$p.nc; done
+#for p in $(seq -f $fg 0 1 $[$ncpu-1]); do ncap -O -s "Zooplankton_Carbon_zooC_in_water=0.2+2*Zooplankton_Carbon_zooC_in_water" tmp.$p.nc tmp.$p.nc; done
 
 #echo "detritus-P_in_soil..."
 #for p in $(seq -f $fg 0 1 $[$ncpu-1]); do ncap -O -s "detritus-P_in_soil=1.7*detritus-P_in_soil" tmp.$p.nc tmp.$p.nc; done
