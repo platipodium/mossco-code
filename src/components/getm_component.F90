@@ -337,7 +337,7 @@ module getm_component
       call getmCmp_StateAddPtr("temperature_in_water",T3D,exportState,"degC",name)
     end if
     if (associated(S3D)) then
-      call getmCmp_StateAddPtr("salinity_in_water",S3D,exportState,"",name)
+      call getmCmp_StateAddPtr("practical_salinity_in_water",S3D,exportState,"",name)
     end if
     if (associated(swr)) then
       call getmCmp_StateAddPtr("surface_downwelling_photosynthetic_radiative_flux",swr,exportState,"W m-2",name)
