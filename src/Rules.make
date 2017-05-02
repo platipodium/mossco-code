@@ -69,6 +69,12 @@ else
       endif
       ESMF_CC:=$(shell $(ESMF_CXXCOMPILER) --showme:command 2> /dev/null)
     endif
+    ifeq ($(ESMF_COMM),intelmpi)
+      ESMF_FC:=$(shell $(ESMF_F90COMPILER) -show 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
+      ifeq ($(ESMF_FC),)
+        $(error $(ESMF_F90COMPILER) is *not* based on $(ESMF_COMM)!)
+      endif
+    endif
     ifeq ($(ESMF_COMM),mpich2)
       ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
       ifeq ($(ESMF_FC),)
@@ -277,11 +283,15 @@ ifdef GETMDIR
       ifeq ($(ESMF_COMM),openmpi)
         export MPI=OPENMPI
       else
+      ifeq ($(ESMF_COMM),intelmpi)
+        export MPI=INTELMPI
+      else
         ifeq ($(ESMF_COMM),mpi)
           export MPI=MPICH
         else
           export MPI=MPICH2
         endif
+      endif
       endif
     else
       export GETM_PARALLEL=false
