@@ -1,6 +1,6 @@
-## Nudge connector
+## Connector nudge
 
-The nudge connector takes adds weighted field data from its import state
+The `nudge_connector` takes adds weighted field data from its import state
 onto field data in its export state.
 
 ### Description
