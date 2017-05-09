@@ -1,10 +1,10 @@
-!> @file fabm0d_driver.F90
+!> @file fabm_pelagic_driver.F90
 !> @brief 3D generic driver for the Framework for Aquatic Biogeochemical Models (FABM)
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2013, 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2013,2014,2015,2016,2017 Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister <richard.hofmeister@hzg.de>
-
+!> @author Carsten Lemmen <carsten.lemmen@hzg.de
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -38,6 +38,7 @@
 
   type, extends(type_rhs_driver), public :: type_mossco_fabm_pelagic
     type(type_model),pointer           :: model
+    !type(type_model), target           :: model_state
     type(export_state_type),dimension(:),pointer :: export_states => null()
     real(rk),dimension(:,:,:),pointer  :: temp,salt,par,dens,current_depth
     real(rk),dimension(:,:,:),pointer  :: layer_height=>null()
@@ -102,24 +103,50 @@
   contains
 
   !> creates instance of pelagic fabm class
-  function mossco_create_fabm_pelagic(fabm_nml) result(pf)
+  function mossco_create_fabm_pelagic(fabm_nml, rc) result(pf)
+
+    use fabm_config
 
     character(len=*), optional, intent(in)  :: fabm_nml
+    integer, optional, intent(out) :: rc
     type(type_mossco_fabm_pelagic), allocatable :: pf
 
     integer  :: n
     integer  :: namlst_unit=123
     real(rk) :: dt
+    logical  :: fileIsPresent
 
     allocate(pf)
     pf%fabm_ready=.false.
     pf%conc => null()
     pf%par => null()
-    ! Build FABM model tree.
+
+    ! Build FABM model tree, based on extension try nml first then yaml,
+    ! yaml is still experimental. Later make yaml the default
+
     if (present(fabm_nml)) then
-      pf%model => fabm_create_model_from_file(namlst_unit,trim(fabm_nml))
+      if (index(fabm_nml,'.nml') > 2) then
+        pf%model => fabm_create_model_from_file(namlst_unit,trim(fabm_nml))
+      else
+        allocate(pf%model)
+        call fabm_create_model_from_yaml_file(pf%model,path=trim(fabm_nml))
+        !pf%model => pf%model_state
+      endif
     else
-      pf%model => fabm_create_model_from_file(namlst_unit,'fabm.nml')
+      inquire(file='fabm.nml',exist=fileIsPresent)
+      if (fileIsPresent) then
+        pf%model => fabm_create_model_from_file(namlst_unit,'fabm.nml')
+      else
+        inquire(file='fabm.yaml',exist=fileIsPresent)
+        if (fileIsPresent) then
+          allocate(pf%model)
+          call fabm_create_model_from_yaml_file(pf%model,path='fabm.yaml')
+          !pf%model => pf%model_state
+        else
+          if (present(rc)) rc=1
+          return
+        endif
+      endif
     endif
 
     pf%nvar = size(pf%model%state_variables)
@@ -572,7 +599,8 @@
   class(type_mossco_fabm_pelagic) :: pf
     integer  :: n,fabm_id
 
-    allocate(pf%export_states(pf%nvar))
+    if (pf%nvar > 0) allocate(pf%export_states(pf%nvar))
+
     do fabm_id=1,pf%nvar
       pf%export_states(fabm_id) = pf%get_export_state_by_id(fabm_id)
     end do
@@ -607,8 +635,10 @@
       end do
     end if
     lbnd = lbound(pf%conc)
-    do n=1,size(pf%export_states)
-      export_state => pf%export_states(n)
+
+    if (associated(pf%export_states)) then
+      do n=1,size(pf%export_states)
+        export_state => pf%export_states(n)
 #if 0
       export_state%conc(lbnd(1):,lbnd(2):,lbnd(3):) => pf%conc(:,:,:,export_state%fabm_id)
 #else
@@ -618,7 +648,8 @@
       if (update_sinking_eff) then
         export_state%ws(RANGE3D) = wstmp(:,:,:,export_state%fabm_id)
       end if
-    end do
+      end do
+    endif
     !> @todo add benthic state variables
   end subroutine update_export_states
 

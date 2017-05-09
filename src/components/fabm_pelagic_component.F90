@@ -136,6 +136,7 @@ module fabm_pelagic_component
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Initialise_Advertise"
+!> This routine is currently not used
   subroutine Initialise_Advertise(gridComp, importState, exportState, parentClock, rc)
     use fabm_types, only: output_none
     type(ESMF_GridComp)  :: gridComp
