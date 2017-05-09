@@ -88,8 +88,8 @@ function predict_time {
 
   S=2000
   NP=$1
-  START=$(cat mossco_run.nml | grep start| awk -F"'" '{print $2}' | awk -F" " '{print $1}')
-  STOP=$(cat mossco_run.nml | grep stop| awk -F"'" '{print $2}' | awk -F" " '{print $1}')
+  START=$(cat ${NML} | grep start| awk -F"'" '{print $2}' | awk -F" " '{print $1}')
+  STOP=$(cat ${NML} | grep stop| awk -F"'" '{print $2}' | awk -F" " '{print $1}')
   Y1=$(echo ${START} | cut -d"-" -f1)
   Y2=$(echo ${STOP}  | cut -d"-" -f1)
   M1=$(echo ${START} | cut -d"-" -f2)
@@ -144,6 +144,7 @@ shift $((OPTIND-1))
 
 # Give default argument is none is provided
 if [[ "x${1}" == "x" ]]; then ARG=${DEFAULT} ; else ARG=${1}; fi
+if [[ "x${2}" == "x" ]]; then NML=mossco_run.nml ; else NML=${2}; fi
 
 if [[ "x${MOSSCO_DIR}" == "x" ]]; then
   echo "This script requires the environment variable MOSSCO_DIR."
@@ -422,7 +423,7 @@ export PATH=${MOSSCO_SETUPDIR}/sns:${PATH}
 export RAMFILES=1
 export NPROC=${NPROC}
 
-${MPI_PREFIX} ${EXE}
+${MPI_PREFIX} ${EXE} ${NML}
 
 cd \$PBS_O_WORKDIR
 echo 'Working Directory     : '\$PBS_O_WORKDIR
@@ -461,6 +462,7 @@ EOT
       echo export I_MPI_FALLBACK=disable  >> slurm.sh
       echo export I_MPI_SLURM_EXT=1  >> slurm.sh
       echo export I_MPI_LARGE_SCALE_THRESHOLD=8192  >> slurm.sh
+      echo export I_MPI_STATS=20   >> slurm.sh
 
     else
       # This is tested on jureca
@@ -470,7 +472,7 @@ EOT
     fi
 
     echo "" >> slurm.sh
-    echo  ${MPI_PREFIX} ${EXE} >> slurm.sh
+    echo  ${MPI_PREFIX} ${EXE} ${NML}>> slurm.sh
 
 ;;
   MOAB) cat << EOT > moab.sh
@@ -493,7 +495,7 @@ echo \$PBS_JOBNAME >> \$PBS_O_WORKDIR/$TITLE.\$PBS_JOBID.nodes
 echo \$PBS_JOBID >> \$PBS_O_WORKDIR/$TITLE.\$PBS_JOBID.nodes
 cat moab.sh >> \$PBS_O_WORKDIR/$TITLE.\$PBS_JOBID.nodes
 
-${MPI_PREFIX} ${EXE} > \$PBS_O_WORKDIR/$TITLE.\$PBS_JOBID.stdout 2> \$PBS_O_WORKDIR/$TITLE.\$PBS_JOBID.stderr
+${MPI_PREFIX} ${EXE} ${NML} > \$PBS_O_WORKDIR/$TITLE.\$PBS_JOBID.stdout 2> \$PBS_O_WORKDIR/$TITLE.\$PBS_JOBID.stderr
 EOT
 ;;
   SGE) cat << EOT > sge.sh
@@ -511,7 +513,7 @@ cat \$PE_HOSTFILE
 #mkdir -p ${OUTDIR}
 #test -d ${OUTDIR} || (echo "Directory ${OUTDIR} could not be created" ; exit 1)
 
-${MPI_PREFIX} ${EXE} > ${STDOUT} 2> ${STDERR}
+${MPI_PREFIX} ${EXE} ${NML} > ${STDOUT} 2> ${STDERR}
 EOT
   ;;
 esac
@@ -545,9 +547,11 @@ esac
 SED=${SED:-$(which gsed 2> /dev/null )}
 SED=${SED:-$(which sed 2> /dev/null )}
 
-if test -f mossco_run.nml ; then
+if test -f ${NML} ; then cp mossco_run.nml ${NML}; fi
+
+if test -f ${NML} ; then
   if [[ "${LOGLEVEL}" != "undefined" ]] ; then
-    ${SED} -i 's/loglevel =.*/loglevel = "'${LOGLEVEL}'",/' mossco_run.nml
+    ${SED} -i 's/loglevel =.*/loglevel = "'${LOGLEVEL}'",/' ${NML}
     export loglevel="${LOGLEVEL}"
   fi
 fi
@@ -577,8 +581,8 @@ if [[ ${RETITLE} != 0 ]] ; then
     ${SED} -i "s/out_fn *=.*/out_fn = '${TITLE}_gotm',/" gotmrun.nml
   fi
 
-  if test -f mossco_run.nml ; then
-    ${SED} -i "s/title *=.*/title = '${TITLE}',/" mossco_run.nml
+  if test -f ${NML} ; then
+    ${SED} -i "s/title *=.*/title = '${TITLE}',/" ${NML}
   fi
 
   export runid="${TITLE}"
@@ -610,7 +614,7 @@ for F in $(ls *.dim 2> /dev/null) ; do
   fi
 done
 
-if ! test -f mossco_run.nml ; then
+if ! test -f ${NML} ; then
   echo
   #echo "ERROR: Need file mossco_run.nml to run"
   #exit 1
@@ -665,17 +669,17 @@ case ${SYSTEM} in
            fi
          else cat slurm.sh ; fi
          ;;
-  BACKGROUND)  ${MPI_PREFIX} ${EXE}  1>  ${STDOUT}  2> ${STDERR} &
+  BACKGROUND)  ${MPI_PREFIX} ${EXE} ${NML}  1>  ${STDOUT}  2> ${STDERR} &
          PID=$!
-         echo "${MPI_PREFIX} ${EXE}  " '1>'  "${STDOUT}"  ' 2> ' "${STDERR}" ' &'
+         echo "${MPI_PREFIX} ${EXE} ${NML} " '1>'  "${STDOUT}"  ' 2> ' "${STDERR}" ' &'
          echo "Job ${TITLE} with PID ${PID} interactively running in background"
          if [[ ${WAITTIME} -gt 0 ]]; then
            echo "Waiting for process ${PID} to finish"
            wait $PID
          fi
          ;;
-  FOREGROUND)  ${MPI_PREFIX} ${EXE}  1>  ${STDOUT}  2> ${STDERR}
-         echo "${MPI_PREFIX} ${EXE}  " '1>'  "${STDOUT}"  ' 2> ' "${STDERR}"
+  FOREGROUND)  ${MPI_PREFIX} ${EXE}  ${NML} 1>  ${STDOUT}  2> ${STDERR}
+         echo "${MPI_PREFIX} ${EXE}  ${NML}" '1>'  "${STDOUT}"  ' 2> ' "${STDERR}"
          echo "Job ${TITLE} interactively running in foreground"
          ;;
   *)     echo "System ${SYSTEM} not defined in $0"; exit 1
