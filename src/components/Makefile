@@ -21,7 +21,9 @@ EXTRA_DIST=README
 
 SUBDIRS=gotm remtc
 
+
 TARGETS=libmossco_technical libconstant libdefault libmossco_grid
+TARGETS=libmossco_aggregation
 TARGETS+=libmossco_simplewave libmossco_info libmossco_filtration
 
 ifeq ($(MOSSCO_NETCDF),true)
@@ -134,6 +136,9 @@ libmossco_technical: prefix libmossco_util test_component.F90 \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_technical.a(test_component.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_technical.a(inout_component.o)
 
+libmossco_aggregation: prefix libmossco_util  \
+		$(MOSSCO_LIBRARY_PATH)/libmossco_aggregation.a(time_aggregation_component.o)
+
 libconstant: prefix modtypes $(MOSSCO_LIBRARY_PATH)/libconstant.a(constant_component.o)
 libdefault: prefix modtypes $(MOSSCO_LIBRARY_PATH)/libdefault.a(default_component.o)
 modtypes: prefix $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
@@ -213,6 +218,7 @@ extraclean:
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libgetm.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libempty.a
+	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_aggregation.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_technical.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libconstant.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libdefault.a
