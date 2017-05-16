@@ -2169,6 +2169,7 @@ libs = {'gotm'       : ['solver', 'mossco_gotm'] ,
         'test'       : ['mossco_test'],
         'simplewave' : ['mossco_simplewave'],
         'river'      : ['mossco_river'],
+        'time_aggregation'      : ['mossco_aggregation'],
         'empty'      : ['mossco_technical'],
         'dummy'      : ['mossco_technical'],
         'inout'      : ['mossco_technical'],
@@ -2210,6 +2211,7 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'netcdf_input'      : ['libmossco_netcdf'],
         'test'       : ['libmossco_test'],
         'info'       : ['libmossco_info'],
+        'time_aggregation'      : ['libmossco_aggregation'],
         'empty'      : ['libmossco_technical'],
         'river'      : ['libmossco_river'],
         'inout'      : ['libmossco_technical'],
@@ -2305,6 +2307,9 @@ libmossco_fabmbenthic:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libmossco_technical libmossco_getm libmossco_simplewave libmossco_netcdf libmossco_benthos:
+	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
+
+libmossco_aggregation:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libmossco_info libmossco_test libmossco_river libmossco_hamsom libmossco_location:
