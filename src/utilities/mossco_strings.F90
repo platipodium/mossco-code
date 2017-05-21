@@ -17,6 +17,8 @@
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "mossco_strings.F90"
 
+#define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
 module mossco_strings
 
   use esmf
@@ -42,6 +44,12 @@ implicit none
     module procedure MOSSCO_MessageAddString
     module procedure MOSSCO_MessageAddList
   end interface
+
+  interface MOSSCO_StringMatch
+    module procedure MOSSCO_StringMatchPattern
+    module procedure MOSSCO_StringMatchPatternList
+  end interface
+
 contains
 
 #undef  ESMF_METHOD
@@ -54,7 +62,7 @@ contains
 
       !> remove model name
       pos = INDEX(longname, " ")
-      
+
       only_var_name = repeat (' ',len_trim(longname)-pos)
       only_var_name = trim(longname(pos+1:))
 
@@ -231,8 +239,8 @@ contains
   end subroutine MOSSCO_MessageAddString
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "MOSSCO_StringMatch"
-  subroutine MOSSCO_StringMatch(item, pattern, isMatch, rc)
+#define ESMF_METHOD "MOSSCO_StringMatchPattern"
+  subroutine MOSSCO_StringMatchPattern(item, pattern, isMatch, rc)
 
     character(len=*), intent(in)        :: item
     character(len=*), intent(in)        :: pattern
@@ -263,7 +271,41 @@ contains
 
     return
 
-  end subroutine MOSSCO_StringMatch
+  end subroutine MOSSCO_StringMatchPattern
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_StringMatchPatternList"
+  subroutine MOSSCO_StringMatchPatternList(itemName, patternList, isMatch, rc)
+
+    character(len=*), intent(in)        :: itemName
+    character(len=*), intent(in), allocatable :: patternList(:)
+    logical, intent(inout)              :: isMatch
+    integer(ESMF_KIND_I4), intent(out), optional  :: rc
+
+    integer(ESMF_KIND_I4)               :: localrc, i, j, rc_
+
+    rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
+
+    ! Return if there is no pattern, isMatch is returned in the state it was
+    ! received (thus only set to .false. two lines below)
+    if (.not.allocated(patternlist)) return
+    isMatch = .false.
+
+    do j=lbound(patternList,1),ubound(patternList,1)
+      call MOSSCO_StringMatch(itemName, patternList(j), isMatch, localrc)
+      if (localrc /= ESMF_SUCCESS) then
+        if (present(rc)) then
+          rc = localrc
+          return
+        else
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+        endif
+      endif
+      if (isMatch) return
+    enddo
+
+  end subroutine MOSSCO_StringMatchPatternList
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_StringClean"
@@ -547,5 +589,56 @@ contains
 
   end subroutine MOSSCO_CleanUnit
 
-
 end module mossco_strings
+
+
+program test_mossco_strings
+
+  use mossco_strings
+
+  character(len=10) :: s1,s2
+  logical           :: isMatch
+  integer(kind=ESMF_KIND_I4) :: rc
+
+  s1 = 'bla *bi d'
+
+  call replace_character(s1,' ','l')
+  if (trim(s1) /= 'blal*bild') then
+    write(0,*) 'Did not pass test for replace_character'
+  endif
+
+  call split_string(s1,s2,'l')
+  call split_string(s2,s1,'l')
+  if (trim(s2) /= '*bi') then
+    write(0,*) 'Did not pass test 1 for split_string'
+  endif
+  if (trim(s1) /= 'd') then
+    write(0,*) 'Did not pass test 2 for split_string'
+  endif
+
+  s1 = 'abcdef'
+  call MOSSCO_MessageAddString(s1, s1, rc)
+  if (trim(s1) /= 'abcdefab..') then
+    write(0,*) 'Did not pass test for MOSSCO_MessageAddString'
+  endif
+
+  call MOSSCO_StringMatchPattern(s1, 'cd', isMatch, rc)
+  if (.not.isMatch)  then
+    write(0,*) 'Did not pass test 1 for MOSSCO_StringMatchPattern'
+  endif
+
+  call MOSSCO_StringMatchPattern(s1, 'cdg', isMatch, rc)
+  if (isMatch)  then
+    write(0,*) 'Did not pass test 2 for MOSSCO_StringMatchPattern'
+  endif
+
+  ! call MOSSCO_StringMatchPatternList(s1, (/'cde*','ab*f'/), isMatch)
+  ! if (.not.isMatch)  then
+  !   write(0,*) 'Did not pass test 1 for MOSSCO_StringMatchPatternList'
+  ! endif
+
+  !call MOSSCO_MessageAddList(message, stringList, rc)
+  ! MOSSCO_CheckUnits(unit1, unit2, isEqual, rc)
+  ! subroutine MOSSCO_CleanUnit(unit, rc)
+
+end
