@@ -2,7 +2,7 @@
 #> @brief Stitching script for multiprocessor tiled output of getm/netcdf components
 
 #  This computer program is part of MOSSCO.
-#> @copyright Copyright (C) 2015 Helmholtz Zentrum Geesthacht
+#> @copyright Copyright (C) 2015, 2016, 2017 Helmholtz Zentrum Geesthacht
 #> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -46,7 +46,7 @@ if len(sys.argv) > 2:
   outfile=sys.argv[-1]
 else:
   outfile=prefix + '_stitched.nc'
-  
+
 if len(files)<1:
   print "Did not find any files for pattern "+pattern
 else:
@@ -116,7 +116,7 @@ try:
 except:
   ncout.close()
   ncout = netcdf.Dataset(outfile, 'w', format='NETCDF4_CLASSIC')
-  
+
 
 for key,value in alon.iteritems():
   dim=nc.variables[key].dimensions[0]
@@ -175,28 +175,28 @@ for item in alon.keys():
     print 'Could not find item ' , item, ' in ncout'
 
 for f in files[:]:
-    
-  try:    
+
+  try:
     nc=netcdf.Dataset(f,'r')
   except:
     print 'Dataset is already open'
-    
+
   lat={}
   lon={}
   meta={}
 
   for item in alat.keys():
-    if ncout.variables.has_key(item): 
+    if ncout.variables.has_key(item):
       temp=nc.variables[item][:]
       if type(temp) is np.ndarray: lat[item] = temp[np.isfinite(temp)]
       elif type(temp) is np.ma.core.MaskedArray: lat[item]=temp.compressed()
       else: lat[item] = temp
   for item in alon.keys():
-    if ncout.variables.has_key(item): 
+    if ncout.variables.has_key(item):
       temp=nc.variables[item][:]
       if type(temp) is np.ndarray: lon[item] = temp[np.isfinite(temp)]
       elif type(temp) is np.ma.core.MaskedArray: lon[item]=temp.compressed()
-      else: 
+      else:
         lon[item] = temp
 
   for item in lat.keys():
@@ -243,32 +243,32 @@ for f in files[:]:
       ubnd.append(len(nc.dimensions[dims[i]]))
       inlbnd.append(0)
       inubnd.append(len(nc.dimensions[dims[i]]))
-      
-      # find coordinate variable with axis attribute and same dimension     
+
+      # find coordinate variable with axis attribute and same dimension
       for item in coords:
         if ncout.variables[item].dimensions[0]==dims[i]:
           if alon.has_key(item):
             lbnd[i]=meta[item]['x'][0]
             ubnd[i]=meta[item]['x'][1]+1
-            
+
           else:
             lbnd[i]=meta[item]['y'][0]
             ubnd[i]=meta[item]['y'][1]+1
-            
+
           try:
-            inlbnd[i]= np.min(np.where((nc.variables[item][:]).mask == False))            
-            inubnd[i]= np.max(np.where((nc.variables[item][:]).mask == False))+1        
+            inlbnd[i]= np.min(np.where((nc.variables[item][:]).mask == False))
+            inubnd[i]= np.max(np.where((nc.variables[item][:]).mask == False))+1
 
           except:
             inlbnd[i]=0
             inubnd[i]=len(nc.dimensions[dims[i]])
-  
+
     if np.any(np.array(inubnd)-np.array(inlbnd) != np.array(ubnd) - np.array(lbnd)) :
       print 'skipped ' + key, lbnd, ubnd, inubnd, inlbnd
       continue
-       
-         
-    try: 
+
+
+    try:
       if n==1:
         var[lbnd[0]:ubnd[0]]=value[inlbnd[0]:inubnd[0]]
       elif n==2:
@@ -279,7 +279,7 @@ for f in files[:]:
       else:
         var[lbnd[0]:ubnd[0],lbnd[1]:ubnd[1],lbnd[2]:ubnd[2],lbnd[3]:ubnd[3]] \
         =value[inlbnd[0]:inubnd[0],inlbnd[1]:inubnd[1],inlbnd[2]:inubnd[2],inlbnd[3]:inubnd[3]]
-    except: 
+    except:
       print 'skipped ' + key, lbnd, ubnd, value.shape
 
       continue
