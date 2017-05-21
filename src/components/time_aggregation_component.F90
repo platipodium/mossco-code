@@ -312,41 +312,17 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     do i=1,itemCount
 
-      !! Look for an exclusion pattern on this field name
-      if (allocated(filterExcludeList)) then
-        do j=1,ubound(filterExcludeList,1)
-          call MOSSCO_StringMatch(itemNameList(i), filterExcludeList(j), isMatch, localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
-          if (ismatch) exit
-        enddo
+      ! Check whether the item is in any one of the exclude patterns, if matched,
+      ! then skip this item
+      call MOSSCO_StringMatch(itemNameList(i), pattern=filterExcludeList, &
+        isMatch=.false., rc=localrc)
+      if (isMatch) cycle
 
-        if (isMatch) then
-          if (advanceCount < 1) then
-            write(message,'(A)') trim(name)//' excluded'
-            call MOSSCO_MessageAdd(message, ' '//trim(itemNameList(i))//' from pattern ')
-            call MOSSCO_MessageAdd(message, ' '//trim(filterExcludeList(j)))
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-          endif
-          cycle
-        endif
-      endif
-
-      !! Look for an inclusion pattern on this field name
-      if (allocated(filterIncludeList)) then
-        do j=1,ubound(filterIncludeList,1)
-          call MOSSCO_StringMatch(itemNameList(i), filterIncludeList(j), isMatch, localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
-          if (ismatch) exit
-        enddo
-        if (.not.ismatch) then
-          if (advanceCount < 1) then
-            write(message,'(A)') trim(name)//' did not include '
-            call MOSSCO_MessageAdd(message,' '//itemNameList(i))
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-          endif
-          cycle
-        endif
-      endif
+      ! Check whether the item is in any one of the include patterns, if not
+      ! matched in any, then skip this item
+      call MOSSCO_StringMatch(itemNameList(i), pattern=filterIncludeList, &
+        isMatch=.true., rc=localrc)
+      if (.not.ismatch) cycle
 
       call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
         itemSearch=trim(itemNameList(i)), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
