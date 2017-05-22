@@ -278,6 +278,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     character(len=ESMF_MAXSTR), allocatable :: filterIncludeList(:), filterExcludeList(:)
     type(ESMF_Field), allocatable :: fieldList(:), exportFieldList(:)
     type(ESMF_Field)              :: exportField
+    type(ESMF_FieldBundle)        :: fieldBundle
 
     rc = ESMF_SUCCESS
 
@@ -310,101 +311,129 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
+    if (allocated(itemTypeList)) deallocate(itemTypeList)
+    if (allocated(itemNameList)) deallocate(itemNameList)
+    allocate(itemTypeList(itemCount), stat=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+    allocate(itemNameList(itemCount), stat=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+    call ESMF_StateGet(importState, itemTypeList=itemTypeList, &
+      itemNameList=itemNameList, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
     do i=1,itemCount
+
+
+      ! Only deal with fields and field bundles, otherwise skip
+      if (itemTypeList(i) /= ESMF_STATEITEM_FIELD .or. &
+        itemTypeList(i) /= ESMF_STATEITEM_FIELDBUNDLE) cycle
 
       ! Check whether the item is in any one of the exclude patterns, if matched,
       ! then skip this item
-      call MOSSCO_StringMatch(itemNameList(i), pattern=filterExcludeList, &
-        isMatch=.false., rc=localrc)
+      isMatch = .false.
+      call MOSSCO_StringMatch(itemNameList(i), filterExcludeList, &
+        isMatch, localrc)
       if (isMatch) cycle
 
       ! Check whether the item is in any one of the include patterns, if not
       ! matched in any, then skip this item
-      call MOSSCO_StringMatch(itemNameList(i), pattern=filterIncludeList, &
-        isMatch=.true., rc=localrc)
+      isMatch = .true.
+      call MOSSCO_StringMatch(itemNameList(i), filterIncludeList, &
+        isMatch, localrc)
       if (.not.ismatch) cycle
 
       call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
         itemSearch=trim(itemNameList(i)), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
-      call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
-
-      if (fieldCount < 1) then
-        if (advanceCount < 1) then
-          write(message,'(A)') trim(name)//' skipped non-field or incomplete item '
-          call MOSSCO_MessageAdd(message,' '//itemNameList(i))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        endif
+      if (fieldCount < 1 .and. advanceCount < 1) then
+        write(message,'(A)') trim(name)//' skipped non-field or incomplete item '
+        call MOSSCO_MessageAdd(message,' '//itemNameList(i))
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         cycle
       endif
 
-        if (advanceCount < 1) then
-          write(message,'(A)') trim(name)//' will time aggregate '
-          call MOSSCO_MessageAdd(message,' '//itemNameList(i))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      if (advanceCount < 1) then
+        write(message,'(A)') trim(name)//' will time aggregate '
+        call MOSSCO_MessageAdd(message,' '//itemNameList(i))
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
+
+      call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
+        itemSearch='avg_'//trim(itemNameList(i)),  rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+      if (exportFieldCount == 0) then
+
+        if (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
+          fieldBundle = ESMF_FieldBundleCreate(name='avg_'//trim(itemNameList(i)), rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
         endif
 
-        if (itemTypeList(i) == ESMF_STATEITEM_FIELD ) then
+        do j=1,fieldCount
 
-          call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
-            itemSearch='avg_'//trim(itemNameList(i)), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+          exportField = ESMF_FieldEmptyCreate(name='avg_'//trim(itemNameList(i)), rc=localrc)
+          call MOSSCO_FieldCopy(exportField, fieldList(i), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
-          if (exportFieldCount > 1 ) then
-            write(message,'(A)') trim(name)//' not implemented aggregating field bundles '//trim(itemNameList(i))
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-          endif
-
-          if (exportFieldCount == 0) then
-            exportField = ESMF_FieldEmptyCreate(name='avg_'//trim(itemNameList(i)), rc=localrc)
-            call MOSSCO_FieldCopy(exportField, fieldList(i), rc=localrc)
+          call ESMF_AttributeSet(exportField, 'averaging_counter', 0, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
-            call ESMF_AttributeSet(exportField, 'averaging_counter', 0, rc=localrc)
+          call MOSSCO_FieldInitialize(exportField, value=0.0d0, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
-            call MOSSCO_FieldInitialize(exportField, value=0.0d0, rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
-
-            call ESMF_StateAdd(exportState, (/exportField/), rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
-          else
-            exportField = exportFieldList(1)
-          endif
-
-          if (needReset) then
-            call MOSSCO_FieldInitialize(exportField, value=0.0D0, rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
-
-            call ESMF_AttributeSet(exportField, 'averaging_counter', 0, rc=localrc)
+          if (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
+            call ESMF_FieldBundleAdd(fieldBundle, (/exportField/), rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
           endif
+        enddo
 
-          ! Find in my alarmList couplings to any fur the component, if there are, then
-          ! remember that this is the last step before having to reset the fields
-          call ESMF_ClockGetAlarmList(clock, ESMF_ALARMLIST_RINGING, &
-            alarmCount=alarmCount, rc=localrc)
+        if (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
+          call ESMF_StateAdd(exportState, (/fieldBundle/), rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+        else
+          call ESMF_StateAdd(exportState, (/exportField/), rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+        endif
+      endif
+
+      if (needReset) then
+        do j=1,fieldCount
+          call MOSSCO_FieldInitialize(exportField, value=0.0D0, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
-          !> Skip if there are no alarms (that would be unusual, so warn about it)
-          if (alarmCount == 0) then
+          call ESMF_AttributeSet(exportField, 'averaging_counter', 0, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+        enddo
+      endif
+
+      cycle !> @todo remove for production
+
+      ! Find in my alarmList couplings to any fur the component, if there are, then
+      ! remember that this is the last step before having to reset the fields
+      call ESMF_ClockGetAlarmList(clock, ESMF_ALARMLIST_RINGING, &
+        alarmCount=alarmCount, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+      !> Skip if there are no alarms (that would be unusual, so warn about it)
+      if (alarmCount == 0) then
             write(message,'(A)') trim(name)//' did not find any ringing alarms ' &
               //' .. strangely at'//trim(timestring)
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
             cycle
-          endif
+      endif
 
-          if (allocated(alarmList)) deallocate(alarmList)
-          allocate(alarmList(alarmCount))
+      if (allocated(alarmList)) deallocate(alarmList)
+      allocate(alarmList(alarmCount))
 
-          call ESMF_ClockGetAlarmList(clock,ESMF_ALARMLIST_ALL,alarmList=alarmList,rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+      call ESMF_ClockGetAlarmList(clock,ESMF_ALARMLIST_ALL,alarmList=alarmList,rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
-          needReset = .false.
+      needReset = .false.
 
-          do j=1,ubound(alarmList,1)
+        do j=1,ubound(alarmList,1)
             call ESMF_AlarmGet(alarmList(j), ringTime=ringTime, name=alarmName, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
@@ -425,17 +454,14 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
               exit
             endif
 
-          enddo
-          if (allocated(alarmList)) deallocate(alarmList)
+      enddo
+      if (allocated(alarmList)) deallocate(alarmList)
 
-          call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
-            itemSearch=trim(itemNameList(i)), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
-          call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+      call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
-          allocate(ubnd(rank))
+      allocate(ubnd(rank))
           allocate(lbnd(rank))
           call ESMF_FieldGetBounds(fieldList(1), exclusiveUbound=ubnd, &
             exclusiveLbound=lbnd, rc=localrc)
@@ -486,18 +512,12 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           deallocate(ubnd)
           deallocate(lbnd)
 
-        elseif (advanceCount < 1) then
-          write(message,'(A)') trim(name)//' not implemented aggregating item '//trim(itemNameList(i))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-        endif
+        ! elseif (advanceCount < 1) then
+        !   write(message,'(A)') trim(name)//' not implemented aggregating item '//trim(itemNameList(i))
+        !   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        ! endif
 
     enddo
-
-    if (allocated(itemNameList)) deallocate(itemNameList)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
-
-    call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
     if (allocated(itemTypeList)) deallocate(itemTypeList)
     if (allocated(itemNameList)) deallocate(itemNameList)

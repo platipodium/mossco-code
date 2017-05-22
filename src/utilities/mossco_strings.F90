@@ -591,54 +591,54 @@ contains
 
 end module mossco_strings
 
-
-program test_mossco_strings
-
-  use mossco_strings
-
-  character(len=10) :: s1,s2
-  logical           :: isMatch
-  integer(kind=ESMF_KIND_I4) :: rc
-
-  s1 = 'bla *bi d'
-
-  call replace_character(s1,' ','l')
-  if (trim(s1) /= 'blal*bild') then
-    write(0,*) 'Did not pass test for replace_character'
-  endif
-
-  call split_string(s1,s2,'l')
-  call split_string(s2,s1,'l')
-  if (trim(s2) /= '*bi') then
-    write(0,*) 'Did not pass test 1 for split_string'
-  endif
-  if (trim(s1) /= 'd') then
-    write(0,*) 'Did not pass test 2 for split_string'
-  endif
-
-  s1 = 'abcdef'
-  call MOSSCO_MessageAddString(s1, s1, rc)
-  if (trim(s1) /= 'abcdefab..') then
-    write(0,*) 'Did not pass test for MOSSCO_MessageAddString'
-  endif
-
-  call MOSSCO_StringMatchPattern(s1, 'cd', isMatch, rc)
-  if (.not.isMatch)  then
-    write(0,*) 'Did not pass test 1 for MOSSCO_StringMatchPattern'
-  endif
-
-  call MOSSCO_StringMatchPattern(s1, 'cdg', isMatch, rc)
-  if (isMatch)  then
-    write(0,*) 'Did not pass test 2 for MOSSCO_StringMatchPattern'
-  endif
-
-  ! call MOSSCO_StringMatchPatternList(s1, (/'cde*','ab*f'/), isMatch)
-  ! if (.not.isMatch)  then
-  !   write(0,*) 'Did not pass test 1 for MOSSCO_StringMatchPatternList'
-  ! endif
-
-  !call MOSSCO_MessageAddList(message, stringList, rc)
-  ! MOSSCO_CheckUnits(unit1, unit2, isEqual, rc)
-  ! subroutine MOSSCO_CleanUnit(unit, rc)
-
-end
+!
+! program test_mossco_strings
+!
+!   use mossco_strings
+!
+!   character(len=10) :: s1,s2
+!   logical           :: isMatch
+!   integer(kind=ESMF_KIND_I4) :: rc
+!
+!   s1 = 'bla *bi d'
+!
+!   call replace_character(s1,' ','l')
+!   if (trim(s1) /= 'blal*bild') then
+!     write(0,*) 'Did not pass test for replace_character'
+!   endif
+!
+!   call split_string(s1,s2,'l')
+!   call split_string(s2,s1,'l')
+!   if (trim(s2) /= '*bi') then
+!     write(0,*) 'Did not pass test 1 for split_string'
+!   endif
+!   if (trim(s1) /= 'd') then
+!     write(0,*) 'Did not pass test 2 for split_string'
+!   endif
+!
+!   s1 = 'abcdef'
+!   call MOSSCO_MessageAddString(s1, s1, rc)
+!   if (trim(s1) /= 'abcdefab..') then
+!     write(0,*) 'Did not pass test for MOSSCO_MessageAddString'
+!   endif
+!
+!   call MOSSCO_StringMatchPattern(s1, 'cd', isMatch, rc)
+!   if (.not.isMatch)  then
+!     write(0,*) 'Did not pass test 1 for MOSSCO_StringMatchPattern'
+!   endif
+!
+!   call MOSSCO_StringMatchPattern(s1, 'cdg', isMatch, rc)
+!   if (isMatch)  then
+!     write(0,*) 'Did not pass test 2 for MOSSCO_StringMatchPattern'
+!   endif
+!
+!   ! call MOSSCO_StringMatchPatternList(s1, (/'cde*','ab*f'/), isMatch)
+!   ! if (.not.isMatch)  then
+!   !   write(0,*) 'Did not pass test 1 for MOSSCO_StringMatchPatternList'
+!   ! endif
+!
+!   !call MOSSCO_MessageAddList(message, stringList, rc)
+!   ! MOSSCO_CheckUnits(unit1, unit2, isEqual, rc)
+!   ! subroutine MOSSCO_CleanUnit(unit, rc)
+!
+! end
