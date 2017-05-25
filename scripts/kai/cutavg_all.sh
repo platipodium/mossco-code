@@ -39,7 +39,7 @@ $SCRDIR/catnml
 N=$(ncdump -h $fname |grep '= UNLIMITED' |cut -f2 -d'(' |cut -f1 -d' ')
 N=$[$N - 1]
 echo 'cutting until time step ' $N
-##N=30
+#N=301
 echo 'cutting until time step ' $N
 
 # here for 178-cpu setup using 6 processors; 
@@ -70,7 +70,7 @@ rm $fname
 #rm $fname
 
 # view results
-ncview $outdir'.nc' &
+## ncview $outdir'.nc' &
 # ncview $outdir'_m.nc' &
 
 #ls -lrt

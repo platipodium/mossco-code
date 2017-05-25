@@ -11,7 +11,7 @@ m_proj('equidistant','lat',latlimit,'lon',lonlimit);
 % value(find(value<1E-4 | value>1E4 ))=-1;
 value=squeeze(datat(ii(mdi),:,:));
 
-value=power(10,-0.3 + 1.4*log10(value));
+%value=power(10,-0.3 + 1.4*log10(value));
 
 if(islog) 
 value(find(value<minval*1.1))=minval*1.1;

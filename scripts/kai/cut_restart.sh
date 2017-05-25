@@ -15,7 +15,7 @@ nam='../mossco_gfbfrr.'
 echo 'retrieving last time step from ' $nam$[$ncpu -1]'.nc' 
 N=$(ncdump -h $nam$[$ncpu -1]'.nc' |grep '= UNLIMITED' |cut -f2 -d'(' |cut -f1 -d' ')
 N=$[$N -2]
-N=1218
+N=468
 echo $N
 for p in $(seq -f $fg 0 1 $[$ncpu-1]); do fname=$nam$p'.nc'; ncks -O -d time,$N,$N $fname tmp.$p.nc; done 
 
@@ -45,4 +45,4 @@ done
 #echo "mole_concentration_of_phosphate_in_soil..."
 #for p in $(seq -f $fg 0 1 $[$ncpu-1]); do ncap -O -s "mole_concentration_of_phosphate_in_soil=1.7*mole_concentration_of_phosphate_in_soil" tmp.$p.nc tmp.$p.nc; done
 
-for p in $(seq -f $fg 0 1 $[$ncpu-1]); do mv tmp.$p.nc 'restart'$ncpu'Jan_20.'$p'.nc' ; done
+for p in $(seq -f $fg 0 1 $[$ncpu-1]); do mv tmp.$p.nc 'restart'$ncpu'Feb_20.'$p'.nc' ; done

@@ -13,7 +13,7 @@
 # ---------------------
 # User configuration
 # Declare a list of variables to extract
-declare -a vn=("Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water" "Chl_chl_in_water" "Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water"   "Detritus_Carbon_detC_in_water" "Phytplankton_Carbon_phyC_in_water" "Zooplankton_Carbon_zooC_in_water" "Virus_C_density_in_cells_vir_in_water" )
+declare -a vn=("Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water" "Chl_chl_in_water" "Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water"   "Detritus_Carbon_detC_in_water" "Phytplankton_Carbon_phyC_in_water" "Zooplankton_Carbon_zooC_in_water" "Virus_C_density_in_cells_vir_in_water" "water_depth_at_soil_surface")
 declare -a vnp=("maximum_bottom_stress" "temperature_in_water" "_datt_in_water"  "turbulent_kinetic_energy_in_water" "salinity_in_water" "maximum_bottom_stress" "layer_height_in_water")
 #"x_velocity_in_water" "y_velocity_in_water" "wind_x_velocity_at_10m""turbulent_kinetic_energy_at_soil_surface""turbulent_diffusivity_of_momentum_at_soil_surface" "dissipation_of_tke_at_soil_surface"
 declare -a vnt=("Phytplankton_Phosphorus_phyP_in_water" "Phytplankton_Nitrogen_phyN_in_water" "fraction_of_Rubisco_Rub_in_water")
@@ -27,10 +27,10 @@ model=''   # FABM model name, e.g. hzg_maecs
 n1=0       # starting domain-no of loop
 dn=1       # increment in domain-no of loop
 Nstart=1  # initial time-step; skips trailer 
-soil=1     # selects benthic BGC (TotNsoil)
-flux=1     # selects fluxes (NOAH)
+soil=0     # selects benthic BGC (TotNsoil)
+flux=0     # selects fluxes (NOAH)
 trait=1    # selects physiology 
-phys=1     # selects getm-phsics 
+phys=0     # selects getm-phsics 
 #prefix=netcdf_fabm_pelagic.  # Prefix of files to process
 if [ -z ${prefix+x} ]; then prefix=mossco_gfbfrr. ; fi  # Prefix of files to process
 dt=1         # slicing of time dimension; 20 gives monthly means at 36h-output
@@ -124,10 +124,11 @@ for p in $(seq -f $form $n1 $dn $nproc); do
 	-d getmGrid3D_1,1,,${dlon} \
 	-d getmGrid3D_2,1,,${dlat} \
 	-d getmGrid3D_3,1 \
-	-d getmGrid3D_3,$[${dz}-1],$[${dz}+1] \
+        -d getmGrid3D_3,${dz} \
         -d ungridded00015,1,,13 \
 	-d time,$Nstart,$N,$dt1 $fname $outname2
 
+#  $[${dz}-1],$[${dz}+1] \
   if [[ $soil == 1 ]]; then
      ncks -O -v $tg,$tb -d time,$Nstart,$N $fname $outnamez 
      ncap2 -O -s 'N2r=denitrification_rate_in_soil*layer_height_in_soil'  $outnamez $outnamez
@@ -137,8 +138,12 @@ for p in $(seq -f $form $n1 $dn $nproc); do
      ncks -A -v N2flux,TotBenN  $outnamez $outname2
   fi
 
+  if [[ $trait == -1 ]]; then
    ncap -O -s "PC=Phytplankton_Phosphorus_phyP_in_water/(Phytplankton_Carbon_phyC_in_water+0.001)"  $outname2 $outname
    ncap -O -s "NC=Phytplankton_Nitrogen_phyN_in_water/(Phytplankton_Carbon_phyC_in_water+0.001)"  $outname $outname2
+   ncap -O -s "ChlC=Chl_chl_in_water/(Phytplankton_Carbon_phyC_in_water+0.001)"  $outname2 $outname
+   ncap -O -s "fRub=fraction_of_Rubisco_Rub_in_water/(Phytplankton_Carbon_phyC_in_water+0.001)"  $outname $outname2
+  fi
    ncap2 -O -s "vir=Virus_C_density_in_cells_vir_in_water/(Phytplankton_Carbon_phyC_in_water+0.001)" $outname2 $outname2
 
 #   ncap2 -O -s 'tot_N=(Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water+Phytplankton_Nitrogen_phyN_in_water+Detritus_Nitrogen_detN_in_water+0.3*Zooplankton_Carbon_zooC_in_water+Dissolved_Organic_Nitrogen_domN_in_water)*layer_height_in_water'  $outname2 $outname

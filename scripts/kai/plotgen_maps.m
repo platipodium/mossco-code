@@ -8,18 +8,17 @@ else
    mofc=mofc+1;
 end
 varshortm0=varshort;
-if isstrprop(ptag(2), 'xdigit') 
+if isstrprop(ptag(2), 'xdigit')
   vli=2:length(ptag); mode='s';
 elseif ~exist('timeg') %~strcmp(varshort,'chl')
   vli=0:nrowm*ncolm-1; mode='c';
   moffs=moffs+1;
 else
-  iig=find(timeg>=t0 & timeg<=t1);
-  vli=0:min(nrowm*ncolm,length(iig)-mofc*(nrowm*ncolm))-1; 
-  moffs=moffs+1;
-  mode='v';
+   iig=find(timeg>=t0 & timeg<=t1);
+   vli=0:min(nrowm*ncolm,length(iig)-mofc*(nrowm*ncolm))-1; 
+   moffs=moffs+1;
+   mode='v';
 end
-
 
 di = cell2mat(var{i}(5)); %depth index
 
@@ -47,7 +46,7 @@ for im=1:length(vli)
  elseif mode=='c'
   ix = 1+mod(im-1,ncolm);
   iy = 1+floor((im-1)/ncolm);
-  ti = toffm+((cell2mat(var{i}(6))-moff)*(nrowm*ncolm)+im)*10;   
+  ti = toffm+((cell2mat(var{i}(6))-moff)*(nrowm*ncolm)+im)*10;  
  else
   ix = 1+mod(im-1,ncolm);
   iy = 1+floor((im-1)/ncolm);

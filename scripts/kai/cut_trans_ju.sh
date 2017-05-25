@@ -16,8 +16,8 @@ setname=$(basename $homed)
 #prefix=netcdf_fabm_pelagic.  # Prefix of files to process
 prefix=mossco_gfbfrr.  # Prefix of files to process
 dt=3      # slicing of time dimension; 20 gives monthly means at 36h-output
-tmin=2011-05-05 # initial time-step; skips trailer 
-tmax=2012-10-20
+tmin=2000-05-01 # initial time-step; skips trailer 
+tmax=2000-10-20
 #tmin=2010-06-12 # initial time-step; skips trailer 
 #tmax=2010-09-28
 
@@ -86,8 +86,8 @@ declare -a gd=(1 1 2 2)
 # ---------------------
 # User configuration
 # Declare a list of variables to extract
-declare -a vn=("Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water" "Chl_chl_in_water" "Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water" "Detritus_Carbon_detC_in_water" )
-#  "Zooplankton_Carbon_zooC_in_water" "Phytplankton_Phosphorus_phyP_in_water" "Phytplankton_Nitrogen_phyN_in_water" "Phytplankton_Carbon_phyC_in_water" "Virus_C_density_in_cells_vir_in_water"  "mole_concentration_of_nitrate_in_soil" "Detritus_Carbon_detC_in_water" "Detritus_Nitrogen_detN_in_water" "Phytplankton_Carbon_phyC_in_water"  
+declare -a vn=("Chl_chl_in_water" "Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water" "Phytplankton_Phosphorus_phyP_in_water" "Phytplankton_Carbon_phyC_in_water" "Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water" "Detritus_Carbon_detC_in_water" )
+#   "Zooplankton_Carbon_zooC_in_water"  "Phytplankton_Nitrogen_phyN_in_water"  "Virus_C_density_in_cells_vir_in_water"  "mole_concentration_of_nitrate_in_soil" "Detritus_Carbon_detC_in_water" "Detritus_Nitrogen_detN_in_water" "Phytplankton_Carbon_phyC_in_water"  
 #tb='denitrification_rate_in_soil,layer_height_in_soil,fast_detritus_C_in_soil,detritus-P_in_soil,mole_concentration_of_nitrate_in_soil,mole_concentration_of_phosphate_in_soil,dissolved_oxygen_in_soil,dissolved_oxygen_upward_flux_at_soil_surface,dissolved_reduced_substances_upward_flux_at_soil_surface'
 
 # ---------------------
@@ -147,6 +147,8 @@ for nt in $(seq 0 3); do
 	-d getmGrid2D_1,${dx[nt]} \
 	-d getmGrid2D_2,${dy[nt]} \
 	-d time,${tmin},${tmax},${dt} $fname $outnameD
+
+  ncap -O -s "PC=Phytplankton_Phosphorus_phyP_in_water/(Phytplankton_Carbon_phyC_in_water+0.001)"  $outname $outname
 
  # Make getmGrid3D_1 record dimension
    ncpdq -O -a getmGrid3D_${gd[nt]},time $outname $outname

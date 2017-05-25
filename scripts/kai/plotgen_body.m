@@ -102,7 +102,8 @@ for ili=1:size(i_loc,1)
   if (occ0(np,ix,iy)==2 & occ(np,ix,iy)==3 & ns==4) ci=1; end
 %  fprintf('%d %d\tns=%d oc=%d %d  ci=%d\n',ix,iy,ns,occ(np,ix,iy),occ0(np,ix,iy),ci);
 %  col=colj(1+occ(np,ix,iy)-(occ0(np,ix,iy)-0)*(ns-1),:); 
-  col=colj(ci,:); 
+%  col=colj(ci,:); 
+  col=coljj(ns*2-2+ci,:);
   for li=2:length(ptag)  % loop over given depths
      if isstrprop(ptag(li), 'xdigit') 
        zi=1+str2num(ptag(li));  % depth index from tag list
@@ -121,7 +122,7 @@ for ili=1:size(i_loc,1)
  %%         hp.CapSize = 2;  %  needs matlab2016b
 
        end 
-       if(ntags>1) plot(time(it),y(ind(it)),'o','Color',coljj(li-1,:),'MarkerFaceColor',coljj(li-1,:),'MarkerSize',2+ceil(2*mod(ns+1,4))); end
+       if(ntags>1 & 1) plot(time(it),y(ind(it)),'o','Color',coljj(li-1,:),'MarkerFaceColor',coljj(li-1,:),'MarkerSize',2+ceil(2*mod(ns+1,4))); end
 %%       annotation('textbox',tpos+[0.05*(li-1)*dxp -0.14*dyp 0 0],'String',[num2str(zi) '/' ptag(li)],'Color',coljj(li-1,:),'Fontweight','bold','FontSize',fs-2,'LineStyle','none');
      else
        if(dim==3 && isempty(findstr(varn,'flux')) )
@@ -142,13 +143,14 @@ for ili=1:size(i_loc,1)
        end %dim==3
      end %xdigit
      plot(time,y(ind),lins(ns,:),'Color' ,col,'LineWidth',linw(ns)); 
-     if ntags>1
+     if ntags>1 
        sp=strfind(tag,'y');
        if sp>0, tag1=tag(sp+1:end);
        else tag1=tag; end
-       plot(time(it),y(ind(it)),'o','Color',coljj(ns*2-1,:),'MarkerFaceColor',coljj(ns*2-1,:),'MarkerSize',8);
+     %  plot(time(it),y(ind(it)),'o','Color',coljj(ns*2-1,:),'MarkerFaceColor',coljj(ns*2-1,:),'MarkerSize',8);
        annotation('textbox',[x0+0.9*dxp y0+(0.85-ns*0.15)*dyp 0.3*dxp 0.11*dyp],'String',tag1,'Color',coljj(ns*2-1,:),'Fontweight','bold','FontSize',fs+2,'LineStyle','none','Interpreter','none');
      end
+%%     set(gca,'Xlim',[t0 t1]);
 %     fprintf('%d %d\t%s  %1.3f\n',ns,i,varn,mean(y));
   end
  case{'M'}  %% map in extra window
@@ -300,7 +302,7 @@ for ili=1:size(i_loc,1)
      indd  = find(~isnan(dval));
      if length(indd)>0
 %       fprintf('%s: %d\t%1.1f %1.1f \n',varshort0,length(indd),datime(indd(1)),datime(indd(end)));
-       plot(datime(indd),dval(indd),'+','Color',col,'MarkerFaceColor',col,'MarkerSize',12-(ili==1)*4,'LineWidth',2);
+       plot(datime(indd),dval(indd),'+-','Color',col,'MarkerFaceColor',col,'MarkerSize',12-(ili==1)*4,'LineWidth',1);
        break;
      end
    end
@@ -314,6 +316,7 @@ for ili=1:size(i_loc,1)
       plot(timea(indd),dval,'s','Color',col,'MarkerFaceColor','none','MarkerSize',14,'LineWidth',1);
     end
    end
+
  end % if show
  
 if(cell2mat(var{i}(9)) ~='N'  )

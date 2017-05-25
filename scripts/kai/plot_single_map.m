@@ -1,7 +1,8 @@
 % set data matrix
   mons=datestr(doy(ti-toffm));
+  dm=4; % eliminate borders
   if length(size(tmp))>3
-    value = squeeze(tmp(:,:,di,ti)); 
+    value = squeeze(tmp(dm:end,dm:end-dm,di,ti)); 
  %% print variable & scen name & date
 %    ta=sprintf('%s%d %d z%d',mons(4:6),year(ti-toffm),doy(ti-toffm),di);
     ta=sprintf('%s%d %d',mons(4:6),year(ti-toffm),doy(ti-toffm));
@@ -10,8 +11,8 @@
     ta=sprintf('%s%d %d',mons(4:6),year(ti-toffm),doy(ti-toffm));
   end
 
-  indn=find(~isnan(value));
 if(show_data)
+  indn=find(~isnan(value));
   fprintf('%d %s/%s\t np=%d/%d mofc=%d im=%d/%d ixy=%d %d/%1.2f\tmean=%1.2f\t%d %d\n',i,varshort,varn,np,cell2mat(var{i}(6)),mofc,im,length(vli),ix,iy,y0,mean(mean(value(indn))),timeg(iig(im)),int32(time(mdi)));
 end
 %% process min-max value

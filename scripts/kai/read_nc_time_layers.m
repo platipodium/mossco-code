@@ -92,13 +92,13 @@ if length(locs) >1 | nfigm>0 | (ptag(1)=='T')
     [m1 i]=min(abs(lat-loc(li,1))+abs(lon-loc(li,2)),[],1);
     [m j]=min(m1);
     i_loc(li,1:2)=[i(j) j];
- %   fprintf('%s: lon %1.3f %1.3f\t lat %1.3f %1.3f\t%d %d\n',locs{li},lon(i_loc(li,1),i_loc(li,2)),loc(li,2),lat(i_loc(li,1),i_loc(li,2)),loc(li,1),i_loc(li,1),i_loc(li,2));
+    fprintf('%s: lon %1.3f %1.3f\t lat %1.3f %1.3f\t%d %d\n',locs{li},lon(i_loc(li,1),i_loc(li,2)),loc(li,2),lat(i_loc(li,1),i_loc(li,2)),loc(li,1),i_loc(li,1),i_loc(li,2));
     switch surround
     case 1  % all neighbor cells
      for ni=0:8  
        dix=floor(ni/3)-1; diy=mod(ni,3)-1;
        if ~isnan(water_dz(i_loc(li,1)+dix,i_loc(li,2)+diy)) neigh=[neigh; [dix diy];]; end
-%      fprintf('dz: %d %d  \t%1.2f\tlat=%1.3f lon=%1.3f\n',dix,diy,water_dz(i_loc(li,1)+dix,i_loc(li,2)+diy),lat(i_loc(li,1)+dix,i_loc(li,2)+diy),lon(i_loc(li,1)+dix,i_loc(li,2)+diy));
+      fprintf('dz: %d %d  \t%1.2f\tlat=%1.3f lon=%1.3f\n',dix,diy,water_dz(i_loc(li,1)+dix,i_loc(li,2)+diy),lat(i_loc(li,1)+dix,i_loc(li,2)+diy),lon(i_loc(li,1)+dix,i_loc(li,2)+diy));
      end 
     case 2 % only bordering neighbor cells
      for ni=-1:2:1

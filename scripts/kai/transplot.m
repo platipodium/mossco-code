@@ -3,24 +3,24 @@
 %
 % kai wirtz Nov2015
 %
-clear all;close all;surf=0;
+clear all;close all;surf=0;surround=0;
 addpath('~/tools/m_map');  % map-toolbox needed for 2D plots
 show_data=1; nice=0; Is1D=0; datf='~/data/DeutscheBucht/stations.nc';
 %% settings
 % locations; at least one site-name (locs) should be given 
 loc =[]; 
 %loc =[[54.18,7.82];[54.96,8.4];[54.1,6.3];[54.2,7.5];]; % 
-locs={'Tsns_06-05_0';}; % 'T1'; 
+locs={'Tsns_04-05_1';}; % 'T1'; 
 
 tags={'';};%_new'_res';'_att';
 ntags=length(tags);
-spath  ='/data/wirtz/sns/cut/';%spath  ='/ocean-data/wirtz/';
+%spath  ='/data/wirtz/sns/cut/';spath  ='~/sns/cut/trans/';
 %spath  ='/media/archiv/'
-%spath= '~/jureca/sns/cut/';%   
+spath= '~/jureca/sns/cut/';%   
 setvar_trans;  % defines variables to show - and where/how to do it %setvar  
 %setvar_1D  % defines variables to show - and where/how to do it 
 %% graph settings
-ncol = 4; nrow = 3; 	% number of columns in fig
+ncol = 6; nrow = 4; 	% number of columns in fig
 %ncol = 1; nrow = 1; 	% number of columns in fig
 dxp = 0.83/(ncol+0.05); dyp = 0.83/(nrow +0.05);
 compn ={'water';'soil'};
