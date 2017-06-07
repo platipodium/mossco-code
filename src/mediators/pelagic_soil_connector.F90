@@ -178,6 +178,7 @@ module pelagic_soil_connector
     integer                     :: myrank
     integer                     :: i,j,inum,jnum
     integer                     :: lbnd(3)=1,ubnd(3)=1
+    integer                     :: lbnd_2nd(3)=1,ubnd_2nd(3)=1
     integer                     :: Clbnd(3),AMMlbnd(3),Plbnd(3)
     integer                     :: Cubnd(3),AMMubnd(3),Pubnd(3)
     type(ESMF_Time)             :: localtime
@@ -238,7 +239,7 @@ module pelagic_soil_connector
     call mossco_state_get(importState,(/ &
         'dissolved_reduced_substances_odu_in_water ', &
         'dissolved_reduced_substances_in_water     '/), &
-        ptr_f3_2nd,lbnd=lbnd,ubnd=ubnd,verbose=verbose, rc=odurc)
+        ptr_f3_2nd,lbnd=lbnd_2nd,ubnd=ubnd_2nd,verbose=verbose, rc=odurc)
 
     if (oxyrc == ESMF_SUCCESS) then
       call mossco_state_get(exportState,(/'dissolved_oxygen_at_soil_surface'/), &
@@ -250,7 +251,8 @@ module pelagic_soil_connector
       if (.not.associated(odu)) allocate(odu(lbnd(1):ubnd(1),lbnd(2):ubnd(2)))
 
       if (odurc == 0) then
-        ptr_f2 = ptr_f3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+        oxy = ptr_f3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+        odu = ptr_f3_2nd(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
       else
         ! assume that negative oxygen is amount of reduced substances
         do j=lbnd(2),ubnd(2)
@@ -259,12 +261,11 @@ module pelagic_soil_connector
             odu(i,j) = max(0.0d0,-ptr_f3(i,j,lbnd(3)))
           end do
         end do
-        ptr_f2 = oxy(:,:)
       end if
+      ptr_f2 = oxy(:,:)
 
       call mossco_state_get(exportState,(/'dissolved_reduced_substances_at_soil_surface'/), &
         ptr_f2, verbose=verbose, rc=odurc)
-      if (odurc == ESMF_SUCCESS) odu = ptr_f3_2nd(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
       ptr_f2 = odu(:,:)
     end if
     nullify(ptr_f3)
