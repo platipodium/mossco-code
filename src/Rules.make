@@ -839,7 +839,7 @@ install:
 .PHONY: mossco_clean
 
 mossco_clean: distclean
-	$(MAKE) -C $(MOSSCO_DIR)/external distclean
+	$(MAKE) -C $(MOSSCO_DIR)/external external_clean
 #ifdef MOSSCO_TRACERDIR
 #	$(MAKE) -C $(MOSSCO_TRACERDIR) distclean
 #endif

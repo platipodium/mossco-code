@@ -42,7 +42,7 @@ ifeq ($(CVS),)
   $(warning "could not find `cvs´ executable")
 endif
 
-.PHONY: all clean extraclean subdirs $(SUBDIRS) clone update
+.PHONY: all clean external_clean subdirs $(SUBDIRS) clone update
 .PHONY: fabm gotm erosed flibs json
 .PHONY: sqlite-zip sqlite
 
@@ -54,7 +54,7 @@ version: fabm_version gotm_version getm_version
 
 clean:
 
-distclean: fabm_distclean gotm_distclean getm_distclean
+external_clean: fabm_distclean gotm_distclean getm_distclean
 
 subdirs: $(SUBDIRS)
 
