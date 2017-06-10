@@ -52,7 +52,7 @@ clone: all
 update: all
 version: fabm_version gotm_version getm_version
 
-clean: distclean
+clean:
 
 distclean: fabm_distclean gotm_distclean getm_distclean
 
