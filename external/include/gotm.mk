@@ -10,24 +10,30 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
 
-.PHONY: getm getm_distclean getm_version
+.PHONY: gotm gotm_distclean gotm_version
 
-getm:
-ifeq ($(wildcard $(external_GETMDIR)/src/getm/main.F90),)
-	@$(GIT) clone -b iow --depth 1 https://git.code.sf.net/p/getm/code $(external_GETMDIR)
+gotm:
+ifeq ($(wildcard $(external_GOTMDIR)/src/gotm/gotm.F90),)
+	@$(GIT) clone -b master --depth 1 https://github.com/gotm-model/code.git $(external_GOTMDIR)
 else
-	@$(GIT) -C $(external_GETMDIR) pull --ff-only
+	@$(GIT) -C $(external_GOTMDIR) pull --ff-only
 endif
 
-getm_distclean:
-ifneq ($(wildcard $(external_GETMDIR)/src/getm/main.F90),)
-	@( unset FABM ; $(MAKE) -C $(external_GETMDIR) distclean )
+gotm_distclean:
+ifeq ($(MOSSCO_GOTM),true)
+	@echo Cleaning the GOTM library in $(GOTM_PREFIX)
+ifndef MOSSCO_GOTM_BINARY_DIR
+	$(RM) -rf $(GOTM_BINARY_DIR)
+endif
+ifndef MOSSCO_GOTM_PREFIX
+	$(RM) -rf $(GOTM_PREFIX)
+endif
 endif
 
-getm_version:
-ifneq ($(wildcard $(external_GETMDIR)/src/getm/main.F90),)
+gotm_version:
+ifneq ($(wildcard $(external_GOTMDIR)/src/gotm/gotm.F90),)
   # git describe --long --tags --dirty --always
-	GETM_VERSION=$(shell $(GIT) -C $(external_GETMDIR) log -1 --format="'%h (%ci)'")
+	GOTM_VERSION=$(shell $(GIT) -C $(external_GOTMDIR) log -1 --format="'%h (%ci)'")
 
 	@#echo "CPPFLAGS+=-DGETM_VERSION="${GETM_VERSION} >> $(MOSSCO_DIR)/src/include/versions.mk
 	@#echo "CPPFLAGS+=-DGETM_GIT_SHA="${GETM_GIT_SHA} >> $(MOSSCO_DIR)/src/include/versions.mk

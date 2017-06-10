@@ -10,24 +10,30 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
 
-.PHONY: getm getm_distclean getm_version
+.PHONY: fabm fabm_distclean fabm_version
 
-getm:
-ifeq ($(wildcard $(external_GETMDIR)/src/getm/main.F90),)
-	@$(GIT) clone -b iow --depth 1 https://git.code.sf.net/p/getm/code $(external_GETMDIR)
+fabm:
+ifeq ($(wildcard $(external_FABMDIR)/src/fabm.F90),)
+	@$(GIT) clone -b master --depth 1 https://git.code.sf.net/p/mossco/fabm $(external_FABMDIR)
 else
-	@$(GIT) -C $(external_GETMDIR) pull --ff-only
+	@$(GIT) -C $(external_FABMDIR) pull --ff-only
 endif
 
-getm_distclean:
-ifneq ($(wildcard $(external_GETMDIR)/src/getm/main.F90),)
-	@( unset FABM ; $(MAKE) -C $(external_GETMDIR) distclean )
+fabm_distclean:
+ifeq ($(MOSSCO_FABM),true)
+	@echo Cleaning the FABM library in $(FABM_PREFIX)
+ifndef MOSSCO_FABM_BINARY_DIR
+	$(RM) -rf $(FABM_BINARY_DIR)
+endif
+ifndef MOSSCO_FABM_PREFIX
+	$(RM) -rf $(FABM_PREFIX)
+endif
 endif
 
-getm_version:
-ifneq ($(wildcard $(external_GETMDIR)/src/getm/main.F90),)
+fabm_version:
+ifneq ($(wildcard $(external_FABMDIR)/src/fabm.F90),)
   # git describe --long --tags --dirty --always
-	GETM_VERSION=$(shell $(GIT) -C $(external_GETMDIR) log -1 --format="'%h (%ci)'")
+	FABM_VERSION=$(shell $(GIT) -C $(external_FABMDIR) log -1 --format="'%h (%ci)'")
 
 	@#echo "CPPFLAGS+=-DGETM_VERSION="${GETM_VERSION} >> $(MOSSCO_DIR)/src/include/versions.mk
 	@#echo "CPPFLAGS+=-DGETM_GIT_SHA="${GETM_GIT_SHA} >> $(MOSSCO_DIR)/src/include/versions.mk

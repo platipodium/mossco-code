@@ -765,17 +765,6 @@ ifdef FABM_BINARY_DIR
 endif
 endif
 
-fabm_clean:
-ifeq ($(MOSSCO_FABM),true)
-	@echo Cleaning the FABM library in $(FABM_PREFIX)
-ifndef MOSSCO_FABM_BINARY_DIR
-	$(RM) -rf $(FABM_BINARY_DIR)
-endif
-ifndef MOSSCO_FABM_PREFIX
-	$(RM) -rf $(FABM_PREFIX)
-endif
-endif
-
 libjson_external: json_build json_install
 
 json_build:
@@ -833,17 +822,6 @@ ifdef GOTM_BINARY_DIR
 endif
 endif
 
-gotm_clean:
-ifeq ($(MOSSCO_GOTM),true)
-	@echo Cleaning the GOTM library in $(GOTM_PREFIX)
-ifndef MOSSCO_GOTM_BINARY_DIR
-	$(RM) -rf $(GOTM_BINARY_DIR)
-endif
-ifndef MOSSCO_GOTM_PREFIX
-	$(RM) -rf $(GOTM_PREFIX)
-endif
-endif
-
 libgetm_external: libgotm_external
 ifdef MOSSCO_GETMDIR
 	( unset FABM ; $(MAKE) -C $(GETMDIR)/src GIT FORTRAN ../VERSION makedirs subdirs )
@@ -864,8 +842,8 @@ install:
 
 .PHONY: mossco_clean
 
-mossco_clean: distclean gotm_clean fabm_clean
-	$(MAKE) -C $(MOSSCO_DIR)/external getm_distclean
+mossco_clean: distclean
+	$(MAKE) -C $(MOSSCO_DIR)/external distclean
 #ifdef MOSSCO_TRACERDIR
 #	$(MAKE) -C $(MOSSCO_TRACERDIR) distclean
 #endif
