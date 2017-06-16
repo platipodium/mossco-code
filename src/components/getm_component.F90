@@ -1221,6 +1221,7 @@ module getm_component
          swr => swr_
       end if
       if (waveforcing_method .eq. WAVES_FROMFILE) then
+!        not needed anymore
          waveH => waveH_
       end if
    end if
