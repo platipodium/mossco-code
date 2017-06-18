@@ -1627,8 +1627,8 @@ module getm_component
 ! !LOCAL VARIABLES
    type(ESMF_Field) :: field
    type(ESMF_StaggerLoc) :: StaggerLoc_
-   integer          :: klen,rc
-    integer(ESMF_KIND_I4) :: localrc
+   integer,target   :: elb(3),eub(3)
+   integer          :: klen,rc,localrc
 !
 !EOP
 !-----------------------------------------------------------------------
@@ -1645,12 +1645,20 @@ module getm_component
       klen = kmax
    end if
 
+#if 0
    if (present(StaggerLoc)) then
       StaggerLoc_ = StaggerLoc
    else
 !     KK-TODO: ESMF_STAGGERLOC_CENTER_VCENTER ?
       StaggerLoc_ = ESMF_STAGGERLOC_CENTER
    end if
+
+   call ESMF_GridGet(getmGrid3D,StaggerLoc_,0,exclusiveLBound=elb,exclusiveUBound=eub,rc=localrc)
+   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+#else
+   call ESMF_GridGetFieldBounds(getmGrid3D,staggerloc=StaggerLoc,totalLBound=elb,totalUBound=eub,rc=localrc)
+   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+#endif
 
 !  in contrast to ESMF_ArrayCreate() no automatic determination of total[L|U]Width
 #if 1
@@ -1659,16 +1667,16 @@ module getm_component
 #else
 !  internal call to ESMF_FieldCreateGridData<rank><type><kind>()
 !  forced by indexflag argument.
-   field = ESMF_FieldCreate(getmGrid3D,p3d,indexflag=ESMF_INDEX_DELOCAL,     &
+   field = ESMF_FieldCreate(getmGrid3D,p3d,indexflag=ESMF_INDEX_DELOCAL, &
 #endif
-                            totalLWidth=int((/1,1,1/)-lbound(p3d)),          &
-                            totalUWidth=int(ubound(p3d)-(/imax,jmax,klen/)), &
-                            name=name,StaggerLoc=StaggerLoc_,rc=localrc)
+                            totalLWidth=int(elb-lbound(p3d)),            &
+                            totalUWidth=int(ubound(p3d)-eub),            &
+                            name=name,StaggerLoc=StaggerLoc,rc=localrc)
    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
    call ESMF_AttributeSet(field,'units',trim(units))
 
-    call ESMF_AttributeSet(field,'creator', trim(componentName), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   call ESMF_AttributeSet(field,'creator', trim(componentName), rc=localrc)
+   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
    call ESMF_StateAdd(state,(/field/),rc=localrc)
    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
