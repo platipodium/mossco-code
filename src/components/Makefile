@@ -210,6 +210,7 @@ libmossco_util libsolver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
 clean: extraclean
+	$(RM) *.o
 
 extraclean:
 	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done

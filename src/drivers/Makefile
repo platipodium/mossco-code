@@ -244,6 +244,8 @@ hamsom_driver.F90: empty_driver.F90
 
 
 clean: extraclean
+	$(RM) *.o
+
 extraclean:
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_getm.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a
