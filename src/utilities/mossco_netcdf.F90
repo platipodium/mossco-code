@@ -2213,7 +2213,7 @@ module mossco_netcdf
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_coordinate_create"
-  subroutine recursive mossco_netcdf_coordinate_create(self, grid)
+  recursive subroutine mossco_netcdf_coordinate_create(self, grid)
 
     use mossco_grid
 
