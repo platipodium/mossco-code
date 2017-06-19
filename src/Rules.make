@@ -1,4 +1,5 @@
-# This Makefile snippet is part of MOSSCO; definition of MOSSCO-wide make rules
+# This Makefile snippet is part of MOSSCO; definition of MOSSCO-wide
+# make rules
 #
 # Copyright (C) 2013, 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
 # Author Carsten Lemmen
@@ -20,6 +21,17 @@ ifndef MOSSCO_PREFIX
 #    Of course, this command already requires gmake, so a better solution is required here
 ifeq ($(shell make --version | grep -c GNU),0)
   $(error GNU make is required)
+endif
+
+export MOSSCO_GIT=false
+ifneq ($(wildcard $(shell which git)),)
+MOSSCO_GIT=true
+export MOSSCO_GIT_VERSION=$(shell git --version |cut -f3 -d" ")
+ifeq ($(shell git --version |cut -f3 -d" "|cut -d'.' -f1),1)
+  $(warning Consider upgrading git to version 2)
+endif
+else
+  $(warning Consider installing git)
 endif
 
 # System-dependent flags
