@@ -32,7 +32,7 @@ module netcdf_component
   implicit none
   private
 
-  type(type_mossco_netcdf)   :: nc !> @todo should this be an array?
+  type(type_mossco_netcdf)   :: nc
 
   public :: SetServices
 
@@ -425,8 +425,11 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
       if (currTime == startTime) then
         nc = mossco_netcdfCreate(fileName, timeUnit=timeUnit, state=importState, rc=localrc)
-      else
-        nc = mossco_netcdfOpen(fileName, timeUnit=timeUnit, state=importState, rc=localrc)
+        call ESMF_AttributeSet(exportState, 'netcdf_id', nc%ncid, rc=localrc)
+        call ESMF_AttributeSet(exportState, 'netcdf_file_name', &
+          trim(fileName), rc=localrc)
+      !else
+        !nc = mossco_netcdfOpen(fileName, timeUnit=timeUnit, !state=importState, rc=localrc)
       end if
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -592,7 +595,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      call nc%close()
+      !call nc%close()
     endif
 
     if (allocated(itemTypeList)) deallocate(itemTypeList)
@@ -656,6 +659,8 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
       importState=importState, exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call nc%close(rc=localrc)
 
     call ESMF_GridCompGet(gridComp, configIsPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
