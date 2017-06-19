@@ -16,7 +16,9 @@ getm:
 ifeq ($(wildcard $(external_GETMDIR)/src/getm/main.F90),)
 	@$(GIT) clone -b iow --depth 1 https://git.code.sf.net/p/getm/code $(external_GETMDIR)
 else
-	@$(GIT) -C $(external_GETMDIR) pull --ff-only
+#	@$(GIT) -C $(external_GETMDIR) pull --ff-only
+#for old git
+	@( cd $(external_GETMDIR) && $(GIT) pull --ff-only )
 endif
 
 getm_distclean:
@@ -27,7 +29,9 @@ endif
 getm_version:
 ifneq ($(wildcard $(external_GETMDIR)/src/getm/main.F90),)
   # git describe --long --tags --dirty --always
-	GETM_VERSION=$(shell $(GIT) -C $(external_GETMDIR) log -1 --format="'%h (%ci)'")
+#	GETM_VERSION=$(shell $(GIT) -C $(external_GETMDIR) log -1 --format="'%h (%ci)'")
+#for old git
+	GETM_VERSION=$(shell cd $(external_GETMDIR) && $(GIT) log -1 --format="'%h (%ci)'")
 
 	@#echo "CPPFLAGS+=-DGETM_VERSION="${GETM_VERSION} >> $(MOSSCO_DIR)/src/include/versions.mk
 	@#echo "CPPFLAGS+=-DGETM_GIT_SHA="${GETM_GIT_SHA} >> $(MOSSCO_DIR)/src/include/versions.mk

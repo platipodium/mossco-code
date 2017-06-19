@@ -16,7 +16,9 @@ fabm:
 ifeq ($(wildcard $(external_FABMDIR)/src/fabm.F90),)
 	@$(GIT) clone -b master --depth 1 https://git.code.sf.net/p/mossco/fabm $(external_FABMDIR)
 else
-	@$(GIT) -C $(external_FABMDIR) pull --ff-only
+#	@$(GIT) -C $(external_FABMDIR) pull --ff-only
+#for old git
+	@( cd $(external_FABMDIR) && $(GIT) pull --ff-only )
 endif
 
 fabm_distclean:
@@ -33,7 +35,9 @@ endif
 fabm_version:
 ifneq ($(wildcard $(external_FABMDIR)/src/fabm.F90),)
   # git describe --long --tags --dirty --always
-	FABM_VERSION=$(shell $(GIT) -C $(external_FABMDIR) log -1 --format="'%h (%ci)'")
+#	FABM_VERSION=$(shell $(GIT) -C $(external_FABMDIR) log -1 --format="'%h (%ci)'")
+#for old git
+	FABM_VERSION=$(shell cd $(external_FABMDIR) && $(GIT) log -1 --format="'%h (%ci)'")
 
 	@#echo "CPPFLAGS+=-DGETM_VERSION="${GETM_VERSION} >> $(MOSSCO_DIR)/src/include/versions.mk
 	@#echo "CPPFLAGS+=-DGETM_GIT_SHA="${GETM_GIT_SHA} >> $(MOSSCO_DIR)/src/include/versions.mk

@@ -16,7 +16,9 @@ gotm:
 ifeq ($(wildcard $(external_GOTMDIR)/src/gotm/gotm.F90),)
 	@$(GIT) clone -b master --depth 1 https://github.com/gotm-model/code.git $(external_GOTMDIR)
 else
-	@$(GIT) -C $(external_GOTMDIR) pull --ff-only
+#	@$(GIT) -C $(external_GOTMDIR) pull --ff-only
+#for old git
+	@( cd $(external_GOTMDIR) && $(GIT) pull --ff-only )
 endif
 
 gotm_distclean:
@@ -33,7 +35,10 @@ endif
 gotm_version:
 ifneq ($(wildcard $(external_GOTMDIR)/src/gotm/gotm.F90),)
   # git describe --long --tags --dirty --always
-	GOTM_VERSION=$(shell $(GIT) -C $(external_GOTMDIR) log -1 --format="'%h (%ci)'")
+#	GOTM_VERSION=$(shell $(GIT) -C $(external_GOTMDIR) log -1 --format="'%h (%ci)'")
+#for old git
+	GOTM_VERSION=$(shell cd $(external_GOTMDIR) && $(GIT) log -1 --format="'%h (%ci)'")
+
 
 	@#echo "CPPFLAGS+=-DGETM_VERSION="${GETM_VERSION} >> $(MOSSCO_DIR)/src/include/versions.mk
 	@#echo "CPPFLAGS+=-DGETM_GIT_SHA="${GETM_GIT_SHA} >> $(MOSSCO_DIR)/src/include/versions.mk
