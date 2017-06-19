@@ -134,6 +134,7 @@ module mossco_netcdf
 
     integer, pointer                  :: gridmask3(:,:,:)=>null(), gridmask2(:,:)=> null()
     type(ESMF_Grid)                   :: grid
+    type(ESMF_StaggerLoc)             :: staggerloc
     integer(ESMF_KIND_I4)             :: gridRank
     type(ESMF_GeomType_Flag)          :: geomType
     logical                           :: isPresent, gridIsPresent
@@ -229,7 +230,7 @@ module mossco_netcdf
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     if (geomType == ESMF_GEOMTYPE_GRID) then
-      call ESMF_FieldGet(field, grid=grid, rc=localrc)
+      call ESMF_FieldGet(field, grid=grid, staggerloc=staggerloc, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_GridGet(grid, rank=gridRank, rc=localrc)
@@ -238,16 +239,16 @@ module mossco_netcdf
 #if ESMF_VERSION_MAJOR > 6
 !! This is only implemented from 7b29
       if (gridRank == 2) then
-        call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, isPresent=gridIsPresent, rc=localrc)
+        call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, isPresent=gridIsPresent, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         if (gridIsPresent) then
-          call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask2, rc=localrc)
+          call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, farrayPtr=gridmask2, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-          call ESMF_GridGetItemBounds(grid, ESMF_GRIDITEM_MASK, exclusiveLbound=grid2Lbnd, &
+          call ESMF_GridGetItemBounds(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, exclusiveLbound=grid2Lbnd, &
             exclusiveUBound=grid2Ubnd, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -255,15 +256,15 @@ module mossco_netcdf
           nullify(gridmask2)
         endif
       elseif (gridRank == 3) then
-        call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, isPresent=gridIsPresent, rc=localrc)
+        call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, isPresent=gridIsPresent, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         if (gridIsPresent) then
-          call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask3, rc=localrc)
+          call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, farrayPtr=gridmask3, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          call ESMF_GridGetItemBounds(grid, ESMF_GRIDITEM_MASK, exclusiveLbound=grid3Lbnd, &
+          call ESMF_GridGetItemBounds(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, exclusiveLbound=grid3Lbnd, &
             exclusiveUBound=grid3Ubnd, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -274,23 +275,23 @@ module mossco_netcdf
       endif
 #else
       if (gridRank == 2) then
-        call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask2, rc=localrc)
+        call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, farrayPtr=gridmask2, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) then
           nullify(gridmask2)
           call ESMF_LogWrite('Disregard five errors above', ESMF_LOGMSG_ERROR)
         else
-          call ESMF_GridGetItemBounds(grid, ESMF_GRIDITEM_MASK, exclusiveLbound=grid2Lbnd, &
+          call ESMF_GridGetItemBounds(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, exclusiveLbound=grid2Lbnd, &
             exclusiveUBound=grid2Ubnd, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
       elseif (gridRank == 3) then
-        call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask3, rc=localrc)
+        call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, farrayPtr=gridmask3, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) then
           nullify(gridmask3)
           call ESMF_LogWrite('Disregard five errors above', ESMF_LOGMSG_ERROR)
         else
-          call ESMF_GridGetItemBounds(grid, ESMF_GRIDITEM_MASK, exclusiveLbound=grid3Lbnd, &
+          call ESMF_GridGetItemBounds(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, exclusiveLbound=grid3Lbnd, &
             exclusiveUBound=grid3Ubnd, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -346,16 +347,16 @@ module mossco_netcdf
         do i=lbnd(1),ubnd(1)
           do j=lbnd(2),ubnd(2)
             do k=lbnd(3),ubnd(3)
-              if (gridmask3(grid3lbnd(1)-1+i,grid3lbnd(2)-1+j,grid3lbnd(3)-1+k) .le. 0) &
-                ncarray4(lbnd(1)-1+i,lbnd(2)-1+j,lbnd(3)-1+k,lbnd(4):ubnd(4))=missingValue
+              if (gridmask3(grid3lbnd(1)-lbnd(1)+i,grid3lbnd(2)-lbnd(2)+j,grid3lbnd(3)-lbnd(3)+k) .le. 0) &
+                ncarray4(i,j,k,lbnd(4):ubnd(4))=missingValue
             enddo
           enddo
         enddo
       elseif (associated(gridmask2)) then
         do i=lbnd(1),ubnd(1)
           do j=lbnd(2),ubnd(2)
-            if (gridmask2(grid2lbnd(1)-1+i,grid2lbnd(2)-1+j) .le. 0) &
-              ncarray4(lbnd(1)-1+i,lbnd(2)-1+j,lbnd(3):ubnd(3),lbnd(4):ubnd(4))=missingValue
+            if (gridmask2(grid2lbnd(1)-lbnd(1)+i,grid2lbnd(2)-lbnd(2)+j) .le. 0) &
+              ncarray4(i,j,lbnd(3):ubnd(3),lbnd(4):ubnd(4))=missingValue
           enddo
         enddo
       end if
@@ -421,21 +422,20 @@ module mossco_netcdf
       if (associated(ncarray3)) deallocate(ncarray3)
       allocate(ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)),stat=localrc)
       ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) = farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))
-
       if (associated(gridmask3)) then
         do i=lbnd(1),ubnd(1)
           do j=lbnd(2),ubnd(2)
             do k=lbnd(3),ubnd(3)
-              if (gridmask3(grid3lbnd(1)-1+i,grid3lbnd(2)-1+j,grid3lbnd(3)-1+k) .le. 0) &
-                ncarray3(lbnd(1)-1+i,lbnd(2)-1+j,lbnd(3)-1+k)=missingValue
+              if (gridmask3(grid3lbnd(1)-lbnd(1)+i,grid3lbnd(2)-lbnd(2)+j,grid3lbnd(3)-lbnd(3)+k) .le. 0) &
+                ncarray3(i,j,k)=missingValue
              enddo
           enddo
         enddo
       elseif (associated(gridmask2)) then
         do i=lbnd(1),ubnd(1)
           do j=lbnd(2),ubnd(2)
-            if (gridmask2(grid2lbnd(1)-1+i,grid2lbnd(2)-1+j) .le. 0) &
-                ncarray3(lbnd(1)-1+i,lbnd(2)-1+j,lbnd(3):ubnd(3))=missingValue
+            if (gridmask2(grid2lbnd(1)-lbnd(1)+i,grid2lbnd(2)-lbnd(2)+j) .le. 0) &
+                ncarray3(i,j,lbnd(3):ubnd(3))=missingValue
           enddo
         enddo
       end if
@@ -470,7 +470,6 @@ module mossco_netcdf
         endif
       endif
       endif
-
       if (any(var%dimids==self%timeDimId)) then
         ncStatus = nf90_put_var(self%ncid, var%varid, real(ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))), &
         start=(/1,1,1,dimlen/))
@@ -500,8 +499,8 @@ module mossco_netcdf
       if (associated(gridmask2)) then
         do i=lbnd(1),ubnd(1)
           do j=lbnd(2),ubnd(2)
-            if (gridmask2(grid2lbnd(1)-1+i,grid2lbnd(2)-1+j) .le. 0) &
-                ncarray2(lbnd(1)-1+i,lbnd(2)-1+j)=missingValue
+            if (gridmask2(grid2lbnd(1)-lbnd(1)+i,grid2lbnd(2)-lbnd(2)+j) .le. 0) &
+                ncarray2(i,j)=missingValue
           enddo
         enddo
       end if
@@ -629,6 +628,7 @@ module mossco_netcdf
     integer(ESMF_KIND_I8)          :: int8
     type(ESMF_TypeKind_Flag)       :: typekind
     type(ESMF_GeomType_Flag)       :: geomType
+    type(ESMF_StaggerLoc)          :: staggerloc
     integer                        :: ungriddedID, ungriddedLength,dimrank
     integer(ESMF_KIND_I4), allocatable, dimension(:) :: uubnd,ulbnd
     logical                        :: isPresent
@@ -656,7 +656,7 @@ module mossco_netcdf
     !> return if variable is already defined in netcdf file
     if (self%variable_present(varname)) return
 
-    call ESMF_FieldGet(field,geomType=geomType,dimCount=dimCount,rc=localrc)
+    call ESMF_FieldGet(field,geomType=geomType,dimCount=dimCount,staggerloc=staggerloc,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -668,7 +668,7 @@ module mossco_netcdf
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      dimids => self%grid_dimensions(grid)
+      dimids => self%grid_dimensions(grid,staggerloc)
 
       call ESMF_GridGet(grid, coordSys=coordSys,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -2036,16 +2036,19 @@ module mossco_netcdf
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_grid_dimensions"
-  recursive function mossco_netcdf_grid_dimensions(self,grid) result(dimids)
+  recursive function mossco_netcdf_grid_dimensions(self,grid,staggerloc) result(dimids)
     class(type_mossco_netcdf)     :: self
     type(ESMF_Grid)               :: grid
+    type(ESMF_StaggerLoc),optional :: staggerloc
+
+    type(ESMF_StaggerLoc)          :: staggerloc_
     integer                       :: ncStatus,rc_,esmfrc,dimcheck
     character(len=ESMF_MAXSTR)    :: geomName, name
     integer,allocatable           :: ubounds(:),lbounds(:)
     integer,pointer,dimension(:)  :: dimids
 
     integer(ESMF_KIND_I4)         :: dimCount, dimid, rank, i, localrc
-    character(len=ESMF_MAXSTR)    :: message
+    character(len=ESMF_MAXSTR)    :: message,staggerlocsuffix
 
     rc_ = ESMF_SUCCESS
 
@@ -2063,13 +2066,25 @@ module mossco_netcdf
     dimids(:)=-1
     dimids(rank+1)=self%timeDimId
 
-    call ESMF_GridGet(grid, ESMF_STAGGERLOC_CENTER, 0, exclusiveCount=ubounds, rc=localrc)
+    if (present(staggerloc)) then
+      staggerloc_ = staggerloc
+    else
+      staggerloc_ = ESMF_STAGGERLOC_CENTER
+    end if
+
+    call ESMF_GridGet(grid, staggerloc_, 0, exclusiveCount=ubounds, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    if (staggerloc_ .eq. ESMF_STAGGERLOC_CENTER) then
+      staggerlocsuffix=''
+    else
+      write(staggerlocsuffix,'(A,I0)') '_',staggerloc
+    end if
+
     ! get grid dimension-ids
     do i=1,rank
-      write(name,'(A,I1)') trim(geomName)//'_',i
+      write(name,'(A,I1,A)') trim(geomName)//'_',i,trim(staggerlocsuffix)
       ncStatus = nf90_inq_dimid(self%ncid,trim(name),dimids(i))
       if (ncStatus /= NF90_NOERR) then
         dimcheck=-1
@@ -2081,7 +2096,7 @@ module mossco_netcdf
     if (dimcheck == -1) then
       ncStatus = nf90_redef(self%ncid)
       do i=1,rank
-        write(name,'(A,I1)') trim(geomName)//'_',i
+        write(name,'(A,I1,A)') trim(geomName)//'_',i,trim(staggerlocsuffix)
         ncStatus = nf90_def_dim(self%ncid, trim(name), &
           ubounds(i)-lbounds(i)+1,dimids(i))
         if (ncStatus==NF90_ENAMEINUSE) then
