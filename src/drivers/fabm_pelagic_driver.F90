@@ -324,13 +324,14 @@
 
     class(type_mossco_fabm_pelagic) :: pf
 
-    integer  :: i,j,k
+    integer  :: i,j,k,k0
 
+    k0 = lbound(pf%zi,3)
     do i=1,pf%inum
       do j=1,pf%jnum
         do k=1,pf%knum
           if (.not.pf%mask(i,j,k)) &
-            pf%layer_height(i,j,k) = pf%zi(i,j,k) - pf%zi(i,j,k-1)
+            pf%layer_height(i,j,k) = pf%zi(i,j,k0+k) - pf%zi(i,j,k0+k-1)
         end do
       end do
     end do
