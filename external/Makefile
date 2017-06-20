@@ -2,7 +2,7 @@
 #
 # @copyright (C) 2013, 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht, Institut für Ostseeforschung Warnemünde
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
-# @author Knut Klingbeil <knut.klingbeil@io-warnemuende.de> 
+# @author Knut Klingbeil <knut.klingbeil@io-warnemuende.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -20,7 +20,18 @@ SUBDIRS =
 
 CVS?=$(shell which cvs)
 SVN?=$(shell which svn)
-GIT?=$(shell which git)
+
+# Test for the version of git and decide whether to make
+# a shallow copy (from version 2)
+ifeq ($(MOSSCO_GIT),true)
+  GIT?=$(shell which git)
+  ifneq ($(MOSSCO_GIT_VERSION_MAJOR),1)
+		GIT_CLONE:=$(GIT) clone --depth=1
+	else
+	  GIT_CLONE:=$(GIT) clone
+	endif
+endif
+
 PYTHON?=$(shell which python)
 PREFIX?=$(HOME)/opt
 
@@ -63,7 +74,7 @@ $(SUBDIRS):
 
 json:
 ifeq ($(wildcard $(external_JSONDIR)/src/json_module.F90),)
-	$(GIT) clone https://github.com/jacobwilliams/json-fortran.git $(external_JSONDIR)
+	$(GIT_CLONE) https://github.com/jacobwilliams/json-fortran.git $(external_JSONDIR)
 else
 	( cd $(external_JSONDIR) && $(GIT) pull )
 endif
@@ -116,10 +127,9 @@ endif
 
 gitstats:
 ifeq ($(wildcard $(external_GITSTATSDIR)/src),)
-	$(GIT) clone git://github.com/hoxu/gitstats.git $(external_GITSTATSDIR)
+	$(GIT_CLONE) git://github.com/hoxu/gitstats.git $(external_GITSTATSDIR)
 else
 	( cd $(external_GITSTATSDIR) && $(GIT) pull )
 endif
 	mkdir -p $(PREFIX)
 	make install PREFIX=$(PREFIX)
-

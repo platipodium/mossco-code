@@ -27,7 +27,8 @@ export MOSSCO_GIT=false
 ifneq ($(wildcard $(shell which git)),)
 MOSSCO_GIT=true
 export MOSSCO_GIT_VERSION=$(shell git --version |cut -f3 -d" ")
-ifeq ($(shell git --version |cut -f3 -d" "|cut -d'.' -f1),1)
+export MOSSCO_GIT_VERSION_MAJOR=$(shell git --version |cut -f3 -d" "|cut -f1 -d.)
+ifeq ($(MOSSCO_GIT_VERSION_MAJOR),1)
   $(warning Consider upgrading git to version 2)
 endif
 else
