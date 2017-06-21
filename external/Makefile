@@ -82,13 +82,14 @@ endif
 erosed:
 ifeq ($(wildcard $(MOSSCO_DIR)/external/erosed-svn),)
 	svn co --depth empty https://svn.oss.deltares.nl/repos/openearthtools/trunk/programs/SandMudBedModule/03_Fortran/example/example $(MOSSCO_DIR)/external/erosed-svn
+endif
 	$(MAKE) erosed-svn-update
 	$(MAKE) flow2d3d-svn-export
-else
+	
+erosed-svn-update:
 	svn update --set-depth infinity $(MOSSCO_DIR)/external/erosed-svn/include
 	svn update --set-depth infinity $(MOSSCO_DIR)/external/erosed-svn/modules
 	svn update --set-depth infinity $(MOSSCO_DIR)/external/erosed-svn/source
-endif
 
 flow2d3d-svn-export:
 	svn export --force https://svn.oss.deltares.nl/repos/delft3d/tags/2399/src/engines_gpl/flow2d3d/packages/kernel/src/compute_sediment/bedbc1993.f90 $(MOSSCO_DIR)/external/erosed-svn/source/bedbc1993.f90
