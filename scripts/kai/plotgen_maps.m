@@ -46,14 +46,14 @@ for im=1:length(vli)
  elseif mode=='c'
   ix = 1+mod(im-1,ncolm);
   iy = 1+floor((im-1)/ncolm);
-  ti = toffm+((cell2mat(var{i}(6))-moff)*(nrowm*ncolm)+im)*10;  
+  ti = toffm+((cell2mat(var{i}(6))-moff)*(nrowm*ncolm)+im)*1;
+  fprintf('%d/%d\tti=%d %d moff=%d\t%d\n',im,length(vli),ti,cell2mat(var{i}(6)),moff,(nrowm*ncolm));
  else
   ix = 1+mod(im-1,ncolm);
   iy = 1+floor((im-1)/ncolm);
   [mdv mdi]=min(abs(timeg(iig(im+mofc*(nrowm*ncolm)))-int32(time)));
   ti =mdi+toffm;
 %%  fprintf('%d/%d\t%d %d\t%d %d\n',im,length(vli),ti,mdi,timeg(iig(im+moff*(nrowm*ncolm))),int32(time(mdi)));
-
  end
  if ti-toffm<=length(ind)
 % goes to new figure (if required)

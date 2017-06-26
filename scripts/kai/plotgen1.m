@@ -6,7 +6,7 @@
 clear all;warning ('off','all');
 addpath('~/tools/m_map');  % map-toolbox needed for 2D plots
 addpath('~/tools/export_fig');  % toolbox needed for correct png layout
-show_data=1; Is1D=0; IsNOAH=0; tmp=version; VerMat=num2str(tmp(1:3)); 
+show_data=0; Is1D=0; IsNOAH=0; tmp=version; VerMat=num2str(tmp(1:3)); 
 %datf='~/data/DeutscheBucht/Helgoland_19622014.nc';
 datf='~/data/DeutscheBucht/stations_1960-2015.nc';
 datm='~/data/DeutscheBucht/chl_esacci_2000_2013.mat';
@@ -62,7 +62,7 @@ else
   load(datm);
   [m_lon,m_lat] = meshgrid(lons,lats);
   im0=0;
-  if 1
+  if 0
     timeg0=timeg;
 % tags ={'_vir_spor_0';'_vir_spor_r0.08';};%'_a_wat
     ii=[];
@@ -82,23 +82,22 @@ end
 %
 % --------------------------------- edit mostly here -------------------------------
 %
-% tags ={'';'_1';};%'';'1r001';'1r001b';'0';'2';'4';
-  tags ={'';};
+%  tags ={'_2';'_2z';};%'';'1r001';'1r001b';'0';'2';'4';
+ tags ={'_Pdep';};
 %'_mort_zoo0.023';'_g_max0.6';'_zm_fa_delmax10';'_basal_resp_zoo0.08';'_vir_mu-0.2';'_vir_spor_C0.002';'_vS_det34';'_z0_const0.005';
 %'_sinking_factor_min0.05';'_half_sedimentation_tke1E-5';
-%'_half_sedimentation_tke2E-4';'_rFast0.05';'_vS_det18';'_sinking_factor0.32';'_sinking_factor_min0.03';'_a_water0.8';bash-4.1$ 
-spath= '/local/home/wirtz/sns/cut/';%   spath= '~/';
-% spath= '~/jureca/sns/cut';%   %%spath  ='/ocean-data/wirtz/';%%%sns/cut
-% spath='/data/wirtz/sns/cut/';
- 
+ %%spath= '/local/home/wirtz/sns/cut/';%   spath= '~/';
+ spath= '~/jureca/sns/cut';%   %%spath  ='/ocean-data/wirtz/';%%%sns/cut
+ %spath='/data/wirtz/';
+
  ncf0 = 'sns'; ntags=length(tags);tagn=ntags;
  if IsNOAH
     setvar_o2flux  % defines variables to show - and where/how to do it %setvar  
    %% nrowm = 1; ncolm = 1;
      ncol = 1; nrow =3; 	% number of columns in fig
  else
-    setvar_snsPres; % %Data defines variables to show - and where/how to do it %       
-%% setvar_snsTrait; %%    setvar_predprey;
+%%    setvar_snsPres; % %Data defines variables to show - and where/how to do it %       
+ setvar_snsTrait; %%    setvar_predprey;
  end
 end
 %% check for tag file
@@ -151,7 +150,7 @@ occ = zeros(nfig,ncol,nrow); occ0=occ+1;
 
 for ns=1:ns2m  %% loop over scenarios/stations/layers
  % reset index for map time offset
- moffs=0;moffc=0;mofc=0;figc=[]; varshortm0='';varshortmc0=''; imc=1;
+ moffs=1;moffc=0;mofc=0;figc=[]; varshortm0='';varshortmc0=''; imc=1;
  %% read model output
  tag=cell2mat(tags((nsu-1)*ncs+ns))
  ncfile = fullfile(spath,[ncf0 tag '.nc']);
@@ -167,8 +166,8 @@ for ns=1:ns2m  %% loop over scenarios/stations/layers
    end
  end
 % t0 = datenum('1962-03-01','yyyy-mm-dd')-1;
-%t0 = datenum('2008-02-01','yyyy-mm-dd')-1;
-%t1 = datenum('2010-03-30','yyyy-mm-dd')-1;
+%t0 = datenum('2009-02-01','yyyy-mm-dd')-1;
+%t1 = datenum('2010-12-30','yyyy-mm-dd')-1;
 %t0 = datenum('2010-03-01','yyyy-mm-dd')-1
 %t1 = datenum('2008-11-01','yyyy-mm-dd')-1;
 

@@ -10,7 +10,7 @@ show_data=1; nice=0; Is1D=0; datf='~/data/DeutscheBucht/stations.nc';
 % locations; at least one site-name (locs) should be given 
 loc =[]; 
 %loc =[[54.18,7.82];[54.96,8.4];[54.1,6.3];[54.2,7.5];]; % 
-locs={'Tsns_04-05_1';}; % 'T1'; 
+locs={'Tsns_13-05_0';}; % 'T1'; 
 
 tags={'';};%_new'_res';'_att';
 ntags=length(tags);

@@ -1,4 +1,4 @@
-offtime=[datenum('01-Mar-0010')  datenum('21-May-0001')];
+offtime=[datenum('01-Feb-0000')  datenum('21-May-0001')];
 ivalue=[];oduvala=[];time=[];
 
 for fi=1:1
@@ -14,28 +14,32 @@ for id=0:nvar-1
    if(length(iw)==0) iw=strfind(varname,'_in_soil'); end
    ii=strfind(varname,'_');
    if(length(ii)>1 & length(iw)>0)
-    i0=max(find(ii<iw));
-    if length(i0)==0, 
+    iu0=max(find(ii<iw));
+    if length(iu0)==0, 
        vars{id+1} = varname(1:iw-1);
     else
-      vars{id+1} = varname(ii(i0)+1:iw-1);
+      vars{id+1} = varname(ii(iu0)+1:iw-1);
     end
    else vars{id+1} =varname;
    end
    %dimv(id+1)= natts-2;
    %if (ismember(id,vid_tshow))  
+if(id==varid | id==odu_id )
+fprintf('\n ******************** \n %s==%s ?\n',varn{id+1},varna);
+end
    fprintf('%d %s %s\n',id,varn{id+1},vars{id+1});
+   
    %end
 end
 
 for vid=0:nvar-1
   [varname,xtype,dimids,natts]=netcdf.inqVar(ncid,vid);
 
-  if (strcmp(varname,'getmGrid3D_getm_lat') & fi==1) lat=netcdf.getVar(ncid,vid); 
+  if (strcmp(varname,'getmGrid3D_y') & fi==1) lat=netcdf.getVar(ncid,vid); 
 %  if (strcmp(varname,'lat') ) lat=netcdf.getVar(ncid,vid); 
  size(lat)
   end
-  if (strcmp(varname,'getmGrid3D_getm_lon') & fi==1) lon=netcdf.getVar(ncid,vid);
+  if (strcmp(varname,'getmGrid3D_x') & fi==1) lon=netcdf.getVar(ncid,vid);
 %  if (strcmp(varname,'lon') ) lon=netcdf.getVar(ncid,vid);
   size(lon)
   end

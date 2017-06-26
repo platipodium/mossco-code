@@ -1,6 +1,6 @@
 % set data matrix
   mons=datestr(doy(ti-toffm));
-  dm=4; % eliminate borders
+  dm=3; % eliminate borders
   if length(size(tmp))>3
     value = squeeze(tmp(dm:end,dm:end-dm,di,ti)); 
  %% print variable & scen name & date
@@ -35,6 +35,7 @@ end
     value(find(value<minval*1.1))=minval*1.1;
     value=log10(value);
   end
+  fprintf('%d %s/%s\t np=%d\tmean=%1.2f\n',im,varshort,varn,np,mean(mean(value)));
 %  m_pcolor(lo(ind),la(ind),value(ind));
   m_pcolor(lo,la,value);
  %       set(gca, 'Color', 'k')
@@ -62,7 +63,7 @@ end
  
   if(ix==1) m_text(lonlimit(1)-0.5,latlimit(2)-0.12,[varshort0 ' ' tag],'HorizontalAlignment','left','FontSize',fs+4,'FontWeight','bold','FontName','Helvetica','Interpreter','none'); end
   set(gca,'FontSize',fs);
-  mh=m_text(lonlimit(2)-0.84,latlimit(1)+0.5,ta,'FontWeight','bold','HorizontalAlignment','right','FontSize',fs);
+  mh=m_text(lonlimit(2)-1.,latlimit(1)+0.5,ta,'FontWeight','bold','HorizontalAlignment','right','FontSize',fs);
   uistack(mh,'top');
 
 %% plot sites of interest
