@@ -505,13 +505,21 @@ module pelagic_soil_connector
       ptr_f2 = amm(AMMlbnd(1):AMMubnd(1),AMMlbnd(2):AMMubnd(2),AMMlbnd(3))
     elseif (hasDIN .and. hasNitrate) then
       ptr_f2 = din(RANGE2D,lbnd(3)) - nit(RANGE2D,lbnd(3))
+      write(message,'(A)') trim(name)//' calculates NH4 as DIN - NO3'
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     elseif (hasDIN) then
       ptr_f2 = 0.5d0 * DIN(RANGE2D,lbnd(3))
+      write(message,'(A)') trim(name)//' calculates NH4 as 0.5 * DIN'
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     elseif (hasNitrate) then
       ptr_f2 = nit(RANGE2D,lbnd(3))
+      write(message,'(A)') trim(name)//' calculates NH4 as equal to NO3'
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     else
       write(message,'(A)') trim(name)//' did not receive any information on nitrogen'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      rc = ESMF_RC_NOT_FOUND
+      return
     end if
 
     ! Get mandatory nitrate field from export State and save either
@@ -529,13 +537,21 @@ module pelagic_soil_connector
     elseif (hasAmmonium .and. hasDIN) then
       ptr_f2 = din(RANGE2D,lbnd(3)) &
         - amm(AMMlbnd(1):AMMubnd(1),AMMlbnd(2):AMMubnd(2),AMMlbnd(3))
+      write(message,'(A)') trim(name)//' calculates NO3 = DIN - NH4'
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     elseif (hasDIN) then
       ptr_f2 = 0.5d0 * DIN(RANGE2D,lbnd(3))
+      write(message,'(A)') trim(name)//' calculates NO3 = 0.5 * DIN'
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     elseif (hasAmmonium) then
       ptr_f2 = amm(AMMlbnd(1):AMMubnd(1),AMMlbnd(2):AMMubnd(2),AMMlbnd(3))
+      write(message,'(A)') trim(name)//' calculates NO3 equal to NH4'
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     else
       write(message,'(A)') trim(name)//' did not receive any information on nitrogen'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      rc = ESMF_RC_NOT_FOUND
+      return
     end if
 
     !> check for DIP, if present, take as is, if not calculate it N-based
@@ -564,17 +580,26 @@ module pelagic_soil_connector
         if (hasAmmonium .and. hasNitrate) then
           din(RANGE2D,lbnd(3)) = nit(RANGE2D,lbnd(3)) &
             + amm(AMMlbnd(1):AMMubnd(1),AMMlbnd(2):AMMubnd(2),AMMlbnd(3))
+          write(message,'(A)') trim(name)//' calculates DIN = NH4 + NO3'
+          if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         elseif (hasAmmonium) then
           din(RANGE2D,lbnd(3)) = 2 *  &
             + amm(AMMlbnd(1):AMMubnd(1),AMMlbnd(2):AMMubnd(2),AMMlbnd(3))
+          write(message,'(A)') trim(name)//' calculates DIN = 2 * NH4'
+          if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         else
           din(RANGE2D,lbnd(3)) = 2 * nit(RANGE2D,lbnd(3))
+          write(message,'(A)') trim(name)//' calculates DIN = 2 * NO3'
+          if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         endif
       endif
 
       if (.not.(associated(dip))) allocate(dip(RANGE2D,1))
 
       dip(RANGE2D,1) = 1.0d0/16.0d0 * DIN(RANGE2D,lbnd(3))
+      write(message,'(A)') trim(name)//' calculates DIP from Redfield DIN'
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
       Plbnd(3)=1
     endif
 
