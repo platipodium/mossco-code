@@ -181,7 +181,11 @@ module pelagic_soil_connector
     type(ESMF_State)     :: exportState
     type(ESMF_Clock)     :: externalclock
     integer, intent(out) :: rc
-    integer              :: ammrc,nitrc
+
+    logical  :: hasAmmonium = .false.
+    logical  :: hasNitrate = .false.
+    logical  :: hasDIN = .false.
+    logical  :: hasDIP = .false.
 
     integer                     :: myrank
     integer                     :: i,j,inum,jnum
@@ -202,9 +206,10 @@ module pelagic_soil_connector
 
     character(len=ESMF_MAXSTR)  :: name, message
     type(ESMF_Time)             :: currTime, stopTime
-    integer                     :: localrc, oxyrc, odurc
+    integer                     :: localrc, oxyrc, odurc, fieldCount
     integer(ESMF_KIND_I8)       :: advanceCount
     logical                     :: verbose=.true.
+    type(ESMF_Field), allocatable :: fieldList(:)
 
     rc = ESMF_SUCCESS
 
@@ -280,10 +285,10 @@ module pelagic_soil_connector
 
       !   Det flux:
     call mossco_state_get(importState,(/ &
-            'detritus_in_water              ', &
-            'detN_in_water                  ', &
-            'Detritus_Nitrogen_detN_in_water'/), &
-            DETN,lbnd=lbnd,ubnd=ubnd, verbose=verbose, rc=localrc)
+      'detritus_in_water              ', &
+      'detN_in_water                  ', &
+      'Detritus_Nitrogen_detN_in_water'/), &
+      DETN,lbnd=lbnd,ubnd=ubnd, verbose=verbose, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
 #if DEBUG
@@ -335,11 +340,11 @@ module pelagic_soil_connector
 ! dirty=non-mass-conserving fix added by kw against unphysical partitioning
 
     where (fac_fdet .gt. CN_det)
-         fac_fdet = CN_det
+      fac_fdet = CN_det
     endwhere
 
     where (fac_fdet .lt. 0.0d0)
-         fac_fdet = 0.0d0
+      fac_fdet = 0.0d0
     endwhere
 
     fac_sdet = CN_det - fac_fdet
@@ -347,50 +352,51 @@ module pelagic_soil_connector
 
     ! get depth from exportState, where the physical model has put its data
     call mossco_state_get(exportState, &
-        (/'water_depth_at_soil_surface'/), depth, verbose=verbose, rc=localrc)
+      (/'water_depth_at_soil_surface'/), depth, verbose=verbose, rc=localrc)
 
     fac_env = 1.0d0
     if (localrc == 0 .and. half_sedimentation_depth .gt. 1E-3) then
-        ! reduce sedimentation due to depth (assuming higher wave erosion in shallow areas)
-        fac_env = fac_env * depth(lbnd(1):ubnd(1),lbnd(2):ubnd(2))**2/(depth(lbnd(1):ubnd(1),lbnd(2):ubnd(2))**2 + half_sedimentation_depth**2)
+      ! reduce sedimentation due to depth (assuming higher wave erosion in shallow areas)
+      fac_env = fac_env * depth(lbnd(1):ubnd(1),lbnd(2):ubnd(2))**2/(depth(lbnd(1):ubnd(1),lbnd(2):ubnd(2))**2 + half_sedimentation_depth**2)
     end if
-      ! ensure minimum sedimentation
+    ! ensure minimum sedimentation
 
-      ! get TKE from exportState, where the physical model has put its data
+    ! get TKE from exportState, where the physical model has put its data
     call mossco_state_get(exportState, &
-        (/'turbulent_kinetic_energy_at_soil_surface'/), tke, verbose=verbose, rc=localrc)
+      (/'turbulent_kinetic_energy_at_soil_surface'/), tke, verbose=verbose, rc=localrc)
 
     if (localrc == 0 .and. half_sedimentation_tke .lt. 9E9 ) then
-        ! reduce sedimentation due to depth (assuming higher wave erosion in shallow areas)
-        fac_env = fac_env * half_sedimentation_tke/(tke(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) + half_sedimentation_tke)
+      ! reduce sedimentation due to depth (assuming higher wave erosion in shallow areas)
+      fac_env = fac_env * half_sedimentation_tke/(tke(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) + half_sedimentation_tke)
     end if
     fac_env = fac_env + sinking_factor_min/sinking_factor
 
     ! reduce sedimentation due to detritus-C (assuming higher DETN in shallow areas)
     if (associated(DETC)) then
-        if (critical_detritus .gt. 1E-3 .and. critical_detritus .lt. 9E9) then
-          fac_env = fac_env * 1.0d0/(1.0d0 + &
-           (DETC(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))/critical_detritus)**4)
-        end if
+      if (critical_detritus .gt. 1E-3 .and. critical_detritus .lt. 9E9) then
+        fac_env = fac_env * 1.0d0/(1.0d0 + &
+          (DETC(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))/critical_detritus)**4)
+      end if
     end if
 
     call mossco_state_get(exportState, &
-        (/'fast_detritus_C_at_soil_surface'/), ptr_f2, verbose=verbose, rc=localrc)
+      (/'fast_detritus_C_at_soil_surface'/), ptr_f2, verbose=verbose, rc=localrc)
     if (localrc==0) ptr_f2 = fac_fdet * DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
 
     call mossco_state_get(exportState, &
-        (/'slow_detritus_C_at_soil_surface'/), ptr_f2, verbose=verbose, rc=localrc)
+      (/'slow_detritus_C_at_soil_surface'/), ptr_f2, verbose=verbose, rc=localrc)
     if(localrc==0) ptr_f2 = fac_sdet * DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
 
-    call mossco_state_get(exportState,(/'fast_detritus_C_z_velocity_at_soil_surface'/), &
-        ptr_f2, verbose=verbose, rc=localrc)
+    call mossco_state_get(exportState, &
+      (/'fast_detritus_C_z_velocity_at_soil_surface'/), &
+      ptr_f2, verbose=verbose, rc=localrc)
     if (localrc==0) ptr_f2 = sinking_factor * fac_env * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
     call mossco_state_get(exportState,(/'slow_detritus_C_z_velocity_at_soil_surface'/), &
         ptr_f2, verbose=verbose, rc=localrc)
     if (localrc==0) ptr_f2 = sinking_factor * fac_env * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
 
-      !> check for Detritus-P and calculate flux either N-based
-      !> or as present through the Detritus-P pool
+    !> check for Detritus-P and calculate flux either N-based
+    !> or as present through the Detritus-P pool
     call mossco_state_get(exportState,(/'detritus-P_at_soil_surface'/), &
         ptr_f2, verbose=verbose, rc=localrc)
     call mossco_state_get(importState,(/ &
@@ -415,60 +421,162 @@ module pelagic_soil_connector
         ptr_f2 = sinking_factor * fac_env * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
     end if
 
-      ! DIM concentrations:
-
-    call mossco_state_get(importState,(/'nitrate_in_water'/), &
-        nit,ubnd=ubnd,lbnd=lbnd, verbose=verbose, rc=nitrc)
-    if (nitrc /= 0) then
-        call mossco_state_get(importState,(/ &
-              'nutrients_in_water                            ', &
-              'DIN_in_water                                  ', &
-              'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water'/), &
-              DIN,lbnd=lbnd,ubnd=ubnd, verbose=verbose, rc=localrc)
-    end if
-    call mossco_state_get(importState,(/ &
-        'ammonium_in_water              ', &
-        'dissolved_ammonium_nh3_in_water'/), &
-        amm,lbnd=AMMlbnd,ubnd=AMMubnd, verbose=verbose, rc=ammrc)
-
-    call ESMF_StateGet(exportState,'mole_concentration_of_ammonium_at_soil_surface',field,rc=localrc)
+    ! Dissolved inorganic matter, i.e. nitrate, ammonium or DIN
+    call MOSSCO_StateGet(importState, fieldList, itemSearchList= (/ &
+      'nitrate_in_water'/), &
+      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
-    call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f2,rc=localrc)
+    if (fieldCount > 0) then
+      hasNitrate = .true.
+      call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=lbnd, &
+        exclusiveUBound=ubnd, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+      call ESMF_FieldGet(fieldList(1), farrayPtr=nit, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+      write(message,'(A)') trim(name)//' obtains DIN from '
+      call MOSSCO_FieldString(fieldList(1), message)
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    endif
+
+    call MOSSCO_StateGet(importState, fieldList, itemSearchList= (/ &
+    'nutrients_in_water                            ', &
+    'DIN_in_water                                  ', &
+    'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water'/), &
+      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
-    if (ammrc == 0) then
-        ptr_f2 = amm(AMMlbnd(1):AMMubnd(1),AMMlbnd(2):AMMubnd(2),AMMlbnd(3))
+    if (fieldCount > 0) then
+      hasDIN = .true.
+      call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=lbnd, &
+        exclusiveUBound=ubnd, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+      call ESMF_FieldGet(fieldList(1), farrayPtr=din, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+      write(message,'(A)') trim(name)//' obtains DIN from '
+      call MOSSCO_FieldString(fieldList(1), message)
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    endif
+
+    call MOSSCO_StateGet(importState, fieldList, itemSearchList= (/ &
+      'ammonium_in_water              ', &
+      'dissolved_ammonium_nh3_in_water'/), &
+      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+    if (fieldCount > 0) then
+      hasAmmonium = .true.
+      call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=AMMlbnd, &
+        exclusiveUBound=AMMubnd, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+      call ESMF_FieldGet(fieldList(1), farrayPtr=amm, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+      write(message,'(A)') trim(name)//' obtains ammonium from '
+      call MOSSCO_FieldString(fieldList(1), message)
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    endif
+
+    ! Get mandatory ammonium field from export State and save either
+    ! the pelagic ammonium (if present) or ammonium derived from combinations
+    ! of NO3 and DIN
+
+    call MOSSCO_StateGet(exportState, fieldList, &
+      itemSearch='mole_concentration_of_ammonium_at_soil_surface', &
+      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+    if (fieldCount /= 1) then
+      write(message,'(A,I1)') 'Expected exactly one complete field for mole_concentration_of_ammonium_at_soil_surface, received ',fieldCount
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      rc = ESMF_RC_ARG_BAD
+      return
+    endif
+
+    call ESMF_FieldGet(fieldList(1), localde=0, farrayPtr=ptr_f2, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+    if (hasAmmonium) then
+      ptr_f2 = amm(AMMlbnd(1):AMMubnd(1),AMMlbnd(2):AMMubnd(2),AMMlbnd(3))
+    elseif (hasDIN .and. hasNitrate) then
+      ptr_f2 = din(RANGE2D,lbnd(3)) - nit(RANGE2D,lbnd(3))
+    elseif (hasDIN) then
+      ptr_f2 = 0.5d0 * DIN(RANGE2D,lbnd(3))
+    elseif (hasNitrate) then
+      ptr_f2 = nit(RANGE2D,lbnd(3))
     else
-        ptr_f2 = 0.5d0 * DIN(RANGE2D,lbnd(3))
+      write(message,'(A)') trim(name)//' did not receive any information on nitrogen'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
     end if
-    call ESMF_StateGet(exportState,'mole_concentration_of_nitrate_at_soil_surface', field, rc=localrc)
+
+    ! Get mandatory nitrate field from export State and save either
+    ! pelagic nitrate (if present) or nitrate derived from DIN and/or NH4
+
+    call ESMF_StateGet(exportState, &
+      'mole_concentration_of_nitrate_at_soil_surface', field, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
-    call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f2,rc=localrc)
+    call ESMF_FieldGet(field, localde=0, farrayPtr=ptr_f2, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
-    if (nitrc == 0) then
-        ptr_f2 = nit(RANGE2D,lbnd(3))
+    if (hasNitrate) then
+      ptr_f2 = nit(RANGE2D,lbnd(3))
+    elseif (hasAmmonium .and. hasDIN) then
+      ptr_f2 = din(RANGE2D,lbnd(3)) &
+        - amm(AMMlbnd(1):AMMubnd(1),AMMlbnd(2):AMMubnd(2),AMMlbnd(3))
+    elseif (hasDIN) then
+      ptr_f2 = 0.5d0 * DIN(RANGE2D,lbnd(3))
+    elseif (hasAmmonium) then
+      ptr_f2 = amm(AMMlbnd(1):AMMubnd(1),AMMlbnd(2):AMMubnd(2),AMMlbnd(3))
     else
-        if (ammrc == 0) then
-          ptr_f2 = DIN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))-amm(AMMlbnd(1):AMMubnd(1),AMMlbnd(2):AMMubnd(2),AMMlbnd(3))
-        else
-          ptr_f2 = 0.5d0 * DIN(RANGE2D,lbnd(3))
-        end if
+      write(message,'(A)') trim(name)//' did not receive any information on nitrogen'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
     end if
 
     !> check for DIP, if present, take as is, if not calculate it N-based
-    call mossco_state_get(importState,(/ &
-          'DIP_in_water                                    ', &
-          'phosphate_in_water                              ', &
-          'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water'/), &
-          DIP,lbnd=Plbnd,ubnd=Pubnd, verbose=verbose, rc=localrc)
-    if (localrc /= 0) then
-        if (.not.(associated(DIP))) allocate(DIP(RANGE2D,1))
-        DIP(RANGE2D,1) = 1.0d0/16.0d0 * DIN(RANGE2D,lbnd(3))
-        Plbnd(3)=1
-    end if
+    !> with Redfield Stoichiometry
+    call MOSSCO_StateGet(importState, fieldList, itemSearchList= (/ &
+      'DIP_in_water                                    ', &
+      'phosphate_in_water                              ', &
+      'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water'/), &
+      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+    if (fieldCount > 0) then
+      call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=Plbnd, &
+        exclusiveUBound=Pubnd, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+      call ESMF_FieldGet(fieldList(1), farrayPtr=dip, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+      write(message,'(A)') trim(name)//' obtains phosphorous from '
+      call MOSSCO_FieldString(fieldList(1), message)
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    else
+      if (.not.(associated(din))) then
+        allocate(din(RANGE2D,lbnd(3)))
+        if (hasAmmonium .and. hasNitrate) then
+          din(RANGE2D,lbnd(3)) = nit(RANGE2D,lbnd(3)) &
+            + amm(AMMlbnd(1):AMMubnd(1),AMMlbnd(2):AMMubnd(2),AMMlbnd(3))
+        elseif (hasAmmonium) then
+          din(RANGE2D,lbnd(3)) = 2 *  &
+            + amm(AMMlbnd(1):AMMubnd(1),AMMlbnd(2):AMMubnd(2),AMMlbnd(3))
+        else
+          din(RANGE2D,lbnd(3)) = 2 * nit(RANGE2D,lbnd(3))
+        endif
+      endif
+
+      if (.not.(associated(dip))) allocate(dip(RANGE2D,1))
+
+      dip(RANGE2D,1) = 1.0d0/16.0d0 * DIN(RANGE2D,lbnd(3))
+      Plbnd(3)=1
+    endif
 
     call ESMF_StateGet(exportState,'mole_concentration_of_phosphate_at_soil_surface', field, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
@@ -477,6 +585,9 @@ module pelagic_soil_connector
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
     ptr_f2 = DIP(RANGE2D,Plbnd(3))
+
+    call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
     call MOSSCO_CompExit(cplComp, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
