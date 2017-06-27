@@ -428,8 +428,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         call ESMF_AttributeSet(exportState, 'netcdf_id', nc%ncid, rc=localrc)
         call ESMF_AttributeSet(exportState, 'netcdf_file_name', &
           trim(fileName), rc=localrc)
-      !else
-        !nc = mossco_netcdfOpen(fileName, timeUnit=timeUnit, !state=importState, rc=localrc)
+      else
+        nc = mossco_netcdfOpen(fileName, timeUnit=timeUnit, state=importState, rc=localrc)
       end if
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -550,7 +550,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           write(message,'(A)') trim(name)//' not implemented saving item '//trim(itemNameList(i))
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         endif
-
     enddo
 
       !> Remove from import state all fields, whether written or not, ensure that all processes have
@@ -595,7 +594,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      !call nc%close()
+      call nc%close()
     endif
 
     if (allocated(itemTypeList)) deallocate(itemTypeList)
