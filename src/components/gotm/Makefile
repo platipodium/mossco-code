@@ -1,7 +1,7 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hzg.de
 # @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
 # @author Knut Klingbeil, Institut für Ostseeforschung Warnemünde
 #
@@ -36,7 +36,8 @@ all: $(TARGETS)
 
 libmossco_gotm: prefix libgotm_external libmossco_util \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_gotm.a(gotm_component.o) \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_gotm.a(gotm_transport_component.o)
+	$(MOSSCO_LIBRARY_PATH)/libmossco_gotm.a(gotm_transport_component.o) \
+	$(MOSSCO_MODULE_PATH)/gotm_component.mod
 
 libmossco_fabmgotm: prefix libmossco_fabmgotm_driver \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_fabmgotm.a(fabm_gotm_component.o)
@@ -47,6 +48,11 @@ libmossco_gotmfabm: prefix libmossco_fabmpelagic libmossco_gotm libmossco_fabmgo
 gotm_component.o: gotm_component.F90
 	@echo "Compiling $<"
 	$(F90) $(GOTM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
+
+$(MOSSCO_MODULE_PATH)/gotm_component.mod: gotm_component.F90
+	@echo "Compiling $<"
+	$(F90) $(GOTM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o gotm_component.o
+
 
 gotm_transport_component.o: gotm_transport_component.F90
 	@echo "Compiling $<"
