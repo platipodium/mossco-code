@@ -129,7 +129,9 @@ module netcdf_component
 
     character(len=ESMF_MAXSTR) :: name, configFileName, fileName
     character(len=4096)        :: message
-    type(ESMF_Time)            :: currTime
+    character(len=ESMF_MAXSTR) :: timeString, timeUnit
+    type(ESMF_Time)            :: currTime, refTime
+    type(ESMF_Clock)           :: clock
     integer(ESMF_KIND_I4)      :: localrc
     logical                    :: fileIsPresent, configIsPresent, labelIsPresent
     type(ESMF_Config)          :: config
@@ -143,6 +145,7 @@ module netcdf_component
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
       importState=importState, exportState=exportState, rc=localrc)
+
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -267,6 +270,32 @@ module netcdf_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_AttributeSet(importState, 'filename', trim(fileName), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_ClockGet(clock, refTime=refTime, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_TimeGet(refTime, timeStringISOFrac=timeString, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    write(timeUnit,'(A)') 'seconds since '//timeString(1:10)//' '//timestring(12:len_trim(timestring))
+
+    nc = mossco_netcdfCreate(fileName, timeUnit=timeUnit, state=importState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeSet(exportState, 'netcdf_id', nc%ncid, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeSet(exportState, 'netcdf_file_name', trim(fileName), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -423,14 +452,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (currTime == startTime) then
-        nc = mossco_netcdfCreate(fileName, timeUnit=timeUnit, state=importState, rc=localrc)
-        call ESMF_AttributeSet(exportState, 'netcdf_id', nc%ncid, rc=localrc)
-        call ESMF_AttributeSet(exportState, 'netcdf_file_name', &
-          trim(fileName), rc=localrc)
-      else
-        nc = mossco_netcdfOpen(fileName, timeUnit=timeUnit, state=importState, rc=localrc)
-      end if
+      nc=mossco_netcdfCreate(fileName, timeUnit=timeUnit, state=importState, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -659,7 +681,7 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call nc%close(rc=localrc)
+    !call nc%close(rc=localrc)
 
     call ESMF_GridCompGet(gridComp, configIsPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
