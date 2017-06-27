@@ -4,7 +4,7 @@
 # Script to convert a netcdf file with one-dimensional lon and lat coordinate
 # variable to a SCRIP file. This  script is part of MOSSCO
 #
-# @copyright (C) 2016 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2016,2017 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -106,12 +106,51 @@ def convert2scrip(basename):
 
     nc.close()
 
+def add2scrip(basename,variables):
+
+    nc = netCDF4.Dataset(basename, 'r')
+    ncv = nc.variables
+    lon = np.squeeze(ncv['lon'][:])
+    lat = np.squeeze(ncv['lat'][:])
+
+    nx = lon.size
+    ny = lat.size
+
+    ncfile = re.sub('.nc', '', basename) + '_scrip.nc'
+    ncout = netCDF4.Dataset(ncfile, 'a', format='NETCDF3_CLASSIC')
+
+    for v in variables.split(','):
+
+        if v not in ncv: continue
+        if v in ncout.variables.keys(): continue
+
+        print '  Adding variable '
+
+        if '_FillValue' in ncv[v].ncattrs(): fillValue = ncv[v]._FillValue
+        else: fillValue =1E20
+
+        var = ncout.createVariable(v,'f4',('grid_size'), fill_value=fillValue)
+
+        for att in ncv[v].ncattrs():
+            var.setncattr(att,ncv[v].getncattr(att))
+
+        var[:] = np.reshape(ncv[v][:], nx * ny,  order='F')
+
+    ncout.close()
+    nc.close()
+
+
 if __name__ == '__main__':
 
     if (len(sys.argv) > 1):
         basename = sys.argv[1]
-
     else:
         basename = '/Volumes/Kea/data/remo/REMO-200303.nc'
 
     convert2scrip(basename)
+
+    # There should not be any user data in a SCRIP file, so this is commented out
+    #if (len(sys.argv) > 2):
+    #    basename = sys.argv[1]
+    #    variables=sys.argv[2]
+    #    add2scrip(basename, variables)
