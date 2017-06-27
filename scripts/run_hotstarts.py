@@ -4,7 +4,8 @@
 # generic MOSSCO examples.
 #
 # @copyright (C) 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
-# @author Richard Hofmeister, Carsten Lemmen
+# @author Richard Hofmeister <richard.hofmeister@hzg.de>
+# @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -18,7 +19,7 @@ import glob
 from datetime import datetime,timedelta
 
 start = '2003-01-01 01:00:00' # time to start/restart the simulation
-stop  = '2003-01-01 02:00:00'
+stop  = '2003-01-01 05:00:00'
 init  = '2003-01-01 00:00:00' # time for initialization without hotstart
 
 number_of_processors = 2
@@ -104,6 +105,7 @@ def create_mossco_run(start,stop):
  title = '%s',
  start = '%s',
  stop= '%s',
+ loglevelzero = 'all',
  loglevel = 'all',
  logflush = .true.,
 /
@@ -131,7 +133,7 @@ while Tcurr<Tstop:
   if Tnext>Tstop:
     Tnext = Tstop
 
-  print("run_hotstart.py: run from %s to %s"%(Tcurr.strftime(tformat),Tnext.strftime(tformat)))
+  print("%s: run from %s to %s"%(sys.argv[0],Tcurr.strftime(tformat),Tnext.strftime(tformat)))
 
   # prepare filesystem
   outdir = '%s/hot_%03d'%(output_directory,i)
@@ -140,11 +142,11 @@ while Tcurr<Tstop:
     print('Could not create directory %s'%(outdir))
     quit()
 
-  print("run_hotstart.py: created output directory %s"%(outdir))
+  print("%s: created output directory %s"%(sys.argv[0],outdir))
 
   # write mossco_run.nml
   create_mossco_run(Tcurr,Tnext)
-  print("run_hotstart.py: created mossco_run.nml")
+  print("%s: created mossco_run.nml"%(sys.argv[0]))
   rc=os.system('cp mossco_run.nml %s'%outdir)
   if (rc != 0):
     print('Could not copy mossco_run.nml')
@@ -158,28 +160,28 @@ while Tcurr<Tstop:
     quit()
 
   # set common GETM parameters:
-  replace_line('getm.inp',' out_dir =',"out_dir = '%s'"%outdir)
+  replace_line('getm.inp',' out_dir =',"out_dir = '%s',"%outdir)
 
   # set restart filename for fabm components in restart.cfg
   if Tcurr == Tinit and 'restart_directory' not in locals():
-    replace_line('getm.inp',' hotstart =','hotstart = .false.')
-    replace_line('getm.inp',' save_initial =','save_initial = .true.')
+    replace_line('getm.inp',' hotstart =','hotstart = .false.,')
+    replace_line('getm.inp',' save_initial =','save_initial = .true.,')
     rc=os.system('rm -f restart_soil.cfg restart_water.cfg')
-    print("run_hotstart.py: starting from initial conditions")
+    print("%s: starting from initial conditions"%(sys.argv[0]))
   else:
     if not(Tcurr == Tinit):
       if not(Tcurr == Tstart and 'restart_directory' in locals()):
         restart_directory = output_directory+'/hot_%03d'%(i-1)
-      print("run_hotstart.py: starting from restart directory")
+      print("%s: starting from restart directory"%(sys.argv[0]))
 
-    text = 'filename: %s/%s.nc\ninclude: *_in_soil\n'%(restart_directory,output_component)
+    text = 'filename: %s/%s.nc\ninclude: *_in_soil\ncheckFile: .true.\n'%(restart_directory,output_component)
     create_cfg('restart_soil.cfg',text)
     rc=os.system('cp restart_soil.cfg %s'%outdir)
     if (rc != 0):
       print('Could not restart_soil.cfg')
       quit()
 
-    text = 'filename: %s/%s.nc\ninclude: *_in_water\n'%(restart_directory,output_component)
+    text = 'filename: %s/%s.nc\ninclude: *_in_water\ncheckFile: .true.\n'%(restart_directory,output_component)
     create_cfg('restart_water.cfg',text)
     rc=os.system('cp restart_water.cfg %s'%outdir)
     if (rc != 0):
@@ -187,37 +189,36 @@ while Tcurr<Tstop:
       quit()
 
     # Do not spinup sediment in subsequent runs
-    replace_line('run_sed.nml','presimulation_years=','  presimulation_years = 0')
-    replace_line('run_sed.nml','presimulation_years =','  presimulation_years = 0')
+    replace_line('run_sed.nml','presimulation_years=','  presimulation_years = 0,')
+    replace_line('run_sed.nml','presimulation_years =','  presimulation_years = 0,')
 
     # prepare GETM's namelists:
     if (hotstart_getm_at_start or not(Tcurr == Tstart)):
-      print('run_hotstar.py: restart GETM from hotstart files')
+      print('%s: restart GETM from hotstart files'%(sys.argv[0]))
       print(Tcurr)
       print(Tstart)
       print(hotstart_getm_at_start)
-      replace_line('getm.inp',' hotstart =','hotstart = .true.')
-      replace_line('getm.inp',' save_initial =','save_initial = .false.')
+      replace_line('getm.inp',' hotstart =','hotstart = .true.,')
+      replace_line('getm.inp',' save_initial =','save_initial = .false.,')
       # copy GETM's restart files
       rc=os.system('cd %s; for f in `ls restart*.out`; do cp ${f} %s/${f%%\\.out}.in; done'%(restart_directory,outdir))
       if (rc != 0):
         print('Could not copy getm restart files from %s to %s'%(restart_directory,outdir))
         quit()
     else:
-      replace_line('getm.inp',' hotstart =','hotstart = .false.')
-      replace_line('getm.inp',' save_initial =','save_initial = .true.')
+      replace_line('getm.inp',' hotstart =','hotstart = .false.,')
+      replace_line('getm.inp',' save_initial =','save_initial = .true.,')
 
   os.system('cp getm.inp run_sed.nml %s'%outdir)
+
   # run MOSSCO
-  print('calling "mossco  -w 10 -t %s -n%d %s"'%(runid,number_of_processors,mossco_example))
-  rc=os.system('mossco  -w 10 -t %s -n%d %s'%(runid,number_of_processors,mossco_example))
-  # print rc
+  print('calling "mossco  -sF -t %s -n%d %s"'%(runid,number_of_processors,mossco_example))
+  rc=os.system('mossco  -sF -t %s -n%d %s'%(runid,number_of_processors,mossco_example))
 
   # move PET and stderr/stdout log files
   rc=os.system('grep -q .F90 *%s*.stderr'%(runid))
   if (rc != 0):
     print('Error detected in stderr files. Try "grep -q .F90 *%s*.stderr"'%(runid))
-  #  quit()
 
   rc=os.system('mv *%s*.std??? %s'%(runid, outdir))
   if (rc != 0):
