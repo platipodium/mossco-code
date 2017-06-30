@@ -331,7 +331,7 @@ subroutine MOSSCO_FieldCopy(to, from, rc)
     call ESMF_FieldGet(from, localDe=0,  farrayPtr=fromFarrayPtr1, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_FieldGet(from, localDe=0,  farrayPtr=toFarrayPtr1, rc=localrc)
+    call ESMF_FieldGet(to, localDe=0,  farrayPtr=toFarrayPtr1, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     toFarrayPtr1(toLbnd(1):toUbnd(1)) = fromFarrayPtr1(fromLbnd(1):fromUbnd(1))
@@ -339,7 +339,7 @@ subroutine MOSSCO_FieldCopy(to, from, rc)
     call ESMF_FieldGet(from, localDe=0,  farrayPtr=fromFarrayPtr2, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_FieldGet(from, localDe=0,  farrayPtr=toFarrayPtr2, rc=localrc)
+    call ESMF_FieldGet(to, localDe=0,  farrayPtr=toFarrayPtr2, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     toFarrayPtr2(toLbnd(1):toUbnd(1),toLbnd(2):toUbnd(2)) &
@@ -348,7 +348,7 @@ subroutine MOSSCO_FieldCopy(to, from, rc)
     call ESMF_FieldGet(from, localDe=0,  farrayPtr=fromFarrayPtr3, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_FieldGet(from, localDe=0,  farrayPtr=toFarrayPtr3, rc=localrc)
+    call ESMF_FieldGet(to, localDe=0,  farrayPtr=toFarrayPtr3, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     toFarrayPtr3(toLbnd(1):toUbnd(1),toLbnd(2):toUbnd(2),toLbnd(3):toUbnd(3)) &
@@ -363,7 +363,7 @@ subroutine MOSSCO_FieldCopy(to, from, rc)
   if (allocated(fromUbnd)) deallocate(fromUbnd)
   if (allocated(toUbnd))   deallocate(toUbnd)
   if (allocated(fromLbnd)) deallocate(fromLbnd)
-  if (allocated(toLbnd)) deallocate(toLbnd)
+  if (allocated(toLbnd))   deallocate(toLbnd)
 
   if (present(rc)) rc = rc_
 
