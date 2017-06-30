@@ -406,8 +406,8 @@ module erosed_component
     allocate (v_bot     (nmlb:nmub))
 
     allocate (taub      (nmlb:nmub))
-    allocate (taubn      (nmlb:nmub))
-    allocate (eq_conc     (nmlb:nmub))
+    allocate (taubn     (nmlb:nmub))
+    allocate (eq_conc   (nmlb:nmub))
     allocate (ws        (nfrac,nmlb:nmub))
     !
     if (bedmodel) then
@@ -554,8 +554,8 @@ module erosed_component
     v_bot   = 0.0_fp        ! flow velocity in v-direction at (center of the ) bottm cell
 
     taub    = 0.0_fp
-    taubn    = 0.0_fp
-    eq_conc =0.0_fp
+    taubn   = 0.0_fp
+    eq_conc = 0.0_fp
 #ifdef DEBUG
     ! Open file for producing output
 !   call ESMF_UtilIOUnitGet(unit707, rc = localrc)
@@ -1191,7 +1191,7 @@ module erosed_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    integer(ESMF_KIND_I4) :: localrc, rc_, i, j
+    integer(ESMF_KIND_I4) :: localrc, rc_, i, j, n
     logical               :: isPresent
     type(ESMF_Clock)      :: clock
     type(ESMF_Time)       :: currTime
@@ -1201,7 +1201,8 @@ module erosed_component
     integer(ESMF_KIND_I4)                       :: importFieldCount, exportFieldCount
     integer(ESMF_KIND_I4), dimension(3)         :: ubnd, lbnd
     real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr3
-
+    real(ESMF_KIND_R8), dimension(nfrac)        :: total_sediment_mass, total_mass, diff_mass
+    
     rc=ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, clock, name=name, currTime=currTime, importState=importState, &
@@ -1212,6 +1213,96 @@ module erosed_component
     ! Currently, this is a 2D gridded field with an additional 3rd dimension
     ! to describe the nfrac sediment fractions.  This could also come as
     ! a fieldBundle in the future.
+
+    call MOSSCO_StateGetFieldList(importState, importFieldList, fieldCount=importFieldCount, &
+      itemSearch='sediment_mass_in_bed', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (importFieldCount < 1) then
+      write(message, '(A)') trim(name)//' did not hotstart'
+      call MOSSCO_FieldString(importFieldList(1), message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      if (allocated(importFieldList)) deallocate(importFieldList)
+      call MOSSCO_CompExit(gridComp, localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      return
+    endif
+
+    if (importFieldCount > 1) then
+      write(message, '(A)') trim(name)//' cannot handle more than one field with sediment mass'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      if (allocated(importFieldList)) deallocate(importFieldList)
+      rc = ESMF_RC_NOT_IMPL
+      return
+    endif
+
+    call ESMF_FieldGet(importFieldList(1), farrayPtr=sediment_mass, exclusiveLBound=lbnd, &
+      exclusiveUBound=ubnd, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    total_sediment_mass = 0.0
+    do n=1,nfrac
+      do j=lbnd(2),ubnd(2)
+        do i=lbnd(1),ubnd(1)
+          if (mask(i,j)>0) total_sediment_mass(n) = total_sediment_mass(n) + sediment_mass(i,j,n)
+        enddo
+      enddo
+    enddo
+
+!     write(message, '(A,9e20.10)') ' total_sediment_mass_in_bed(in): ', total_sediment_mass
+!     call MOSSCO_FieldString(importFieldList(1), message)
+!     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    !>@ todo proper bound checking is required here, the following is certainly wrong !MK:statement still valid??
+
+    mass = 0.0
+    do j=0,ubnd(2)-lbnd(2)
+      do i=0, ubnd(1)-lbnd(1)
+        if (mask(lbnd(1)+i,lbnd(2)+j)>0) then
+          mass(:,inum*(j) + i + 1) = sediment_mass(lbnd(1)+i,lbnd(2)+j,:)
+
+!           if (lbnd(1)+i==30 .and. lbnd(2)+j==30) then
+!             write(message, '(A,3e20.10)') ' mass_in_bed(30,30): ', mass(:,inum*(j) + i + 1)
+!             call MOSSCO_FieldString(importFieldList(1), message)
+!             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+!           endif
+
+        endif
+      end do
+    end do
+
+    do n=1,nfrac
+      total_mass(n) = sum(mass(n,:))
+      diff_mass(n) = total_mass(n)-total_sediment_mass(n)
+    enddo
+
+!     write(message, '(A,9e20.10)') ' total_mass_in_bed(in): ', total_mass
+!     call MOSSCO_FieldString(importFieldList(1), message)
+!     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+!     write(message, '(A,9e20.10)') ' diff_mass_in_bed(in): ', diff_mass
+!     call MOSSCO_FieldString(importFieldList(1), message)
+!     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    if (sum(diff_mass)>1e-6) then
+      write(message, '(A,9e20.10)') ' restart mass budget violation: diff= ', sum(diff_mass)
+      call MOSSCO_FieldString(importFieldList(1), message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    do n=1,nfrac
+      if (total_mass(n)<1e-6) then
+        write(message, '(A,i2.2,A)') ' sediment_mass_in_bed for fraction ',n,' initialized to ZERO '
+        call MOSSCO_FieldString(importFieldList(1), message)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      endif
+    enddo
+!     do n=1,nfrac
+!         write(message, '(A,i2.2,A,e20.10)') ' sediment_mass_in_bed for fraction ',n,' initialized with ',total_mass(n)
+!         call MOSSCO_FieldString(importFieldList(1), message)
+!         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+!     enddo
 
     call MOSSCO_StateGetFieldList(exportState, exportFieldList, fieldCount=exportFieldCount, &
       itemSearch='sediment_mass_in_bed', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
@@ -1230,47 +1321,13 @@ module erosed_component
       return
     endif
 
-    call MOSSCO_StateGetFieldList(importState, importFieldList, fieldCount=importFieldCount, &
-      itemSearch='sediment_mass_in_bed', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    if (importFieldCount < 1) then
-      write(message, '(A)') trim(name)//' did not hotstart'
-      call MOSSCO_FieldString(exportFieldList(1), message)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      if (allocated(exportFieldList)) deallocate(exportFieldList)
-      if (allocated(importFieldList)) deallocate(importFieldList)
-      call MOSSCO_CompExit(gridComp, localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      return
-    endif
-
-    if (importFieldCount > 1) then
-      write(message, '(A)') trim(name)//' cannot handle more than one field with sediment mass'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      if (allocated(exportFieldList)) deallocate(exportFieldList)
-      if (allocated(importFieldList)) deallocate(importFieldList)
-      rc = ESMF_RC_NOT_IMPL
-      return
-    endif
-
     call MOSSCO_FieldCopy(exportfieldList(1), importFieldList(1), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_FieldGet(exportFieldList(1), farrayPtr=sediment_mass, exclusiveLBound=lbnd, &
-      exclusiveUBound=ubnd, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    !>@ todo proper bound checking is required here, the following is certainly wrong
-
-    do j=0,ubnd(2)-lbnd(2)
-      do i=0, ubnd(1)-lbnd(1)
-        mass(:,inum*(j) + i + 1) = sediment_mass(lbnd(1)+i,lbnd(2)+j,:)
-      end do
-    end do
 
     write(message, '(A)') trim(name)//' restarted '
-    call MOSSCO_FieldString(exportFieldList(1), message)
+    call MOSSCO_FieldString(importFieldList(1), message)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     if (allocated(exportFieldList)) deallocate(exportFieldList)
