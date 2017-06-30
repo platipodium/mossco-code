@@ -127,6 +127,7 @@ module fabm_pelagic_component
     call ESMF_AttributeAdd(gridComp, convention="NUOPC", purpose="General", &
       attrList=(/"InitializePhaseMap"/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
     call ESMF_AttributeSet(gridComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
       convention="NUOPC", purpose="General", rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -440,7 +441,6 @@ module fabm_pelagic_component
         totalLWidth2(:,1)=0
         totalUWidth2(:,1)=0
       endif
-
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       inum=maxIndex(1)
@@ -476,6 +476,7 @@ module fabm_pelagic_component
 
     call ESMF_DistGridGet(distGrid_3D,delayout=delayout)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
     call ESMF_DELayoutGet(delayout,deCount=deCount)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -486,9 +487,9 @@ module fabm_pelagic_component
     call ESMF_DistGridGet(distGrid_3D,minIndexPDe=minIndexPDe, &
                                       maxIndexPDe=maxIndexPDe)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
     deBlockList(:,1,:) = minIndexPDe
     deBlockList(:,2,:) = maxIndexPDe
-
     distGrid_2D = ESMF_DistGridCreate(minval(deBlockList(1:2,1,:),2), &
                                       maxval(deBlockList(1:2,2,:),2), &
                                       int(deBlockList(1:2,:,:)),      &
@@ -507,6 +508,7 @@ module fabm_pelagic_component
       if (coordDimCount(n) .eq. 1) then
         call ESMF_GridGetCoord(state_grid, staggerloc=ESMF_STAGGERLOC_CENTER, coorddim=n, farrayptr=coord1d, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
         distgridToArrayMap = 0
         distgridToArrayMap(n) = 1
         array = ESMF_ArrayCreate(distGrid_2D,coord1d,indexflag=ESMF_INDEX_DELOCAL,distgridToArrayMap=distgridToArrayMap, rc=localrc)
@@ -525,6 +527,7 @@ module fabm_pelagic_component
       else
         call ESMF_GridGetCoord(state_grid, staggerloc=ESMF_STAGGERLOC_CENTER, coorddim=n, farrayptr=coord2d, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
         array = ESMF_ArrayCreate(distGrid_2D,coord2d,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 #if 0
@@ -562,6 +565,7 @@ module fabm_pelagic_component
     !! re-allocate state variables
     call ESMF_GridGetFieldBounds(state_grid,totalubound=ubnd3,totallbound=lbnd3,rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
     allocate(pel%conc(1-totalLWidth3(1,1):inum+totalUWidth3(1,1), &
                       1-totalLWidth3(2,1):jnum+totalUWidth3(2,1), &
                       1-totalLWidth3(3,1):numlayers+totalUWidth3(3,1), &
@@ -637,29 +641,19 @@ module fabm_pelagic_component
                        staggerloc=ESMF_STAGGERLOC_CENTER,rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_AttributeSet(concfield,'creator', trim(name), rc=localrc)
+      call ESMF_AttributeSet(concfield, 'creator', trim(name), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       !! when memory is allocated, set pel%export_states(n)%conc to the values?
 
-      !> create empty fields for restarts
-      restartField = ESMF_FieldEmptyCreate(name=trim(varname),rc=localrc)
+      write(message,'(A)') trim(name)//' created field '
+      call MOSSCO_FieldString(concfield, message)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+      !> add fabm index in concentration array as "external_index" to be used by other components
+      call ESMF_AttributeSet(concfield, 'external_index', int(pel%export_states(n)%fabm_id,ESMF_KIND_I8))
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_AttributeSet(restartField,'creator', trim(name), rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      call ESMF_AttributeSet(restartField,'units',trim(pel%export_states(n)%units))
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      call ESMF_FieldEmptySet(restartField, state_grid, &
-        staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      call ESMF_StateAddReplace(importState,(/restartField/),rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      !> continue with statefield
-      call ESMF_AttributeSet(concfield,'units',trim(pel%export_states(n)%units))
+      call ESMF_AttributeSet(concfield, 'units', trim(pel%export_states(n)%units))
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_AttributeGet(exportState, trim(name)//'::dt', dt, rc=localrc)
@@ -667,6 +661,24 @@ module fabm_pelagic_component
 
       call ESMF_AttributeSet(concfield, 'integration_timestep', dt, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      !> create empty fields for restarts
+      restartField = ESMF_FieldEmptyCreate(name=trim(varname),rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_AttributeSet(restartField, 'creator', trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_AttributeSet(restartField, 'units', trim(pel%export_states(n)%units))
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_FieldEmptySet(restartField, state_grid, &
+        staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message,'(A)') trim(name)//' created importField '
+      call MOSSCO_FieldString(restartField, message)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
       !> Find all attributes in this state variable and add them to MOSSCO
       itemCount =  pel%model%state_variables(n)%properties%size()
@@ -727,40 +739,38 @@ module fabm_pelagic_component
       case default
       end select
 
-      !> add fabm index in concentration array as "external_index" to be used by other components
-      call ESMF_AttributeSet(concfield, 'external_index', int(pel%export_states(n)%fabm_id,ESMF_KIND_I8))
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
       wsfield = ESMF_FieldCreate(state_grid,typekind=ESMF_TYPEKIND_R8, &
                        name=trim(wsname), &
                        totalLWidth=totalLWidth3(:,1),totalUWidth=totalUWidth3(:,1), &
                        staggerloc=ESMF_STAGGERLOC_CENTER,rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      call ESMF_AttributeSet(wsfield,'creator', trim(name), rc=localrc)
+      call ESMF_AttributeSet(wsfield, 'creator', trim(name), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message,'(A)') trim(name)//' created field '
+      call MOSSCO_FieldString(wsfield, message)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
       !> add fabm index in concentration array as "external_index" to be used by other components
       call ESMF_AttributeSet(wsfield, 'external_index', int(pel%export_states(n)%fabm_id,ESMF_KIND_I8))
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_AttributeSet(wsfield,'units','m s-1')
+      call ESMF_AttributeSet(wsfield, 'units', 'm s-1')
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       call ESMF_FieldGet(field=wsfield, localDe=0, farrayPtr=pel%export_states(n)%ws, &
                      totalLBound=lbnd3,totalUBound=ubnd3, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       pel%export_states(n)%ws = 0.0d0
 
-      write(message,'(A)') trim(name)//' created field '
-      call MOSSCO_FieldString(wsfield, message)
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-
-      !> add to state depending on existing items
+      !> add to state depending on existing export items
       call ESMF_StateGet(exportState, trim(varname), itemType, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (itemType == ESMF_STATEITEM_NOTFOUND) then
+
         call ESMF_StateAddReplace(exportState,(/concfield,wsfield/),rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
       else if (itemType ==ESMF_STATEITEM_FIELD) then
       !> if field present, remove from state, create bundle, add fields
         call ESMF_StateGet(exportState,trim(varname),field,rc=localrc)
@@ -772,8 +782,19 @@ module fabm_pelagic_component
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         call ESMF_AttributeSet(fieldBundle,'creator', trim(name), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        write(message,'(A)') trim(name)//' created fieldBundle '//trim(varname)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+        write(message,'(A)') '  moved '
+        call MOSSCO_FieldString(concfield, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+        write(message,'(A)') '  to '
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
         call ESMF_StateAddReplace(exportState,(/fieldBundle/),rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
 
         call ESMF_StateGet(exportState, trim(wsname), field, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -783,9 +804,19 @@ module fabm_pelagic_component
                 name=trim(wsname),   &
                 multiflag=.true.,rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        call ESMF_StateAddReplace(exportState,(/fieldBundle/),rc=localrc)
+        call ESMF_AttributeSet(fieldBundle, 'creator', trim(name), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        call ESMF_AttributeSet(fieldBundle,'creator', trim(name), rc=localrc)
+
+        write(message,'(A)') trim(name)//' created fieldBundle '//trim(wsname)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+        write(message,'(A)') '  moved '
+        call MOSSCO_FieldString(wsfield, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+        write(message,'(A)') '  to '
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+        call ESMF_StateAddReplace(exportState,(/fieldBundle/),rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       else if(itemType == ESMF_STATEITEM_FIELDBUNDLE) then
@@ -794,11 +825,81 @@ module fabm_pelagic_component
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         call ESMF_FieldBundleAdd(fieldBundle,(/concfield/),multiflag=.true.,rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        write(message,'(A)') '  added '//trim(varname)//' to fieldBundle '
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+
         call ESMF_StateGet(exportState,trim(wsname),fieldBundle,rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         call ESMF_FieldBundleAdd(fieldBundle,(/wsfield/),multiflag=.true.,rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        write(message,'(A)') '  added '//trim(wsname)//' to fieldBundle '
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
       end if
+
+      !> create empty fields for restarts
+      restartField = ESMF_FieldEmptyCreate(name=trim(varname),rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_AttributeSet(restartField, 'creator', trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_AttributeSet(restartField, 'units', trim(pel%export_states(n)%units))
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_FieldEmptySet(restartField, state_grid, &
+        staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message,'(A)') trim(name)//' created importField '
+      call MOSSCO_FieldString(restartField, message)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+      !> add to state depending on existing import items
+      call ESMF_StateGet(importState, trim(varname), itemType, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (itemType == ESMF_STATEITEM_NOTFOUND) then
+
+        call ESMF_StateAddReplace(importState,(/restartField/),rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      else if (itemType ==ESMF_STATEITEM_FIELD) then
+      !> if field present, remove from state, create bundle, add fields
+        call ESMF_StateGet(importState,trim(varname),field,rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        call ESMF_StateRemove(importState,(/ trim(varname) /),rc=localrc)
+        fieldBundle = ESMF_FieldBundleCreate(fieldlist=(/field,restartField/), &
+                name=trim(varname),   &
+                multiflag=.true.,rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        call ESMF_AttributeSet(fieldBundle,'creator', trim(name), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        write(message,'(A)') trim(name)//' created import fieldBundle '//trim(varname)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+        write(message,'(A)') '  moved '
+        call MOSSCO_FieldString(restartField, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+        write(message,'(A)') '  to '
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+        call ESMF_StateAddReplace(importState,(/fieldBundle/),rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      else if(itemType == ESMF_STATEITEM_FIELDBUNDLE) then
+      !> if fieldBundle, get the bundle and add field
+        call ESMF_StateGet(importState,trim(varname),fieldBundle,rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        call ESMF_FieldBundleAdd(fieldBundle,(/restartField/),multiflag=.true.,rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        write(message,'(A)') '  added '//trim(varname)//' to fieldBundle'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+      end if
+
     end do
 
     !> this will not work, is state_grid contains halo zones
@@ -964,7 +1065,6 @@ module fabm_pelagic_component
           else
             call ESMF_GridGetCoord(horizontal_grid, staggerloc=ESMF_STAGGERLOC_CENTER, &
               coorddim=k, farrayptr=coord2d, exclusiveLBound=lbnd2, exclusiveUBound=ubnd2,rc=localrc)
-
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
             ptr_f2(1:pel%inum,1:pel%jnum) = coord2d(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2))
@@ -1247,7 +1347,7 @@ module fabm_pelagic_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    character(len=ESMF_MAXSTR)  :: name,message,varname
+    character(len=ESMF_MAXSTR)  :: name, message, varname, component_name, creator_name
     type(ESMF_Time)             :: currTime
     integer                     :: localrc, n, rank, k
 
@@ -1260,6 +1360,7 @@ module fabm_pelagic_component
     integer(ESMF_KIND_I4)          :: fieldCount
     integer(ESMF_KIND_I8)          :: external_index
     type(ESMF_Field),dimension(:),allocatable :: fieldList
+    character(len=ESMF_MAXSTR), dimension(:),allocatable :: fieldName
     logical                        :: foundItem=.false.
 
     rc=ESMF_SUCCESS
@@ -1267,6 +1368,11 @@ module fabm_pelagic_component
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_StateGet(importState, name=component_name, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    write(message,'(A)') trim(name)//' scan for variables in component '//trim(component_name)
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
     !> browse through list of state variables and
     !! copy data from importState fields with same name
@@ -1276,25 +1382,57 @@ module fabm_pelagic_component
       call ESMF_StateGet(importState, trim(varname), itemType=itemType, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (itemType == ESMF_STATEITEM_FIELDBUNDLE) then
+      if (itemType == ESMF_STATEITEM_NOTFOUND) then
+        write(message,'(2x,''('',i2.2,'') '',A)') n, trim(varname)//' has itemType ESMF_STATEITEM_NOTFOUND'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+        cycle
+      endif
+
+      if (itemType == ESMF_STATEITEM_FIELD) then
+
+        write(message,'(2x,''('',i2.2,'') '',A)') n, trim(varname)//' has itemType ESMF_STATEITEM_FIELD'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+        call ESMF_StateGet(importState, trim(varname), field=field, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        call RestartConcFromField(n,field)
+
+      elseif (itemType == ESMF_STATEITEM_FIELDBUNDLE) then
+
+        write(message,'(2x,''('',i2.2,'') '',A)') n, trim(varname)//' has itemType ESMF_STATEITEM_FIELDBUNDLE'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
         foundItem=.false.
         call ESMF_StateGet(importState, trim(varname), fieldBundle, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        call ESMF_FieldBundleGet(fieldBundle, fieldName=trim(varname), &
-          fieldCount=fieldCount, rc=localrc)
+
+        !call ESMF_FieldBundleGet(fieldBundle, fieldName=trim(varname), fieldCount=fieldCount, rc=localrc)
+        call ESMF_FieldBundleGet(fieldBundle, fieldCount=fieldCount, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         if (fieldCount == 0) then
+          call ESMF_AttributeGet(fieldBundle, 'creator', creator_name)
+          write(message,'(A)') trim(name)//' found empty fieldBundle '//trim(varname)//' created by '//trim(creator_name)
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
           write(message,'(A)') trim(name)//' empty fieldBundle, skipped hotstart for variable '//trim(varname)
-          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
           cycle
         end if
-        call MOSSCO_Reallocate(fieldList, fieldCount, rc=localrc)
-        call ESMF_FieldBundleGet(fieldBundle, &
-            fieldName=trim(varname), fieldList = fieldList, rc=localrc)
 
+        call MOSSCO_Reallocate(fieldList, fieldCount, rc=localrc)
+        !call MOSSCO_Reallocate(fieldName, fieldCount, rc=localrc)
+        call ESMF_FieldBundleGet(fieldBundle, fieldList=fieldList, rc=localrc)
+        !call ESMF_FieldBundleGet(fieldBundle, fieldName=fieldName, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         do k=1,fieldCount
-          call ESMF_AttributeGet(fieldList(k), name='external_index', &
-                 value=external_index, &
+          !write(message,'(A,i2,i2)') '  '//trim(varname)//' fieldcount=',k,fieldCount
+          !call MOSSCO_FieldString(fieldList(k),message)
+          !call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+          !if ( verify(trim(fieldName(k)),trim(varname))==0 ) cycle
+
+          call ESMF_AttributeGet(fieldList(k), name='external_index', value=external_index, &
                  defaultValue=int(-1,ESMF_KIND_I8),rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
           ! only use field, if external_index matches own index
@@ -1303,6 +1441,7 @@ module fabm_pelagic_component
             foundItem=.true.
             exit
           end if
+
         end do
 
         if (foundItem) then
@@ -1313,12 +1452,13 @@ module fabm_pelagic_component
           cycle
         end if
 
-      else if (itemType == ESMF_STATEITEM_FIELD) then
+      else
 
-        call ESMF_StateGet(importState, trim(varname), field=field, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        write(message,'(A)') "fabm_pelagic#1564: "//trim(varname)//" - ITEMTYPE NOT IMPLEMENTED !"
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+        !write(message,'(A)') "  don't know how to handle this itemType"
+        !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
 
-        call RestartConcFromField(n,field)
       end if
 
     end do
@@ -1703,7 +1843,7 @@ module fabm_pelagic_component
           farrayPtr3(RANGE3D) = farrayPtr3(RANGE3D)  + ratePtr3(RANGE3D) * dt
           write (message,'(A,ES10.3,A)') trim(name)//' added ',maxval(ratePtr3(RANGE3D) * dt),' from '
           call MOSSCO_FieldString(importFieldList(i),message)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         endif
 
       enddo
