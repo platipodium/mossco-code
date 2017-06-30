@@ -135,11 +135,11 @@ module netcdf_input_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(len=ESMF_MAXSTR) :: timeString, message, name, fileName
+    character(len=ESMF_MAXSTR) :: timeString, message, name, fileName, varname
     character(len=ESMF_MAXSTR) :: foreignGridFieldName, form
     type(ESMF_Time)            :: currTime, ncTime
     type(ESMF_TimeInterval)    :: climatologyTimeStep
-    integer(ESMF_KIND_I4)      :: petCount, localPet, localRc, int4
+    integer(ESMF_KIND_I4)      :: petCount, localPet, localRc, int4, fieldCount
     type(ESMF_Clock)           :: clock
 
     logical                    :: isPresent, fileIsPresent, labelIsPresent, hasGrid
@@ -161,6 +161,8 @@ module netcdf_input_component
     logical                    :: isMatch, checkFile, hasTimeDim
 
     type(ESMF_FieldStatus_Flag):: fieldStatus
+    type(ESMF_FieldBundle)     :: fieldBundle
+    type(ESMF_StateItem_Flag)  :: itemtype
 
     rc = ESMF_SUCCESS
 
@@ -415,13 +417,14 @@ module netcdf_input_component
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     inquire(file=trim(fileName), exist=isPresent)
-
     if (.not.isPresent) then
       write(message,'(A)') trim(name)//' file '
-      call MOSSCO_MessageAdd(message,trim(fileName)//' does not exist')
+      call MOSSCO_MessageAdd(message,' '//trim(fileName)//' does not exist')
       if (checkFile) then
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-        rc = ESMF_RC_NOT_FOUND
+        localrc = ESMF_RC_NOT_FOUND
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       else
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         rc = ESMF_SUCCESS
@@ -894,7 +897,7 @@ module netcdf_input_component
     if (isBundle) then
       write(message, '(A)') trim(name)//' will bundle fields with same name'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      call MOSSCO_StateMoveNumericFieldsToBundle(exportState, rc=localrc)
+      call MOSSCO_StateMoveNumericFieldsToBundle(exportState, creator=trim(name), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
