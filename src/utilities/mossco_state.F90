@@ -1955,10 +1955,11 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_StateMoveNumericFieldsToBundle"
-  subroutine MOSSCO_StateMoveNumericFieldsToBundle(state, kwe, rc)
+  subroutine MOSSCO_StateMoveNumericFieldsToBundle(state, kwe, creator, rc)
 
-    type(ESMF_State), intent(inout)              :: state
-    logical, intent(in), optional                :: kwe
+    type(ESMF_State),      intent(inout)         :: state
+    logical,               intent(in),  optional :: kwe
+    character(len=*),      intent(in),  optional :: creator
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)                   :: rc_, localrc, i, itemCount, j, k
@@ -2027,7 +2028,11 @@ contains
         fieldBundle = ESMF_FieldBundleCreate(name=itemName(1:j-1), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
+        if (present(creator)) then
+          call ESMF_AttributeSet(fieldBundle,'creator', trim(creator), rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
         write(message,'(A)')  '  created field bundle '//itemName(1:j-1)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
@@ -2067,10 +2072,10 @@ contains
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      write(message,'(A)')  '  moved '
+      write(message,'(i2,2x,A)')  i,'  moved '
       call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      write(message,'(A)')  '  to '
+      write(message,'(4x,A)')  '  to '
       call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
