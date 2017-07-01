@@ -4,7 +4,7 @@
 #        You may want to link this script into directory within your $PATH
 #
 # This computer program is part of MOSSCO.
-# @copyright Copyright (C) 2014,2015,2016,2017 Helmholtz-Zentrum Geesthacht
+# @copyright Copyright (C) 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -19,20 +19,21 @@ REMAKE=0           # Do not recompile if not necessary
 BUILD_ONLY=0       # Executed, don't stop after build
 COMPILE_ONLY=0
 WALLTIME=00:00:00     # Default run time, if this is zero the run time is estimated automatically
-DEFAULT=getm--fabm_pelagic--fabm_sediment--river--porosity--restart  # Default example
+DEFAULT=getm--fabm_pelagic--fabm_sediment--river--porosity--deposition  # Default example
 AUTOTITLE=1          # Whether to change the simulation title in mossco_run and getm.inp/gotmrun.nml
 POSTPROCESS=NONE
 NP=NONE
 LOGLEVEL='undefined'
 WAITTIME=0
 QUEUE='undefined'
+RECURSION=NONE
 
 # Function for printing usage of this script
 function usage {
   echo
 	echo "Usage: $0 [options] [example]"
 	echo
-	echo "Accepted options are -r, -b, -t <title>, -n <numproc>, -s <system> -l <loglevel> <example>"
+	echo "Common options are -r, -b, -t <title>, -n <numproc>, -s <system> -l <loglevel> <example>"
 	echo "If not provided, the default <example> is ${DEFAULT}"
 	echo
   echo "    [-b] :  build-only.  Does not execute the example. Rebuilds job script."
@@ -45,19 +46,20 @@ function usage {
   echo "      [-n X[:YxZ]]: The layout Y cpu-per-node times Z nodes is used"
   echo
   echo "    [-p] :  specify the name of a postprocess script (only SLURM)"
-	echo "            the default is <system>_postprocess.h"
-  echo "    [-r] :  Rebuilds the [generic] example and MOSSCO coupled system"
+  echo "            the default is <system>_postprocess.h"
   echo "    [-q QUEUE] :  Selects a queue/partition with name QUEUE"
-	echo "    [-s M|S|J|F|B|P]: exeute batch queue for a specific system, which is"
+  echo "    [-r] :  Rebuilds the [generic] example and MOSSCO coupled system"
+#  echo "    [-R H|D|M|Y] :  Restart simulation every hour, day, month, year, default is NONE"
+  echo "    [-s M|S|J|F|B|P]: exeute batch queue for a specific system, which is"
   echo "            autodetected by default"
-	echo
+  echo
   echo "      [-s P]: PBS system, writes pbs.sh"
   echo "      [-s M]: MOAB system, writes moab.sh"
-	echo "      [-s S]: SGE system, e.g. ocean.hzg.de, writes sge.sh"
-	echo "      [-s J]: Slurm system, e.g. Jureca, Mistral, writes slurm.sh"
-	echo "      [-s F]: Command line interactive, running in foreground"
-	echo "      [-s B]: Command line interactive, running in background"
-	echo
+  echo "      [-s S]: SGE system, e.g. ocean.hzg.de, writes sge.sh"
+  echo "      [-s J]: Slurm system, e.g. Jureca, Mistral, writes slurm.sh"
+  echo "      [-s F]: Command line interactive, running in foreground"
+  echo "      [-s B]: Command line interactive, running in background"
+  echo
   echo "    [-t] :    give a title in mossco_run.nml and getm.inp/gotmrun.nml"
   echo "    [-w W] :  wait W seconds for polling batch jobs (only -s J|B)"
   echo "    [-z HH:MM:SS] : set HH:MM:SS as maximum run duration walltime"
@@ -77,16 +79,16 @@ function select_sge_queue {
 }
 
 # Function for predicting simulation time (adjusted for slurm)
-function predict_time {
+function predict_time() {
 
   S=30
   case ${SYSTEM} in
     PBS)  S=1000;;
     SGE)  S=300;;
-    SLURM) S=2000;;
+    SLURM) S=1500;;
   esac
 
-  S=2000
+  S=1500
   NP=$1
   START=$(cat ${NML} | grep start| awk -F"'" '{print $2}' | awk -F" " '{print $1}')
   STOP=$(cat ${NML} | grep stop| awk -F"'" '{print $2}' | awk -F" " '{print $1}')
@@ -108,7 +110,7 @@ function predict_time {
 }
 
 # Getopts parsing of command line arguments
-while getopts ":rt:bcn:s:l:w:p:q:z:" opt; do
+while getopts ":rt:bcn:s:l:w:p:q:z:R:" opt; do
   case "$opt" in
   r)  REMAKE=1
       ;;
@@ -118,18 +120,20 @@ while getopts ":rt:bcn:s:l:w:p:q:z:" opt; do
       ;;
   c)  COMPILE_ONLY=1
       ;;
-  p)  POSTPROCESS=${OPTARG}
-      ;;
   n)  NP=${OPTARG}
       ;;
   t)  TITLE=${OPTARG}
       AUTOTITLE=0
       ;;
-  s)  SYSTEM=${OPTARG}
-      ;;
   l)  LOGLEVEL=${OPTARG}
       ;;
+  p)  POSTPROCESS=${OPTARG}
+      ;;
   q)  QUEUE=${OPTARG}
+      ;;
+  R)  RESTART=${OPTARG}
+      ;;
+  s)  SYSTEM=${OPTARG}
       ;;
   w)  WAITTIME=${OPTARG}
       ;;
@@ -547,7 +551,7 @@ esac
 SED=${SED:-$(which gsed 2> /dev/null )}
 SED=${SED:-$(which sed 2> /dev/null )}
 
-if test -f ${NML} ; then cp mossco_run.nml ${NML}; fi
+if ! test -f ${NML} ; then cp mossco_run.nml ${NML}; fi
 
 if test -f ${NML} ; then
   if [[ "${LOGLEVEL}" != "undefined" ]] ; then
