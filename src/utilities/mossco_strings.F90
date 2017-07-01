@@ -27,7 +27,9 @@ module mossco_strings
   implicit none
 
   private
-  public order, intformat
+  public intformat, order, MOSSCO_MessageAdd, only_var_name, replace_character
+  public split_string, MOSSCO_StringMatch, MOSSCO_StringClean
+  public MOSSCO_CheckUnits, MOSSCO_CleanUnit
 
   !> @brief Returns the order of magnitude of its input argument
   !> @param <integer|real>(kind=4|8)
@@ -230,9 +232,9 @@ contains
 #define ESMF_METHOD "MOSSCO_MessageAddString"
   subroutine MOSSCO_MessageAddString(message, string, rc)
 
-    character(len=*), intent(inout)  :: message
-    character(len=*), intent(in)           :: string
-    integer(ESMF_KIND_I4), optional        :: rc
+    character(len=*), intent(inout)    :: message
+    character(len=*), intent(in)       :: string
+    integer(ESMF_KIND_I4), optional    :: rc
 
     integer(ESMF_KIND_I4)                  :: len1, len2, len0, rc_
 
@@ -266,6 +268,7 @@ contains
 
     integer(ESMF_KIND_I4)               :: localrc, i, j
 
+    rc = ESMF_SUCCESS
     isMatch = .false.
 
     i=index(pattern,'*')
@@ -285,8 +288,6 @@ contains
       if (trim(item)==trim(pattern)) isMatch=.true.
       !write(0,*)  'Match 3', trim(item), trim(pattern), trim(item), '?=', trim(pattern) , isMatch
     endif
-
-    return
 
   end subroutine MOSSCO_StringMatchPattern
 
@@ -526,7 +527,7 @@ contains
   end subroutine MOSSCO_CheckUnits
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "MOSSCO_CleanUnits"
+#define ESMF_METHOD "MOSSCO_CleanUnit"
   subroutine MOSSCO_CleanUnit(unit, rc)
 
     character(len=*), intent(inout)              :: unit

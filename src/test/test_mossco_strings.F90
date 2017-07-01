@@ -34,12 +34,13 @@ program test_mossco_strings
   logical                             :: boolean
   logical, allocatable                :: booleanlist(:)
 
-  character(len=ESMF_MAXSTR)          :: string,format
+  character(len=ESMF_MAXSTR)          :: string,format,remainder
   character(len=ESMF_MAXSTR), allocatable :: stringlist(:)
 
   call ESMF_Initialize(rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+  write(*,'(A)') 'Testing interface "order"'
   do i=1,11
     int4 = 3**i
     int8 = 9**i
@@ -49,11 +50,49 @@ program test_mossco_strings
     !write(*,*) i,real4,order(real4),real8,order(real8)
   enddo
 
+  write(*,'(A)') 'Testing interface "intformat"'
   do i=1,11
     int4 = (2*mod(i,2)-1)*3**i
     int8 = (2*mod(i,2)-1)*9**i
     write(format,'(A)') '(I2,I11,X,A,X,'//intformat(int4)//',X,I11,X,A,X'//intformat(int8)//')'
     write(*,format) i,int4,intformat(int4),int4,int8,intformat(int8),int8
+  enddo
+
+  !--------------
+  write(*,'(A)') 'Testing interface "MOSSCO_MessageAdd"'
+  string='This is not such a large string'
+  do i=1,5
+    call MOSSCO_MessageAdd(string, trim(string), localrc)
+    write(*,'(I1,X,A)') i,trim(string)
+  enddo
+
+  allocate(stringList(5))
+  do i=1,5
+    stringList(i) = 'This is not such a large string'
+  enddo
+
+  string='bla'
+  call MOSSCO_MessageAdd(string, stringList, localrc)
+  write(*,'(A)') string
+
+  deallocate(stringList)
+
+  !--------------
+  write(*,'(A)') 'Testing procedure  "only_var_name"'
+  string='bla=6 is a/blubb=7 v:%xariable'
+  write(*,'(A,X,A)') trim(string),only_var_name(string)
+
+  !--------------
+  write(*,'(A)') 'Testing procedure  "replace_character"'
+  string='bla=6 is a/blubb=7 v:%xariable'
+  call replace_character(string,' ','_')
+  write(*,'(A)') trim(string)
+
+  !--------------
+  write(*,'(A)') 'Testing procedure  "split_string"'
+  do i=1,5
+    call split_string(string,remainder,'_')
+    write(*,'(I1,X,A,A)') i,trim(string),trim(remainder)
   enddo
 
   call ESMF_Finalize(rc=localrc)
