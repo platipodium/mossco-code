@@ -566,6 +566,7 @@ contains
     integer(kind=ESMF_KIND_I8), allocatable :: integer8ValueList(:)
     character(len=4096)       , allocatable :: characterValueList(:)
     type(ESMF_State)                        :: childState
+    character(len=10)                       :: format
 
     if (present(rc)) rc = ESMF_SUCCESS
     if (present(kwe)) localrc = ESMF_SUCCESS
@@ -649,10 +650,13 @@ contains
         call ESMF_AttributeGet(state, name=attributeName, valueList=integer4ValueList, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        write(string,'(I3.3)') integer4ValueList(1)
+        write(format,'(A)') '('//trim(intformat(integer4ValueList(1)))//')'
+        write(string,format) integer4ValueList(1)
         call MOSSCO_MessageAdd(message,', '//trim(string))
+
         do j=2, itemCount-1
-          write(string,'(A,I3.3)') ', ',integer4ValueList(j)
+          write(format,'(A)') '(A,'//trim(intformat(integer4ValueList(j)))//')'
+          write(string,format) ', ',integer4ValueList(j)
           call MOSSCO_MessageAdd(message,', '//trim(string))
         enddo
         deallocate(integer4ValueList)
@@ -663,10 +667,13 @@ contains
         call ESMF_AttributeGet(state, name=attributeName, valueList=integer8ValueList, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        write(string,'(I3.3)') integer8ValueList(1)
+        write(format,'(A)') '('//trim(intformat(integer8ValueList(1)))//')'
+        write(string,format) integer8ValueList(1)
         call MOSSCO_MessageAdd(message,', '//trim(string))
+
         do j=2, itemCount-1
-          write(string,'(A,I3.3)') ', ',integer8ValueList(j)
+          write(format,'(A)') '('//trim(intformat(integer8ValueList(j)))//')'
+          write(string,format) integer8ValueList(j)
           call MOSSCO_MessageAdd(message,', '//trim(string))
         enddo
         deallocate(integer8ValueList)
