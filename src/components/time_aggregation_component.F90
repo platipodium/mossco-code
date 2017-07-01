@@ -267,7 +267,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     type(ESMF_StateItem_Flag), allocatable, dimension(:) :: itemTypeList
     character(len=ESMF_MAXSTR), allocatable, dimension(:) :: itemNameList
     type(ESMF_Clock)        :: clock
-    logical                 :: isMatch, needReset
+    logical                 :: isMatch
+    logical ,save                :: needReset=.false.
     character(len=ESMF_MAXSTR) :: form
     type(ESMF_Alarm), dimension(:), allocatable :: alarmList
     integer(ESMF_KIND_I4), allocatable :: ubnd(:), lbnd(:)
@@ -500,6 +501,14 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           call ESMF_FieldGet(exportFieldList(j), farrayPtr=exportPtr2, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
+          if (any(lbound(exportPtr2) - lbound(farrayPtr2) /= 0) .or. &
+              any(ubound(exportPtr2) - ubound(farrayPtr2) /= 0)) then
+            write(message,'(A)') trim(name)//' array bounds do not match for'
+            call MOSSCO_FieldString(fieldList(j),message)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+            cycle
+          endif
+
           exportPtr2(RANGE2D) = exportPtr2(RANGE2D)  + farrayPtr2(RANGE2D)
 
           ! Divide by number of steps for state variables (i.e. arithmetic
@@ -518,6 +527,14 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
           call ESMF_FieldGet(exportFieldList(j), farrayPtr=exportPtr3, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+          if (any(lbound(exportPtr3) - lbound(farrayPtr3) /= 0) .or. &
+              any(ubound(exportPtr3) - ubound(farrayPtr3) /= 0)) then
+            write(message,'(A)') trim(name)//' array bounds do not match for'
+            call MOSSCO_FieldString(fieldList(j),message)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+            cycle
+          endif
 
           exportPtr3(RANGE3D) = exportPtr3(RANGE3D)  + farrayPtr3(RANGE3D)
 
