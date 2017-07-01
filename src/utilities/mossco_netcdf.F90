@@ -3267,7 +3267,7 @@ module mossco_netcdf
     implicit none
     class(type_mossco_netcdf)                    :: self
     character(len=*)                             :: varname
-    type(type_mossco_netcdf_variable), pointer    :: var
+    type(type_mossco_netcdf_variable), pointer   :: var
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)                        :: i, rc_
@@ -3378,7 +3378,7 @@ module mossco_netcdf
         !> time difference in TimeIntervalSetDur().  Count the days and
         !> get the month of a Gregorian-calendar average year
         call ESMF_TimeIntervalGet(currTime - refTime, d_i8=ticks, rc=localrc)
-        ticks = int(floor(ticks * 12.0 / 365.2425), ESMF_KIND_I8)
+        ticks = int(floor(real(ticks) * 12.0 / 365.2425), ESMF_KIND_I8)
 
         !call ESMF_TimeIntervalPrint(timeInterval)
         !call ESMF_TimeIntervalGet(timeInterval, startTime=refTime, mm_i8=ticks, rc=localrc)
