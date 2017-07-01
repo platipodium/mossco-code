@@ -142,14 +142,11 @@ contains
    function order_i8(i) result(order)
      integer(kind=8), intent(in)  :: i
      integer(kind=4)              :: order
-     integer(kind=8)              :: s
-     integer(kind=8), parameter   :: ONE=1
 
      if ( i .eq. 0 ) then
-       order = 0
+       order = 1
      else
-       s = sign(ONE,i)
-       order = int(0.5*(1.0-real(s))) + int(log10(abs(real(i))))
+       order = int(log10(abs(real(i)))) + 1
      endif
    end function order_i8
 
@@ -163,9 +160,9 @@ contains
      integer(kind=4)              :: order
 
      if ( i .eq. 0 ) then
-       order = 0
+       order = 1
      else
-       order = int(0.5*(1.0-sign(1,i))) + int(log10(1.0*abs(i)))
+       order = int(log10(abs(real(i)))) + 1
      endif
    end function order_i4
 
@@ -177,10 +174,12 @@ contains
    function order_r8(r) result(order)
      real(kind=8), intent(in)  :: r
      integer(kind=4)           :: order
-     if (r<0) then
-       order=int(log10(-r))+1
+     if (r .eq. 0) then
+       order = 1
+     elseif ( abs(r) < 1 ) then
+       order=-int(log10(abs(r))) + 1
      else
-       order=int(log10(r))
+       order=int(log10(abs(r))) + 1
      endif
    end function order_r8
 
@@ -189,10 +188,12 @@ contains
    function order_r4(r) result(order)
      real(kind=4), intent(in)  :: r
      integer(kind=4)           :: order
-     if (r<0) then
-       order=int(log10(-r))+1
+     if (r .eq. 0) then
+       order = 1
+     elseif ( abs(r) < 1 ) then
+       order=-int(log10(abs(r))) + 1
      else
-       order=int(log10(r))
+       order=int(log10(abs(r))) + 1
      endif
    end function order_r4
 
@@ -203,7 +204,7 @@ contains
      integer(kind=8), intent(in) :: i
      integer             :: o
 
-     o=order(i)+1
+     o=order(i)
      if (o<1) o=1
      if (o>9) o=9
      write(intformat_i8,'(A,I1,A,I1)') 'I', o , '.', o
@@ -217,7 +218,8 @@ contains
      integer(kind=4), intent(in) :: i
      integer             :: o
 
-     o=order(i)+1
+     o=order(i)
+     if (i<0) o=o+1
      if (o<1) o=1
      if (o>9) o=9
      write(intformat_i4,'(A,I1,A,I1)') 'I', o , '.', o

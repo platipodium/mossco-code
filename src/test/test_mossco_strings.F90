@@ -1,7 +1,7 @@
 !> @brief unit tests of string utilities
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2014, Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2017, Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
 !
@@ -11,69 +11,51 @@
 ! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 !
 
+#define ESMF_CONTEXT  line=__LINE__
+#define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
+#undef ESMF_FILENAME
+#define ESMF_FILENAME "test_mossco_strings.F90"
+#define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
 program test_mossco_strings
 
-!   function only_var_name(longname)
+  use esmf
   use mossco_strings
 
-  character(len=255) :: string1, string2
-  integer(kind=8)    :: i8, n
-  integer(kind=4)    :: i4
-  !real(kind=4)       :: r4
-  !real(kind=8)       :: r8
-  character(len=10)   :: f
+  integer(ESMF_KIND_I4)               :: rc
+  integer(ESMF_KIND_I4)               :: int4
+  integer(ESMF_KIND_I4), allocatable  :: int4list(:)
+  integer(ESMF_KIND_I8)               :: int8
+  integer(ESMF_KIND_I4), allocatable  :: int8list(:)
+  real(ESMF_KIND_R4)                  :: real4
+  real(ESMF_KIND_R4), allocatable     :: real4list(:)
+  real(ESMF_KIND_R8)                  :: real8
+  real(ESMF_KIND_R8 ), allocatable    :: real8list(:)
+  logical                             :: boolean
+  logical, allocatable                :: booleanlist(:)
 
-  write(string1,'(A)') 'The quick brown fox jumped'
-  write(string2,'(A)') 'The_quick_brown_fox_jumped'
-  call replace_character(string1,' ','_')
+  character(len=ESMF_MAXSTR)          :: string,format
+  character(len=ESMF_MAXSTR), allocatable :: stringlist(:)
 
-  n=len_trim(string1)
-  if (.not.string1(1:n).eq.string2(1:n)) then
-    write(0,'(A)') 'Error testing replace_character'
-  endif
+  call ESMF_Initialize(rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-  call split_string(string1,string2,'e')
+  do i=1,11
+    int4 = 3**i
+    int8 = 9**i
+    real4 = 3.0**(real(i)-6.0)
+    real8 = 3.0**(dble(i)-6.0)
+    !write(*,*) i,int4,order(int4),int8,order(int8)
+    !write(*,*) i,real4,order(real4),real8,order(real8)
+  enddo
 
-  i8=167889716
-  if (.not.order(i8).eq.8) then
-    write(0,'(A)') 'Error testing order with int*8'
-  endif
+  do i=1,11
+    int4 = (2*mod(i,2)-1)*3**i
+    int8 = (2*mod(i,2)-1)*9**i
+    write(format,'(A)') '(I2,I11,X,A,X,'//intformat(int4)//',X,I11,X,A,X'//intformat(int8)//')'
+    write(*,format) i,int4,intformat(int4),int4,int8,intformat(int8),int8
+  enddo
 
-  i4=-167
-  if (.not.order(i4).eq.3) then
-    write(0,'(A,I1,A)') 'Error testing order with int*4', order(i4), '/= 3'
-  endif
+  call ESMF_Finalize(rc=localrc)
 
-!   r4=-25E15
-!   if (.not.order(r4).eq.16) then
-!     write(0,'(A,I1,A)') 'Error testing order with real*4', order(r4), '/= 16'
-!   endif
-!
-!   r8=1.00000000004D-10
-!   if (.not.order(r4).eq.-10) then
-!     write(0,'(A,I1,A)') 'Error testing order with real*8', order(r4), '/= -10'
-!   endif
-
-  write(f,'(A)') intformat(i8)
-
-  if (.not.trim(f).eq.'I9.9') then
-    write(0,'(A)') 'Error testing intformat from int*8'
-    print *, intformat(i8)
-  endif
-
-  write(f,'(A)') intformat(-i4)
-
-  if (.not.trim(f).eq.'I3.3') then
-    write(0,'(A)') 'Error testing intformat from positive int*4'
-    print *, intformat(i4)
-  endif
-
-  write(f,'(A)') intformat(i4)
-
-  if (.not.trim(f).eq.'I4.4') then
-    write(0,'(A)') 'Error testing intformat from negative int*4'
-    print *, intformat(i4)
-  endif
-
-
-end program test_mossco_strings
+end program
