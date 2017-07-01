@@ -323,7 +323,7 @@ module netcdf_input_component
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         write(message,'(A)') trim(name)//' uses exclude patterns:'
-        call MOSSCO_MessageAdd(message, filterExcludeList, rc=localrc)
+        call MOSSCO_MessageAdd(message, filterExcludeList, localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
@@ -348,7 +348,7 @@ module netcdf_input_component
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         write(message,'(A)') trim(name)//' uses include patterns:'
-        call MOSSCO_MessageAdd(message, filterIncludeList, rc=localrc)
+        call MOSSCO_MessageAdd(message, filterIncludeList, localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
@@ -373,7 +373,7 @@ module netcdf_input_component
 
         do i = lbound(aliasList,1), ubound(aliasList,1)
           write(message,'(A)') trim(name)//' uses alias: '
-          call MOSSCO_MessageAdd(message, trim(aliasList(i,1))//' = '//trim(aliasList(i,2)), rc=localrc)
+          call MOSSCO_MessageAdd(message, trim(aliasList(i,1))//' = '//trim(aliasList(i,2)), localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)

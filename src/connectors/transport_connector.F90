@@ -9,7 +9,7 @@
 !> in the coupler's export state
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2015, 2016 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, <carsten.lemmen@hzg.de>
 
 !
@@ -32,6 +32,7 @@ module transport_connector
   use mossco_component
   use mossco_attribute
   use mossco_config
+  use mossco_strings
 
   implicit none
 
@@ -180,7 +181,7 @@ module transport_connector
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         write(message,'(A)') trim(name)//' uses exclude patterns:'
-        call MOSSCO_MessageAdd(message, filterExcludeList, rc=localrc)
+        call MOSSCO_MessageAdd(message, filterExcludeList, localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
@@ -213,7 +214,7 @@ module transport_connector
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     write(message,'(A)') trim(name)//' uses include patterns:'
-    call MOSSCO_MessageAdd(message, filterIncludeList, rc=localrc)
+    call MOSSCO_MessageAdd(message, filterIncludeList, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
