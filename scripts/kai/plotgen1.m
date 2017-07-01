@@ -83,11 +83,11 @@ end
 % --------------------------------- edit mostly here -------------------------------
 %
 %  tags ={'_2';'_2z';};%'';'1r001';'1r001b';'0';'2';'4';
- tags ={'_Pdep';};
+ tags ={'_trait0011';};
 %'_mort_zoo0.023';'_g_max0.6';'_zm_fa_delmax10';'_basal_resp_zoo0.08';'_vir_mu-0.2';'_vir_spor_C0.002';'_vS_det34';'_z0_const0.005';
 %'_sinking_factor_min0.05';'_half_sedimentation_tke1E-5';
- %%spath= '/local/home/wirtz/sns/cut/';%   spath= '~/';
- spath= '~/jureca/sns/cut';%   %%spath  ='/ocean-data/wirtz/';%%%sns/cut
+ spath= '/local/home/wirtz/sns/cut/';%   spath= '~/';
+ %spath= '~/jureca/sns/cut';%   %%spath  ='/ocean-data/wirtz/';%%%sns/cut
  %spath='/data/wirtz/';
 
  ncf0 = 'sns'; ntags=length(tags);tagn=ntags;

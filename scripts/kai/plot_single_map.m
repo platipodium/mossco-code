@@ -37,6 +37,7 @@ end
   end
   fprintf('%d %s/%s\t np=%d\tmean=%1.2f\n',im,varshort,varn,np,mean(mean(value)));
 %  m_pcolor(lo(ind),la(ind),value(ind));
+  ind=find(lo>999 | la>999 );lo(ind)=NaN;la(ind)=NaN;value(ind)=NaN;
   m_pcolor(lo,la,value);
  %       set(gca, 'Color', 'k')
   if(islog) set(gca,'Clim',log10([minval maxVal]));
@@ -58,18 +59,25 @@ end
 %      ctl =ceil(log10(minval)):0.5:ceil(log10(maxVal));
        if(islog) set(cb,'YTick',log10(ytl),'YTicklabels',ytl); 
        else set(cb,'YTick',ytl,'YTicklabels',ytl); end
+    else
+       if(islog) set(cb,'YTick',log10(ytl),'Ticklabels',ytl); 
+       else set(cb,'YTick',ytl,'Ticklabels',ytl); end
     end
   end
  
   if(ix==1) m_text(lonlimit(1)-0.5,latlimit(2)-0.12,[varshort0 ' ' tag],'HorizontalAlignment','left','FontSize',fs+4,'FontWeight','bold','FontName','Helvetica','Interpreter','none'); end
   set(gca,'FontSize',fs);
-  mh=m_text(lonlimit(2)-1.,latlimit(1)+0.5,ta,'FontWeight','bold','HorizontalAlignment','right','FontSize',fs);
+  mh=m_text(lonlimit(2)-1.,latlimit(1)-0.5,ta,'FontWeight','bold','HorizontalAlignment','right','FontSize',fs);
   uistack(mh,'top');
-
+  cc='kw';
 %% plot sites of interest
   for ili=1:size(loc,1)
 %    m_plot(loc(ili,2),loc(ili,1),'o','markersize',9,'MarkerFaceColor','none','Color','w','Linewidth',2);normal
-    m_plot(lon(i_loc(ili,1),i_loc(ili,2)),lat(i_loc(ili,1),i_loc(ili,2)),'o','Color','w','MarkerSize',6,'Linewidth',2)
+ %   m_plot(lon(i_loc(ili,1),i_loc(ili,2)),lat(i_loc(ili,1),i_loc(ili,2)),'o','Color','w','MarkerSize',6,'Linewidth',2)
+    for rad=8:2:16
+      m_plot(lon(i_loc(ili,1),i_loc(ili,2)),lat(i_loc(ili,1),i_loc(ili,2)),'o','Color',cc(1+(rad>13 &rad<17)),'MarkerSize',rad,'Linewidth',2)
+    end
+
 %   m_text(lon(i_loc(ili,1),i_loc(ili,2)),lat(i_loc(ili,1),i_loc(ili,2)),'o','Color','w','HorizontalAlignment','center','FontWeight','bold','FontSize',fs+(nrowm==1)*4)
 %[x,y] = m_ll2xy(varargin{1},varargin{2});s = size(varargin,1);h=plot(x,y,varargin{3:s});
 

@@ -12,12 +12,13 @@ datf='~/data/DeutscheBucht/stations_1960-2015.nc';
 datm='~/data/DeutscheBucht/chl_esacci_2000_2013.mat';
 
 %% settings
-% locations; at least one site-name (locs) should be given 
+% locations; at least one site-name (locs) shoulNoordwijk-10d be given 
 %loc =[]; ];%];%54.17,7.88];[55.,8.3][55.5,6.]
-loc =[[54.14,7.97];[55.0,8.3];[53.7,7.2];[52.3,4.3];[52.59,3.53];[53.42,5.15];[53.77,4.77]; [54.6,8.4];[54.0,8.7];[53.9,2.9];[54.17,7.88];];%[52.1,2.8];[54.1,6.3];[54.2,7.5];[53.92,4.6];;[55.2,5.0];[55.0,8.0];]; 
+% Noordwijk-10[52.3,4.3];
+loc =[[54.13,7.98];[55.0,8.3];[53.7,7.2];[52.35,4.1];[52.59,3.53];[53.42,5.15];[53.77,4.77]; [54.0,8.7];];%[54.6,8.4];[53.9,2.9];[54.14,7.97];[52.1,2.8];[54.1,6.3];[54.2,7.5];[53.92,4.6];;[55.2,5.0];[55.0,8.0];]; 
 % %[54.96,8.4]; ];%
 %  % 17 m 28 m% Noordwijk-10 Noordwijk-70
-locs={'Helgoland';'Sylt'; 'Norderney';'NOORDWK10';'NOORDWK70';'TERSLG4';  'TERSLG50';   'SAmrum';  'Norderelbe';'EastAngliaPlume'; 'HR0';'EnglishChannel';'T22';    'T26';  'TERSLG70';'T2' ;'T8';}; %
+locs={'Helgoland';'Sylt';'Norderney';'NOORDWK10';'NOORDWK70';'TERSLG4';  'TERSLG50';     'Norderelbe';'SAmrum';'EastAngliaPlume'; 'Helg0';'EnglishChannel';'T22';    'T26';  'TERSLG70';'T2' ;'T8';}; %
 %'Helgoland'; 'Sylt';    'SAmrum';'Norderelbe';'Nordeney',
 %  'T36';     'T26' ;    'T41';   'T8'  ;      'T2';
 %  'T22';     'T5';      'T12';   'T11'  ; 'NOORDWK2';
@@ -40,8 +41,8 @@ surround=2;  % show min-max of bordering neighbor cells
 %tags={'_a';'_b'};%'_c';'_3';'_0';tags={'_4';};%'_2';'_3';
 %tags={'';'_Zmort';'_n'};%;};%'_0';'_1';'exu';'Ndep';
 %nrow  = 1; ncol  = 1; 	% number of columns in fig
-nrow  = 2; ncol  = 1; 	% number of columns in fig
-nrowm = 4; ncolm = 7;
+nrow  = 1; ncol  = 1; 	% number of columns in fig
+nrowm = 3; ncolm = 4;
 %nrowm = 3; ncolm = 5;
 ntagsu = 1; % number of constellations of plot series
 if Is1D 
@@ -66,8 +67,9 @@ else
     timeg0=timeg;
 % tags ={'_vir_spor_0';'_vir_spor_r0.08';};%'_a_wat
     ii=[];
+% 2004:{62,82,100,114,136,145,180,189,221,246,277,300}
 %      tm={{73,81,93,97,108,119,134,165,191,196,227,257,288},{62,82,100,114,136,145,180,189,211,221,247,263}};
-    tm={{21,35,49,63,77,91,105,119,133,147,161,175,189,203,217,231,245,259,273,287,301,315,357},{21,35,49,63,77,91,105,119,133,147,161,175,189,203,217,231,245,259,273,287,301,315,357},{21,35,49,63,77,91,105,119,133,147,161,175,189,203,217,231,245,259,273,287,301,315,357},{81,93,97,108,119,135,160,180,195,227,257,288},{62,82,100,114,136,145,180,189,221,246,277,300},{82,90,102,113,126,135,148,160,175,200,214,230,243,266,289},{63,82,85,95,100,104,107,119,124,130,134,148,152,162,168,174,181,185,193,197,199,206,218,231,241,254,264,311},{67,73,85,95,105,119,140,150,179,189,200,208,217,241,250,265,283,303,305},{40,46,56,74,89,99,101,104,106,112,123,128,132,135,145,160,179,183,196,205,217,223,228,243,262,291,303,313},{39,45,61,67,70,76,78,8,88,91,95,100,107,108,109,113,120,122,128,132,138,143,144,150,157,163,170,174,183,194,201,205,215,218,231,234,242,244,252,259,265,277,287,290},{44,60,63,66,82,98,100,104,107,110,113,117,125,130,134,140,148,154,167,174,185,191,197,205,218,231,240,248,264,283,289,311,319},{39,67,70,78,81,86,102,109,110,115,121,124,130,132,140,145,153,160,165,175,178,192,208,219,227,254,272,274,288,296,306},{43,50,56,81,83,85,88,96,121,144,147,172,181,206,225,241,253},{73,85,91,92,93,109,110,113,119,121,123,125,129,146,147,153,154,158,165,176,186,196,199,215,226,235,238,247,265,273,279}};
+    tm={{21,35,49,63,77,91,105,119,133,147,161,175,189,203,217,231,245,259,273,287,301,315,357},{21,35,49,63,77,91,105,119,133,147,161,175,189,203,217,231,245,259,273,287,301,315,357},{21,35,49,63,77,91,105,119,133,147,161,175,189,203,217,231,245,259,273,287,301,315,357},{81,93,97,108,119,135,160,180,195,227,257,288},{62,82,114,136,145,180,221,246},{82,90,102,113,126,135,148,160,175,200,214,230,243,266,289},{63,82,85,95,100,104,107,119,124,130,134,148,152,162,168,174,181,185,193,197,199,206,218,231,241,254,264,311},{67,73,85,95,105,119,140,150,179,189,200,208,217,241,250,265,283,303,305},{40,46,56,74,89,99,101,104,106,112,123,128,132,135,145,160,179,183,196,205,217,223,228,243,262,291,303,313},{39,45,61,67,70,76,78,8,88,91,95,100,107,108,109,113,120,122,128,132,138,143,144,150,157,163,170,174,183,194,201,205,215,218,231,234,242,244,252,259,265,277,287,290},{44,60,63,66,82,98,100,104,107,110,113,117,125,130,134,140,148,154,167,174,185,191,197,205,218,231,240,248,264,283,289,311,319},{39,67,70,78,81,86,102,109,110,115,121,124,130,132,140,145,153,160,165,175,178,192,208,219,227,254,272,274,288,296,306},{43,50,56,81,83,85,88,96,121,144,147,172,181,206,225,241,253},{73,85,91,92,93,109,110,113,119,121,123,125,129,146,147,153,154,158,165,176,186,196,199,215,226,235,238,247,265,273,279}};
     for yi=1:size(tm,2)
        for di=1:length(tm{yi})
          ind=find(yearg==2000+yi-1 & doyg==tm{yi}{di});
@@ -83,7 +85,7 @@ end
 % --------------------------------- edit mostly here -------------------------------
 %
 % tags ={'';'_1';};%'';'1r001';'1r001b';'0';'2';'4';
-  tags ={'';};
+  tags ={'_ref_20002011';'_ju'};
 %'_mort_zoo0.023';'_g_max0.6';'_zm_fa_delmax10';'_basal_resp_zoo0.08';'_vir_mu-0.2';'_vir_spor_C0.002';'_vS_det34';'_z0_const0.005';
 %'_sinking_factor_min0.05';'_half_sedimentation_tke1E-5';
 %'_half_sedimentation_tke2E-4';'_rFast0.05';'_vS_det18';'_sinking_factor0.32';'_sinking_factor_min0.03';'_a_water0.8';bash-4.1$ 
@@ -119,15 +121,15 @@ else
   tagn=0;
 end
 
-dxp = 0.82/(ncol+0.05); dyp = 0.83/(nrow +0.05);
+dxp = 0.82/(ncol+0.05); dyp = 0.82/(nrow +0.1);
 dxpm = 0.86/( ncolm +0.05); dypm= 0.86/(nrowm+0.05);
 compn ={'water';'soil'};
-fs = 12; colp=prism(5);colp=gray(5);colj=colp([2:5 2:3 1:2],:); coljj=jet(11); 
-coljj(8,:)=coljj(3,:);coljj(3,:)=coljj(7,:);
+fs = 14; colp=prism(5);colp=gray(5);colj=colp([2:5 2:3 1:2],:); coljj=jet(11); 
+coljj(1,:)=[1 0.5 0];coljj(8,:)=coljj(3,:);coljj(3,:)=coljj(7,:);
 colt='kw';
 i0=10;coljm=ones(256,3); coljm(i0+1:256,:)=jet(256-i0);
 vt{1}='00';
-linw=[2 2*ones(1,14)]; lins=['- '; repmat('- ',14,1);]; 
+linw=[3 2*ones(1,14)]; lins=['- '; repmat('- ',14,1);]; 
 %linw=ones(1,16);
 
 for nsu=1:ntagsu % loop over scenario configurations
@@ -144,7 +146,7 @@ figdir = fullfile('~/sns',['plots' tagnam]);
 if ~exist(figdir),  mkdir(figdir); end;
 close all;
 %% open all figures
-for np=1:nfig+nfigm, figure(np);  set(gcf,'Position',[0 0 1280 560],'Visible','off','Color','w');clf; end
+for np=1:nfig+nfigm, figure(np);  set(gcf,'Position',[0 0 1180 490],'Visible','off','Color','w');clf; end
 oldfig=-np; 
 ptag=cell2mat(var{1}(9));
 occ = zeros(nfig,ncol,nrow); occ0=occ+1;
@@ -167,8 +169,8 @@ for ns=1:ns2m  %% loop over scenarios/stations/layers
    end
  end
 % t0 = datenum('1962-03-01','yyyy-mm-dd')-1;
-%t0 = datenum('2008-02-01','yyyy-mm-dd')-1;
-%t1 = datenum('2010-03-30','yyyy-mm-dd')-1;
+t0 = datenum('2009-02-01','yyyy-mm-dd')-1;
+t1 = datenum('2010-10-30','yyyy-mm-dd')-1;
 %t0 = datenum('2010-03-01','yyyy-mm-dd')-1
 %t1 = datenum('2008-11-01','yyyy-mm-dd')-1;
 
@@ -188,10 +190,15 @@ for ns=1:ns2m  %% loop over scenarios/stations/layers
       eval(['tmp=' varn(3:end) ';']);
     else
       tmp = ncread(ncfile,varn);
-      if surf & size(tmp,3)>2
-         tmp2 = squeeze(sum(tmp(:,:,2:end,:),3))/(size(tmp,3)-1); 
-         tmp(:,:,2,:) = tmp2;
-         tmp = tmp(:,:,1:2,:);
+      if surf  & strcmp(varshort0,'CHL')
+         ncfile2 = fullfile(spath,[ncf0 tag '_chls.nc']);
+         tmp2 = ncread(ncfile2,'Chl_chl_in_water');
+         kd   = 0.4 + 0.02*squeeze(tmp(:,:,2,:));
+         fac  = exp(-2*kd.*squeeze(water_dz(:,:,2,:)));
+         fac(fac>0.5) = 0.5;
+         f2   = fac.*fac;
+ %        tmp2 = squeeze(tmp(:,:,2)); 
+         tmp(:,:,2,:) = (1-fac-f2).*squeeze(tmp(:,:,2,:))+fac.*squeeze(tmp2(:,:,2,:))+f2.*squeeze(tmp2(:,:,1,:));
       end
       % stored for later calculation
       if IsStore(i), eval([varshort(find(~isspace(varshort))) '=tmp;']); end
@@ -200,6 +207,7 @@ for ns=1:ns2m  %% loop over scenarios/stations/layers
         units = '-'; dim=3;
       else
         units = netcdf.getAtt(ncid,varid,'units');
+        units=strrep(units,'**','^');
         dims  = netcdf.getAtt(ncid,varid,'coordinates');
         dim   = length(strfind(dims,' '))+1;
       end
@@ -244,13 +252,13 @@ for np=1:nfig+nfigm+nfigc
   if(np<=nfig)
     li=ceil(np/nfig0);
     fprintf('np %d/%d=%d\n', np,nfig0,li); %floor ?
-    annotation('textbox',[0.45 0.95 0.2 0.045],'String',locs{max(1,li)},'Color','k','Fontweight','bold','FontSize',fs+2,'LineStyle','none');
+    annotation('textbox',[0.45 0.965 0.2 0.045],'String',locs{max(1,li)},'Color','k','Fontweight','bold','FontSize',fs,'LineStyle','none');
 %% create base file name
     fnam0=sprintf('%d_%s%s',np,locs{max(1,li)},tagnam);
   else if(np<=nfig+nfigm) 
      fnam0=sprintf('%d_map_%s',np,vt{min(np-nfig,length(vt))});
       else
-     fnam0=sprintf('%d_mapc%s%s',np,cell2mat(tags(ns1)),cell2mat(tags(ns2)));    
+     fnam0=sprintf('%d_%d_mapc%s%s',np,years(1),cell2mat(tags(ns1)),cell2mat(tags(ns2)));    
     end 
   end
 %  fnam=fullfile(figdir,[fnam0 '.eps']);
@@ -259,7 +267,7 @@ for np=1:nfig+nfigm+nfigc
   fnam=fullfile(figdir,[fnam0 '.png']);
   fprintf('save PNG in %s ...\n',fnam);
 %  export_fig(fnam,'-eps','-r600');
-  export_fig(fnam,'-png'); %,'PaperUnits','cm','PaperSize',[30,40],'PaperPosition',[0 0 30 40],'-r300'
+  export_fig(fnam,'-png','-r600'); %,'PaperUnits','cm','PaperSize',[30,40],'PaperPosition',[0 0 30 40],'-r300'
 %  print(gcf,'-dpng',fnam);
 end
 end %nsu

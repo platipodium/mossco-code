@@ -3,7 +3,7 @@
 iy=cell2mat(var{i}(7)); ix=cell2mat(var{i}(8));  
 ytl=[1E-5 1E-4 1E-3 0.01 0.1 0.3 1 3 10 20 50 100 1E3 1E4 1E5 1E6];  
 % geometry of sub-plot
-x0=0.05+(ix-1)*1.2*dxp; y0=0.1+(nrow-iy)*1.07*dyp;
+x0=0.1+(ix-1)*1.1*dxp; y0=0.2-(nrow-1)*0.07+(nrow-iy)*1.1*dyp;
 z0=min(2,size(tmp,3));
 % loop over sites (eg from 3D output)
 for ili=1:size(i_loc,1)
@@ -33,9 +33,11 @@ for ili=1:size(i_loc,1)
 % goes to new figure if required
   np=cell2mat(var{i}(6)) + nfig0*(ili-1);
   figure(np); 
+np
   set(gcf,'visible',vis);
   oldfig=np; hold on
   axs=subplot('Position',[x0 y0 dxp dyp]);
+[x0 y0 dxp dyp]
   hold on
   tpos=[x0+0.223*(min(occ(np,ix,iy),4)+0.11)*dxp y0+0.85*dyp 0.3*dxp 0.11*dyp];
 
@@ -68,17 +70,53 @@ for ili=1:size(i_loc,1)
        nm=ceil(dtim/365);
        xt=round( nm*(0:round(dtim/30.25))*30.25);
        set(axs,'XTick',xt+t0);
-       datetick(axs,'x','mmm','keepticks','keeplimits');
+       if (dtim<9*360) datetick(axs,'x','mmm','keepticks','keeplimits');
+       else set(axs,'XTickLabel',[]);  end
        if (dtim>360 & iy==nrow)
         for yi=1:length(years)
           xy=0.1+(mean(time(find(year==years(yi))))-t0)/dtim;
-          annotation('textbox',[x0+(xy-0.16)*dxp y0+0.85*dyp-0.905*dyp 0.2*dxp 0.2*dyp],'String',num2str(years(yi)),'Color','k','Fontweight','normal','FontSize',fs+2,'LineStyle','none');
+          annotation('textbox',[x0+(xy-0.13)*dxp 0.02 0.2*dxp 0.2*dyp],'String',num2str(years(yi)),'Color','k','Fontweight','normal','FontSize',fs+4,'LineStyle','none');
         end
        end 
      end %if dtim
      if(iy<nrow) set(axs,'XTickLabel',[]); end
    end %if occ
  end
+
+
+
+% plot data
+%fprintf('%d %d data: %d\t%c\n',i,ili,show_dati(ili),cell2mat(var{i}(9)));
+ if (show_dati(ili)>0 & ns==1)%& (cell2mat(var{i}(9))=='L' | cell2mat(var{i}(9))=='M'))
+  id=show_dati(ili); iv=1;
+%  fprintf('datashow: %d \n',size(vars,2));
+%%  col=colj(1+occ(np,ix,iy)-occ0(np,ix,iy)*(ns-1),:); 
+  col=ones(3,1)*0.3; 
+  while length(vars{id,iv})>0 
+%   fprintf('%s:%s\n',varshort0,vars{id,iv});
+   if strcmpi(vars{id,iv},varshort0)
+     dval = squeeze(data{id,iv})*cell2mat(var{i}(5));
+     indd  = find(~isnan(dval));
+     if length(indd)>0
+%       fprintf('%s: %d\t%1.1f %1.1f \n',varshort0,length(indd),datime(indd(1)),datime(indd(end)));
+       plot(datime(indd),dval(indd),'+','Color',col,'MarkerFaceColor',col,'MarkerSize',11-(ili==1)*5,'LineWidth',1);
+       break;
+     end
+   end
+   iv=iv+1;
+  end %while
+  if strcmpi('chl',varshort0)  & 1
+    indd  = find(~isnan(timser(:,ili)) & timea>= t0 & timea<=t1);
+    if length(indd)>0
+      dval = timser(indd,ili)*cell2mat(var{i}(5));
+%      fprintf('%s: %d\t%1.1f %1.1f \n',varshort0,length(indd),datime(indd(1)),datime(indd(end)));
+      plot(timea(indd),dval,'o','Color',col,'MarkerFaceColor','none','MarkerSize',3,'LineWidth',1);
+    end
+   end
+
+ end % if show
+ 
+
 
  if(ptag(1)=='C' | ptag(1)=='P')
      if(Zt(i)==2)
@@ -95,7 +133,7 @@ for ili=1:size(i_loc,1)
  switch(ptag(1))  % plot type
 
  case{'L'} %% single lines
-  if occ(np,ix,iy) ==0,set(axs,'ylim',[minval maxVal]);ylabel(units); grid on; end
+  if occ(np,ix,iy) ==0,set(axs,'ylim',[minval maxVal]);ylabel(units); grid off; end
 %  set(cb,'position',[x0cb y0cb 0.015 dyp*0.8],'YAxisLocation','right');
   if (occ0(np,ix,iy)==1 & ns>1) occ0(np,ix,iy)=occ(np,ix,iy); end  %
   ci = 1+mod(occ(np,ix,iy),occ0(np,ix,iy)+(ns==1)*99);
@@ -110,7 +148,7 @@ for ili=1:size(i_loc,1)
        % rescale depth index for more than 10 layers/
        if(size(res,1)>10) zi=1+round((zi-1)/9*(size(res,1)-1)); end
        y=res(zi,:);
-       if size(neigh,1)>0
+       if size(neigh,1)>0 & 0
  %%        Xt=[time,fliplr(time)];                %#create continuous x value array for plotting
  %%        Ym=[resmin-0.5,fliplr(resmax)+2];              %#create y values for out and then back
  %%        fill(Xt,Ym,'w','Color',ones(3,1)*0.9); 
@@ -142,7 +180,8 @@ for ili=1:size(i_loc,1)
          y = res;
        end %dim==3
      end %xdigit
-     plot(time,y(ind),lins(ns,:),'Color' ,col,'LineWidth',linw(ns)); 
+     patchline(time,y(ind),'edgealpha',0.6,'edgecolor',col,'linewidth',linw(ns));
+%     plot(time,y(ind),lins(ns,:),'Color' ,col,'LineWidth',linw(ns)); 
      if ntags>1 
        sp=strfind(tag,'y');
        if sp>0, tag1=tag(sp+1:end);
@@ -289,36 +328,6 @@ for ili=1:size(i_loc,1)
 
   end
 
-% plot data
-%fprintf('%d %d data: %d\t%c\n',i,ili,show_dati(ili),cell2mat(var{i}(9)));
- if (show_dati(ili)>0 & ns==1)%& (cell2mat(var{i}(9))=='L' | cell2mat(var{i}(9))=='M'))
-  id=show_dati(ili); iv=1;
-%  fprintf('datashow: %d \n',size(vars,2));
-  col=colj(1+occ(np,ix,iy)-occ0(np,ix,iy)*(ns-1),:); 
-  while length(vars{id,iv})>0 
-%   fprintf('%s:%s\n',varshort0,vars{id,iv});
-   if strcmpi(vars{id,iv},varshort0)
-     dval = squeeze(data{id,iv})*cell2mat(var{i}(5));
-     indd  = find(~isnan(dval));
-     if length(indd)>0
-%       fprintf('%s: %d\t%1.1f %1.1f \n',varshort0,length(indd),datime(indd(1)),datime(indd(end)));
-       plot(datime(indd),dval(indd),'+-','Color',col,'MarkerFaceColor',col,'MarkerSize',12-(ili==1)*4,'LineWidth',1);
-       break;
-     end
-   end
-   iv=iv+1;
-  end %while
-  if strcmpi('chl',varshort0)
-    indd  = find(~isnan(timser(:,ili)) & timea>= t0 & timea<=t1);
-    if length(indd)>0
-      dval = timser(indd,ili)*cell2mat(var{i}(5));
-%      fprintf('%s: %d\t%1.1f %1.1f \n',varshort0,length(indd),datime(indd(1)),datime(indd(end)));
-      plot(timea(indd),dval,'s','Color',col,'MarkerFaceColor','none','MarkerSize',14,'LineWidth',1);
-    end
-   end
-
- end % if show
- 
 if(cell2mat(var{i}(9)) ~='N'  )
  if (ns==1 & occ(np,ix,iy)<5)
    fac=abs(cell2mat(var{i}(5))-1);
@@ -329,7 +338,10 @@ if(cell2mat(var{i}(9)) ~='N'  )
 %  col=colj(1+3*floor(occ(np,ix,iy)/(occ0(np,ix,iy)+1)),:); 
 %fprintf('%s\t np=%d occ=%d %d\t%d\n',varshort,np,occ(np,ix,iy),occ0(np,ix,iy),1+3*floor(occ(np,ix,iy)/(occ0(np,ix,iy)+1)));
 %fprintf('%s\t tpy=%1.1f \t %d\n',varshort,tpos(2),ii);
-   th(ii)=annotation('textbox',tpos+0.15*dxp+[0.33*dxp*(ptag(1)=='V') -0.22 0 0],'String',[varshort ],'Color',col,'Fontweight','bold','FontSize',fs+12,'LineStyle','none','FitHeightToText','off');%tag
+varshort
+   ta=strrep(varshort,'ZooC','Zooplankton');
+%0.33*dxp*(ptag(1)=='V')
+   th(ii)=annotation('textbox',tpos+[0.37*dxp 0.02 0 0],'String',[ta ],'Color',col,'Fontweight','bold','FontSize',fs+12,'LineStyle','none','FitHeightToText','off');%tag
 %%   annotation('textbox',tpos-[0 0.14*dyp 0 0],'String',compn{Zt(i)},'Color',col,'Fontweight','bold','FontSize',fs-2,'LineStyle','none');
  end %if (ns==1 &
  occ(np,ix,iy) = occ(np,ix,iy) + 1;

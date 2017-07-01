@@ -39,8 +39,6 @@ $SCRDIR/catnml
 N=$(ncdump -h $fname |grep '= UNLIMITED' |cut -f2 -d'(' |cut -f1 -d' ')
 N=$[$N - 1]
 echo 'cutting until time step ' $N
-#N=301
-echo 'cutting until time step ' $N
 
 # here for 178-cpu setup using 6 processors; 
 for ((a=0;a<6;a++)); do $SCRDIR/cut_avg_surf.sh $nproc ~/sns/cut $a 6 $N & done
@@ -63,9 +61,9 @@ rm $fname
 python  $SCRDIR/stitch_tiles.py cut_\*.nc $outdir'.nc'
 #python  $SCRDIR/stitch_tiles.py cutz  # surface sums
 #python  $SCRDIR/stitch_tiles.py cutm_\*.nc $outdir'_m.nc'  #monthly maximum
-
+#python  $SCRDIR/stitch_tiles.py cutc_\*.nc $outdir'_chls.nc'  #subsurface chl
 fname='cut*.nc'
-rm $fname
+rm $fname *.tmp
 #fname='cutm_*.nc'
 #rm $fname
 

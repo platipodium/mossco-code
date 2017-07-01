@@ -3,24 +3,26 @@
 addpath('~/tools/mexcdf/mexnc'); addpath('~/tools/m_map');
 clear all; close all
 addpath('~/tools/export_fig');  % toolbox needed for correct png layout
-show_data=1; Is1D=0; IsNOAH=0; tmp=version; VerMat=num2str(tmp(1:3)); 
+show_data=1; Is1D=0; IsNOAH=1; tmp=version; VerMat=num2str(tmp(1:3)); 
 datm='~/data/DeutscheBucht/esacci_2003_2013.mat';
 %% settings
 % locations; at least one site-name (locs) should be given 
 %loc =[]; ];%];%
-loc =[[54.18,7.86];[55.,8.3];[53.7,7.2];[52.3,4.3];[52.56,3.5];[53.42,5.15];[53.76,4.77]; [54.6,8.4];[54.0,8.7];[54.1,6.3];[54.2,7.5];[53.92,4.6];[53.9,2.9];];%;;[55.2,5.0];[55.0,8.0];]; 
+%%loc =[[54.18,7.86];[55.,8.3];[53.7,7.2];[52.3,4.3];[52.56,3.5];[53.42,5.15];[53.76,4.77]; [54.6,8.4];[54.0,8.7];[54.1,6.3];[54.2,7.5];[53.92,4.6];[53.9,2.9];];%;;[55.2,5.0];[55.0,8.0];];
+%%locs={'Helgoland';'Sylt'; 'Norderney';'NOORDWK10';'NOORDWK70';'TERSLG4';  'TERSLG50';   'SAmrum';  'Norderelbe'; 'T22';    'T26';  'TERSLG70';'EastAngliaPlume';'T2' ;'T8';}; %
+ loc =[[54.18,7.86];[53.989,6.237];	[53.987,6.870];	[54.070,8.019];	[54.173,7.962];	[54.092,7.357];	[54.439,7.425];	[54.468,6.193];	[55.038,6.403];	[54.830,5.575];	[55.257,4.746];	[55.502,4.168];	[54.685,6.737];	[54.688,7.510];	[54.194,7.234]];
+ locs={'Helgoland';'NOAH-A-permeable';	'NOAH-B';	'NOAH-C-imperm';	'NOAH-CCPG';	'NOAH-D';	'NOAH-E';	'NOAH-F';	'NOAH-G';	'NOAH-H';	'NOAH-CCPJ';	'NOAH-I';	'NOAH-NSB3';	'NOAH-NSB2';	'NOAH-DB';};	
 % %[54.96,8.4]; 
 %  % 17 m 28 m% Noordwijk-10 Noordwijk-70
-locs={'Helgoland';'Sylt'; 'Norderney';'NOORDWK10';'NOORDWK70';'TERSLG4';  'TERSLG50';   'SAmrum';  'Norderelbe'; 'T22';    'T26';  'TERSLG70';'EastAngliaPlume';'T2' ;'T8';}; %
 %tags ={'';'_half_sedimentation_tke2E-4';'_rFast0.05';'_vS_det18';'_sinking_factor0.32';'_sinking_factor_min0.03';'_a_water0.8'};
 tags ={''};
 for nsu=1:length(tags)
  tag=cell2mat(tags(nsu));
  files{1} = fullfile('~/sns/cut',['sns' tag '.nc']);
 %% Output directory
-dirname=['sns_Oflux01_' tag]; if ~exist(dirname),  mkdir(dirname); end;
+dirname=['sns_Oflux02' tag]; if ~exist(dirname),  mkdir(dirname); end;
 %files={'~/jureca/sns/cut/sns.nc'};%,
-files={'~/sns/cut/sns.nc'};%,'~/sns_kai_z2.nc'
+files={'~/sns/cut/sns.nc'};%,'~/sns_kai_z2.nc'_ref_20002011
 
 %% Construtcs File and Path names
 %vid_tshow=[0]; j=1; 
@@ -31,9 +33,9 @@ else
 %  varna='Temp (^oC)';  zlimit=[-1 20];varid=7;
 %  varna='N_2 flux (mmol/m2d)';  zlimit=[0 2.5];  varid=0;
 %  varna='depth (m)';  zlimit=[2 52];  varid=0;
-  varna='O_2 downward flux';varun='(mmol/m^2d)';  zlimit=[0 40];  varid=8;
+  varna='O_2 downward flux';varun='(mmol/m^2d)';  zlimit=[0 40];  varid=15;
 end
-dim3d=0; odu=1;odu_id=9;
+dim3d=0; odu=1;odu_id=16;
 %lx0=2;lx1=4;ly0=1;ly1=0;
 lx0=1;lx1=0;ly0=1;ly1=0;
 
@@ -48,6 +50,8 @@ collo=ones(3,1)*0.0;colhi=ones(3,1)*0.7;
 
 read_mossco_nc; % from files{i},  returns ncid and variables lon, lat
 read_noah;
+latlimit =[51.0402   55.6386];
+lonlimit =[0.0029    9.2283];
 
 %% Init animation
 fn=vars{varid+1};
@@ -120,8 +124,13 @@ for it=1:1:it1 %length(doy)
    m_text(lonlimit(1)-0.1,latlimit(2),varna,'HorizontalAlignment','left','FontSize',fs+6,'FontWeight','bold');
    m_text(lonlimit(2)-7,latlimit(1)+0.5,ta,'FontWeight','bold','HorizontalAlignment','right','FontSize',fs);
    set(gca,'FontSize',fs);
-   for i=1:ndn
-     m_text(lon(nsgi(i,1),nsgi(i,2)),lat(nsgi(i,1),nsgi(i,2)),'o','FontSize',15,'FontWeight','bold','HorizontalAlignment','center','Color','w');
+   cc='kw';
+    for i=1:ndn
+    for rad=8:2:16
+      m_plot(lon(nsgi(i,1),nsgi(i,2)),lat(nsgi(i,1),nsgi(i,2)),'o','Color',cc(1+(rad>13 &rad<17)),'MarkerSize',rad,'Linewidth',2)
+    end
+
+%     m_text(lon(nsgi(i,1),nsgi(i,2)),lat(nsgi(i,1),nsgi(i,2)),'o','FontSize',15,'FontWeight','bold','HorizontalAlignment','center','Color','w');
    end
    set(gcf,'PaperPositionMode','auto');
    fname=sprintf('%s/%s_%d_%d.png',dirname,fn,mi,year(it));%vars{varid+1}md(jm)
@@ -161,9 +170,9 @@ yh(1,:) = o2fl_mean(ii)-sqrt(o2fl_var(ii));
 yh(2,:) = o2fl_mean(ii)+sqrt(o2fl_var(ii))-yh(1,:)' ;
 pa=area(ii,yh');
 set(pa(1),'FaceColor','w'); 
-set(pa(2),'FaceColor',ones(3,1)*0.85); 
+set(pa(2),'FaceColor',ones(3,1)*0.75); 
 set(pa,'LineStyle','none')
-plot(ii,o2fl_mean(ii),'-','Color','w','LineWidth',3)
+plot(ii,o2fl_mean(ii),'-','Color','w','LineWidth',4)
 if nsu==1
   o2fl_ref = o2fl_mean(ii);
 else
@@ -177,8 +186,8 @@ for i=1:ndn
    lg(i)=plot(noahdat(:,1),noahdat(:,1+i),'o','markersize',8,'MarkerFaceColor',colnj(i,:),'Color',colnj(i,:));
 end %collo
 
-le=legend(lg,statlabel,'Location','NorthWest')
-set(le,'Box','off');
+%le=legend(lg,statlabel,'Location','NorthWest')
+%set(le,'Box','off','FontSize',8);
 if 0
 for y=years(2):years(4)
   it=find(year==y);

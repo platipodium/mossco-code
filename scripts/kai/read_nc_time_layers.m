@@ -35,18 +35,18 @@ end
 if IsWater
   try
     water_dz   = squeeze(ncread(ncfile,'layer_height_in_water'));
-    if surf & size(water_dz,3)>2
-       tmp2 = squeeze(sum(water_dz(:,:,2:end,:),3))/(size(water_dz,3)-1); 
-       water_dz(:,:,2,:) = tmp2;
-       water_dz = water_dz(:,:,1:2,:);
-    end
+%    if surf & size(water_dz,3)>2
+%       tmp2 = squeeze(sum(water_dz(:,:,2:end,:),3))/(size(water_dz,3)-1); 
+%       water_dz(:,:,2,:) = tmp2;
+%       water_dz = water_dz(:,:,1:2,:);
+%    end
 
   catch exception
      varid=netcdf.inqDimID(ncid,[coordn '_3']);
      [id nz]=netcdf.inqDim(ncid,varid);
-     if surf
-        nz=2;
-     end
+%     if surf
+%        nz=2;
+%     end
      fprintf('using equidistant mesh\n');
      water_dz = ones(nz,length(time));
   end
