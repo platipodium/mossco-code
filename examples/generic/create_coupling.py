@@ -2318,7 +2318,7 @@ libmossco_info libmossco_test libmossco_river libmossco_hamsom libmossco_locatio
 libmossco_sediment:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
-libsurfacescouplerlibaocoupler liblinkcoupler libxgridcoupler libregridcoupler libcopycoupler libmossco_coupler:
+libsurfacescouplerlibaocoupler liblinkcoupler libxgridcoupler libregridcoupler libcopycoupler libmossco_coupler libmossco_mediator:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
 libmossco_connector:

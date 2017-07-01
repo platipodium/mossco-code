@@ -649,7 +649,8 @@ contains
         call ESMF_AttributeGet(state, name=attributeName, valueList=integer4ValueList, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        write(message,'(A,I3.3)') trim(message)//' ',integer4ValueList(1)
+        write(string,'(I3.3)') integer4ValueList(1)
+        call MOSSCO_MessageAdd(message,', '//trim(string))
         do j=2, itemCount-1
           write(string,'(A,I3.3)') ', ',integer4ValueList(j)
           call MOSSCO_MessageAdd(message,', '//trim(string))
@@ -662,7 +663,8 @@ contains
         call ESMF_AttributeGet(state, name=attributeName, valueList=integer8ValueList, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        write(message,'(A,I3.3)') trim(message)//' ',integer8ValueList(1)
+        write(string,'(I3.3)') integer8ValueList(1)
+        call MOSSCO_MessageAdd(message,', '//trim(string))
         do j=2, itemCount-1
           write(string,'(A,I3.3)') ', ',integer8ValueList(j)
           call MOSSCO_MessageAdd(message,', '//trim(string))
@@ -675,7 +677,8 @@ contains
         call ESMF_AttributeGet(state, name=attributeName, valueList=real4ValueList, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        write(message,'(A,ES9.2)') trim(message)//' ',real4ValueList(1)
+        write(string,'(ES9.2)') real4ValueList(1)
+        call MOSSCO_MessageAdd(message,', '//trim(string))
         do j=2, itemCount-1
           write(string,'(A,ES9.2)') ', ',real4ValueList(j)
           call MOSSCO_MessageAdd(message,', '//trim(string))
@@ -689,7 +692,8 @@ contains
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        write(message,'(A,ES9.2)') trim(message)//' ',real8ValueList(1)
+        write(string,'(ES9.2)') real8ValueList(1)
+        call MOSSCO_MessageAdd(message,', '//trim(string))
         do j=2, itemCount-1
           write(string,'(A,ES9.2)') ', ',real8ValueList(j)
           call MOSSCO_MessageAdd(message,', '//trim(string))
