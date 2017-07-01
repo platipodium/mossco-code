@@ -24,10 +24,14 @@ module mossco_strings
   use esmf
   use mossco_memory
 
-implicit none
+  implicit none
 
+  private
   public order, intformat
 
+  !> @brief Returns the order of magnitude of its input argument
+  !> @param <integer|real>(kind=4|8)
+  !> @return integer(kind=4)
   interface order
     module procedure order_i4
     module procedure order_i8
@@ -35,11 +39,16 @@ implicit none
     module procedure order_r8
   end interface
 
+  !> @brief Returns a formatstring for its argument
+  !> @param integer(kind=4|8)
+  !> @return character(len=4)
   interface intformat
     module procedure intformat_i4
     module procedure intformat_i8
   end interface
 
+  !> @brief Safely adds a string or list of strings to existing string, observing length
+  !> @param character(len=*) | character(len=*),dimension(*)
   interface MOSSCO_MessageAdd
     module procedure MOSSCO_MessageAddString
     module procedure MOSSCO_MessageAddList
@@ -140,12 +149,15 @@ contains
        order = 0
      else
        s = sign(ONE,i)
-       order = int(0.5*(1-s)) + int(log10(1.0*s*i))
+       order = int(0.5*(1.0-real(s))) + int(log10(abs(real(i))))
      endif
    end function order_i8
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "order_i4"
+!> @brief Returns the order of magnitude of its input argument
+!> @return integer(kind=4)
+!> @param integer(kind=4)
    function order_i4(i) result(order)
      integer(kind=4), intent(in)  :: i
      integer(kind=4)              :: order
@@ -153,12 +165,15 @@ contains
      if ( i .eq. 0 ) then
        order = 0
      else
-       order = int(0.5*(1-sign(1,i))) + int(log10(1.0*abs(i)))
+       order = int(0.5*(1.0-sign(1,i))) + int(log10(1.0*abs(i)))
      endif
    end function order_i4
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "order_r8"
+!> @brief Returns the order of magnitude of its input argument
+!> @return integer(kind=4)
+!> @param integer(kind=8)
    function order_r8(r) result(order)
      real(kind=8), intent(in)  :: r
      integer(kind=4)           :: order
@@ -183,7 +198,7 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "intformat_i8"
-   function intformat_i8(i)
+  function intformat_i8(i)
      character(len=4) :: intformat_i8
      integer(kind=8), intent(in) :: i
      integer             :: o
@@ -197,7 +212,7 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "intformat_i4"
-   function intformat_i4(i)
+  function intformat_i4(i)
      character(len=4) :: intformat_i4
      integer(kind=4), intent(in) :: i
      integer             :: o
