@@ -584,30 +584,41 @@ module fabm_pelagic_component
                                       1-totalLWidth3(2,1):jnum+totalUWidth3(2,1)))
     pel%is_openboundary_hz = .false.
 
-    call ESMF_GridGetItem(state_grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask, rc=localrc)
-    if (localrc == ESMF_SUCCESS) then
+    call ESMF_GridGetItem(state_grid, itemflag=ESMF_GRIDITEM_MASK, isPresent=isPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (isPresent) then
+      call ESMF_GridGetItem(state_grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       mask = ( gridmask.le.0 ) !>@todo: mask where gridmask /= 1
       pel%is_openboundary = ( gridmask > 1 )
       pel%is_openboundary_hz = pel%is_openboundary(:,:,1)
     end if
 
     !! add cell area to horizontal grid
-    call ESMF_GridAddItem(horizontal_grid, itemflag=ESMF_GRIDITEM_AREA, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
+    call ESMF_GridAddItem(horizontal_grid, itemflag=ESMF_GRIDITEM_AREA, &
+      staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-    call ESMF_GridGetItem(horizontal_grid, itemflag=ESMF_GRIDITEM_AREA, staggerloc=ESMF_STAGGERLOC_CENTER, farrayPtr=pel%column_area, rc=localrc)
+
+    call ESMF_GridGetItem(horizontal_grid, itemflag=ESMF_GRIDITEM_AREA, &
+      staggerloc=ESMF_STAGGERLOC_CENTER, farrayPtr=pel%column_area, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-    ! get area from 3d grid
-    call ESMF_GridGetItem(state_grid, itemflag=ESMF_GRIDITEM_AREA, staggerloc=ESMF_STAGGERLOC_CENTER_VCENTER, farrayPtr=ptr_f3, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
-      !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    ! get area from 3d grid if it is present
+    call ESMF_GridGetItem(state_grid, itemflag=ESMF_GRIDITEM_AREA, &
+      staggerloc=ESMF_STAGGERLOC_CENTER_VCENTER, isPresent=isPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (isPresent) then
+      call ESMF_GridGetItem(state_grid, itemflag=ESMF_GRIDITEM_AREA, &
+        staggerloc=ESMF_STAGGERLOC_CENTER_VCENTER, farrayPtr=ptr_f3, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      pel%column_area = ptr_f3(1:inum,1:jnum,1)
+    else
+      !> @todo: if no area in state_grid, calculate based on corner coordinates
       pel%column_area = 1.0d0
       write(message, '(A)') trim(name)//' cannot find vcenter area in grid, set to 1.0 and assume fluxes_in_water to come as mass m-2 s-1'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-    else
-      ! use layer 1 cell area.
-      ! the indexing fits to GETM layout that starts at i=1-totalLWidth(1)
-      pel%column_area = ptr_f3(1:inum,1:jnum,1)
-      ! @todo: if no area in state_grid, calculate based on corner coordinates
     end if
 
     call pel%initialize_domain(inum,jnum,numlayers,dt,mask=mask(1:inum,1:jnum,1:numlayers))
