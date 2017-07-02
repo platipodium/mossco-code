@@ -157,6 +157,7 @@ module filtration_component
     parameters(1)%name='mussel_mass'
     parameters(1)%label='mussel_mass'
     parameters(1)%typeKind=ESMF_TYPEKIND_R8
+    otherCount = 0
     !parameters(1)%unit='g'
 
     filterSpecies = 'phytoplankton' ! Main variable to filter
