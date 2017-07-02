@@ -6,7 +6,7 @@
 !> @export water_temperature, grid_height, (FABM variables)
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2013, 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !> @author Richard Hofmeister <richard.hofmeister@hzg.de>
 !
@@ -227,16 +227,21 @@ module gotm_component
     call ESMF_TimeIntervalSet(timeInterval,s_r8=gotm_time_timestep,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_ClockSet(clock, timeStep=timeInterval, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring,rc=localrc)
+    call ESMF_TimeGet(currTime, timeStringISOFrac=timestring, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     gotm_time_start=timestring(1:10)//" "//timestring(12:19)
 
-    call ESMF_TimeGet(stopTime,timeStringISOFrac=timestring)
+    call ESMF_ClockGet(parentClock, stopTime=stopTime, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_TimeGet(stopTime, timeStringISOFrac=timestring)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     gotm_time_stop=timestring(1:10)//" "//timestring(12:19)
@@ -522,7 +527,7 @@ module gotm_component
                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
                if (status.eq.ESMF_FIELDSTATUS_EMPTY) then
-                  ! we do not expect imcomplete fields here                 
+                  ! we do not expect imcomplete fields here
                else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
                   call ESMF_LogWrite('  will transport external field '//trim(itemNameList(i)),ESMF_LOGMSG_INFO)
                   call ESMF_FieldGet(concFieldList(i), farrayPtr=ptrf3, rc=localrc)
