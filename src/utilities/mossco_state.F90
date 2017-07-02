@@ -742,6 +742,11 @@ contains
       if (itemtypeList(i) == ESMF_STATEITEM_FIELD) then
 
         call ESMF_StateGet(state, itemNameList(i), field, rc=localrc)
+
+        !> @todo the following ccycle statement should not be necessary (but we
+        !have incidents on jureca
+        if (localrc /= ESMF_SUCCESS) cycle
+
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
