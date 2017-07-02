@@ -1414,17 +1414,25 @@ module mossco_netcdf
     integer                       :: rc_, localrc
     logical                       :: isPresent
 
+    rc_ = ESMF_SUCCESS
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
+
     inquire(file=trim(filename), exist=isPresent)
+    if (ispresent) then
+      call ESMF_LogWrite('  overwriting file '//trim(filename), ESMF_LOGMSG_INFO)
+    else
+      call ESMF_LogWrite('  created new file '//trim(filename), ESMF_LOGMSG_INFO)
+    endif
 
     ncStatus = nf90_create(trim(filename), NF90_CLOBBER, nc%ncid)
     if (ncStatus /= NF90_NOERR) then
       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot create file '//trim(filename), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    else
-      if (ispresent) then
-        call ESMF_LogWrite('  overwriting file '//trim(filename), ESMF_LOGMSG_INFO)
+      if (present(rc)) then
+        rc = ESMF_RC_FILE_WRITE
+        return
       else
-        call ESMF_LogWrite('  created new file '//trim(filename), ESMF_LOGMSG_INFO)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
     endif
 
@@ -1448,6 +1456,7 @@ module mossco_netcdf
       endif
     endif
 
+    !> @todo write global attributes
     if (present(state)) then
       !call MOSSCO_AttributeNetcdfWrite(state, nc%ncid, varid=NF90_GLOBAL, rc=localrc)
       !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
