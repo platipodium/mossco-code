@@ -668,7 +668,7 @@ module filtration_component
     integer(ESMF_KIND_I4)                :: ubndZ(3), lbndZ(3)
     type(ESMF_Field), allocatable        :: fieldList(:)
 
-    character(len=ESMF_MAXSTR)  :: filterSpecies, fluxName, creatorName
+    character(len=ESMF_MAXSTR)  :: filterSpecies, fluxName, creatorName, string
     character(len=ESMF_MAXSTR), allocatable  :: filterSpeciesList(:)
     type(ESMF_FieldStatus_Flag) :: fieldStatus
     logical                     :: isSoil, isSurface
@@ -1052,6 +1052,8 @@ module filtration_component
 
       ! Cap the fractional loss rate at 30% of integration_timestep. Then correct
       ! also the absolute loss rate
+
+      write(message,'(A)') trim(name)
       if (any(-fractionalLossRate(RANGE3D) * integration_timestep > maximumRelativeChange)) then
 
         where (-fractionalLossRate(RANGE3D) * integration_timestep > maximumRelativeChange)
@@ -1059,17 +1061,16 @@ module filtration_component
           lossRate(RANGE3D) = fractionalLossRate(RANGE3D) * concentration(RANGE3D)
         endwhere
 
-        write(message,'(A,ES10.3,A,F6.3,A)') trim(name)//' is filtering (capped) up to ', &
-          maxval(-lossRate(RANGE3D),mask=mask(RANGE3D)),' mmol m-3 s-1 or ',&
-          maxval(-fractionalLossRate(RANGE3D),mask=mask(RANGE3D))*100*3600,'% h-1'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
+        call MOSSCO_MessageAdd(message,' is filtering (capped) up to ')
       else
-        write(message,'(A,ES10.3,A,F6.3,A)') trim(name)//' is filtering up to ', &
-          maxval(-lossRate(RANGE3D),mask=mask(RANGE3D)),' mmol m-3 s-1 or ',&
-          maxval(-fractionalLossRate(RANGE3D),mask=mask(RANGE3D))*100*3600,'% h-1'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        call MOSSCO_MessageAdd(message,' is filtering up to ')
       endif
+
+      write(string,'(ES10.3)') maxval(-lossRate(RANGE3D),mask=mask(RANGE3D))
+      call MOSSCO_MessageAdd(message,trim(string))
+      write(string,'(F6.3)') maxval(-fractionalLossRate(RANGE3D),mask=mask(RANGE3D))*100*3600
+      call MOSSCO_MessageAdd(message,' mmol m-3 s-1 or '//trim(string)//'% h-1')
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       call MOSSCO_AttributeGet(gridComp, 'filter_other_species', filterSpeciesList, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
