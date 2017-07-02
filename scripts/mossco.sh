@@ -476,8 +476,9 @@ EOT
     fi
 
     echo "" >> slurm.sh
+    echo "# optionally copy-from restart directory" >> slurm.sh
     echo  ${MPI_PREFIX} ${EXE} ${NML}>> slurm.sh
-
+    echo "# optionally copy-to restart directory" >> slurm.sh
 ;;
   MOAB) cat << EOT > moab.sh
 #!/bin/bash -x
