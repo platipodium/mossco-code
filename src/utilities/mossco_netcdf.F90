@@ -17,6 +17,12 @@
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "mossco_netcdf.F90"
 
+#define RANGE3D lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)
+#define RANGE2D lbnd(1):ubnd(1),lbnd(2):ubnd(2)
+#define RANGE1D lbnd(1):ubnd(1)
+
+#define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
 module mossco_netcdf
 
   use mossco_variable_types, only: mossco_variableInfo
@@ -147,8 +153,7 @@ module mossco_netcdf
 
     call ESMF_FieldGet(field, name=varname, rank=rank, &
       localDeCount=localDeCount, typeKind=typeKind, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (localDeCount == 0) return
     if (typeKind /= ESMF_TYPEKIND_R8) return
@@ -158,8 +163,7 @@ module mossco_netcdf
     allocate(exclusiveCount(rank), stat=localrc)
     call ESMF_FieldGetBounds(field, localDe=0, exclusiveLBound=lbnd, &
       exclusiveUBound=ubnd, exclusiveCount=exclusiveCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (any(exclusiveCount==0)) return
 
@@ -180,8 +184,7 @@ module mossco_netcdf
         precision_=self%precision
       endif
       call self%create_variable(field, trim(varname), precision=precision_, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       call self%update_variables()
       call self%update()
@@ -227,47 +230,43 @@ module mossco_netcdf
     endif
 
     call ESMF_FieldGet(field, geomType=geomType, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
     if (geomType == ESMF_GEOMTYPE_GRID) then
       call ESMF_FieldGet(field, grid=grid, staggerloc=staggerloc, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       call ESMF_GridGet(grid, rank=gridRank, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
 #if ESMF_VERSION_MAJOR > 6
 !! This is only implemented from 7b29
       if (gridRank == 2) then
         call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, isPresent=gridIsPresent, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
         if (gridIsPresent) then
           call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, farrayPtr=gridmask2, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
           call ESMF_GridGetItemBounds(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, exclusiveLbound=grid2Lbnd, &
             exclusiveUBound=grid2Ubnd, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
         else
           nullify(gridmask2)
         endif
       elseif (gridRank == 3) then
         call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, isPresent=gridIsPresent, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
         if (gridIsPresent) then
           call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, farrayPtr=gridmask3, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          call ESMF_GridGetItemBounds(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, exclusiveLbound=grid3Lbnd, &
-            exclusiveUBound=grid3Ubnd, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+          call ESMF_GridGetItemBounds(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, &
+            exclusiveLbound=grid3Lbnd, exclusiveUBound=grid3Ubnd, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
           gridmask2 => gridmask3(:,:,1)
         else
           nullify(gridmask3)
@@ -282,8 +281,7 @@ module mossco_netcdf
         else
           call ESMF_GridGetItemBounds(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, exclusiveLbound=grid2Lbnd, &
             exclusiveUBound=grid2Ubnd, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
         endif
       elseif (gridRank == 3) then
         call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, farrayPtr=gridmask3, rc=localrc)
@@ -293,8 +291,8 @@ module mossco_netcdf
         else
           call ESMF_GridGetItemBounds(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, exclusiveLbound=grid3Lbnd, &
             exclusiveUBound=grid3Ubnd, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
           gridmask2 => gridmask3(:,:,1)
         endif
       endif
@@ -302,24 +300,31 @@ module mossco_netcdf
     end if
 
     call ESMF_AttributeGet(field, 'missing_value', isPresent=isPresent, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (isPresent) then
       call ESMF_AttributeGet(field, 'missing_value', typeKind=mvTypeKind, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       if (mvTypeKind == ESMF_TYPEKIND_R8) then
         call ESMF_AttributeGet(field, 'missing_value', missingValueR8, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
         missingValue = missingValueR8
       elseif (mvTypeKind == ESMF_TYPEKIND_R4) then
         call ESMF_AttributeGet(field, 'missing_value', missingValueR4, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
         missingValue = dble(missingValueR4)
       elseif (mvTypeKind == ESMF_TYPEKIND_I8) then
         call ESMF_AttributeGet(field, 'missing_value', missingValueI8, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
         missingValue = dble(missingValueI8)
       elseif (mvTypeKind == ESMF_TYPEKIND_I4) then
         call ESMF_AttributeGet(field, 'missing_value', missingValueI4, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
         missingValue = dble(missingValueI4)
       else
         write(message,'(A)')  '  missing value of non-implemented type '
@@ -328,15 +333,13 @@ module mossco_netcdf
         if (present(rc)) rc=ESMF_RC_NOT_IMPL
         return
       endif
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
 
     if (rank==4) then
 
       call  ESMF_FieldGet(field, farrayPtr=farrayPtr4, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       !> @todo We should *not* write into any parts of the pointer, rather make a copy
       if (associated(ncarray4)) deallocate(ncarray4)
@@ -416,8 +419,7 @@ module mossco_netcdf
     elseif (rank==3) then
 
       call  ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       if (associated(ncarray3)) deallocate(ncarray3)
       allocate(ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)),stat=localrc)
@@ -489,8 +491,7 @@ module mossco_netcdf
     elseif (rank==2) then
 
       call  ESMF_FieldGet(field, farrayPtr=farrayPtr2, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       if (associated(ncarray2)) deallocate(ncarray2)
       allocate(ncarray2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)),stat=localrc)
@@ -555,8 +556,7 @@ module mossco_netcdf
     elseif (rank==1) then
 
       call  ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
 
       if (any(var%dimids==self%timeDimId)) then
@@ -585,7 +585,6 @@ module mossco_netcdf
     ! if (present(rc)) rc=rc_
 
   end subroutine mossco_netcdf_variable_put
-
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_variable_present"
@@ -643,12 +642,14 @@ module mossco_netcdf
     type(ESMF_Vm)                  :: vm
     integer, allocatable           :: iarray1(:), iarray2(:,:), iarray3(:,:,:), dimlen(:)
 
+    integer(ESMF_KIND_I4),allocatable   :: ubnd(:), lbnd(:)
+    real(ESMF_KIND_R8),pointer     :: farrayPtr1(:), farrayPtr2(:,:), farrayPtr3(:,:,:)
+
     rc_ = ESMF_SUCCESS
     if (present(rc)) rc = ESMF_SUCCESS
 
     call ESMF_FieldGet(field,name=fieldname,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     varname = trim(fieldname)
     if (present(name)) varname=trim(name)
@@ -657,22 +658,20 @@ module mossco_netcdf
     if (self%variable_present(varname)) return
 
     call ESMF_FieldGet(field,geomType=geomType,dimCount=dimCount,staggerloc=staggerloc,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (geomType==ESMF_GEOMTYPE_GRID) then
       call ESMF_FieldGet(field,grid=grid,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       call ESMF_GridGet(grid,name=geomName,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       dimids => self%grid_dimensions(grid,staggerloc)
 
       call ESMF_GridGet(grid, coordSys=coordSys,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       if (coordSys == ESMF_COORDSYS_SPH_DEG) then
         coordnames=(/'lon  ','lat  ','level'/)
       elseif (coordSys == ESMF_COORDSYS_SPH_RAD) then
@@ -711,8 +710,7 @@ module mossco_netcdf
         rc=ESMF_RC_FILE_WRITE
         if (ESMF_LogFoundError(rc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT)) return
       else
-        if (ESMF_LogFoundError(ESMF_RC_FILE_WRITE, ESMF_ERR_PASSTHRU, ESMF_CONTEXT)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       endif
     endif
 
@@ -724,8 +722,8 @@ module mossco_netcdf
       allocate(ulbnd(ungriddedDimCount))
       allocate(uubnd(ungriddedDimCount))
       call ESMF_FieldGet(field,ungriddedLBound=ulbnd,ungriddedUBound=uubnd,rc=localrc)
-       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       ! re-allocate dimids and add dimension-id(s) of ungridded dimension
       allocate(tmpDimids(1:dimrank))
       tmpDimids = dimids
@@ -761,6 +759,8 @@ module mossco_netcdf
     endif
 
     call ESMF_FieldGet(field, typeKind=typeKind, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
     if (typekind==ESMF_TYPEKIND_I4) then
       ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_INT,dimids,varid)
     elseif (typekind==ESMF_TYPEKIND_I8) then
@@ -775,12 +775,10 @@ module mossco_netcdf
       endif
     elseif (typekind==ESMF_TYPEKIND_CHARACTER) then
       !> @todo
-      if (ESMF_LogFoundError(ESMF_RC_NOT_IMPL, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     elseif (typekind==ESMF_TYPEKIND_LOGICAL) then
       !> @todo
-      if (ESMF_LogFoundError(ESMF_RC_NOT_IMPL, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
 
     if (ncStatus /= NF90_NOERR) then
@@ -795,11 +793,11 @@ module mossco_netcdf
 
     if (typeKind == ESMF_TYPEKIND_R8) then
       call ESMF_AttributeGet(field, 'numeric_precision', isPresent=isPresent, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       if (.not.isPresent) call ESMF_AttributeSet(field, 'numeric_precision', trim(precision), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
     endif
 
     !call ESMF_AttributeGet(field, 'standard_name', isPresent=isPresent, rc=localrc)
@@ -813,82 +811,78 @@ module mossco_netcdf
     !    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     !endif
     call ESMF_AttributeGet(field, 'long_name', isPresent=isPresent, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
     if (.not.isPresent) call ESMF_AttributeSet(field, 'long_name', trim(fieldName), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
     call ESMF_AttributeGet(field, 'coordinates', isPresent=isPresent, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
     if (.not.isPresent) call ESMF_AttributeSet(field, 'coordinates', trim(coordinates), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (typeKind == ESMF_TYPEKIND_R4) then
       call ESMF_AttributeGet(field, 'missing_value', isPresent=isPresent, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       if (.not.isPresent) call ESMF_AttributeSet(field, 'missing_value', missingValueR4, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       call ESMF_AttributeGet(field, '_FillValue', isPresent=isPresent, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       if (.not.isPresent) call ESMF_AttributeSet(field, '_FillValue', missingValueR4, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
     elseif (typeKind == ESMF_TYPEKIND_R8) then
       call ESMF_AttributeGet(field, 'missing_value', isPresent=isPresent, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       if (.not.isPresent) call ESMF_AttributeSet(field, 'missing_value', missingValueR8, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       call ESMF_AttributeGet(field, '_FillValue', isPresent=isPresent, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       if (.not.isPresent) call ESMF_AttributeSet(field, '_FillValue', missingValueR8, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
     elseif (typeKind == ESMF_TYPEKIND_I4) then
       call ESMF_AttributeGet(field, 'missing_value', isPresent=isPresent, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       if (.not.isPresent) call ESMF_AttributeSet(field, 'missing_value', missingValueI4, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       call ESMF_AttributeGet(field, '_FillValue', isPresent=isPresent, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       if (.not.isPresent) call ESMF_AttributeSet(field, '_FillValue', missingValueI4, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
     elseif (typeKind == ESMF_TYPEKIND_I8) then
       call ESMF_AttributeGet(field, 'missing_value', isPresent=isPresent, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       if (.not.isPresent) call ESMF_AttributeSet(field, 'missing_value', missingValueI8, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       call ESMF_AttributeGet(field, '_FillValue', isPresent=isPresent, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       if (.not.isPresent) call ESMF_AttributeSet(field, '_FillValue', missingValueI8, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
 
     !call MOSSCO_FieldLog(field)
     call MOSSCO_AttributeNetcdfWrite(field, self%ncid, varid=varid, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     ncStatus = nf90_enddef(self%ncid)
     if (ncStatus /= NF90_NOERR) then
       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot end definition mode', ESMF_LOGMSG_ERROR)
-      if (ESMF_LogFoundError(ESMF_RC_OBJ_BAD, ESMF_ERR_PASSTHRU, ESMF_CONTEXT)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
 
     !> @todo remove time from dimensions
@@ -898,8 +892,7 @@ module mossco_netcdf
       ncStatus = nf90_redef(self%ncid)
       if (ncStatus /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot enter definition mode', ESMF_LOGMSG_ERROR)
-        if (ESMF_LogFoundError(ESMF_RC_OBJ_BAD, ESMF_ERR_PASSTHRU, ESMF_CONTEXT)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       endif
 
       if (geomType==ESMF_GEOMTYPE_GRID) then
@@ -921,18 +914,16 @@ module mossco_netcdf
       ncStatus = nf90_put_att(self%ncid,varid,'_FillValue',-1)
 
       call ESMF_VMGetGlobal(vm=vm, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       call ESMF_VMGet(vm, localPet=localPet, petCount=petCount, peCount=peCount, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       ncStatus = nf90_put_att(self%ncid,varid,'vm_pet_count',petCount)
       ncStatus = nf90_put_att(self%ncid,varid,'vm_processing_element_count',peCount)
 
       call ESMF_VMGet(vm, localPet, peCount=peCount, ssiId=ssiId, vas=vas, rc=rc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       ncStatus = nf90_put_att(self%ncid,varid,'pet_virtual_address_space',vas)
       ncStatus = nf90_put_att(self%ncid,varid,'pet_single_system_image_id',ssiId)
@@ -941,8 +932,7 @@ module mossco_netcdf
       ncStatus = nf90_enddef(self%ncid)
       if (ncStatus /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot end definition mode', ESMF_LOGMSG_ERROR)
-        if (ESMF_LogFoundError(ESMF_RC_OBJ_BAD, ESMF_ERR_PASSTHRU, ESMF_CONTEXT)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       endif
 
       allocate(dimlen(ubound(dimids,1)-1))
@@ -968,6 +958,90 @@ module mossco_netcdf
       endif
       deallocate(dimlen)
     endif ! present(pet_var)
+
+    !> If there is an item in the grid with GRIDITEM_AREA, then write
+    !> this item to the netcdf file with standard name area
+    !> @todo implement this for meshes, too
+
+    if (geomType==ESMF_GEOMTYPE_GRID) then
+      call ESMF_GridGetItem(grid, itemFlag=ESMF_GRIDITEM_AREA, &
+        staggerloc=ESMF_STAGGERLOC_CENTER, isPresent=isPresent, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    else
+      isPresent = .false.
+    endif
+
+    varname='cell_area_'//trim(geomName)
+    if (.not.self%variable_present(varname) .and. isPresent) then
+
+      ncStatus = nf90_redef(self%ncid)
+      if (ncStatus /= NF90_NOERR) then
+        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot enter definition mode', ESMF_LOGMSG_ERROR)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      endif
+
+      dimids => self%grid_dimensions(grid)
+
+      ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_FLOAT,dimids(1:ubound(dimids,1)-1),varid)
+      if (ncStatus /= NF90_NOERR) then
+        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot define variable '//trim(varname),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+      ncStatus = nf90_put_att(self%ncid,varid,'standard_name','area')
+      ncStatus = nf90_put_att(self%ncid,varid,'mossco_name','cell_area')
+      ncStatus = nf90_put_att(self%ncid,varid,'long_name','Area of grid cell from grid'//trim(geomName))
+      ncStatus = nf90_put_att(self%ncid,varid,'coordinates',trim(coordinates))
+      ncStatus = nf90_put_att(self%ncid,varid,'units','m-2')
+      ncStatus = nf90_put_att(self%ncid,varid,'missing_value',-1.0E30)
+      ncStatus = nf90_put_att(self%ncid,varid,'_FillValue',-1.0E30)
+
+      ncStatus = nf90_enddef(self%ncid)
+      if (ncStatus /= NF90_NOERR) then
+        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot end definition mode', ESMF_LOGMSG_ERROR)
+        if (ESMF_LogFoundError(ESMF_RC_OBJ_BAD, ESMF_ERR_PASSTHRU, ESMF_CONTEXT)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      allocate(dimlen(ubound(dimids,1)-1))
+      do i=1,ubound(dimids,1)-1
+        ncStatus = nf90_inquire_dimension(self%ncid,dimids(i),len=dimlen(i))
+      enddo
+
+      if (allocated(ubnd)) deallocate(ubnd)
+      if (allocated(lbnd)) deallocate(lbnd)
+      allocate(ubnd(ubound(dimids,1)-1))
+      allocate(lbnd(ubound(dimids,1)-1))
+      call ESMF_GridGetItemBounds(grid, itemFlag=ESMF_GRIDITEM_AREA, &
+        staggerloc=ESMF_STAGGERLOC_CENTER, exclusiveLBound=lbnd, &
+        exclusiveUbound=ubnd, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      if (ubound(dimids,1)==2) then
+        call ESMF_GridGetItem(grid, itemFlag=ESMF_GRIDITEM_AREA, &
+          staggerloc=ESMF_STAGGERLOC_CENTER, farrayPtr=farrayPtr1, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        ncStatus = nf90_put_var(self%ncid, varid, farrayPtr1(RANGE1D))
+        nullify(farrayPtr1)
+      elseif (ubound(dimids,1)==3) then
+        call ESMF_GridGetItem(grid, itemFlag=ESMF_GRIDITEM_AREA, &
+          staggerloc=ESMF_STAGGERLOC_CENTER, farrayPtr=farrayPtr2, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        ncStatus = nf90_put_var(self%ncid, varid, farrayPtr2(RANGE2D))
+        nullify(farrayPtr2)
+      elseif (ubound(dimids,1)==4) then
+        call ESMF_GridGetItem(grid, itemFlag=ESMF_GRIDITEM_AREA, &
+          staggerloc=ESMF_STAGGERLOC_CENTER, farrayPtr=farrayPtr3, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        ncStatus = nf90_put_var(self%ncid, varid, farrayPtr3(RANGE3D))
+        nullify(farrayPtr3)
+      endif
+      deallocate(dimlen)
+      deallocate(ubnd)
+      deallocate(lbnd)
+    endif ! present(pet_var) .and. isPresent
 
     call self%update_variables()
     call self%update()
