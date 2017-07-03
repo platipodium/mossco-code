@@ -1213,17 +1213,19 @@ module fabm_pelagic_component
       end if
     end do
 
+    !> The next was commented as this information is alread present in
+    !> te netcdf writeout of GRIDITEM_AREA
     !> add column_area to export state
-    field = ESMF_FieldCreate(horizontal_grid,farrayPtr=pel%column_area, &
-      name='water_column_area', rc=localrc)
-    call ESMF_AttributeSet(field,'units','m**2')
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-    call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-    call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    ! field = ESMF_FieldCreate(horizontal_grid,farrayPtr=pel%column_area, &
+    !   name='water_column_area', rc=localrc)
+    ! call ESMF_AttributeSet(field,'units','m**2')
+    ! _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    ! call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
+    ! _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    ! _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    ! call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
+    ! _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !> also update export states again with sinking velocities
     !! todo: this has to go into a second init phase,
