@@ -431,7 +431,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     else
       write(message,'(A)') 'Cannot use this advanceCount for a netcdf timeSlice, failed to convert long int to int'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      rc = ESMF_RC_ARG_OUTOFRANGE
+      return
     endif
 
     if (itemcount>0) then
@@ -452,7 +453,14 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      nc=mossco_netcdfCreate(fileName, timeUnit=timeUnit, state=importState, rc=localrc)
+      if (currTime == startTime) then
+        nc = mossco_netcdfCreate(fileName, timeUnit=timeUnit, state=importState, rc=localrc)
+        call ESMF_AttributeSet(exportState, 'netcdf_id', nc%ncid, rc=localrc)
+        call ESMF_AttributeSet(exportState, 'netcdf_file_name', &
+          trim(fileName), rc=localrc)
+      else
+        nc = mossco_netcdfOpen(fileName, timeUnit=timeUnit, state=importState, rc=localrc)
+      end if
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
