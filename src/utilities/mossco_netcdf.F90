@@ -2270,11 +2270,11 @@ module mossco_netcdf
     if (dimCount<1) return
 
     if (coordSys == ESMF_COORDSYS_SPH_DEG) then
-      coordnames=(/'lon  ','lat  ','layer'/)
+      coordnames=(/'lon  ','lat  ','level'/)
       coordunits=(/'degree','degree','1     '/)
       standardNameList=(/'longitude         ','latitude          ','model_level_number'/)
     elseif (coordSys == ESMF_COORDSYS_SPH_RAD) then
-      coordnames=(/'lon  ','lat  ','layer'/)
+      coordnames=(/'lon  ','lat  ','level'/)
       coordunits=(/'rad','rad','1  '/)
       standardNameList=(/'longitude         ','latitude          ','model_level_number'/)
     else
@@ -3210,7 +3210,7 @@ module mossco_netcdf
       endif
 
       ! If the variable is an _in_water quality and the input is a 2-dimensional dimension, then
-      ! fill the upper and the lower layer only
+      ! fill the upper and the lower level only
       !> @todo this should be configurable
       if (index(name, '_in_water') > 1 .and. count(3) == 2 .and. (ubnd(3)-lbnd(3)+1 > 1)) then
         farrayPtr3(fstart(1):fstart(1)+count(1)-1, &
