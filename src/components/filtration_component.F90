@@ -1069,8 +1069,8 @@ module filtration_component
 
       write(string,'(ES10.3)') maxval(-lossRate(RANGE3D),mask=mask(RANGE3D))
       call MOSSCO_MessageAdd(message,trim(string))
-      write(string,'(F6.3)') maxval(-fractionalLossRate(RANGE3D),mask=mask(RANGE3D))*100*3600
-      call MOSSCO_MessageAdd(message,' mmol m-3 s-1 or '//trim(string)//'% h-1')
+      !write(string,'(F6.3)') maxval(-fractionalLossRate(RANGE3D),mask=mask(RANGE3D))*100.0*3600.0
+      !call MOSSCO_MessageAdd(message,' mmol m-3 s-1 or '//trim(string)//'% h-1')
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       call MOSSCO_AttributeGet(gridComp, 'filter_other_species', filterSpeciesList, rc=localrc)
