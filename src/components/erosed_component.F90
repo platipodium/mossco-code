@@ -1202,7 +1202,7 @@ module erosed_component
     integer(ESMF_KIND_I4), dimension(3)         :: ubnd, lbnd
     real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr3
     real(ESMF_KIND_R8), dimension(nfrac)        :: total_sediment_mass, total_mass, diff_mass
-    
+
     rc=ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, clock, name=name, currTime=currTime, importState=importState, &
@@ -1809,7 +1809,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     call ESMF_FieldGet(field, status=status, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (status /= ESMF_FIELDSTATUS_COMPLETE) then
       write(message, '(A)') trim(name)//' received incomplete field'

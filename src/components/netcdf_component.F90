@@ -621,6 +621,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
         write(message,'(A)') trim(name)//' ignores error above '
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        localrc = ESMF_SUCCESS
         !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
