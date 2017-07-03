@@ -435,10 +435,11 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
       if (exportFieldCount < 1) then
         call MOSSCO_CreateVerticallyReducedField(importFieldList(i), exportField, operator=operator, &
           scale=scale, offset=offset, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-        call ESMF_StateAddReplace(exportState, (/exportField/), rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+        if (localrc == ESMF_SUCCESS) then
+          call ESMF_StateAddReplace(exportState, (/exportField/), rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+        endif
       endif
 
       call MOSSCO_Reallocate(exportFieldList, 0,  rc=localrc)
@@ -735,7 +736,10 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     call ESMF_FieldGet(importField, status=fieldStatus, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) return
+    if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
+      if (present(rc)) rc = ESMF_RC_ARG_BAD
+      return
+    endif
 
     call ESMF_FieldGet(importField, grid=importGrid, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -743,7 +747,10 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     call ESMF_GridGet(importGrid, rank=rank, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    if (rank /= 3) return
+    if (rank /= 3) then
+      if (present(rc)) rc = ESMF_RC_ARG_BAD
+      return
+    endif
 
     exportGrid = MOSSCO_GridCreateFromOtherGrid(importGrid, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
