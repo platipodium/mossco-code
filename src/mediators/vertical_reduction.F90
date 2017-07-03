@@ -492,8 +492,8 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     integer(ESMF_KIND_I4),dimension(:,:,:), pointer :: mask => null()
     real(ESMF_KIND_R8), pointer, dimension(:,:,:) :: farrayPtr3 => null()
     real(ESMF_KIND_R8), pointer, dimension(:,:)   :: farrayPtr2 => null()
-    real(ESMF_KIND_R8), pointer, dimension(:,:,:)   :: depth_at_cell_face => null()
-    real(ESMF_KIND_R8), allocatable, dimension(:,:,:)   :: weight, layer_height
+    real(ESMF_KIND_R8), pointer, dimension(:,:,:)   :: layer_height => null()
+    real(ESMF_KIND_R8), allocatable, dimension(:,:,:)   :: weight
     character(len=ESMF_MAXSTR)             :: importItemName
     type(ESMF_TypeKind_Flag)               :: typeKind
 
@@ -595,44 +595,35 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
 
       if (.not.importGridRank == 3) cycle
 
-      call ESMF_FieldGet(importFieldList(1),  localDe=0, farrayPtr=farrayPtr3, exclusiveLbound=lbnd, &
-        exclusiveUbound=ubnd, rc=localrc)
+      call ESMF_FieldGet(importFieldList(1),  localDe=0, farrayPtr=farrayPtr3, &
+        exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      !> @todo ask if item exists
-      !> Get the 3D mask from the grid
-      call ESMF_GridGetItem(importGrid, ESMF_GRIDITEM_MASK, farrayPtr=mask, rc=localrc)
+      call MOSSCO_GridGetDepth(importGrid, height=layer_height, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-      !> Predefine the weight for vertically summing of layers as 1
-      if (allocated(layer_height)) deallocate(layer_height)
-      allocate(layer_height(RANGE3D), stat=localrc)
-      layer_height(RANGE3D) = 0.0
-
-      where(mask(RANGE3D) > 0)
-        layer_height(RANGE3D) = 1.0
-      endwhere
-
-      !> Get the vertical (3rd coordinate) layer vface depths to calculate the weights
-      !> for vertical averaging
-      !> @todo what happens if this coordinate info is not present?
-      call ESMF_GridGetCoord(importGrid, coordDim=3, staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
-        farrayPtr=depth_at_cell_face, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-      if (associated(depth_at_cell_face)) then
-        layer_height(RANGE3D) = depth_at_cell_face(RANGE3D)! -  depth_at_cell_face(RANGE2D, lbnd(3)-1:ubnd(3)-1)
-      endif
 
       if (allocated(weight)) deallocate(weight)
       allocate(weight(RANGE3D), stat=localrc)
       weight(RANGE3D) = 0.0
 
       do j = lbnd(3), ubnd(3)
-        where ( mask(RANGE2D,j) > 0 .and. layer_height(RANGE2D,j) > 0)
+        where (layer_height(RANGE2D,j) > 0)
           weight(RANGE2D,j) = layer_height(RANGE2D,j)/sum(layer_height(RANGE3D), dim=3)
         endwhere
       enddo
+
+      call ESMF_GridGetItem(importGrid, ESMF_GRIDITEM_MASK, &
+        staggerloc=ESMF_STAGGERLOC_CENTER, isPresent=isPresent, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      if (isPresent) then
+        call ESMF_GridGetItem(importGrid, ESMF_GRIDITEM_MASK, &
+          staggerloc=ESMF_STAGGERLOC_CENTER,farrayPtr=mask, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      else
+        if (associated(mask)) deallocate(mask)
+        allocate(mask(RANGE3D))
+      endif
 
       if (exportGridRank == 2 .and. exportRank == 2) then
 
@@ -652,6 +643,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
         case ('average')
           farrayPtr2(exportLbnd(1):exportUbnd(1),exportLbnd(2):exportUbnd(2)) = &
             sum(farrayPtr3(RANGE3D) * weight(RANGE3D), dim=3, mask=(mask(RANGE3D)>0))
+            write(0,*) 'AVG: ',maxval(layer_height),maxval(weight),maxval(farrayPtr3)
         case ('minimum' )
           farrayPtr2(exportLbnd(1):exportUbnd(1),exportLbnd(2):exportUbnd(2)) = &
             minval(farrayPtr3(RANGE3D) * weight(RANGE3D), dim=3, mask=(mask(RANGE3D)>0))
@@ -678,9 +670,8 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
-      if (allocated(layer_height)) deallocate(layer_height)
       if (allocated(weight)) deallocate(weight)
-      nullify(depth_at_cell_face)
+      nullify(layer_height)
       nullify(mask)
       nullify(farrayPtr3)
       nullify(farrayPtr2)
