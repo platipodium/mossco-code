@@ -743,11 +743,14 @@ module mossco_netcdf
 
     call replace_character(geomName, ' ', '_')
 
-    if (ubound(dimids,1)>1) then
-      write(coordinates,'(A)') trim(geomName)//'_'//trim(coordnames(ubound(dimids,1)-1))
-      do i=ubound(dimids,1)-2,1,-1
+    !> @todo The CF-standard demands that only the 2D (lat lon) coordinates are written
+    !> to this attribute.
+    if (ubound(dimids,1)>2) then
+      write(coordinates,'(A)') trim(geomName)//'_'//trim(coordnames(ubound(dimids,1)-2))
+      do i=ubound(dimids,1)-3,1,-1
         write(coordinates,'(A)') trim(coordinates)//' '//trim(geomName)//'_'//trim(coordnames(i))
       enddo
+      write(0,*) 'COORD', trim(coordinates)
     endif
 
     !! define variable
