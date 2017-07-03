@@ -3,7 +3,7 @@
 !> @file vertical_reduction.F90
 !!
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2016 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2016, 2017 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -19,6 +19,8 @@
 
 #define RANGE2D lbnd(1):ubnd(1),lbnd(2):ubnd(2)
 #define RANGE3D lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)
+
+#define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 module vertical_reduction
 
@@ -50,21 +52,17 @@ module vertical_reduction
 
     call ESMF_cplCompSetEntryPoint(cplComp, ESMF_METHOD_INITIALIZE, phase=0, &
       userRoutine=InitializeP0, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_cplCompSetEntryPoint(cplComp, ESMF_METHOD_INITIALIZE, phase=1, &
       userRoutine=InitializeP1, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_cplCompSetEntryPoint(cplComp, ESMF_METHOD_RUN, Run, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_cplCompSetEntryPoint(cplComp, ESMF_METHOD_FINALIZE, Finalize, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine SetServices
 
@@ -86,32 +84,26 @@ module vertical_reduction
     integer(ESMF_KIND_I4)       :: localrc
 
     call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
 
     call ESMF_AttributeAdd(cplComp, convention="NUOPC", purpose="General", &
       attrList=(/"InitializePhaseMap"/), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_AttributeSet(cplComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
       convention="NUOPC", purpose="General", rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_StateReconcile(importState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_StateReconcile(exportState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_CompExit(cplComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP0
 
@@ -139,8 +131,7 @@ module vertical_reduction
     rc=ESMF_SUCCESS
 
     call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !> Default values for operations
     operator = 'average'
@@ -157,37 +148,29 @@ module vertical_reduction
 
       !> @todo deal with already existing config
       config = ESMF_ConfigCreate(rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_ConfigLoadFile(config, trim(configfilename), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       !> Look up labels, don't check for rc, as it will return ESMF_RC_NOT_FOUND if not found
       call MOSSCO_ConfigGet(config, label='operator', value=operator, defaultValue='average', rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call MOSSCO_ConfigGet(config, label='offset', value=offset, defaultValue=0.0D0, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call MOSSCO_ConfigGet(config, label='scale', value=scale, defaultValue=1.0D0, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call MOSSCO_ConfigGet(config, 'exclude', filterExcludeList)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call MOSSCO_ConfigGet(config, 'include', filterIncludeList, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_CplCompSet(cplComp, config=config, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     endif
 
@@ -206,9 +189,6 @@ module vertical_reduction
     case default
       write(message, '(A)') trim(name)//' obtained invalid operator '//trim(operator)
       call MOSSCO_CompExit(cplComp, rc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
       rc = ESMF_RC_ARG_BAD
       return
     end select
@@ -216,31 +196,25 @@ module vertical_reduction
     !> Add all configurable options as attributes
     if (allocated(filterExcludeList)) then
       call MOSSCO_AttributeSet(cplComp, 'filter_pattern_exclude', filterExcludeList, localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
 
     if (allocated(filterIncludeList)) then
       call MOSSCO_AttributeSet(cplComp, 'filter_pattern_include', filterIncludeList, localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
 
     call ESMF_AttributeSet(cplComp, 'operator_type', trim(operator), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_AttributeSet(cplComp, 'scale_factor', offset, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_AttributeSet(cplComp, 'add_offset', offset, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_CompExit(cplComp, rc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP1
 
@@ -260,21 +234,17 @@ module vertical_reduction
     rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_CreateVerticallyReducedExportFields(cplComp, importState, exportState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_ReduceFields(cplComp, importState, exportState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !! Finally, log the successful completion of this function
     call MOSSCO_CompExit(cplComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Run
 
@@ -296,28 +266,23 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_CplCompGet(cplComp, configIsPresent=isPresent, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (isPresent) then
 
       call ESMF_CplCompGet(cplComp, config=config, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_ConfigDestroy(config, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     end if
 
     call MOSSCO_CompExit(cplComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Finalize
 
@@ -353,35 +318,28 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     if (present(rc)) rc = rc_
 
     call ESMF_CplCompGet(cplComp, name=name, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_AttributeGet(cplComp, name='add_offset', defaultValue=0.0D0, value=offset, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_AttributeGet(cplComp, name='operator_type', defaultValue='average', value=operator, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_AttributeGet(cplComp, name='scale_factor', defaultValue=1.0D0, value=scale, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_CplCompGet(cplComp, clock=clock, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_ClockGet(clock, advanceCount=advanceCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     ! It is better to compare startTime with currTime in a connector, as it could be
     ! called multiple times for a single timeStep
     call ESMF_ClockGet(clock, startTime=startTime, currTime=currTime, &
       timeStep=timeStep, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (currTime > startTime) then
       if (advanceCount < 1) advanceCount = nint((currTime - startTime) / timeStep)
@@ -392,36 +350,32 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
 
     call MOSSCO_StateGetFieldList(importState, importFieldList, fieldCount=importFieldCount, &
       rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (importFieldCount < 1 .and. advanceCount < 2) then
       write(message,'(A)') trim(name)//' found no fields to reduce'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-      if (present(rc)) rc=ESMF_SUCCESS
+      if (present(rc)) rc = ESMF_SUCCESS
       return
     endif
 
     call MOSSCO_AttributeGet(cplComp, 'filter_pattern_include', filterIncludeList, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call MOSSCO_AttributeGet(cplComp, 'filter_pattern_exclude', filterExcludeList, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     do i=1, importFieldCount
 
       call ESMF_FieldGet(importFieldList(i), name=itemName, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       ! Look for an exclusion pattern on this itemName
       if (allocated(filterExcludeList)) then
         do j=1,ubound(filterExcludeList,1)
           call MOSSCO_StringMatch(itemName, filterExcludeList(j), isMatch, localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
           if (ismatch) exit
         enddo
         if (ismatch .and. advanceCount < 2) then
@@ -436,8 +390,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
       if (allocated(filterIncludeList)) then
         do j=1,ubound(filterIncludeList,1)
           call MOSSCO_StringMatch(itemName, filterIncludeList(j), isMatch, localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
           if (ismatch) exit
         enddo
         if (.not.ismatch .and. advanceCount < 2) then
@@ -452,29 +405,24 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
       !> get a temporary fieldList with all items mathcing itemName
       call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
         itemSearch=trim(itemName), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       call MOSSCO_Reallocate(fieldList, 0,  rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       if (fieldCount /= 1) cycle
 
       call ESMF_FieldGet(importFieldList(i), status=fieldStatus, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) cycle
 
       !> Found out whether this field has a vertical dimension, if not, then cycle
       call ESMF_FieldGet(importFieldList(i), grid=grid, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       call ESMF_GridGet(grid, rank=rank, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       if (rank /= 3) cycle
 
@@ -482,37 +430,30 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
       ! the field exists
       call MOSSCO_StateGetFieldList(exportState, exportFieldList, fieldCount=exportFieldCount, &
         itemSearch='vred_'//trim(itemName), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       if (exportFieldCount < 1) then
         call MOSSCO_CreateVerticallyReducedField(importFieldList(i), exportField, operator=operator, &
           scale=scale, offset=offset, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
         call ESMF_StateAddReplace(exportState, (/exportField/), rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       endif
 
       call MOSSCO_Reallocate(exportFieldList, 0,  rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     enddo
 
     call MOSSCO_Reallocate(importFieldList, 0,  rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call MOSSCO_Reallocate(filterIncludeList, 0, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call MOSSCO_Reallocate(filterExcludeList, 0, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (present(rc)) rc=rc_
 
@@ -559,35 +500,28 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     if (present(rc)) rc = rc_
 
     call ESMF_CplCompGet(cplComp, name=name, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_AttributeGet(cplComp, 'add_offset', value=offset, defaultValue=0.0D0, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_AttributeGet(cplComp, name='operator_type', defaultValue='average', value=operator, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_AttributeGet(cplComp, name='scale_factor', defaultValue=1.0D0, value=scale, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_CplCompGet(cplComp, clock=clock, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_ClockGet(clock, advanceCount=advanceCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     ! It is better to compare startTime with currTime in a connector, as it could be
     ! called multiple times for a single timeStep
     call ESMF_ClockGet(clock, startTime=startTime, currTime=currTime, &
       timeStep=timeStep, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (currTime > startTime) then
       if (advanceCount < 1) advanceCount = nint((currTime - startTime) / timeStep)
@@ -598,8 +532,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
 
     call MOSSCO_StateGetFieldList(exportState, exportFieldList, fieldCount=exportFieldCount, &
       rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (exportFieldCount < 1 .and. advanceCount < 2) then
       write(message,'(A)') trim(name)//' found no fields to reduce'
@@ -611,27 +544,23 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     do i=1, exportFieldCount
 
       call ESMF_FieldGet(exportFieldList(i), name=itemName, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       if (itemName(1:5) /= 'vred_') cycle
       importItemName = itemName(6:len_trim(itemName))
 
       !> Find the name of the variable on which the reduction shall be applied
       !call ESMF_AttributeGet(exportFieldList(i), name='source', isPresent=isPresent, rc=localrc)
-      !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       !if (.not.isPresent()) cycle
 
       !call ESMF_AttributeGet(exportFieldList(i), name='source', value=importItemName, rc=localrc)
-      !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       call MOSSCO_StateGetFieldList(importState, importFieldList, fieldCount=importFieldCount, &
         itemSearch=trim(importItemName), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       !call ESMF_LogWrite(trim(name)//' in loop'//trim(importItemName), ESMF_LOGMSG_INFO)
 
@@ -643,26 +572,21 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
 
       !> Complete the field if it is gridset
       call ESMF_FieldGet(exportFieldList(i), status=exportFieldStatus,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       if (exportfieldStatus /= ESMF_FIELDSTATUS_COMPLETE) cycle
 
       call ESMF_FieldGet(exportFieldList(i), grid=exportGrid, rank=exportRank, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       call ESMF_FieldGet(importFieldList(1), grid=importGrid, rank=importRank, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       call ESMF_GridGet(exportGrid, rank=exportGridRank, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       call ESMF_GridGet(importGrid, rank=importGridRank, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       if (.not.importRank == 3) cycle
       allocate(lbnd(3), stat=localrc)
@@ -672,18 +596,18 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
 
       call ESMF_FieldGet(importFieldList(1),  localDe=0, farrayPtr=farrayPtr3, exclusiveLbound=lbnd, &
         exclusiveUbound=ubnd, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
+      !> @todo ask if item exists
       !> Get the 3D mask from the grid
       call ESMF_GridGetItem(importGrid, ESMF_GRIDITEM_MASK, farrayPtr=mask, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       !> Predefine the weight for vertically summing of layers as 1
       if (allocated(layer_height)) deallocate(layer_height)
       allocate(layer_height(RANGE3D), stat=localrc)
       layer_height(RANGE3D) = 0.0
+
       where(mask(RANGE3D) > 0)
         layer_height(RANGE3D) = 1.0
       endwhere
@@ -693,8 +617,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
       !> @todo what happens if this coordinate info is not present?
       call ESMF_GridGetCoord(importGrid, coordDim=3, staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
         farrayPtr=depth_at_cell_face, rc=localrc)
-      if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       if (associated(depth_at_cell_face)) then
         layer_height(RANGE3D) = depth_at_cell_face(RANGE3D)! -  depth_at_cell_face(RANGE2D, lbnd(3)-1:ubnd(3)-1)
@@ -717,8 +640,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
 
         call ESMF_FieldGet(exportFieldList(i), localDe=0, farrayPtr=farrayPtr2, exclusiveLbound=exportLbnd, &
           exclusiveUbound=exportUbnd, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
         if (any(ubnd(1:2) - lbnd(1:2) /= exportUbnd(1:2) - exportLbnd(1:2))) cycle
 
@@ -763,8 +685,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
       nullify(farrayPtr2)
 
       call MOSSCO_Reallocate(importFieldList, 0,  rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       deallocate(exportLbnd, stat=localrc)
       deallocate(exportUbnd, stat=localrc)
@@ -774,8 +695,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     enddo
 
     call MOSSCO_Reallocate(exportFieldList, 0,  rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (present(rc)) rc=rc_
 
@@ -810,50 +730,40 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     if (present(operator)) operator_ = operator
 
     call ESMF_FieldGet(importField, name=importName, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_FieldGet(importField, status=fieldStatus, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) return
 
     call ESMF_FieldGet(importField, grid=importGrid, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_GridGet(importGrid, rank=rank, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (rank /= 3) return
 
     exportGrid = MOSSCO_GridCreateFromOtherGrid(importGrid, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     exportName = 'vred_' // trim(importName)
 
     exportField = ESMF_FieldEmptyCreate(name=trim(exportName), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_FieldEmptySet(exportField, exportGrid, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_FieldGet(importField, typeKind=typeKind, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_FieldEmptyComplete(exportfield, typeKind=typeKind, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call MOSSCO_FieldInitialize(exportField, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   end subroutine MOSSCO_CreateVerticallyReducedField
 
