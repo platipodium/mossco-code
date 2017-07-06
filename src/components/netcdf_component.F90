@@ -599,8 +599,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 !       endif
 
     !! Somehow this did not help, so we ask again for the items
+    !call ESMF_StateReconcile(importState, rc=localrc) ! not working on ocean
     if (allocated(itemNameList)) deallocate(itemNameList)
-   ! call ESMF_StateReconcile(importState, rc=localrc) ! not working on ocean
    ! 7.0.0 b64
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -609,7 +609,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (itemcount>0) then
+    ! The removal creates problesm, it is disabled here for further testing.  Is
+    ! it needed at all?
+    if (itemcount<0) then
 
       allocate(itemNameList(itemCount))
 
@@ -631,6 +633,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (allocated(itemTypeList)) deallocate(itemTypeList)
     if (allocated(itemNameList)) deallocate(itemNameList)
 
+    !call ESMF_StateReconcile(importState, rc=localrc) ! not working on ocean
     !call ESMF_LogOpen(log, "netcdf", rc=localrc)
     !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
