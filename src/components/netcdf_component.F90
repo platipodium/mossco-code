@@ -611,7 +611,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     ! The removal creates problesm, it is disabled here for further testing.  Is
     ! it needed at all?
-    if (itemcount<0) then
+    if (itemcount>0) then
 
       allocate(itemNameList(itemCount))
 
@@ -627,8 +627,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      call nc%close()
     endif
+
+    call nc%close()
 
     if (allocated(itemTypeList)) deallocate(itemTypeList)
     if (allocated(itemNameList)) deallocate(itemNameList)
