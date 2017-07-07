@@ -1220,7 +1220,7 @@ module erosed_component
 
     if (importFieldCount < 1) then
       write(message, '(A)') trim(name)//' did not hotstart'
-      call MOSSCO_FieldString(importFieldList(1), message)
+      !MKcall MOSSCO_FieldString(importFieldList(1), message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       if (allocated(importFieldList)) deallocate(importFieldList)
       call MOSSCO_CompExit(gridComp, localrc)

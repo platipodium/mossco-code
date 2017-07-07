@@ -379,7 +379,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
   real(fp)    , dimension(nfrac)              :: taucr        ! Critical bed shear stress for sand
   real(fp)    , dimension(nfrac)              :: dstar        ! dimensiosless corn diameter d* in van Rijn formula
   real(fp)    , dimension(nfrac)              :: tetacr       ! Dimensionless critical bed shear stress for sand
-  real(fp)       , dimension(nmlb:nmub)       :: ubed         ! near_bed velocity magnitude
+  real(fp)    , dimension(nmlb:nmub)          :: ubed         ! near_bed velocity magnitude
   real(fp)    , dimension(nmlb:nmub)          :: zubed        ! elevation of ubed
   real(fp)                                    :: eps          ! 1e-6
   real(fp)    , dimension(nfrac)              :: z0cur        ! current_related bed roughness (i.e. z0= ks/30.0 (ks = 2.50 sedd50))
