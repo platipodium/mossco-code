@@ -1,7 +1,7 @@
 # Recipe #24: MOSSCO on Jureca
 
 Jureca (Juelich Research on Exascale Cluster Architectures) is one of the current supercomputers at FZ Jülich.
-It is based on Intel Xeon E5-2680 v3 Haswell CPUs with 12 cores per CPU and dual sockets. 
+It is based on Intel Xeon E5-2680 v3 Haswell CPUs with 12 cores per CPU and dual sockets.
 
 You can apply for a testaccount by contacting their support at <dispatch.jsc@fz-juelich.de>.
 
