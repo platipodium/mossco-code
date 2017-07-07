@@ -2580,7 +2580,7 @@ module mossco_netcdf
           ncStatus = nf90_put_var(self%ncid, varid, farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)))
         case default
           write(message,'(A)')  '  cannot deal with less than 1 or more than 3 coordinate dimensions'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       end select
 
@@ -2847,7 +2847,7 @@ module mossco_netcdf
     localrc = nf90_get_att(self%ncid, var%varid, 'coordinates', coordinates)
     if (localrc /= NF90_NOERR) then
       write(message,'(A)') 'Cannot determine grid, "coordinates" attribute is missing from variable '//trim(var%name)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       return
     end if
 
@@ -2866,7 +2866,7 @@ module mossco_netcdf
       localrc = nf90_inq_varid(self%ncid, trim(coordNameList(i)), varid)
       if (localrc /= NF90_NOERR) then
         write(message,'(A)') 'No variable found for coordinate '//trim(coordNameList(i))
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         return
       end if
 
@@ -2881,7 +2881,7 @@ module mossco_netcdf
       do j=1, ubound(coordVar%dimids,1)
         if (all(var%dimids /= coordVar%dimids(j))) then
           write(message,'(A)') 'No corresponding dimensions in variable and its coordinate '//trim(coordNameList(i))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           return
         end if
         k=k+1
@@ -2902,7 +2902,7 @@ module mossco_netcdf
 
       if (localrc /= NF90_NOERR) then
        ! write(message,'(A)') 'No variable found for coordinate '//trim(coordNameList(i))
-       ! call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+       ! call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
        ! return
       end if
 
@@ -2931,7 +2931,7 @@ module mossco_netcdf
 !        localrc = nf90_var_get(self%ncid, coordVar%varid, farrayPtr2, lbnd, ubnd)
 !      else
 !        write(message,'(A)') 'Not implemented: rank>2 coordinate variable '//trim(coordVar%name)
-!        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+!        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
 !        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 !      end if
 !      deallocate(lbnd)
@@ -3057,6 +3057,7 @@ module mossco_netcdf
     type(ESMF_Vm)                                :: Vm
 
     rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
 
     if (present(itime)) then
       itime_ = itime
@@ -3066,48 +3067,41 @@ module mossco_netcdf
 
     ! Test for field completeness and terminate if not complete
     call ESMF_FieldGet(field, status=fieldStatus, name=name, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
       write(message, '(A)')  'Cannot read into non-complete field '
       call MOSSCO_FieldString(field, message, rc=localrc)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+
+      if (present(rc)) rc = ESMF_RC_ARG_BAD
+      return
     endif
 
     call ESMF_FieldGet(field, rank=fieldRank, localDeCount=localDeCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    if (localDeCount == 0) then
-      if (present(rc)) rc = ESMF_SUCCESS
-      return
-    endif
+    if (localDeCount == 0) return
 
     if (fieldRank > 4) then
       write(message, '(A)')  'Rank > 4 not implemented for reading field '
       call MOSSCO_FieldString(field, message, rc=localrc)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       if (present(rc)) rc = ESMF_RC_NOT_IMPL
       return
     endif
 
     call ESMF_FieldGet(field, grid=grid, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_GridGet(grid, distGrid=distGrid, rank=gridRank, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_DistGridGet(distGrid, delayout=delayout, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_DELayoutGet(delayout, deCount=deCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     !> @todo check error state
     allocate(minIndexPDe(gridRank, deCount), stat=localrc)
@@ -3115,16 +3109,13 @@ module mossco_netcdf
 
     call ESMF_DistGridGet(distGrid, minIndexPDe=minIndexPDe, &
                                     maxIndexPDe=maxIndexPDe, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_VmGetGlobal(vm, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_VmGet(vm, localPet=localPet, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     !> @todo check error state
     allocate(start(fieldRank)); start(1:fieldRank) = 1
@@ -3135,8 +3126,7 @@ module mossco_netcdf
     allocate(lbnd(fieldRank))
 
     call ESMF_FieldGetBounds(field, exclusiveUbound=ubnd, exclusiveLBound=lbnd, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     ncubnd = ubnd ! initialize array size from local field bounds
 
@@ -3175,15 +3165,14 @@ module mossco_netcdf
       write(0,*) '  ncubnd = ', ncubnd
       write(message,'(A)') '  count < 0 for '
       call MOSSCO_FieldString(field, message, rc=localrc)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       if (present(rc)) rc = ESMF_RC_CANNOT_GET
       return
     end if
 
     if (fieldRank == 1) then
       call ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       allocate(netcdfPtr1(count(1)), stat=localrc)
       if (var%rank==fieldRank) then
@@ -3192,26 +3181,27 @@ module mossco_netcdf
         if (self%dimlens(self%timeDimId) < itime_) then
           write(message,'(A)') '  requested index exceeds time dimension when reading '//trim(var%name)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if (present(rc)) rc = ESMF_RC_ARG_OUTOFRANGE
+          return
         endif
         localrc = nf90_get_var(self%ncid, var%varid, netcdfPtr1, (/start(1),itime_/), (/count(1),1/))
       else
+        ! ungridded bounds not implemented
         if (present(rc)) rc = ESMF_RC_NOT_IMPL
         return
       endif
       if (localrc /= NF90_NOERR) then
         write(message,'(A)') '  '//trim(nf90_strerror(localrc))//', could not read variable '//trim(var%name)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        if (present(rc)) rc = ESMF_RC_FILE_READ
+        return
       endif
       farrayPtr1(fstart(1):fstart(1)+count(1)-1) = netcdfPtr1
       if (associated(netcdfPtr1)) deallocate(netcdfPtr1)
 
     elseif (fieldRank == 2) then
       call ESMF_FieldGet(field, farrayPtr=farrayPtr2, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       !write(0,*) 'rank=', fieldrank, 'var%rank=', var%rank, 'var%dimids=', var%dimids(:), 'udimid=',self%timeDimId
       allocate(netcdfPtr2(1:count(1),1:count(2)))
@@ -3231,6 +3221,7 @@ module mossco_netcdf
         localrc = nf90_get_var(self%ncid, var%varid, netcdfPtr2, (/start(1),start(2),itime_/), (/count(1),count(2),1/))
         !write(0,*) 'shape = ',shape(netcdfPtr2), ' start = ',  (/start(1),start(2),itime_/), ' count = ', (/count(1),count(2),1/)
       else
+        ! ungridded bounds not implemented
         if (present(rc)) rc = ESMF_RC_NOT_IMPL
         return
       endif
@@ -3248,8 +3239,8 @@ module mossco_netcdf
 
     elseif (fieldRank == 3) then
       call ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       allocate(netcdfPtr3(1:count(1),1:count(2),1:count(3)))
       if (var%rank==fieldRank) then
         localrc = nf90_get_var(self%ncid, var%varid, netcdfPtr3, start, count)
@@ -3257,12 +3248,13 @@ module mossco_netcdf
         localrc = nf90_get_var(self%ncid, var%varid, netcdfPtr3, &
           (/start(1),start(2),start(3),itime_/), (/count(1),count(2), count(3),1/))
       else
-        if (present(rc)) rc=ESMF_RC_NOT_IMPL
+        ! ungridded bounds not implemented
+        if (present(rc)) rc = ESMF_RC_NOT_IMPL
         return
       endif
       if (localrc /= NF90_NOERR) then
         write(message,'(A)') '  '//trim(nf90_strerror(localrc))//', could not read variable '//trim(var%name)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
@@ -3303,8 +3295,8 @@ module mossco_netcdf
       if (associated(netcdfPtr3)) deallocate(netcdfPtr3)
     elseif (fieldRank == 4) then
       call ESMF_FieldGet(field, farrayPtr=farrayPtr4, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       allocate(netcdfPtr4(1:count(1),1:count(2),1:count(3),1:count(4)))
       if (var%rank==fieldRank) then
         localrc = nf90_get_var(self%ncid, var%varid, netcdfPtr4, start, count)
@@ -3312,12 +3304,13 @@ module mossco_netcdf
         localrc = nf90_get_var(self%ncid, var%varid, netcdfPtr4, &
           (/start(1),start(2),start(3),start(4),itime_/), (/count(1),count(2),count(3),count(4),1/))
       else
-        if (present(rc)) rc=ESMF_RC_NOT_IMPL
+        ! ungridded bounds not implemented
+        if (present(rc)) rc = ESMF_RC_NOT_IMPL
         return
       endif
       if (localrc /= NF90_NOERR) then
         write(message,'(A)') '  '//trim(nf90_strerror(localrc))//', could not read variable '//trim(var%name)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
@@ -3339,8 +3332,7 @@ module mossco_netcdf
     if (allocated(fstart)) deallocate(fstart)
 
     call self%getatt(field, var, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     return
 
@@ -3493,7 +3485,7 @@ module mossco_netcdf
         allocate(farray(ntime), stat=localrc)
         if (localrc /= 0) then
           write(message,'(A)') '    could not allocate memory for farray'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           if (present(rc)) rc = ESMF_RC_MEM
           return
         endif
@@ -3982,7 +3974,7 @@ module mossco_netcdf
     ncStatus = nf90_inquire_variable(ncid, varid_, xtype = precision)
     if (ncStatus /= NF90_NOERR) then
       write(message, '(A)') '  '//trim(nf90_strerror(ncStatus)//', could not get precision')
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
