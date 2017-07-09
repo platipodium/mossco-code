@@ -2349,43 +2349,43 @@ contains
 
     do i = 1, itemCount
 
-      !! Look for an exclusion pattern on this item name
-      ! if (present(exclude)) then
-      !   do j = lbound(exclude,1),ubound(exclude,1)
-      !     call MOSSCO_StringMatch(itemNameList(i), exclude(j), isMatch, localrc)
-      !     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      !       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      !     if (ismatch) exit
-      !   enddo
-      !
-      !   if (isMatch) then
-      !     if (verbose_) then
-      !       write(message,'(A)') '  excluded'
-      !       call MOSSCO_MessageAdd(message, ' '//trim(itemNameList(i))//' with pattern ')
-      !       call MOSSCO_MessageAdd(message, ' '//trim(exclude(j)))
-      !       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      !     endif
-      !     cycle
-      !   endif
-      ! endif
-      !
-      ! !! Look for an inclusion pattern on this field name
-      ! if (present(include)) then
-      !   do j = lbound(include,1),ubound(include,1)
-      !     call MOSSCO_StringMatch(itemNameList(i), include(j), isMatch, localrc)
-      !     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      !       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      !     if (ismatch) exit
-      !   enddo
-      !   if (.not.ismatch) then
-      !     if (verbose_) then
-      !       write(message,'(A)') '  did not include '
-      !       call MOSSCO_MessageAdd(message,' '//itemNameList(i))
-      !       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      !     endif
-      !     cycle
-      !   endif
-      ! endif
+      ! Look for an exclusion pattern on this item name
+      if (present(exclude)) then
+        do j = lbound(exclude,1),ubound(exclude,1)
+          call MOSSCO_StringMatch(itemNameList(i), exclude(j), isMatch, localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if (ismatch) exit
+        enddo
+
+        if (isMatch) then
+          if (verbose_) then
+            write(message,'(A)') '  excluded'
+            call MOSSCO_MessageAdd(message, ' '//trim(itemNameList(i))//' with pattern ')
+            call MOSSCO_MessageAdd(message, ' '//trim(exclude(j)))
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          endif
+          cycle
+        endif
+      endif
+
+      !! Look for an inclusion pattern on this field name
+      if (present(include)) then
+        do j = lbound(include,1),ubound(include,1)
+          call MOSSCO_StringMatch(itemNameList(i), include(j), isMatch, localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if (ismatch) exit
+        enddo
+        if (.not.ismatch) then
+          if (verbose_) then
+            write(message,'(A)') '  did not include'
+            call MOSSCO_MessageAdd(message,' '//itemNameList(i))
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          endif
+          cycle
+        endif
+      endif
 
       if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
 
@@ -2452,11 +2452,11 @@ contains
       endif
     endif
 
-    do i=1, fieldCount_
-      message='mossco_state: '
-      call MOSSCO_FieldString(fieldList(i), message)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-    enddo
+    ! do i=1, fieldCount_
+    !   message='mossco_state: '
+    !   call MOSSCO_FieldString(fieldList(i), message)
+    !   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+    ! enddo
 
     call MOSSCO_Reallocate(fieldInBundleList, 0, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -2482,11 +2482,11 @@ contains
         n = n + 1
         tempList(n) = fieldList(i)
 
-        ! if (verbose_) then
-        !   write(message,'(A)') '  uses '
-        !   call MOSSCO_FieldString(fieldList(i), message)
-        !   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        ! endif
+        if (verbose_) then
+          write(message,'(A)') '  uses '
+          call MOSSCO_FieldString(fieldList(i), message)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        endif
 
       enddo
 
