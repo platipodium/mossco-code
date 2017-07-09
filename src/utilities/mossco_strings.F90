@@ -397,6 +397,13 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_CheckUnits"
+!> @param character(len=*) unit1, unit2: strings to compare [in]
+!> @param logical isEqual: result of checking two unit strings for equality [out]
+!> @param integer [rc]: return code
+!> @desc Compares two unit strings for equality, using unit cleaning and
+!> sorting of entries.
+!> @todo: detect multiple occurence of the same unit
+!> @todo: optionally rely on physunits package
   subroutine MOSSCO_CheckUnits(unit1, unit2, isEqual, rc)
 
     character(len=*), intent(in)   :: unit1, unit2
@@ -512,7 +519,7 @@ contains
       call ESMF_LogWrite('  equal units '//trim(message), ESMF_LOGMSG_INFO)
     else
       isEqual = .false.
-      call ESMF_LogWrite('  wrong units '//trim(message), ESMF_LOGMSG_WARNING)
+      call ESMF_LogWrite('  units '//trim(message), ESMF_LOGMSG_WARNING)
       call ESMF_LogWrite('  differ from '//trim(unit_), ESMF_LOGMSG_WARNING)
     endif
 
@@ -528,6 +535,11 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_CleanUnit"
+!> @param character(len=*) unit: string to clean [inout]
+!> @param integer [rc]: return code
+!> @desc cleans a unit string to follow the most simple CF conventions
+!> e.g. convert 'kg*m.s^-2 s**-1 to kg m s-2 s-1'
+!> @todo implement conversion of slash "/" character to negative exponent
   subroutine MOSSCO_CleanUnit(unit, rc)
 
     character(len=*), intent(inout)              :: unit
