@@ -322,11 +322,13 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     real(ESMF_KIND_R8)      :: seconds
     integer(ESMF_KIND_I4)   :: itemCount, timeSlice, localPet,  petCount
     integer(ESMF_KIND_I4)   :: localrc, fieldCount
+    type(ESMF_StateItem_Flag) :: itemType
     type(ESMF_StateItem_Flag), allocatable, dimension(:) :: itemTypeList
     character(len=ESMF_MAXSTR), allocatable, dimension(:) :: itemNameList
+    character(len=ESMF_MAXSTR), allocatable, dimension(:) :: fieldNameList
     type(ESMF_Clock)        :: clock
-    logical                 :: isMatch
-    character(len=ESMF_MAXSTR) :: form
+    logical                 :: isMatch, verbose
+    character(len=ESMF_MAXSTR) :: form, fieldName
 
     character(len=ESMF_MAXSTR) :: message, fileName, name, timeUnit
     character(len=ESMF_MAXSTR), allocatable :: filterIncludeList(:), filterExcludeList(:)
@@ -401,8 +403,11 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         call ESMF_AttributeSet(exportState, 'netcdf_id', nc%ncid, rc=localrc)
         call ESMF_AttributeSet(exportState, 'netcdf_file_name', &
           trim(fileName), rc=localrc)
+        verbose = .true.
+
       else
         nc = mossco_netcdfOpen(fileName, timeUnit=timeUnit, state=importState, rc=localrc)
+        verbose = .false.
       end if
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -438,95 +443,156 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     endif
 
-    call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
+
+    !
+    ! call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
+    ! _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    ! if (itemcount>0) then
+    !   if (.not.allocated(itemTypeList)) allocate(itemTypeList(itemCount))
+    !   if (.not.allocated(itemNameList)) allocate(itemNameList(itemCount))
+    !
+    !   call ESMF_StateGet(importState, itemTypeList=itemTypeList, itemNameList=itemNameList, rc=localrc)
+    !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    ! endif
+    !
+    ! do i=1,itemCount
+    !
+    !   !! Look for an exclusion pattern on this field name
+    !   if (allocated(filterExcludeList)) then
+    !     do j=1,ubound(filterExcludeList,1)
+    !       call MOSSCO_StringMatch(itemNameList(i), filterExcludeList(j), isMatch, localrc)
+    !       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !       if (ismatch) exit
+    !     enddo
+    !
+    !     if (isMatch) then
+    !       if (advanceCount < 1) then
+    !         write(message,'(A)') trim(name)//' excluded'
+    !         call MOSSCO_MessageAdd(message, ' '//trim(itemNameList(i))//' from pattern ')
+    !         call MOSSCO_MessageAdd(message, ' '//trim(filterExcludeList(j)))
+    !         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    !       endif
+    !       cycle
+    !     endif
+    !   endif
+    !
+    !   !! Look for an inclusion pattern on this field name
+    !   if (allocated(filterIncludeList)) then
+    !     do j=1,ubound(filterIncludeList,1)
+    !       call MOSSCO_StringMatch(itemNameList(i), filterIncludeList(j), isMatch, localrc)
+    !       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    !       if (ismatch) exit
+    !     enddo
+    !     if (.not.ismatch) then
+    !       if (advanceCount < 1) then
+    !         write(message,'(A)') trim(name)//' did not include '
+    !         call MOSSCO_MessageAdd(message,' '//itemNameList(i))
+    !         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    !       endif
+    !       cycle
+    !     endif
+    !   endif
+    !
+    !   call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
+    !     itemSearch=trim(itemNameList(i)), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    !     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    !   call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
+    !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    !   if (fieldCount < 1) then
+    !     if (advanceCount < 1) then
+    !       write(message,'(A)') trim(name)//' skipped non-field or incomplete item '
+    !       call MOSSCO_MessageAdd(message,' '//itemNameList(i))
+    !       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    !     endif
+    !     cycle
+    !   endif
+    !
+    !     if (advanceCount < 1) then
+    !       write(message,'(A)') trim(name)//' will write'
+    !       call MOSSCO_MessageAdd(message,' '//itemNameList(i))
+    !       call MOSSCO_MessageAdd(message,' to file ')
+    !       call MOSSCO_MessageAdd(message,' '//fileName)
+    !       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    !     endif
+    !
+    !     if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
+    !       call nc_state_field_write(importState, trim(itemNameList(i)), &
+    !         checkNaN=checkNaN, checkInf=checkInf, rc=localrc)
+    !         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    !     elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
+    !       call nc_state_fieldbundle_write(importState, trim(itemNameList(i)), &
+    !         checkNaN=checkNaN, checkInf=checkInf, rc=localrc)
+    !         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    !     elseif (advanceCount < 1) then
+    !       write(message,'(A)') trim(name)//' not implemented saving item '//trim(itemNameList(i))
+    !       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+    !     endif
+    ! enddo
+
+    call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
+      fieldStatus=ESMF_FIELDSTATUS_COMPLETE, include=filterIncludeList, &
+      exclude=filterExcludeList, verbose=verbose, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    if (itemcount>0) then
-      if (.not.allocated(itemTypeList)) allocate(itemTypeList(itemCount))
-      if (.not.allocated(itemNameList)) allocate(itemNameList(itemCount))
+    do i=1, fieldCount
 
-      call ESMF_StateGet(importState, itemTypeList=itemTypeList, itemNameList=itemNameList, rc=localrc)
+      call ESMF_FieldGet(fieldList(i), name=fieldName, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-    endif
 
-    do i=1,itemCount
-
-      !! Look for an exclusion pattern on this field name
-      if (allocated(filterExcludeList)) then
-        do j=1,ubound(filterExcludeList,1)
-          call MOSSCO_StringMatch(itemNameList(i), filterExcludeList(j), isMatch, localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-          if (ismatch) exit
-        enddo
-
-        if (isMatch) then
-          if (advanceCount < 1) then
-            write(message,'(A)') trim(name)//' excluded'
-            call MOSSCO_MessageAdd(message, ' '//trim(itemNameList(i))//' from pattern ')
-            call MOSSCO_MessageAdd(message, ' '//trim(filterExcludeList(j)))
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-          endif
-          cycle
-        endif
+      if (verbose) then
+        write(message,'(A)') trim(name)//' will write'
+        call MOSSCO_MessageAdd(message,' '//trim(fieldName))
+        call MOSSCO_MessageAdd(message,' to file ')
+        call MOSSCO_MessageAdd(message,' '//fileName)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
-      !! Look for an inclusion pattern on this field name
-      if (allocated(filterIncludeList)) then
-        do j=1,ubound(filterIncludeList,1)
-          call MOSSCO_StringMatch(itemNameList(i), filterIncludeList(j), isMatch, localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      call ESMF_StateGet(importState, fieldName, itemType, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          if (ismatch) exit
-        enddo
-        if (.not.ismatch) then
-          if (advanceCount < 1) then
-            write(message,'(A)') trim(name)//' did not include '
-            call MOSSCO_MessageAdd(message,' '//itemNameList(i))
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-          endif
-          cycle
-        endif
-      endif
-
-      call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
-        itemSearch=trim(itemNameList(i)), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      if (itemType == ESMF_STATEITEM_FIELD) then
+        call nc_state_field_write(importState, trim(fieldName), &
+          checkNaN=checkNaN, checkInf=checkInf, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      elseif (itemType == ESMF_STATEITEM_FIELDBUNDLE) then
 
-      if (fieldCount < 1) then
-        if (advanceCount < 1) then
-          write(message,'(A)') trim(name)//' skipped non-field or incomplete item '
-          call MOSSCO_MessageAdd(message,' '//itemNameList(i))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        if (.not.allocated(fieldNameList)) then
+          call MOSSCO_Reallocate(fieldNameList, 1, keep=.false., rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          fieldNameList(1)=''
+          isMatch = .false.
+        else
+          call MOSSCO_StringMatch(fieldName, fieldNameList, isMatch, localrc)
         endif
-        cycle
+
+        !> Avoid duplicate writing of fields in fieldBundle
+        if (isMatch) cycle
+
+        call MOSSCO_Reallocate(fieldNameList, ubound(fieldNameList,1)+1, keep=.true., rc=localrc)
+        fieldNameList(ubound(fieldNameList,1)) = trim(fieldName)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        fieldNameList(1)=''
+
+        call nc_state_fieldbundle_write(importState, trim(fieldName), &
+          checkNaN=checkNaN, checkInf=checkInf, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      else
+        localrc = ESMF_RC_NOT_IMPL
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) return
       endif
-
-        if (advanceCount < 1) then
-          write(message,'(A)') trim(name)//' will write'
-          call MOSSCO_MessageAdd(message,' '//itemNameList(i))
-          call MOSSCO_MessageAdd(message,' to file ')
-          call MOSSCO_MessageAdd(message,' '//fileName)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        endif
-
-        if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
-          call nc_state_field_write(importState, trim(itemNameList(i)), &
-            checkNaN=checkNaN, checkInf=checkInf, rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-        elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
-          call nc_state_fieldbundle_write(importState, trim(itemNameList(i)), &
-            checkNaN=checkNaN, checkInf=checkInf, rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-        elseif (advanceCount < 1) then
-          write(message,'(A)') trim(name)//' not implemented saving item '//trim(itemNameList(i))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-        endif
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     enddo
+
 
       !> Remove from import state all fields, whether written or not, ensure that all processes have
       !> processed all states by using a barrier
@@ -547,6 +613,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     !! Somehow this did not help, so we ask again for the items
     !call ESMF_StateReconcile(importState, rc=localrc) ! not working on ocean
     if (allocated(itemNameList)) deallocate(itemNameList)
+    if (allocated(fieldNameList)) deallocate(fieldNameList)
    ! 7.0.0 b64
    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -562,7 +629,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       call ESMF_StateGet(importState, itemNameList=itemNameList, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_StateRemove(importState, itemNameList, rc=localrc)
+      !call ESMF_StateRemove(importState, itemNameList, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
         write(message,'(A)') trim(name)//' ignores error above '
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
