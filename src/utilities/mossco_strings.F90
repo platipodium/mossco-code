@@ -528,6 +528,10 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_CleanUnit"
+!> @param character(len=*) unit: string to clean [inout]
+!> @param integer [rc]: return code
+!> @desc cleans a unit string to follow the simples CF conventions
+!> e.g. convert 'kg*m.s^-2 s**-1 to kg m s-2 s-1'
   subroutine MOSSCO_CleanUnit(unit, rc)
 
     character(len=*), intent(inout)              :: unit
