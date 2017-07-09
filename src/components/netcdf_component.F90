@@ -16,8 +16,6 @@
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "netcdf_component.F90"
 
-#define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
 module netcdf_component
 
   use esmf
@@ -53,21 +51,26 @@ module netcdf_component
 
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=0, &
       userRoutine=InitializeP0, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=1, &
       userRoutine=InitializeP1, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_READRESTART, phase=1, &
       userRoutine=ReadRestart, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine SetServices
 
@@ -92,20 +95,24 @@ module netcdf_component
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
 
     call ESMF_AttributeAdd(gridComp, convention="NUOPC", purpose="General", &
       attrList=(/"InitializePhaseMap"/), rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_AttributeSet(gridComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
       convention="NUOPC", purpose="General", rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_CompExit(gridComp, localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP0
 
@@ -138,7 +145,9 @@ module netcdf_component
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
       importState=importState, exportState=exportState, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! The default filename to read is the name of the component with a .nc
     !! extension
@@ -157,18 +166,22 @@ module netcdf_component
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       config = ESMF_ConfigCreate(rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_ConfigLoadFile(config, trim(configfilename), rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     else
       call ESMF_GridCompGet(gridComp, configIsPresent=configIsPresent, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (configIsPresent) then
         call ESMF_GridCompGet(gridComp, config=config, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         write(message,'(A)')  trim(name)//' reads configuration from component'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
@@ -180,92 +193,115 @@ module netcdf_component
       !> Value of netcdf fileName defaults to name of component
       call MOSSCO_ConfigGet(config, label='filename', value=fileName, &
         defaultValue=trim(name), rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call MOSSCO_ConfigGet(config, label='exclude', value=filterExcludeList, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       !> Value of checkNaN defaults to .true.
       call MOSSCO_ConfigGet(config, label='checkNaN', value=checkNaN, defaultValue=.true., rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       !> Value of checkInf defaults to .true.
       call MOSSCO_ConfigGet(config, label='checkInf', value=checkNaN, defaultValue=.true., rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       !> Default value for filter ExcludeList is a non-associated pointer
       call MOSSCO_ConfigGet(config, label='exclude', value=filterExcludeList, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       !> Default value for filterIncludeList is a non-associated pointer
       call MOSSCO_ConfigGet(config, 'include', value=filterIncludeList, &
         isPresent=labelIsPresent, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_GridCompSet(gridComp, config=config, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     endif
 
     if (allocated(filterIncludeList)) then
       call MOSSCO_AttributeSet(importState, 'filter_pattern_include', filterIncludeList, localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_AttributeGet(importState, 'filter_pattern_include', value=message, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       write(message,'(A)') trim(name)//' include patterns: '//trim(message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       call MOSSCO_Reallocate(filterIncludeList, 0, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
     if (allocated(filterExcludeList)) then
       call MOSSCO_AttributeSet(importState, 'filter_pattern_exclude', filterExcludeList, localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_AttributeGet(importState, 'filter_pattern_exclude', value=message, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       write(message,'(A)') trim(name)//' exclude patterns: '//trim(message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       call MOSSCO_Reallocate(filterExcludeList, 0, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
     call MOSSCO_AttributeSet(importState, 'check_inf', checkInf, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_AttributeSet(importState, 'check_nan', checkNaN, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_AttributeSet(importState, 'filename', trim(fileName), rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_ClockGet(clock, refTime=refTime, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_TimeGet(refTime, timeStringISOFrac=timeString, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     write(timeUnit,'(A)') 'seconds since '//timeString(1:10)//' '//timestring(12:len_trim(timestring))
 
     nc = mossco_netcdfCreate(fileName, timeUnit=timeUnit, state=importState, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_AttributeSet(exportState, 'netcdf_id', nc%ncid, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_AttributeSet(exportState, 'netcdf_file_name', trim(fileName), rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_CompExit(gridComp, localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP1
 
@@ -337,24 +373,30 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
       importState=importState, exportState=exportState, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> Synchronize this component's current time with the parent clock's
     call ESMF_ClockSet(clock, currTime=currTime, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_ClockGet(clock, advanceCount=advanceCount, refTime=refTime, startTime=startTime, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompGet(gridComp, petCount=petCount, localPet=localPet, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_AttributeGet(importState, name='filename', value=fileName, &
       defaultValue=trim(name)//'.nc', rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     j=index(fileName,'.nc',back=.true.)
     if (j < len_trim(fileName)-2) fileName=trim(fileName)//'.nc'
@@ -365,18 +407,25 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     endif
 
     call MOSSCO_AttributeGet(importState, 'filter_pattern_include', filterIncludeList, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_AttributeGet(importState, 'filter_pattern_exclude', filterExcludeList, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_AttributeGet(importState, 'check_nan', checkNaN, defaultValue=.true., rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_AttributeGet(importState, 'check_inf', checkInf, defaultValue=.true., rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !> Deal with time first, independent of items to be written
+    call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     if (advanceCount<huge(timeSlice)) then
       timeSlice=int(advanceCount, ESMF_KIND_I4)
     else
@@ -386,15 +435,23 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       return
     endif
 
-    if (.true.) then
+    if (itemcount>0) then
+      if (.not.allocated(itemTypeList)) allocate(itemTypeList(itemCount))
+      if (.not.allocated(itemNameList)) allocate(itemNameList(itemCount))
+
+      call ESMF_StateGet(importState, itemTypeList=itemTypeList, itemNameList=itemNameList, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_TimeGet(refTime, timeStringISOFrac=timeString, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       write(timeUnit,'(A)') 'seconds since '//timeString(1:10)//' '//timestring(12:len_trim(timestring))
 
       call ESMF_TimeIntervalGet(currTime-refTime, s_r8=seconds, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (currTime == startTime) then
         nc = mossco_netcdfCreate(fileName, timeUnit=timeUnit, state=importState, rc=localrc)
@@ -404,7 +461,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       else
         nc = mossco_netcdfOpen(fileName, timeUnit=timeUnit, state=importState, rc=localrc)
       end if
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call nc%update()
       call nc%update_variables()
@@ -415,18 +473,19 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       call nc%timeGet(minTime, searchIndex=1, stopTime=maxTime, rc=localrc)
       if (localrc == ESMF_RC_NOT_FOUND .or. maxTime < currTime) then
         call nc%add_timestep(seconds, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       elseif (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       elseif (maxTime > currTime) then
         call ESMF_TimeGet(currTime, timeStringISOFrac=timeString, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         write(message, '(A)')  trim(name)//' '//trim(timeString)//' cannot insert time before'
         call ESMF_TimeGet(maxTime, timeStringISOFrac=timeString, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call MOSSCO_MessageAdd(message,' '//trim(timeString))
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
 
@@ -438,16 +497,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     endif
 
-    call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    if (itemcount>0) then
-      if (.not.allocated(itemTypeList)) allocate(itemTypeList(itemCount))
-      if (.not.allocated(itemNameList)) allocate(itemNameList(itemCount))
-
-      call ESMF_StateGet(importState, itemTypeList=itemTypeList, itemNameList=itemNameList, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-    endif
 
     do i=1,itemCount
 
@@ -455,7 +504,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       if (allocated(filterExcludeList)) then
         do j=1,ubound(filterExcludeList,1)
           call MOSSCO_StringMatch(itemNameList(i), filterExcludeList(j), isMatch, localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           if (ismatch) exit
         enddo
 
@@ -474,8 +524,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       if (allocated(filterIncludeList)) then
         do j=1,ubound(filterIncludeList,1)
           call MOSSCO_StringMatch(itemNameList(i), filterIncludeList(j), isMatch, localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           if (ismatch) exit
         enddo
         if (.not.ismatch) then
@@ -490,10 +540,12 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
       call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
         itemSearch=trim(itemNameList(i)), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (fieldCount < 1) then
         if (advanceCount < 1) then
@@ -515,12 +567,14 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
           call nc_state_field_write(importState, trim(itemNameList(i)), &
             checkNaN=checkNaN, checkInf=checkInf, rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
           call nc_state_fieldbundle_write(importState, trim(itemNameList(i)), &
             checkNaN=checkNaN, checkInf=checkInf, rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         elseif (advanceCount < 1) then
           write(message,'(A)') trim(name)//' not implemented saving item '//trim(itemNameList(i))
@@ -548,10 +602,12 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     !call ESMF_StateReconcile(importState, rc=localrc) ! not working on ocean
     if (allocated(itemNameList)) deallocate(itemNameList)
    ! 7.0.0 b64
-   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     ! The removal creates problesm, it is disabled here for further testing.  Is
     ! it needed at all?
@@ -560,7 +616,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       allocate(itemNameList(itemCount))
 
       call ESMF_StateGet(importState, itemNameList=itemNameList, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_StateRemove(importState, itemNameList, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
@@ -595,18 +652,22 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     !! timestep.  Thus, it is advanced to the next alarm time.
 
     call MOSSCO_ClockGetTimeStepToNextAlarm(clock, timeStep, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_ClockGet(clock, stopTime=stopTime, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !if (timeStep>0) then
       call ESMF_ClockAdvance(clock, timeStep=timeStep, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     !endif
 
     call MOSSCO_CompExit(gridComp, localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Run
 
@@ -630,43 +691,53 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
       importState=importState, exportState=exportState, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !call nc%close(rc=localrc)
 
     call ESMF_GridCompGet(gridComp, configIsPresent=isPresent, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (isPresent) then
 
       call ESMF_GridCompGet(gridComp, config=config, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_ConfigDestroy(config, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     end if
 
     call ESMF_GridCompGet(gridComp, importStateIsPresent=isPresent, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (isPresent) call ESMF_StateValidate(importState, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_DestroyOwn(importState, trim(name), rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompGet(gridComp, exportStateIsPresent=isPresent, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (isPresent) call ESMF_StateValidate(exportState, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_DestroyOwn(exportState, trim(name), rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call MOSSCO_CompExit(gridComp, localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Finalize
 

@@ -2214,7 +2214,7 @@ contains
   end subroutine MOSSCO_StateMoveFieldsToBundle
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "MOSSCO_StateGetFieldsList"
+#define ESMF_METHOD "MOSSCO_StateGetFieldList"
   !> @param rc: [optional] return code
   subroutine MOSSCO_StateGetFieldsList(state, fieldList, kwe, itemSearchList, &
     fieldCount, fieldStatus, rc)
@@ -2274,7 +2274,7 @@ contains
 #define ESMF_METHOD "MOSSCO_StateGetFieldList"
   !> @param rc: [optional] return code
   subroutine MOSSCO_StateGetFieldList(state, fieldList, kwe, itemSearch, &
-    fieldCount, fieldStatus, include, exclude, verbose, rc)
+    fieldCount, fieldStatus, rc)
 
     type(ESMF_State), intent(in)                 :: state
     type(ESMF_Field), allocatable, intent(out)   :: fieldList(:)
@@ -2282,8 +2282,6 @@ contains
     character(len=*), intent(in), optional       :: itemSearch
     integer(ESMF_KIND_I4), intent(out), optional :: fieldCount
     type(ESMF_FieldStatus_Flag), intent(in), optional   :: fieldStatus
-    character(len=*), intent(in), optional       :: include(:), exclude(:)
-    logical, intent(in), optional                :: verbose
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)                   :: rc_, localrc, i, j, itemCount
@@ -2294,13 +2292,9 @@ contains
     type(ESMF_FieldBundle)                  :: fieldBundle
     type(ESMF_FieldStatus_Flag)             :: fieldStatus_
     type(ESMF_Field), allocatable           :: tempList(:), fieldInBundleList(:)
-    logical                                 :: isMatch, verbose_
 
     rc_ = ESMF_SUCCESS
-    if (present(rc)) rc = ESMF_SUCCESS
     fieldCount_ = 0
-    verbose_ = .false.
-    if (present(verbose)) verbose_ = verbose
 
     call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -2348,45 +2342,6 @@ contains
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     do i = 1, itemCount
-
-      !! Look for an exclusion pattern on this item name
-      if (present(exclude)) then
-        do j = lbound(exclude,1),ubound(exclude,1)
-          call MOSSCO_StringMatch(itemNameList(i), exclude(j), isMatch, localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          if (ismatch) exit
-        enddo
-
-        if (isMatch) then
-          if (verbose) then
-            write(message,'(A)') '  excluded'
-            call MOSSCO_MessageAdd(message, ' '//trim(itemNameList(i))//' with pattern ')
-            call MOSSCO_MessageAdd(message, ' '//trim(exclude(j)))
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-          endif
-          cycle
-        endif
-      endif
-
-      !! Look for an inclusion pattern on this field name
-      if (present(include)) then
-        do j = lbound(include,1),ubound(include,1)
-          call MOSSCO_StringMatch(itemNameList(i), include(j), isMatch, localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          if (ismatch) exit
-        enddo
-        if (.not.ismatch) then
-          if (verbose) then
-            write(message,'(A)') '  did not include '
-            call MOSSCO_MessageAdd(message,' '//itemNameList(i))
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-          endif
-          cycle
-        endif
-      endif
-
       if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
 
         fieldCount_ = fieldCount_ + 1
@@ -2481,12 +2436,6 @@ contains
         if (fieldStatus /= fieldStatus_) cycle
         n = n + 1
         tempList(n) = fieldList(i)
-
-        if (verbose) then
-          write(message,'(A)') '  uses '
-          call MOSSCO_FieldString(fieldList(i), message)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        endif
 
       enddo
 
