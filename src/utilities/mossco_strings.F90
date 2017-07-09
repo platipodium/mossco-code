@@ -230,6 +230,11 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_MessageAddString"
+!> @param character(len=*) message : string to add to [inout]
+!> @param character(len=*) string: string to add [in]
+!> @param integer [rc]: return code
+!> @desc Adds onto a string another string, and observes the
+!> maximum length of the receiving string
   subroutine MOSSCO_MessageAddString(message, string, rc)
 
     character(len=*), intent(inout)    :: message
@@ -367,6 +372,11 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_MessageAddList"
+!> @param character(len=*) message : string to add to [inout]
+!> @param character(len=*), dimension(:): string to add [in]
+!> @param integer [rc]: return code
+!> @desc Adds onto a string a list of strings, and observes the
+!> maximum length of the receiving string
   subroutine MOSSCO_MessageAddList(message, stringList, rc)
 
     character(len=*), intent(inout)  :: message
