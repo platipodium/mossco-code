@@ -243,7 +243,8 @@ module vertical_reduction
     call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CreateVerticallyReducedExportFields(cplComp, importState, exportState, rc=localrc)
+    call MOSSCO_CreateVerticallyReducedExportFields(cplComp, importState, &
+      exportState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_ReduceFields(cplComp, importState, exportState, rc=localrc)
@@ -440,17 +441,19 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
       ! The field is created from gridset and complete fields, no error is thrown if
       ! the field exists
       call MOSSCO_StateGetFieldList(exportState, exportFieldList, fieldCount=exportFieldCount, &
-        itemSearch='vred_'//trim(itemName), rc=localrc)
+        itemSearch='vred_'//operator(1:4)//'_'//trim(itemName), rc=localrc)
+
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       if (exportFieldCount < 1) then
-        call MOSSCO_CreateVerticallyReducedField(importFieldList(i), exportField, operator=operator, &
-          scale=scale, offset=offset, scale_depth=scale_depth, rc=localrc)
 
-        if (localrc == ESMF_SUCCESS) then
-          call ESMF_StateAddReplace(exportState, (/exportField/), rc=localrc)
+        call MOSSCO_CreateVerticallyReducedField(importFieldList(i), exportField, &
+          operator=trim(operator), offset=offset, scale_depth=scale_depth, &
+          name=trim(name), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        call ESMF_StateAddReplace(exportState, (/exportField/), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-        endif
       endif
 
       call MOSSCO_Reallocate(exportFieldList, 0,  rc=localrc)
@@ -563,7 +566,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
       call ESMF_FieldGet(exportFieldList(i), name=itemName, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      if (itemName(1:5) /= 'vred_') cycle
+      if (itemName(1:10) /= 'vred_'//operator(1:4)//'_') cycle
       importItemName = itemName(6:len_trim(itemName))
 
       !> Find the name of the variable on which the reduction shall be applied
@@ -625,7 +628,10 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
 
       !> If we use vertical profile weighting with depth scale (exponential)
       !> decrease with depth, the weight is generated from depth.
+      !> @todo make sure this is only available with 'average' operator, consider
+      !> min/max
       if (scale_depth > 0.0) then
+
         call MOSSCO_GridGetDepth(importGrid, depth=depth, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
@@ -745,23 +751,27 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_CreateVerticallyReducedField"
   subroutine MOSSCO_CreateVerticallyReducedField(importField, exportfield, kwe, &
-    scale, offset, scale_depth, operator, rc)
+    scale, offset, scale_depth, operator, name, rc)
 
     type(ESMF_Field), intent(in)           :: importField
     type(ESMF_Field), intent(out)          :: exportField
     type(ESMF_KeywordEnforcer), optional   :: kwe
     real(ESMF_KIND_R8), optional, intent(in) :: scale, offset, scale_depth
     character(len=*), optional, intent(in) :: operator
+    character(len=*), optional, intent(in) :: name
     integer(ESMF_KIND_I4), optional        :: rc
 
-    character(ESMF_MAXSTR)                 :: exportName, importName
+    character(ESMF_MAXSTR)                 :: exportName, importName, unitString
 
-    integer(ESMF_KIND_I4)                  :: localrc, rc_, rank
+    integer(ESMF_KIND_I4)                  :: localrc, rc_, rank, i
     real(ESMF_KIND_R8)                     :: scale_, offset_, scale_depth_
-    character(len=ESMF_MAXSTR)             :: operator_
+    character(len=ESMF_MAXSTR)             :: operator_, name_
     type(ESMF_FieldStatus_Flag)            :: fieldStatus
     type(ESMF_Grid)                        :: importGrid, exportGrid
     type(ESMF_TypeKind_Flag)               :: typeKind
+
+
+    call ESMF_LogWrite('VR:',ESMF_LOGMSG_INFO,ESMF_CONTEXT)
 
     rc_ = ESMF_SUCCESS
     if (present(rc))  rc = rc_
@@ -770,6 +780,13 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     if (present(scale_depth)) scale_depth_ = scale_depth
     if (present(offset)) offset_ = offset
     if (present(operator)) operator_ = operator
+    if (present(name)) then
+      name_ = trim(name)
+    else
+      name_ = 'vertical_reduction'
+    endif
+
+    call ESMF_LogWrite('VR:',ESMF_LOGMSG_INFO,ESMF_CONTEXT)
 
     call ESMF_FieldGet(importField, name=importName, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -796,7 +813,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     exportGrid = MOSSCO_GridCreateFromOtherGrid(importGrid, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    exportName = 'vred_' // trim(importName)
+    exportName = 'vred_'//operator_(1:4)//'_'//trim(importName)
 
     exportField = ESMF_FieldEmptyCreate(name=trim(exportName), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -810,8 +827,51 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     call ESMF_FieldEmptyComplete(exportfield, typeKind=typeKind, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
+    call MOSSCO_FieldCopyAttributes(exportField, importField, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
     call MOSSCO_FieldInitialize(exportField, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_AttributeSet(exportField, 'cell_methods', &
+      'vertical: '//trim(operator), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_AttributeSet(exportField, 'creator', trim(name_), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_AttributeGet(importfield, 'units', unitString, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_AttributeGet(importfield, 'units', unitString, defaultValue='', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_LogWrite('VR:',ESMF_LOGMSG_INFO,ESMF_CONTEXT)
+
+    ! The next call is problematic
+    !call MOSSCO_CleanUnit(unitString, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    call ESMF_LogWrite('VR:',ESMF_LOGMSG_INFO,ESMF_CONTEXT)
+
+    i = index(unitString,'m-3')
+    if (i > 0) then
+      unitString(i+2:i+2) = '2'
+    else
+      i = index(unitString,'m-1')
+      if (i == 1) then
+        unitString = unitString(3:len(unitString))
+      elseif (i > 1) then
+        unitString = unitString(1:i-1)//unitString(i+3:len(unitString))
+      else
+        unitString = trim(unitString)//' m'
+      endif
+    endif
+    call ESMF_LogWrite('VR:',ESMF_LOGMSG_INFO,ESMF_CONTEXT)
+
+    call ESMF_AttributeSet(exportfield, name='units', value=trim(unitString),  rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_LogWrite('VR:',ESMF_LOGMSG_INFO,ESMF_CONTEXT)
 
   end subroutine MOSSCO_CreateVerticallyReducedField
 
