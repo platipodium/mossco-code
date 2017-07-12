@@ -123,7 +123,7 @@ module vertical_reduction
     integer(ESMF_KIND_I4)           :: localrc
 
     type(ESMF_Config)               :: config
-    real(ESMF_KIND_R8)              :: offset, scale
+    real(ESMF_KIND_R8)              :: offset, scale, scale_depth
     character(len=ESMF_MAXSTR)      :: operator
     logical                         :: labelIsPresent, isPresent, fileIsPresent
     character(len=ESMF_MAXSTR), allocatable :: filterExcludeList(:), filterIncludeList(:)
@@ -137,6 +137,7 @@ module vertical_reduction
     operator = 'average'
     scale = 1.0
     offset = 0.0
+    scale_depth = 0.0
 
     configfilename=trim(name)//'.cfg'
     inquire(file=trim(configfilename), exist=fileIsPresent)
@@ -161,6 +162,9 @@ module vertical_reduction
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call MOSSCO_ConfigGet(config, label='scale', value=scale, defaultValue=1.0D0, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call MOSSCO_ConfigGet(config, label='scale_depth', value=scale, defaultValue=0.0D0, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call MOSSCO_ConfigGet(config, 'exclude', filterExcludeList)
@@ -207,7 +211,10 @@ module vertical_reduction
     call ESMF_AttributeSet(cplComp, 'operator_type', trim(operator), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(cplComp, 'scale_factor', offset, rc=localrc)
+    call ESMF_AttributeSet(cplComp, 'scale_factor', scale, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_AttributeSet(cplComp, 'scale_depth', scale_depth, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_AttributeSet(cplComp, 'add_offset', offset, rc=localrc)
@@ -303,7 +310,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     character(len=ESMF_MAXSTR), allocatable :: filterExcludeList(:), filterIncludeList(:)
     character(len=ESMF_MAXSTR), allocatable :: checkExcludeList(:)
 
-    real(ESMF_KIND_R8)                     :: offset, scale
+    real(ESMF_KIND_R8)                     :: offset, scale, scale_depth
     integer(ESMF_KIND_I4)                  :: localrc, rc_, matchIndex, matchScore
     integer(ESMF_KIND_I8)                  :: advanceCount
     type(ESMF_Clock)                       :: clock
@@ -329,6 +336,9 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     call ESMF_AttributeGet(cplComp, name='scale_factor', defaultValue=1.0D0, value=scale, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
+    call ESMF_AttributeGet(cplComp, name='scale_depth', defaultValue=0.0D0, value=scale_depth, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
     call ESMF_CplCompGet(cplComp, clock=clock, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
@@ -348,7 +358,8 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
       advanceCount = 0
     endif
 
-    call MOSSCO_StateGetFieldList(importState, importFieldList, fieldCount=importFieldCount, &
+    call MOSSCO_StateGet(importState, importFieldList, &
+      fieldCount=importFieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, &
       rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
@@ -434,7 +445,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
 
       if (exportFieldCount < 1) then
         call MOSSCO_CreateVerticallyReducedField(importFieldList(i), exportField, operator=operator, &
-          scale=scale, offset=offset, rc=localrc)
+          scale=scale, offset=offset, scale_depth=scale_depth, rc=localrc)
 
         if (localrc == ESMF_SUCCESS) then
           call ESMF_StateAddReplace(exportState, (/exportField/), rc=localrc)
@@ -475,7 +486,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     logical                                 :: isPresent
     character(len=ESMF_MAXSTR), allocatable :: filterExcludeList(:), filterIncludeList(:)
 
-    real(ESMF_KIND_R8)                     :: offset, scale
+    real(ESMF_KIND_R8)                     :: offset, scale, scale_depth
     integer(ESMF_KIND_I4)                  :: localrc, rc_
     integer(ESMF_KIND_I8)                  :: advanceCount
     type(ESMF_Clock)                       :: clock
@@ -492,8 +503,10 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     integer(ESMF_KIND_I4),dimension(:,:,:), pointer :: mask => null()
     real(ESMF_KIND_R8), pointer, dimension(:,:,:) :: farrayPtr3 => null()
     real(ESMF_KIND_R8), pointer, dimension(:,:)   :: farrayPtr2 => null()
-    real(ESMF_KIND_R8), pointer, dimension(:,:,:)   :: layer_height => null()
-    real(ESMF_KIND_R8), allocatable, dimension(:,:,:)   :: weight
+    real(ESMF_KIND_R8), pointer, dimension(:,:,:) :: layer_height => null()
+    real(ESMF_KIND_R8), pointer, dimension(:,:,:) :: depth => null()
+    real(ESMF_KIND_R8), allocatable, dimension(:,:)   :: sum_weight
+    real(ESMF_KIND_R8), allocatable, dimension(:,:,:) :: weight
     character(len=ESMF_MAXSTR)             :: importItemName
     type(ESMF_TypeKind_Flag)               :: typeKind
 
@@ -510,6 +523,9 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_AttributeGet(cplComp, name='scale_factor', defaultValue=1.0D0, value=scale, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_AttributeGet(cplComp, name='scale_depth', defaultValue=1.0D0, value=scale_depth, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_CplCompGet(cplComp, clock=clock, rc=localrc)
@@ -599,18 +615,47 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
         exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      call MOSSCO_GridGetDepth(importGrid, height=layer_height, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
       if (allocated(weight)) deallocate(weight)
       allocate(weight(RANGE3D), stat=localrc)
       weight(RANGE3D) = 0.0
 
-      do j = lbnd(3), ubnd(3)
-        where (layer_height(RANGE2D,j) > 0)
-          weight(RANGE2D,j) = layer_height(RANGE2D,j)/sum(layer_height(RANGE3D), dim=3)
+      if (allocated(sum_weight)) deallocate(sum_weight)
+      allocate(sum_weight(RANGE2D), stat=localrc)
+      sum_weight(RANGE2D) = 0.0
+
+      !> If we use vertical profile weighting with depth scale (exponential)
+      !> decrease with depth, the weight is generated from depth.
+      if (scale_depth > 0.0) then
+        call MOSSCO_GridGetDepth(importGrid, depth=depth, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        where (depth(RANGE3D) > 0)
+          weight(RANGE3D) = exp (- depth(RANGE3D)/scale_depth)
         endwhere
-      enddo
+
+        where (sum(weight(RANGE3D), dim=3) > 0)
+          sum_weight(RANGE2D) = sum(weight(RANGE3D), dim=3)
+        endwhere
+
+        do j = lbnd(3), ubnd(3)
+          where (sum_weight(RANGE2D) > 0)
+            weight(RANGE2D,j) = weight(RANGE2D,j)/sum_weight(RANGE2D)
+          endwhere
+        enddo
+      else
+        !> The weight is generated from layer height
+        call MOSSCO_GridGetDepth(importGrid, height=layer_height, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        do j = lbnd(3), ubnd(3)
+          where (layer_height(RANGE2D,j) > 0)
+            weight(RANGE2D,j) = layer_height(RANGE2D,j)/sum(layer_height(RANGE3D), dim=3)
+          endwhere
+        enddo
+      endif
+
+      sum_weight = sum(weight(RANGE3D), dim=3)
+      if (allocated(sum_weight)) deallocate(sum_weight)
 
       call ESMF_GridGetItem(importGrid, ESMF_GRIDITEM_MASK, &
         staggerloc=ESMF_STAGGERLOC_CENTER, isPresent=isPresent, rc=localrc)
@@ -686,6 +731,10 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
 
     enddo
 
+    if (allocated(weight)) deallocate(weight)
+    if (associated(depth)) deallocate(depth)
+    if (associated(layer_height)) deallocate(layer_height)
+
     call MOSSCO_Reallocate(exportFieldList, 0,  rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
@@ -696,19 +745,19 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_CreateVerticallyReducedField"
   subroutine MOSSCO_CreateVerticallyReducedField(importField, exportfield, kwe, &
-    scale, offset, operator, rc)
+    scale, offset, scale_depth, operator, rc)
 
     type(ESMF_Field), intent(in)           :: importField
     type(ESMF_Field), intent(out)          :: exportField
     type(ESMF_KeywordEnforcer), optional   :: kwe
-    real(ESMF_KIND_R8), optional, intent(in) :: scale, offset
+    real(ESMF_KIND_R8), optional, intent(in) :: scale, offset, scale_depth
     character(len=*), optional, intent(in) :: operator
     integer(ESMF_KIND_I4), optional        :: rc
 
     character(ESMF_MAXSTR)                 :: exportName, importName
 
     integer(ESMF_KIND_I4)                  :: localrc, rc_, rank
-    real(ESMF_KIND_R8)                     :: scale_, offset_
+    real(ESMF_KIND_R8)                     :: scale_, offset_, scale_depth_
     character(len=ESMF_MAXSTR)             :: operator_
     type(ESMF_FieldStatus_Flag)            :: fieldStatus
     type(ESMF_Grid)                        :: importGrid, exportGrid
@@ -718,6 +767,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     if (present(rc))  rc = rc_
     if (present(kwe)) rc_ = ESMF_SUCCESS
     if (present(scale)) scale_ = scale
+    if (present(scale_depth)) scale_depth_ = scale_depth
     if (present(offset)) offset_ = offset
     if (present(operator)) operator_ = operator
 
