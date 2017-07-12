@@ -2217,7 +2217,7 @@ contains
 #define ESMF_METHOD "MOSSCO_StateGetFieldsList"
   !> @param rc: [optional] return code
   subroutine MOSSCO_StateGetFieldsList(state, fieldList, kwe, itemSearchList, &
-    fieldCount, fieldStatus, rc)
+    fieldCount, fieldStatus, verbose, rc)
 
     type(ESMF_State), intent(in)                 :: state
     type(ESMF_Field), allocatable, intent(out)   :: fieldList(:)
@@ -2225,15 +2225,20 @@ contains
     logical, intent(in), optional                :: kwe
     integer(ESMF_KIND_I4), intent(out), optional :: fieldCount
     type(ESMF_FieldStatus_Flag), intent(in), optional   :: fieldStatus
+    logical, intent(in), optional                :: verbose
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     type(ESMF_Field), allocatable   :: singleFieldList(:)
     integer(ESMF_KIND_I4)           :: i, fieldCount_
     integer(ESMF_KIND_I4)           :: singleFieldCount, rc_, localrc
     character(len=ESMF_MAXSTR)      :: message
+    logical                         :: verbose_
 
     rc_ = ESMF_SUCCESS
     if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = ESMF_SUCCESS
+    verbose_ = .true.
+    if (present(verbose)) verbose_ = verbose
 
     fieldCount_ = 0
     call MOSSCO_Reallocate(fieldList,0)
@@ -2242,10 +2247,11 @@ contains
       if (present(fieldStatus)) then
         call MOSSCO_StateGetFieldList(state, singleFieldList, &
           itemSearch=trim(itemSearchlist(i)), fieldCount=singleFieldCount, &
-          fieldStatus=fieldStatus, rc=rc_)
+          fieldStatus=fieldStatus, verbose=verbose_, rc=rc_)
       else
         call MOSSCO_StateGetFieldList(state, singleFieldList, &
-          itemSearch=trim(itemSearchlist(i)), fieldCount=singleFieldCount, rc=rc_)
+          itemSearch=trim(itemSearchlist(i)), fieldCount=singleFieldCount, &
+          verbose=verbose_, rc=rc_)
       endif
       ! write(message,'(A,X,I1,X,I1)') trim(itemSearchlist(i)),i,singleFieldCount
       ! call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
@@ -2299,6 +2305,7 @@ contains
     rc_ = ESMF_SUCCESS
     if (present(rc)) rc = ESMF_SUCCESS
     fieldCount_ = 0
+    itemCount = 0
     verbose_ = .false.
     if (present(verbose)) verbose_ = verbose
 
@@ -2307,7 +2314,7 @@ contains
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (present(itemSearch)) then
-      call ESMF_StateGet(state, itemSearch=trim(itemSearch), itemCount=itemCount, rc=localrc)
+      call ESMF_StateGet(state, itemSearch=trim(adjustl(itemSearch)), itemCount=itemCount, rc=localrc)
       if (itemCount > 1) then
         rc_ = ESMF_RC_NOT_IMPL
         if (present(rc)) rc = rc_
@@ -2338,8 +2345,8 @@ contains
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (present(itemSearch)) then
-      itemNameList(1)=trim(itemSearch)
-      call ESMF_StateGet(state, itemName=trim(itemSearch), itemType=itemTypeList(1), &
+      itemNameList(1)=trim(adjustl(itemSearch))
+      call ESMF_StateGet(state, itemName=itemNameList(1), itemType=itemTypeList(1), &
         rc=localrc)
     else
       call ESMF_StateGet(state, itemTypeList=itemTypeList, itemNameList=itemNameList, rc=localrc)
@@ -2481,13 +2488,6 @@ contains
         if (fieldStatus /= fieldStatus_) cycle
         n = n + 1
         tempList(n) = fieldList(i)
-
-        if (verbose_) then
-          write(message,'(A)') '  uses '
-          call MOSSCO_FieldString(fieldList(i), message)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        endif
-
       enddo
 
       fieldCount_ = n
@@ -2508,6 +2508,14 @@ contains
     call MOSSCO_Reallocate(tempList, 0, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (verbose_) then
+      do i = 1, fieldCount_
+        write(message,'(A)') '  found '
+        call MOSSCO_FieldString(fieldList(i), message)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      enddo
+    endif
 
     if (.not.present(fieldCount) .and. fieldCount_ == 0) rc_ = ESMF_RC_NOT_FOUND
     if (present(fieldCount)) fieldCount = fieldCount_
