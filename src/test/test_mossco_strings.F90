@@ -95,6 +95,29 @@ program test_mossco_strings
     write(*,'(I1,X,A,A)') i,trim(string),trim(remainder)
   enddo
 
+  !--------------
+  write(*,'(A)') 'Testing procedure  "CleanUnit"'
+
+  allocate(stringList(10))
+  stringList(1) = ''
+  stringList(2) = ' '
+  stringList(3) = '(5)'
+  stringList(4) = 'm'
+  stringList(5) = 'm*s'
+  stringList(6) = 'm/s'
+  stringList(7) = 'm**5'
+  stringList(8) = 'm**-2'
+  stringList(9) = 'm s**-1 m^4 J**3'
+  stringList(10) = ''
+
+  do i=1,10
+    string = stringList(i)
+    call MOSSCO_CleanUnit(string)
+    write(*,'(I2.2,X,A)') i,'"'//trim(stringList(i))//'" ?= "'//trim(string)//'"'
+  enddo
+
+  write(*,'(A)') 'All tests done.'
+
   call ESMF_Finalize(rc=localrc)
 
 end program
