@@ -555,8 +555,8 @@ contains
     character(len=*), intent(inout)              :: unit
     integer(ESMF_KIND_I4), optional, intent(out) :: rc
 
-    integer(ESMF_KIND_I4)            :: rc_, localrc, chunk, i
-    character(len=ESMF_MAXSTR)       :: string
+    integer(ESMF_KIND_I4)            :: rc_, localrc, chunk, i, j, number
+    character(len=ESMF_MAXSTR)       :: string, format
 
     if (present(rc)) rc = ESMF_RC_NOT_IMPL
 
@@ -564,45 +564,28 @@ contains
     if (index(unit,'(') > 0) return
     if (index(unit,')') > 0) return
 
+    if (present(rc)) rc = ESMF_SUCCESS
+
     !> Remove instances of leading, trailing, and double whitespace
     unit=adjustl(trim(unit))
-    do
-      i=index(unit,'  ')
-      if (i<1) exit
-      write(unit,'(A)') unit(1:i)//unit(i+2:len_trim(unit))
+    if (len_trim(unit) == 0) return
+
+    do i = 1,len_trim(unit)-1
+      if (unit(i:i) == ' ' .and. unit(i+1:i+1) == ' ') then
+        write(unit,'(A)') unit(1:i)//unit(i+2:len_trim(unit))
+      endif
     enddo
 
-    !> Search for multiplication dot '.'. replace by whitespace
-    do
-      i=index(unit,'.')
-      if (i<1) exit
-      unit(i:i)=' '
-    enddo
+    !> Assume all whitespace that is between numbers and/or
+    !> letters is a multiplication (represented by dot)
+    do i = 2,len_trim(unit)-1
+      if (unit(i:i) /= ' ') cycle
 
-    !>  @todo  Search for division slash '/', replace this by whitespace
-    !> and change the next occuring number to negative
-
-    string=unit
-    do
-      i=index(string,'/')
-      if (i<1) exit
-
-      string(i:i) = ' '
-      i=i+1
-      ! Search for a number
-      do
-        if (i == len(string)) return
-        if (string(i:i) > '9' .or. string(i:i) < '0' ) then
-          i=i+1
-        else
-          exit
-        endif
-      enddo
-
-      if (string(i-1:i-1) == '-') then
-        write(string,'(A)') string(1:i-2)//string(i:len_trim(string))
+      if ((isChar(unit(i-1:i-1)) .or. isDigit(unit(i-1:i-1))) &
+       .and. (isChar(unit(i+1:i+1)) .or. isDigit(unit(i+1:i+1)))) then
+         unit(i:i) = '.'
       else
-        write(string,'(A)') string(1:i-1)//'-'//string(i:len_trim(string))
+        unit = unit(1:i-1)//unit(i+1:len_trim(unit))
       endif
     enddo
 
@@ -620,14 +603,103 @@ contains
       write(unit,'(A)') unit(1:i-1)//unit(i+2:len_trim(unit))
     enddo
 
-    !> Remove instances of single '*'
+    !> Replace instances of single '*' with dot
     do
-      i=index(unit,'^')
+      i=index(unit,'*')
       if (i<1) exit
-      write(unit,'(A)') unit(1:i-1)//unit(i+2:len_trim(unit))
+      unit(i:i) = '.'
     enddo
 
+    !>  @todo  Search for division slash '/', replace this by whitespace
+    !> and change the next occuring number to negative
+    do
+      j = 0
+      number = 0
+      i=index(unit,'/')
+      if (i<1) exit
+
+      unit(i:i) = '.'
+      i=i+1
+
+      ! Search for a number
+      do while (isChar(unit(i:i)))
+        i = i + 1
+      enddo
+
+!      write(0,'(I2,X,A,X,A,X,I3)') i,trim(unit),unit(i:i),__LINE__
+
+      if (i > len_trim(unit)) then
+        unit = unit(1:len_trim(unit))//'-1'
+      elseif (unit(i:i) == '-') then
+        unit = unit(1:i-1)//unit(i+1:len_trim(unit))
+      else
+        unit = unit(1:i-1)//'-'//unit(i:len_trim(unit))
+      endif
+
+    enddo
+
+
+    !> Search for multiplication dot '.'. replace by whitespace
+    ! do
+    !   i=index(unit,'.')
+    !   if (i<1) exit
+    !   unit(i:i)=' '
+    ! enddo
+
   end subroutine MOSSCO_CleanUnit
+
+  function isChar(string) result(isTrue)
+    character(len=1), intent(in) :: string
+    logical                      :: isTrue
+
+    if (index('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',string)>0) then
+      isTrue = .true.
+    else
+      isTrue = .false.
+    endif
+  end
+
+  function isDigit(string) result(isTrue)
+    character(len=1), intent(in) :: string
+    logical                      :: isTrue
+
+    if (index('0123456789',string)>0) then
+      isTrue = .true.
+    else
+      isTrue = .false.
+    endif
+  end function isDigit
+
+  pure function isNumeric(string) result(isTrue)
+
+    character(len=*), intent(in) :: string
+    logical                      :: isTrue
+
+    isTrue = .false.
+    if (isInteger(string)) then
+      isTrue = .true.
+      return
+    endif
+
+    isTrue = isReal(string)
+  end function isNumeric
+
+  pure function isInteger(string) result(isTrue)
+
+    character(len=*), intent(in) :: string
+    logical                      :: isTrue
+
+    isTrue = .false.
+
+  end function isInteger
+
+  pure function isReal(string) result(isTrue)
+
+    character(len=*), intent(in) :: string
+    logical                      :: isTrue
+
+    isTrue = .false.
+  end function isReal
 
 end module mossco_strings
 

@@ -99,21 +99,19 @@ program test_mossco_strings
   write(*,'(A)') 'Testing procedure  "CleanUnit"'
 
   allocate(stringList(10))
-  stringList(1) = ''
-  stringList(2) = ' '
-  stringList(3) = '(5)'
-  stringList(4) = 'm'
-  stringList(5) = 'm*s'
-  stringList(6) = 'm/s'
-  stringList(7) = 'm**5'
-  stringList(8) = 'm**-2'
-  stringList(9) = 'm s**-1 m^4 J**3'
-  stringList(10) = ''
+  stringList(1) = 'm'
+  stringList(2) = 'm/s'
+  stringList(3) = 'kg/mmol'
+  stringList(4) = 'N / km'
+  stringList(5) = 'ms**2/km**2'
+  stringList(6) = 'kg.m/s2'
+  stringList(7) = '4E10 m/s-1'
+  stringList(8) = 'm**-2 * km**1'
 
-  do i=1,10
+  do i=1,8
     string = stringList(i)
     call MOSSCO_CleanUnit(string)
-    write(*,'(I2.2,X,A)') i,'"'//trim(stringList(i))//'" ?= "'//trim(string)//'"'
+    write(*,'(I2.2,X,A15,A)') i,'"'//trim(stringList(i))//'"',' ?= "'//trim(string)//'"'
   enddo
 
   write(*,'(A)') 'All tests done.'
