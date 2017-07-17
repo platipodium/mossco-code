@@ -188,8 +188,6 @@ module vertical_reduction
       operator = 'minimum'
     case ('max', 'maximum')
       operator = 'maximum'
-    case ('product')
-    !case ('norm')
     case default
       write(message, '(A)') trim(name)//' obtained invalid operator '//trim(operator)
       call MOSSCO_CompExit(cplComp, rc)
@@ -503,7 +501,8 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     type(ESMF_Grid)                        :: importGrid, exportGrid
     type(ESMF_FieldStatus_Flag)            :: exportFieldStatus, importFieldStatus
 
-    integer(ESMF_KIND_I4),dimension(:,:,:), pointer :: mask => null()
+    integer(ESMF_KIND_I4),dimension(:,:,:), pointer :: mask3 => null()
+    integer(ESMF_KIND_I4),dimension(:,:),   pointer :: mask2 => null()
     real(ESMF_KIND_R8), pointer, dimension(:,:,:) :: farrayPtr3 => null()
     real(ESMF_KIND_R8), pointer, dimension(:,:)   :: farrayPtr2 => null()
     real(ESMF_KIND_R8), pointer, dimension(:,:,:) :: layer_height => null()
@@ -512,6 +511,9 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     real(ESMF_KIND_R8), allocatable, dimension(:,:,:) :: weight
     character(len=ESMF_MAXSTR)             :: importItemName
     type(ESMF_TypeKind_Flag)               :: typeKind
+    type(ESMF_Array)                       :: gridArray
+    type(ESMF_DistGrid)                    :: distGrid
+    type(ESMF_Index_Flag)                  :: indexFlag
 
     rc_ = ESMF_SUCCESS
     if (present(rc)) rc = rc_
@@ -550,51 +552,40 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
       advanceCount = 0
     endif
 
-    call MOSSCO_StateGetFieldList(exportState, exportFieldList, fieldCount=exportFieldCount, &
-      rc=localrc)
+    call MOSSCO_StateGet(exportState, exportFieldList, &
+      include=(/'vred_'//operator(1:4)//'_*'/), fieldCount=exportFieldCount, &
+      fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    if (exportFieldCount < 1 .and. advanceCount < 2) then
+    if (exportFieldCount < 1) then
       write(message,'(A)') trim(name)//' found no fields to reduce'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      if  (advanceCount < 2) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
       if (present(rc)) rc=ESMF_SUCCESS
       return
     endif
 
     do i=1, exportFieldCount
 
+      !> Get the matching field for a given export field
       call ESMF_FieldGet(exportFieldList(i), name=itemName, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      if (itemName(1:10) /= 'vred_'//operator(1:4)//'_') cycle
-      importItemName = itemName(6:len_trim(itemName))
+      importItemName = itemName(11:len_trim(itemName))
 
-      !> Find the name of the variable on which the reduction shall be applied
-      !call ESMF_AttributeGet(exportFieldList(i), name='source', isPresent=isPresent, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-      !if (.not.isPresent()) cycle
-
-      !call ESMF_AttributeGet(exportFieldList(i), name='source', value=importItemName, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-      call MOSSCO_StateGetFieldList(importState, importFieldList, fieldCount=importFieldCount, &
+      call MOSSCO_StateGet(importState, fieldList=importFieldList, fieldCount=importFieldCount, &
         itemSearch=trim(importItemName), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      !call ESMF_LogWrite(trim(name)//' in loop'//trim(importItemName), ESMF_LOGMSG_INFO)
-
       !> if not found, or if multiple fields with the same name, then skip this
       !> @todo add later capability for field bundles
-      if (importFieldCount /= 1) cycle
+      if (importFieldCount /= 1) then
+        write(message,'(A)') trim(name)//' found no matching field for '
+        call MOSSCO_FieldString(exportFieldList(i), message)
+        if  (advanceCount < 2) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        cycle
+      endif
 
-      !call ESMF_LogWrite(trim(name)//' importfielCount', ESMF_LOGMSG_INFO)
-
-      !> Complete the field if it is gridset
-      call ESMF_FieldGet(exportFieldList(i), status=exportFieldStatus,rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-      if (exportfieldStatus /= ESMF_FIELDSTATUS_COMPLETE) cycle
+      !> Obtain grid information and see whether it matches
 
       call ESMF_FieldGet(exportFieldList(i), grid=exportGrid, rank=exportRank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -602,35 +593,80 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
       call ESMF_FieldGet(importFieldList(1), grid=importGrid, rank=importRank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
+      if (.not.importRank == 3) cycle
+
       call ESMF_GridGet(exportGrid, rank=exportGridRank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       call ESMF_GridGet(importGrid, rank=importGridRank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      if (.not.importRank == 3) cycle
       allocate(lbnd(3), stat=localrc)
       allocate(ubnd(3), stat=localrc)
 
-      if (.not.importGridRank == 3) cycle
-
+      !> @todo this should ask for grid bounds not field bounds
       call ESMF_FieldGet(importFieldList(1),  localDe=0, farrayPtr=farrayPtr3, &
         exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      if (allocated(weight)) deallocate(weight)
-      allocate(weight(RANGE3D), stat=localrc)
-      weight(RANGE3D) = 0.0
+      call ESMF_GridGetItem(importGrid, ESMF_GRIDITEM_MASK, &
+        staggerloc=ESMF_STAGGERLOC_CENTER, isPresent=isPresent, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      if (allocated(sum_weight)) deallocate(sum_weight)
-      allocate(sum_weight(RANGE2D), stat=localrc)
-      sum_weight(RANGE2D) = 0.0
+      if (isPresent) then
+        call ESMF_GridGetItem(importGrid, ESMF_GRIDITEM_MASK, &
+          staggerloc=ESMF_STAGGERLOC_CENTER,farrayPtr=mask3, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      else
+        if (associated(mask3)) deallocate(mask3)
+        allocate(mask3(RANGE3D))
+      endif
+
+      call ESMF_GridGetItem(exportGrid, ESMF_GRIDITEM_MASK, &
+        staggerloc=ESMF_STAGGERLOC_CENTER, isPresent=isPresent, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      if (isPresent) then
+        call ESMF_GridGetItem(exportGrid, ESMF_GRIDITEM_MASK, &
+          staggerloc=ESMF_STAGGERLOC_CENTER, farrayPtr=mask2, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      else
+
+        if (associated(mask2)) deallocate(mask2)
+        allocate(mask2(RANGE2D))
+        mask2 = minval(mask3(RANGE3D), dim=3)
+
+        call ESMF_GridGet(exportGrid, &
+          distGrid=distGrid, indexFlag=indexFlag, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+              ! gridArray = ESMF_ArrayCreate(distGrid=distGrid, name='gridMask', &
+              !   indexFlag=indexFlag, farray=mask2, rc=localrc)
+              _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+              !
+              ! call ESMF_GridSetItem(exportGrid, staggerloc=ESMF_STAGGERLOC_CENTER, &
+              !   itemFlag=ESMF_GRIDITEM_MASK, array=gridArray, rc=localrc)
+              _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      endif
+
+      if (operator == 'average' .or. operator == 'total') then
+
+        if (allocated(weight)) deallocate(weight)
+        allocate(weight(RANGE3D), stat=localrc)
+        weight(RANGE3D) = 0.0
+
+        if (allocated(sum_weight)) deallocate(sum_weight)
+        allocate(sum_weight(RANGE2D), stat=localrc)
+        sum_weight(RANGE2D) = 0.0
+
+      endif
 
       !> If we use vertical profile weighting with depth scale (exponential)
       !> decrease with depth, the weight is generated from depth.
       !> @todo make sure this is only available with 'average' operator, consider
       !> min/max
-      if (scale_depth > 0.0) then
+      if (scale_depth > 0.0 .and. operator == 'average') then
 
         call MOSSCO_GridGetDepth(importGrid, depth=depth, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -648,32 +684,38 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
             weight(RANGE2D,j) = weight(RANGE2D,j)/sum_weight(RANGE2D)
           endwhere
         enddo
-      else
+
+      elseif (operator == 'average' .or. operator == 'total') then
         !> The weight is generated from layer height
         call MOSSCO_GridGetDepth(importGrid, height=layer_height, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
+        write(*,*) 'LH: ',lbound(layer_height),ubound(layer_height),shape(layer_height),__LINE__
+
+        sum_weight(RANGE2D) = sum(layer_height(RANGE3D), dim=3, mask=(mask3(RANGE3D)>0))
+
         do j = lbnd(3), ubnd(3)
           where (layer_height(RANGE2D,j) > 0)
-            weight(RANGE2D,j) = layer_height(RANGE2D,j)/sum(layer_height(RANGE3D), dim=3)
+            weight(RANGE2D,j) = layer_height(RANGE2D,j)/sum_weight(RANGE2D)
           endwhere
         enddo
-      endif
 
-      sum_weight = sum(weight(RANGE3D), dim=3)
-      if (allocated(sum_weight)) deallocate(sum_weight)
+      endif ! 'average' or 'total'
 
-      call ESMF_GridGetItem(importGrid, ESMF_GRIDITEM_MASK, &
-        staggerloc=ESMF_STAGGERLOC_CENTER, isPresent=isPresent, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      if (allocated(sum_weight)) then
+        sum_weight(RANGE2D) = sum(weight(RANGE3D), dim=3, mask=(mask3(RANGE3D)>0))
 
-      if (isPresent) then
-        call ESMF_GridGetItem(importGrid, ESMF_GRIDITEM_MASK, &
-          staggerloc=ESMF_STAGGERLOC_CENTER,farrayPtr=mask, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-      else
-        if (associated(mask)) deallocate(mask)
-        allocate(mask(RANGE3D))
+        if (nint(maxval(sum_weight(RANGE2D), mask=(mask2(RANGE2D)>0))) /= 1) then
+          write(*,*) 'SW:',sum_weight(RANGE2D)
+          write(message,'(A)') trim(name)//' could not calculate weights, assumes equal weight everywhere'
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING,ESMF_CONTEXT)
+          if (operator == 'total') then
+            weight(RANGE3D) = 1.0
+          else
+            weight(RANGE3D) = 1.0/(ubnd(3) - lbnd(3) + 1)
+          endif
+        endif
+        deallocate(sum_weight)
       endif
 
       if (exportGridRank == 2 .and. exportRank == 2) then
@@ -681,27 +723,32 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
         allocate(exportLbnd(2), stat=localrc)
         allocate(exportUbnd(2), stat=localrc)
 
-        call ESMF_FieldGet(exportFieldList(i), localDe=0, farrayPtr=farrayPtr2, exclusiveLbound=exportLbnd, &
-          exclusiveUbound=exportUbnd, rc=localrc)
+        call ESMF_FieldGet(exportFieldList(i), localDe=0, farrayPtr=farrayPtr2, &
+          exclusiveLbound=exportLbnd, exclusiveUbound=exportUbnd, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
         if (any(ubnd(1:2) - lbnd(1:2) /= exportUbnd(1:2) - exportLbnd(1:2))) cycle
 
         select case(trim(operator))
         case ('total')
-          farrayPtr2(exportLbnd(1):exportUbnd(1),exportLbnd(2):exportUbnd(2)) = &
-            sum(farrayPtr3(RANGE3D) * layer_height(RANGE3D), dim=3, mask=(mask(RANGE3D)>0))
+          farrayPtr2(RANGE2D) = &
+            sum(farrayPtr3(RANGE3D) * layer_height(RANGE3D), dim=3, mask=(mask3(RANGE3D)>0))
+
         case ('average')
-          farrayPtr2(exportLbnd(1):exportUbnd(1),exportLbnd(2):exportUbnd(2)) = &
-            sum(farrayPtr3(RANGE3D) * weight(RANGE3D), dim=3, mask=(mask(RANGE3D)>0))
-            write(0,*) 'AVG: ',maxval(layer_height),maxval(weight),maxval(farrayPtr3)
+          farrayPtr2(RANGE2D) = &
+            sum(farrayPtr3(RANGE3D) * weight(RANGE3D), dim=3, mask=(mask3(RANGE3D)>0))
+
         case ('minimum' )
-          farrayPtr2(exportLbnd(1):exportUbnd(1),exportLbnd(2):exportUbnd(2)) = &
-            minval(farrayPtr3(RANGE3D) * weight(RANGE3D), dim=3, mask=(mask(RANGE3D)>0))
+          call ESMF_LogWrite('VR:'//trim(itemName),ESMF_LOGMSG_INFO,ESMF_CONTEXT)
+          farrayPtr2(RANGE2D) = -maxval(-farrayPtr3(RANGE3D), dim=3, mask=(mask3(RANGE3D)>0))
+
+          write(message,'(ES10.3,X,ES10.3)') maxval(farrayPtr3(RANGE3D),mask=(mask3(RANGE3D)>0)),minval(farrayPtr3(RANGE3D),mask=(mask3(RANGE3D)>0))
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO,ESMF_CONTEXT)
         case ('maximum' )
-          farrayPtr2(exportLbnd(1):exportUbnd(1),exportLbnd(2):exportUbnd(2)) = &
-            maxval(farrayPtr3(RANGE3D) * weight(RANGE3D), dim=3, mask=(mask(RANGE3D)>0))
-        !case ('norm', 'product')
+          farrayPtr2(RANGE2D) = maxval(farrayPtr3(RANGE3D), dim=3, mask=(mask3(RANGE3D)>0))
+          write(message,'(ES10.3,X,ES10.3)') maxval(farrayPtr3(RANGE3D),mask=(mask3(RANGE3D)>0)),minval(farrayPtr3(RANGE3D),mask=(mask3(RANGE3D)>0))
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO,ESMF_CONTEXT)
+
         case default
           rc = ESMF_RC_NOT_IMPL
           call ESMF_LogWrite(trim(name)//' operator '//trim(operator)//' not implemented', ESMF_LOGMSG_ERROR)
@@ -713,17 +760,18 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
         endif
       endif
 
-      if (advanceCount < 2) then
-        write(message,'(A)') trim(name)//' reduced '
-        call MOSSCO_FieldString(importFieldList(1), message)
-        call MOSSCO_MessageAdd(message,' to ')
-        call MOSSCO_FieldString(exportFieldList(i), message)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      endif
+      !if (advanceCount < 2) then
+        ! write(message,'(A)') trim(name)//' reduced '
+        ! call MOSSCO_FieldString(importFieldList(1), message)
+        ! call MOSSCO_MessageAdd(message,' to ')
+        ! call MOSSCO_FieldString(exportFieldList(i), message)
+        ! call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      !endif
 
       if (allocated(weight)) deallocate(weight)
       nullify(layer_height)
-      nullify(mask)
+      nullify(mask3)
+      nullify(mask2)
       nullify(farrayPtr3)
       nullify(farrayPtr2)
 
@@ -738,6 +786,8 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     enddo
 
     if (allocated(weight)) deallocate(weight)
+    if (associated(mask2)) deallocate(mask2)
+    if (associated(mask3)) deallocate(mask3)
     if (associated(depth)) deallocate(depth)
     if (associated(layer_height)) deallocate(layer_height)
 
@@ -770,9 +820,6 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     type(ESMF_Grid)                        :: importGrid, exportGrid
     type(ESMF_TypeKind_Flag)               :: typeKind
 
-
-    call ESMF_LogWrite('VR:',ESMF_LOGMSG_INFO,ESMF_CONTEXT)
-
     rc_ = ESMF_SUCCESS
     if (present(rc))  rc = rc_
     if (present(kwe)) rc_ = ESMF_SUCCESS
@@ -785,8 +832,6 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     else
       name_ = 'vertical_reduction'
     endif
-
-    call ESMF_LogWrite('VR:',ESMF_LOGMSG_INFO,ESMF_CONTEXT)
 
     call ESMF_FieldGet(importField, name=importName, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -846,12 +891,8 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     call ESMF_AttributeGet(importfield, 'units', unitString, defaultValue='', rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_LogWrite('VR:',ESMF_LOGMSG_INFO,ESMF_CONTEXT)
-
-    ! The next call is problematic
-    !call MOSSCO_CleanUnit(unitString, rc=localrc)
+    call MOSSCO_CleanUnit(unitString, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-    call ESMF_LogWrite('VR:',ESMF_LOGMSG_INFO,ESMF_CONTEXT)
 
     i = index(unitString,'m-3')
     if (i > 0) then
@@ -866,12 +907,9 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
         unitString = trim(unitString)//' m'
       endif
     endif
-    call ESMF_LogWrite('VR:',ESMF_LOGMSG_INFO,ESMF_CONTEXT)
 
     call ESMF_AttributeSet(exportfield, name='units', value=trim(unitString),  rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-    call ESMF_LogWrite('VR:',ESMF_LOGMSG_INFO,ESMF_CONTEXT)
 
   end subroutine MOSSCO_CreateVerticallyReducedField
 
