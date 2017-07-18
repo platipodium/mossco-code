@@ -657,7 +657,7 @@ contains
     else
       isTrue = .false.
     endif
-  end
+  end function isChar
 
   function isDigit(string) result(isTrue)
     character(len=1), intent(in) :: string
