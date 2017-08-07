@@ -1115,14 +1115,12 @@ module getm_component
 ! !USES:
    use parameters     ,only: rho_0
    use domain         ,only: imin,imax,jmin,jmax,kmax
-   use domain         ,only: az
-   use domain         ,only: grid_type,xc,xu,xv,yc,yu,yv,convc
+   use domain         ,only: grid_type,convc
    use domain         ,only: cosconv,sinconv
-   use domain         ,only: dxv,dyu,arcd1
    use initialise     ,only: runtype
-   use variables_2d   ,only: zo,z,D,Dvel,U,DU,V,DV
+   use variables_2d   ,only: D,Dvel,velx,vely
 #ifndef NO_3D
-   use variables_3d   ,only: dt,ho,hn,hvel,uu,hun,vv,hvn,ww
+   use variables_3d   ,only: hn,hvel,velx3d,vely3d
    use variables_3d   ,only: SS,num,nuh,tke,eps
    use variables_3d   ,only: taubmax_3d
 #ifndef NO_BAROCLINIC
@@ -1130,7 +1128,6 @@ module getm_component
    use variables_3d   ,only: T,S,NN
 #endif
 #endif
-   use m2d            ,only: dtm
    use meteo          ,only: metforcing,met_method,METEO_CONST,METEO_FROMFILE
    use meteo          ,only: u10,v10,swr_=>swr
    use waves          ,only: waveforcing_method,NO_WAVES,WAVES_FROMWIND,WAVES_FROMFILE
@@ -1148,10 +1145,6 @@ module getm_component
 !
 ! !LOCAL VARIABLES
    REALTYPE,dimension(E2DFIELD)         :: wrk
-   REALTYPE,dimension(E2DFIELD),target  :: t_vel
-   REALTYPE,dimension(I3DFIELD),target  :: t_vel3d
-   REALTYPE,dimension(:,:)  ,pointer    :: p_vel
-   REALTYPE,dimension(:,:,:),pointer    :: p_vel3d
    integer                              :: k,klen
    REALTYPE,parameter                   :: vel_missing=0.0d0
    REALTYPE, parameter :: pi=3.1415926535897932384626433832795029d0
@@ -1228,31 +1221,8 @@ module getm_component
 
    wrk = _ZERO_
 
-   if (noKindMatch) then
-      p_vel => t_vel
-   else
-      p_vel => U2D
-   end if
-   call to_u(imin,jmin,imax,jmax,az,                                 &
-             dtm,grid_type,                                          &
-             dxv,dyu,arcd1,                                          &
-             xc,xu,xv,z,zo,Dvel,U,DU,V,DV,wrk,wrk,vel_missing,p_vel)
-   if (noKindMatch) then
-      U2D = t_vel
-   end if
-
-   if (noKindMatch) then
-      p_vel => t_vel
-   else
-      p_vel => V2D
-   end if
-   call to_v(imin,jmin,imax,jmax,az,                                 &
-             dtm,grid_type,                                          &
-             dxv,dyu,arcd1,                                          &
-             yc,yu,yv,z,zo,Dvel,U,DU,V,DV,wrk,wrk,vel_missing,p_vel)
-   if (noKindMatch) then
-      V2D = t_vel
-   end if
+   U2D = velx
+   V2D = vely
 
 #ifndef NO_3D
    if (runtype .eq. 1) then
@@ -1263,70 +1233,14 @@ module getm_component
 
    if (klen .gt. 1) then
       if (associated(U3D)) then
-         if (noKindMatch) then
-            p_vel3d => t_vel3d
-         else
-            p_vel3d => U3D
-         end if
-         do k=1,kmax
-            call to_u(imin,jmin,imax,jmax,az,                            &
-                      dt,grid_type,                                      &
-                      dxv,dyu,arcd1,                                     &
-                      xc,xu,xv,hn(:,:,k),ho(:,:,k),hvel(:,:,k),          &
-                      uu(:,:,k),hun(:,:,k),vv(:,:,k),hvn(:,:,k),         &
-                      ww(:,:,k-1),ww(:,:,k),vel_missing,p_vel3d(:,:,k))
-         end do
-         if (noKindMatch) then
-            U3D(:,:,1:kmax) = t_vel3d(:,:,1:kmax)
-         end if
+         U3D = velx3d
       else
-         if (noKindMatch) then
-            p_vel => t_vel
-         else
-            p_vel => Ubot
-         end if
-         call to_u(imin,jmin,imax,jmax,az,                            &
-                   dt,grid_type,                                      &
-                   dxv,dyu,arcd1,                                     &
-                   xc,xu,xv,hn(:,:,1),ho(:,:,1),hvel(:,:,1),          &
-                   uu(:,:,1),hun(:,:,1),vv(:,:,1),hvn(:,:,1),         &
-                   ww(:,:,0),ww(:,:,1),vel_missing,p_vel)
-         if (noKindMatch) then
-            Ubot = t_vel
-         end if
+         Ubot = velx3d(:,:,1)
       end if
       if (associated(V3D)) then
-         if (noKindMatch) then
-            p_vel3d => t_vel3d
-         else
-            p_vel3d => V3D
-         end if
-         do k=1,kmax
-            call to_v(imin,jmin,imax,jmax,az,                            &
-                      dt,grid_type,                                      &
-                      dxv,dyu,arcd1,                                     &
-                      yc,yu,yv,hn(:,:,k),ho(:,:,k),hvel(:,:,k),          &
-                      uu(:,:,k),hun(:,:,k),vv(:,:,k),hvn(:,:,k),         &
-                      ww(:,:,k-1),ww(:,:,k),vel_missing,p_vel3d(:,:,k))
-         end do
-         if (noKindMatch) then
-            V3D(:,:,1:kmax) = t_vel3d(:,:,1:kmax)
-         end if
+         V3D = vely3d
       else
-         if (noKindMatch) then
-            p_vel => t_vel
-         else
-            p_vel => Vbot
-         end if
-         call to_v(imin,jmin,imax,jmax,az,                            &
-                   dt,grid_type,                                      &
-                   dxv,dyu,arcd1,                                     &
-                   yc,yu,yv,hn(:,:,1),ho(:,:,1),hvel(:,:,1),          &
-                   uu(:,:,1),hun(:,:,1),vv(:,:,1),hvn(:,:,1),         &
-                   ww(:,:,0),ww(:,:,1),vel_missing,p_vel)
-         if (noKindMatch) then
-            Vbot = t_vel
-         end if
+         Vbot = vely3d(:,:,1)
       end if
    end if
 
@@ -1609,7 +1523,7 @@ module getm_component
 !
 ! !USES:
    use initialise,only: runtype
-   use domain    ,only: imax,jmax,kmax
+   use domain    ,only: kmax
    IMPLICIT NONE
 !
 ! !INPUT PARAMETERS:
@@ -1626,7 +1540,6 @@ module getm_component
 !
 ! !LOCAL VARIABLES
    type(ESMF_Field) :: field
-   type(ESMF_StaggerLoc) :: StaggerLoc_
    integer,target   :: elb(3),eub(3)
    integer          :: klen,rc,localrc
 !
