@@ -542,9 +542,22 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     !     endif
     ! enddo
 
-    call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
-      fieldStatus=ESMF_FIELDSTATUS_COMPLETE, include=filterIncludeList, &
-      exclude=filterExcludeList, verbose=verbose, rc=localrc)
+    if (allocated(filterIncludeList) .and. allocated(filterExcludeList)) then
+      call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
+        fieldStatus=ESMF_FIELDSTATUS_COMPLETE, include=filterIncludeList, &
+        exclude=filterExcludeList, verbose=verbose, rc=localrc)
+    elseif (allocated(filterIncludeList)) then
+      call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
+        fieldStatus=ESMF_FIELDSTATUS_COMPLETE, include=filterIncludeList, &
+        verbose=verbose, rc=localrc)
+    elseif (allocated(filterExcludeList)) then
+      call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
+        fieldStatus=ESMF_FIELDSTATUS_COMPLETE, exclude=filterExcludeList, &
+        verbose=verbose, rc=localrc)
+    else
+      call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
+        fieldStatus=ESMF_FIELDSTATUS_COMPLETE, verbose=verbose, rc=localrc)
+    endif
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     do i=1, fieldCount
