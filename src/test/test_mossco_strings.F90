@@ -11,18 +11,20 @@
 ! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 !
 
-#define ESMF_CONTEXT  line=__LINE__
+#define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
 #define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
-#undef ESMF_FILENAME
 #define ESMF_FILENAME "test_mossco_strings.F90"
 #define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+#define ESMF_METHOD "test_mossco_strings"
 program test_mossco_strings
 
   use esmf
   use mossco_strings
 
-  integer(ESMF_KIND_I4)               :: rc
+  implicit none
+
+  integer(ESMF_KIND_I4)               :: rc, localrc, i
   integer(ESMF_KIND_I4)               :: int4
   integer(ESMF_KIND_I4), allocatable  :: int4list(:)
   integer(ESMF_KIND_I8)               :: int8
@@ -31,8 +33,9 @@ program test_mossco_strings
   real(ESMF_KIND_R4), allocatable     :: real4list(:)
   real(ESMF_KIND_R8)                  :: real8
   real(ESMF_KIND_R8 ), allocatable    :: real8list(:)
-  logical                             :: boolean
+  logical                             :: boolean, isMatch
   logical, allocatable                :: booleanlist(:)
+
 
   character(len=ESMF_MAXSTR)          :: string,format,remainder
   character(len=ESMF_MAXSTR), allocatable :: stringlist(:)
@@ -112,6 +115,49 @@ program test_mossco_strings
     string = stringList(i)
     call MOSSCO_CleanUnit(string)
     write(*,'(I2.2,X,A15,A)') i,'"'//trim(stringList(i))//'"',' ?= "'//trim(string)//'"'
+  enddo
+
+  !--------------
+  write(*,'(A)') 'Testing procedure  "MOSSCO_StringMatch"'
+
+  call MOSSCO_StringMatch('', '', isMatch, rc=localrc)
+  if (isMatch) localrc=ESMF_RC_NOT_FOUND
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  string='myVariable_that_is_zero_000'
+
+  !> Define patterns that should match
+  stringList(1) = '*'
+  stringList(2) = 'myVariable*'
+  stringList(3) = '*_000'
+  stringList(4) = '*_that_*'
+  stringList(5) = 'myVar*_is_*'
+  stringList(6) = '*yVar*_is_*0*'
+
+  do i=1,6
+    call MOSSCO_StringMatch(string, stringList(i), isMatch=isMatch, rc=localrc)
+    if (.not.isMatch) then
+      localrc=ESMF_RC_NOT_FOUND
+      write(*,'(A)') 'String "'//trim(string)//'" wrongly not matched by  "'//trim(StringList(i))//'"'
+      !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    endif
+  enddo
+
+  !> Define patterns that should not match
+  stringList(1) = ''
+  stringList(2) = 'myVariable'
+  stringList(3) = '_000'
+  stringList(4) = '_that_'
+  stringList(5) = '*_than_'
+  stringList(6) = '*x*'
+
+  do i=1,6
+    call MOSSCO_StringMatch(string, stringList(i), isMatch=isMatch, rc=localrc)
+    if (isMatch) then
+      localrc=ESMF_RC_NOT_FOUND
+      write(*,'(A)') 'String "'//trim(string)//'" wrongly matched "'//trim(StringList(i))//'"'
+      !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    endif
   enddo
 
   write(*,'(A)') 'All tests done.'

@@ -264,35 +264,52 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_StringMatchPattern"
-  subroutine MOSSCO_StringMatchPattern(item, pattern, isMatch, rc)
+   subroutine MOSSCO_StringMatchPattern(item, pattern, isMatch, rc)
 
     character(len=*), intent(in)        :: item
     character(len=*), intent(in)        :: pattern
     logical, intent(out)                :: isMatch
     integer(ESMF_KIND_I4), intent(out)  :: rc
 
-    integer(ESMF_KIND_I4)               :: localrc, i, j
+    integer(ESMF_KIND_I4)               :: localrc, p0, p1, i0, i1
 
     rc = ESMF_SUCCESS
     isMatch = .false.
 
-    i=index(pattern,'*')
-    j=index(pattern,'*',back=.true.)
+    if (len_trim(pattern) == 0) return
+    if (len_trim(item) == 0) return
 
-    if (i>0 .and. j>i+1) then  ! found two asterisks with content in between
-      if (index(item, pattern(i+1:j-1)) > 0) isMatch=.true.
-      !write(0,*)  'Match 1', trim(item), trim(pattern), index(item, pattern(i+1:j-1)), ' ?> 0', isMatch
-    elseif (i==1) then         ! found one asterisk at beginning, match end
-      j=index(item, pattern(i+1:len_trim(pattern)))
-      if (j+len_trim(pattern)-2 == len_trim(item)) isMatch=.true.
-      !write(0,*)  'Match 2', trim(item), trim(pattern), j+len_trim(pattern)-2, '?=', len_trim(item) , isMatch
-    elseif (i>1 .and. len_trim(item)>=i) then          ! found one asterisk at end, match beginning
-      if (item(1:i-1)==pattern(1:i-1)) isMatch=.true.
-      !write(0,*)  'Match 3', trim(item), trim(pattern), item(1:i-1), '?=', pattern(1:i-1) , isMatch
-    else                       ! found no asterisk
-      if (trim(item)==trim(pattern)) isMatch=.true.
-      !write(0,*)  'Match 3', trim(item), trim(pattern), trim(item), '?=', trim(pattern) , isMatch
+    if (trim(pattern) == trim(item)) then
+      isMatch = .true.
+      return
     endif
+
+    !> Look for asterisk
+    p0=index(pattern,'*')
+    if (p0<1) return
+
+    i0=1
+    !> If there are one or more asterisks then the substring between
+    !> asterisks should be found in the string. When the loop exits,
+    !> the function returns true, when it returns, it remains false
+    do while (p0 <= len_trim(pattern) .and. i0 <= len_trim(item))
+
+      if (p0 == len_trim(pattern)) exit ! Trailing asterisk in pattern
+
+      p1=index(pattern(p0+1:len_trim(pattern)),'*')
+      if (p1 < 1) then ! No more asterisk found, equal end of string
+        i1=index(item(i0:len_trim(item)),pattern(p0+1:len_trim(pattern)),back=.true.)
+        if (i1 < 1) return ! Not matched
+        if (item(i0+i1-1:len_trim(item)) == pattern(p0+1:len_trim(pattern))) exit
+      endif
+
+      i1=index(item(i0:len_trim(item)),pattern(p0+1:p0+p1-1),back=.true.)
+      if (i1<1) return
+      i0 = i0 + i1 + p1 - 2 ! advance to position of remaining string
+      p0 = p0 + p1          ! advance to position of next asterisk
+
+    enddo
+    isMatch = .true.
 
   end subroutine MOSSCO_StringMatchPattern
 
