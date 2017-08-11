@@ -680,7 +680,7 @@ contains
     if (columnCount /= 1) return
 
     !write(message,'(A,I1,A,I1,A)') '  reading table "'//trim(label)//'::" (',rowCount,' x ', columnCount,')'
-    write(message,'(A,I1,A,I1,A)') '  reading table "'//trim(label)
+    write(message,'(A,I1,A,I1,A)') '  reading table "'//trim(label)//'"'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     allocate(value(rowCount), stat=localrc)
