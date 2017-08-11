@@ -193,11 +193,11 @@ module netcdf_component
       call MOSSCO_ConfigGet(config, label='checkInf', value=checkNaN, defaultValue=.true., rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      !> Default value for filter ExcludeList is a non-associated pointer
+      !> Default value for filter ExcludeList is a non-allocated field
       call MOSSCO_ConfigGet(config, label='exclude', value=filterExcludeList, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      !> Default value for filterIncludeList is a non-associated pointer
+      !> Default value for filterIncludeList is a non-allocated field
       call MOSSCO_ConfigGet(config, 'include', value=filterIncludeList, &
         isPresent=labelIsPresent, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)

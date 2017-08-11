@@ -2288,7 +2288,7 @@ contains
     character(len=*), intent(in), optional       :: itemSearch
     integer(ESMF_KIND_I4), intent(out), optional :: fieldCount
     type(ESMF_FieldStatus_Flag), intent(in), optional   :: fieldStatus
-    character(len=*), intent(in), optional       :: include(:), exclude(:)
+    character(len=*), intent(in), optional, pointer      :: include(:), exclude(:)
     logical, intent(in), optional                :: verbose
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
@@ -2357,7 +2357,7 @@ contains
     do i = 1, itemCount
 
       ! Look for an exclusion pattern on this item name
-      if (present(exclude)) then
+      if (present(exclude) .and. associated(exclude)) then
         do j = lbound(exclude,1),ubound(exclude,1)
           call MOSSCO_StringMatch(itemNameList(i), exclude(j), isMatch, localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -2376,12 +2376,18 @@ contains
         endif
       endif
 
-      !! Look for an inclusion pattern on this field name
-      if (present(include)) then
+      !! Look for an inclusion pattern on this field or fieldBundle name
+      if (present(include) .and. associated(include)) then
         do j = lbound(include,1),ubound(include,1)
           call MOSSCO_StringMatch(itemNameList(i), include(j), isMatch, localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if (ismatch .and. verbose_) then
+            write(message,'(A)') '  included'
+            call MOSSCO_MessageAdd(message, ' '//trim(itemNameList(i))//' with pattern ')
+            call MOSSCO_MessageAdd(message, ' '//trim(include(j)))
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          endif
           if (ismatch) exit
         enddo
         if (.not.ismatch) then
