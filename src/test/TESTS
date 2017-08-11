@@ -31,3 +31,4 @@ test_pointer
 test_precision
 test_units
 test_mossco_config
+test_MOSSCO_StateGet

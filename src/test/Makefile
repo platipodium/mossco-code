@@ -43,6 +43,9 @@ test_Coupler: test_Coupler.F90 libmossco_mediator
 libmossco_mediator:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
+test_MOSSCO_StateGet: test_MOSSCO_StateGet.F90
+	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_util $(LIBS)
+
 test_mossco_strings: test_mossco_strings.F90 libmossco_util
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_util $(LIBS)
 
