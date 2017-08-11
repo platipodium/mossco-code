@@ -150,8 +150,9 @@ program test_mossco_strings
   stringList(4) = '_that_'
   stringList(5) = '*_than_'
   stringList(6) = '*x*'
+  stringList(7) = 'bla*'
 
-  do i=1,6
+  do i=1,7
     call MOSSCO_StringMatch(string, stringList(i), isMatch=isMatch, rc=localrc)
     if (isMatch) then
       localrc=ESMF_RC_NOT_FOUND

@@ -284,17 +284,35 @@ contains
       return
     endif
 
+    if (trim(pattern) == '*') then
+      isMatch = .true.
+      return
+    endif
+
     !> Look for asterisk
     p0=index(pattern,'*')
     if (p0<1) return
 
+    !> Look for simple one trailing asterisk
+    if (p0 == len_trim(pattern)) then
+      if (item(1:p0-1) == pattern(1:p0-1)) then
+        isMatch = .true.
+        return
+      endif
+    endif
+
     i0=1
+    i1=0
     !> If there are one or more asterisks then the substring between
     !> asterisks should be found in the string. When the loop exits,
     !> the function returns true, when it returns, it remains false
     do while (p0 <= len_trim(pattern) .and. i0 <= len_trim(item))
 
-      if (p0 == len_trim(pattern)) exit ! Trailing asterisk in pattern
+      if (p0 == len_trim(pattern)) then ! Trailing asterisk in pattern
+        !write(*,*) 'Trailing asterisk ',i0,i1,p0,p1,trim(pattern),' ',trim(item)
+        if (i0 == 1 .or. i1 < 1) return
+        exit
+      endif
 
       p1=index(pattern(p0+1:len_trim(pattern)),'*')
       if (p1 < 1) then ! No more asterisk found, equal end of string
