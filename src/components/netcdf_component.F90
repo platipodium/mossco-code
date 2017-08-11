@@ -128,8 +128,8 @@ module netcdf_component
     integer(ESMF_KIND_I4)      :: localrc
     logical                    :: fileIsPresent, configIsPresent, labelIsPresent
     type(ESMF_Config)          :: config
-    character(len=ESMF_MAXSTR), allocatable :: filterExcludeList(:)
-    character(len=ESMF_MAXSTR), allocatable :: filterIncludeList(:)
+    character(len=ESMF_MAXSTR), pointer :: filterExcludeList(:) => null()
+    character(len=ESMF_MAXSTR), pointer :: filterIncludeList(:) => null()
     logical                    :: checkNaN, checkInf
 
     rc  = ESMF_SUCCESS
@@ -207,7 +207,7 @@ module netcdf_component
 
     endif
 
-    if (allocated(filterIncludeList)) then
+    if (associated(filterIncludeList)) then
       call MOSSCO_AttributeSet(importState, 'filter_pattern_include', filterIncludeList, localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -217,11 +217,10 @@ module netcdf_component
       write(message,'(A)') trim(name)//' include patterns: '//trim(message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      call MOSSCO_Reallocate(filterIncludeList, 0, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      deallocate(filterIncludeList)
     endif
 
-    if (allocated(filterExcludeList)) then
+    if (associated(filterExcludeList)) then
       call MOSSCO_AttributeSet(importState, 'filter_pattern_exclude', filterExcludeList, localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -231,8 +230,7 @@ module netcdf_component
       write(message,'(A)') trim(name)//' exclude patterns: '//trim(message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      call MOSSCO_Reallocate(filterExcludeList, 0, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      deallocate(filterExcludeList)
     endif
 
     call MOSSCO_AttributeSet(importState, 'check_inf', checkInf, rc=localrc)
@@ -331,7 +329,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     character(len=ESMF_MAXSTR) :: form, fieldName
 
     character(len=ESMF_MAXSTR) :: message, fileName, name, timeUnit
-    character(len=ESMF_MAXSTR), allocatable :: filterIncludeList(:), filterExcludeList(:)
+    character(len=ESMF_MAXSTR), pointer :: filterIncludeList(:) => null()
+    character(len=ESMF_MAXSTR), pointer :: filterExcludeList(:) => null()
     logical                    :: checkNaN=.true., checkInf=.true.
     type(ESMF_Field), allocatable :: fieldList(:)
 
@@ -450,114 +449,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     endif
 
-
-    !
-    ! call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
-    ! _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-    !
-    ! if (itemcount>0) then
-    !   if (.not.allocated(itemTypeList)) allocate(itemTypeList(itemCount))
-    !   if (.not.allocated(itemNameList)) allocate(itemNameList(itemCount))
-    !
-    !   call ESMF_StateGet(importState, itemTypeList=itemTypeList, itemNameList=itemNameList, rc=localrc)
-    !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-    ! endif
-    !
-    ! do i=1,itemCount
-    !
-    !   !! Look for an exclusion pattern on this field name
-    !   if (allocated(filterExcludeList)) then
-    !     do j=1,ubound(filterExcludeList,1)
-    !       call MOSSCO_StringMatch(itemNameList(i), filterExcludeList(j), isMatch, localrc)
-    !       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-    !       if (ismatch) exit
-    !     enddo
-    !
-    !     if (isMatch) then
-    !       if (advanceCount < 1) then
-    !         write(message,'(A)') trim(name)//' excluded'
-    !         call MOSSCO_MessageAdd(message, ' '//trim(itemNameList(i))//' from pattern ')
-    !         call MOSSCO_MessageAdd(message, ' '//trim(filterExcludeList(j)))
-    !         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-    !       endif
-    !       cycle
-    !     endif
-    !   endif
-    !
-    !   !! Look for an inclusion pattern on this field name
-    !   if (allocated(filterIncludeList)) then
-    !     do j=1,ubound(filterIncludeList,1)
-    !       call MOSSCO_StringMatch(itemNameList(i), filterIncludeList(j), isMatch, localrc)
-    !       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-    !
-    !       if (ismatch) exit
-    !     enddo
-    !     if (.not.ismatch) then
-    !       if (advanceCount < 1) then
-    !         write(message,'(A)') trim(name)//' did not include '
-    !         call MOSSCO_MessageAdd(message,' '//itemNameList(i))
-    !         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-    !       endif
-    !       cycle
-    !     endif
-    !   endif
-    !
-    !   call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
-    !     itemSearch=trim(itemNameList(i)), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
-    !     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-    !
-    !   call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
-    !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-    !
-    !   if (fieldCount < 1) then
-    !     if (advanceCount < 1) then
-    !       write(message,'(A)') trim(name)//' skipped non-field or incomplete item '
-    !       call MOSSCO_MessageAdd(message,' '//itemNameList(i))
-    !       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-    !     endif
-    !     cycle
-    !   endif
-    !
-    !     if (advanceCount < 1) then
-    !       write(message,'(A)') trim(name)//' will write'
-    !       call MOSSCO_MessageAdd(message,' '//itemNameList(i))
-    !       call MOSSCO_MessageAdd(message,' to file ')
-    !       call MOSSCO_MessageAdd(message,' '//fileName)
-    !       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-    !     endif
-    !
-    !     if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
-    !       call nc_state_field_write(importState, trim(itemNameList(i)), &
-    !         checkNaN=checkNaN, checkInf=checkInf, rc=localrc)
-    !         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-    !
-    !     elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
-    !       call nc_state_fieldbundle_write(importState, trim(itemNameList(i)), &
-    !         checkNaN=checkNaN, checkInf=checkInf, rc=localrc)
-    !         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-    !
-    !     elseif (advanceCount < 1) then
-    !       write(message,'(A)') trim(name)//' not implemented saving item '//trim(itemNameList(i))
-    !       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-    !     endif
-    ! enddo
-
-    if (allocated(filterIncludeList) .and. allocated(filterExcludeList)) then
-      call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
+    verbose = .true.
+    call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
         fieldStatus=ESMF_FIELDSTATUS_COMPLETE, include=filterIncludeList, &
         exclude=filterExcludeList, verbose=verbose, rc=localrc)
-    elseif (allocated(filterIncludeList)) then
-      call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
-        fieldStatus=ESMF_FIELDSTATUS_COMPLETE, include=filterIncludeList, &
-        verbose=verbose, rc=localrc)
-    elseif (allocated(filterExcludeList)) then
-      call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
-        fieldStatus=ESMF_FIELDSTATUS_COMPLETE, exclude=filterExcludeList, &
-        verbose=verbose, rc=localrc)
-    else
-      call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
-        fieldStatus=ESMF_FIELDSTATUS_COMPLETE, verbose=verbose, rc=localrc)
-    endif
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     do i=1, fieldCount
@@ -675,8 +570,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (allocated(filterIncludeList)) deallocate(filterIncludeList)
-    if (allocated(filterExcludeList)) deallocate(filterExcludeList)
+    if (associated(filterIncludeList)) deallocate(filterIncludeList)
+    if (associated(filterExcludeList)) deallocate(filterExcludeList)
 
     !! For this component, it does not make sense to advance its clock by a regular
     !! timestep.  Thus, it is advanced to the next alarm time.
