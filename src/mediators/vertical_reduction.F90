@@ -126,7 +126,8 @@ module vertical_reduction
     real(ESMF_KIND_R8)              :: offset, scale, scale_depth
     character(len=ESMF_MAXSTR)      :: operator
     logical                         :: labelIsPresent, isPresent, fileIsPresent
-    character(len=ESMF_MAXSTR), allocatable :: filterExcludeList(:), filterIncludeList(:)
+    character(len=ESMF_MAXSTR), pointer :: filterExcludeList(:) => null()
+    character(len=ESMF_MAXSTR), pointer :: filterIncludeList(:) => null()
 
     rc=ESMF_SUCCESS
 
@@ -196,12 +197,12 @@ module vertical_reduction
     end select
 
     !> Add all configurable options as attributes
-    if (allocated(filterExcludeList)) then
+    if (associated(filterExcludeList)) then
       call MOSSCO_AttributeSet(cplComp, 'filter_pattern_exclude', filterExcludeList, localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
 
-    if (allocated(filterIncludeList)) then
+    if (associated(filterIncludeList)) then
       call MOSSCO_AttributeSet(cplComp, 'filter_pattern_include', filterIncludeList, localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
@@ -305,9 +306,10 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     integer(ESMF_KIND_I4)                  :: i, j, jj, rank
     integer(ESMF_KIND_I4)                  :: importFieldCount, exportFieldCount, fieldCount
 
-    logical                                 :: isPresent, tagOnly_, isMatch
-    character(len=ESMF_MAXSTR), allocatable :: filterExcludeList(:), filterIncludeList(:)
-    character(len=ESMF_MAXSTR), allocatable :: checkExcludeList(:)
+    logical                                :: isPresent, tagOnly_, isMatch
+    character(len=ESMF_MAXSTR), pointer    :: filterExcludeList(:) => null()
+    character(len=ESMF_MAXSTR), pointer    :: filterIncludeList(:) => null()
+    character(len=ESMF_MAXSTR), pointer    :: checkExcludeList(:) => null()
 
     real(ESMF_KIND_R8)                     :: offset, scale, scale_depth
     integer(ESMF_KIND_I4)                  :: localrc, rc_, matchIndex, matchScore
@@ -381,7 +383,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       ! Look for an exclusion pattern on this itemName
-      if (allocated(filterExcludeList)) then
+      if (associated(filterExcludeList)) then
         do j=1,ubound(filterExcludeList,1)
           call MOSSCO_StringMatch(itemName, filterExcludeList(j), isMatch, localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -397,7 +399,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
       endif
 
       !! Look for an inclusion pattern on this field/bundle name
-      if (allocated(filterIncludeList)) then
+      if (associated(filterIncludeList)) then
         do j=1,ubound(filterIncludeList,1)
           call MOSSCO_StringMatch(itemName, filterIncludeList(j), isMatch, localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -462,11 +464,8 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     call MOSSCO_Reallocate(importFieldList, 0,  rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call MOSSCO_Reallocate(filterIncludeList, 0, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-    call MOSSCO_Reallocate(filterExcludeList, 0, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    if (associated(filterIncludeList)) deallocate(filterIncludeList)
+    if (associated(filterExcludeList)) deallocate(filterExcludeList)
 
     if (present(rc)) rc=rc_
 
@@ -484,8 +483,9 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     character(ESMF_MAXSTR)                 :: message, itemName, name, operator
     integer(ESMF_KIND_I4)                  :: i, j, importFieldCount, exportFieldCount
 
-    logical                                 :: isPresent
-    character(len=ESMF_MAXSTR), allocatable :: filterExcludeList(:), filterIncludeList(:)
+    logical                                :: isPresent
+    character(len=ESMF_MAXSTR), pointer    :: filterExcludeList(:) => null()
+    character(len=ESMF_MAXSTR), pointer    :: filterIncludeList(:) => null()
 
     real(ESMF_KIND_R8)                     :: offset, scale, scale_depth
     integer(ESMF_KIND_I4)                  :: localrc, rc_
@@ -514,6 +514,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     type(ESMF_Array)                       :: gridArray
     type(ESMF_DistGrid)                    :: distGrid
     type(ESMF_Index_Flag)                  :: indexFlag
+    character(len=ESMF_MAXSTR), pointer    :: includeList(:) => null()
 
     rc_ = ESMF_SUCCESS
     if (present(rc)) rc = rc_
@@ -552,10 +553,13 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
       advanceCount = 0
     endif
 
+    allocate(includeList(1))
+    includeList(1) = 'vred_'//operator(1:4)//'_*'
     call MOSSCO_StateGet(exportState, exportFieldList, &
-      include=(/'vred_'//operator(1:4)//'_*'/), fieldCount=exportFieldCount, &
+      include=includeList, fieldCount=exportFieldCount, &
       fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    deallocate(includeList)
 
     if (exportFieldCount < 1) then
       write(message,'(A)') trim(name)//' found no fields to reduce'
