@@ -306,7 +306,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     integer(ESMF_KIND_I4)                  :: i, j, jj, rank
     integer(ESMF_KIND_I4)                  :: importFieldCount, exportFieldCount, fieldCount
 
-    logical                                :: isPresent, tagOnly_, isMatch
+    logical                                :: isPresent, tagOnly_
     character(len=ESMF_MAXSTR), pointer    :: filterExcludeList(:) => null()
     character(len=ESMF_MAXSTR), pointer    :: filterIncludeList(:) => null()
     character(len=ESMF_MAXSTR), pointer    :: checkExcludeList(:) => null()
@@ -377,57 +377,12 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     call MOSSCO_AttributeGet(cplComp, 'filter_pattern_exclude', filterExcludeList, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
+    call MOSSCO_StateGet(importState, fieldList=importFieldList, fieldCount=importFieldCount, &
+        fieldStatus=ESMF_FIELDSTATUS_COMPLETE, include=filterIncludeList, &
+        exclude=filterExcludeList, verbose=.true., rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
     do i=1, importFieldCount
-
-      call ESMF_FieldGet(importFieldList(i), name=itemName, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-      ! Look for an exclusion pattern on this itemName
-      if (associated(filterExcludeList)) then
-        do j=1,ubound(filterExcludeList,1)
-          call MOSSCO_StringMatch(itemName, filterExcludeList(j), isMatch, localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-          if (ismatch) exit
-        enddo
-        if (ismatch .and. advanceCount < 2) then
-          write(message,'(A)')  trim(name)//' excluded item'
-          call MOSSCO_MessageAdd(message, trim(itemName))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-          cycle
-        endif
-      endif
-
-      !! Look for an inclusion pattern on this field/bundle name
-      if (associated(filterIncludeList)) then
-        do j=1,ubound(filterIncludeList,1)
-          call MOSSCO_StringMatch(itemName, filterIncludeList(j), isMatch, localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-          if (ismatch) exit
-        enddo
-        if (.not.ismatch .and. advanceCount < 2) then
-          write(message,'(A)')  trim(name)//' did not include'
-          call MOSSCO_MessageAdd(message, ' '//trim(itemName))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-          cycle
-        endif
-      endif
-
-      !> @todo add later capability for field bundles, for now
-      !> get a temporary fieldList with all items mathcing itemName
-      call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
-        itemSearch=trim(itemName), rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-      call MOSSCO_Reallocate(fieldList, 0,  rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-      if (fieldCount /= 1) cycle
-
-      call ESMF_FieldGet(importFieldList(i), status=fieldStatus, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-      if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) cycle
 
       !> Found out whether this field has a vertical dimension, if not, then cycle
       call ESMF_FieldGet(importFieldList(i), grid=grid, rc=localrc)
@@ -442,7 +397,6 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
       ! the field exists
       call MOSSCO_StateGetFieldList(exportState, exportFieldList, fieldCount=exportFieldCount, &
         itemSearch='vred_'//operator(1:4)//'_'//trim(itemName), rc=localrc)
-
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       if (exportFieldCount < 1) then
@@ -458,7 +412,6 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
 
       call MOSSCO_Reallocate(exportFieldList, 0,  rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
     enddo
 
     call MOSSCO_Reallocate(importFieldList, 0,  rc=localrc)
