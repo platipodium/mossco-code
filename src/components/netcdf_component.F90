@@ -449,7 +449,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     endif
 
-    verbose = .true.
     call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
         fieldStatus=ESMF_FIELDSTATUS_COMPLETE, include=filterIncludeList, &
         exclude=filterExcludeList, verbose=verbose, rc=localrc)
