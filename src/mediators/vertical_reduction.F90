@@ -532,10 +532,12 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
 
       !> if not found, or if multiple fields with the same name, then skip this
       !> @todo add later capability for field bundles
+      !> This message occurs when multiple components are connect through this mediator,
+      !> thus it is disabled for now
       if (importFieldCount /= 1) then
         write(message,'(A)') trim(name)//' did not find matching '//trim(importItemName)//' for '
         call MOSSCO_FieldString(exportFieldList(i), message)
-        if  (advanceCount < 2) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        !if  (advanceCount < 2) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         cycle
       endif
 
@@ -843,35 +845,37 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     call ESMF_AttributeSet(exportField, 'creator', trim(name_), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_AttributeGet(importfield, 'units', unitString, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-    call ESMF_AttributeGet(importfield, 'units', unitString, defaultValue='', rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-    call MOSSCO_CleanUnit(unitString, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-    i = index(unitString,'m-3')
-    if (i > 0) then
-      unitString(i+2:i+2) = '2'
-    else
-      i = index(unitString,'m-1')
-      if (i == 1) then
-        unitString = unitString(3:len(unitString))
-      elseif (i > 1) then
-        unitString = unitString(1:i-1)//unitString(i+3:len(unitString))
-      else
-        unitString = trim(unitString)//' m'
-      endif
-    endif
-
-    call ESMF_AttributeSet(exportfield, name='units', value=trim(unitString),  rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
     write(message,'(A)') trim(name)//' created '
     call MOSSCO_FieldString(exportField, message)
-    call MOSSCO_MessageAdd(message,' with unit '//trim(unitString))
+
+    !> For max, min, average, the unit stays the same, for total however, the unit
+    !> must be multiplie by the unit of layer_height, which is here assumed to be 'm'
+    if (trim(operator) == 'total') then
+
+      call ESMF_AttributeGet(importfield, 'units', unitString, defaultValue='', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call MOSSCO_CleanUnit(unitString, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      i = index(unitString,'m-3')
+      if (i > 0) then
+        unitString(i+2:i+2) = '2'
+      else
+        i = index(unitString,'m-1')
+        if (i == 1) then
+          unitString = unitString(3:len(unitString))
+        elseif (i > 1) then
+          unitString = unitString(1:i-1)//unitString(i+3:len(unitString))
+        else
+          unitString = trim(unitString)//' m'
+        endif
+      endif
+      call ESMF_AttributeSet(exportfield, name='units', value=trim(unitString),  rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call MOSSCO_MessageAdd(message,' with unit '//trim(unitString))
+    endif
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
   end subroutine MOSSCO_CreateVerticallyReducedField
