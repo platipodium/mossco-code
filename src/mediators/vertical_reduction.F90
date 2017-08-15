@@ -123,7 +123,7 @@ module vertical_reduction
     integer(ESMF_KIND_I4)           :: localrc
 
     type(ESMF_Config)               :: config
-    real(ESMF_KIND_R8)              :: offset, scale, scale_depth
+    real(ESMF_KIND_R8)              :: offset, scale_factor, scale_depth
     character(len=ESMF_MAXSTR)      :: operator
     logical                         :: labelIsPresent, isPresent, fileIsPresent
     character(len=ESMF_MAXSTR), pointer :: filterExcludeList(:) => null()
@@ -136,7 +136,7 @@ module vertical_reduction
 
     !> Default values for operations
     operator = 'average'
-    scale = 1.0
+    scale_factor = 1.0
     offset = 0.0
     scale_depth = 0.0
 
@@ -162,10 +162,10 @@ module vertical_reduction
       call MOSSCO_ConfigGet(config, label='offset', value=offset, defaultValue=0.0D0, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call MOSSCO_ConfigGet(config, label='scale', value=scale, defaultValue=1.0D0, rc=localrc)
+      call MOSSCO_ConfigGet(config, label='scale', value=scale_factor, defaultValue=1.0D0, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call MOSSCO_ConfigGet(config, label='scale_depth', value=scale, defaultValue=0.0D0, rc=localrc)
+      call MOSSCO_ConfigGet(config, label='scale_depth', value=scale_depth, defaultValue=0.0D0, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call MOSSCO_ConfigGet(config, 'exclude', filterExcludeList)
@@ -210,7 +210,7 @@ module vertical_reduction
     call ESMF_AttributeSet(cplComp, 'operator_type', trim(operator), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(cplComp, 'scale_factor', scale, rc=localrc)
+    call ESMF_AttributeSet(cplComp, 'scale_factor', scale_factor, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_AttributeSet(cplComp, 'scale_depth', scale_depth, rc=localrc)
@@ -311,7 +311,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     character(len=ESMF_MAXSTR), pointer    :: filterIncludeList(:) => null()
     character(len=ESMF_MAXSTR), pointer    :: checkExcludeList(:) => null()
 
-    real(ESMF_KIND_R8)                     :: offset, scale, scale_depth
+    real(ESMF_KIND_R8)                     :: offset, scale_factor, scale_depth
     integer(ESMF_KIND_I4)                  :: localrc, rc_, matchIndex, matchScore
     integer(ESMF_KIND_I8)                  :: advanceCount
     type(ESMF_Clock)                       :: clock
@@ -334,7 +334,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     call ESMF_AttributeGet(cplComp, name='operator_type', defaultValue='average', value=operator, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_AttributeGet(cplComp, name='scale_factor', defaultValue=1.0D0, value=scale, rc=localrc)
+    call ESMF_AttributeGet(cplComp, name='scale_factor', defaultValue=1.0D0, value=scale_factor, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_AttributeGet(cplComp, name='scale_depth', defaultValue=0.0D0, value=scale_depth, rc=localrc)
@@ -359,18 +359,6 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
       advanceCount = 0
     endif
 
-    call MOSSCO_StateGet(importState, importFieldList, &
-      fieldCount=importFieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, &
-      rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-    if (importFieldCount < 1 .and. advanceCount < 2) then
-      write(message,'(A)') trim(name)//' found no fields to reduce'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-      if (present(rc)) rc = ESMF_SUCCESS
-      return
-    endif
-
     call MOSSCO_AttributeGet(cplComp, 'filter_pattern_include', filterIncludeList, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
@@ -382,9 +370,18 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
         exclude=filterExcludeList, verbose=.true., rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+    !if (importFieldCount < 1 .and. advanceCount < 2) then
+    if (importFieldCount < 1) then
+      write(message,'(A)') trim(name)//' found no fields to reduce'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      if (present(rc)) rc = ESMF_SUCCESS
+      return
+    endif
+
     do i=1, importFieldCount
 
       !> Found out whether this field has a vertical dimension, if not, then cycle
+      !> @todo, what about meshes?
       call ESMF_FieldGet(importFieldList(i), grid=grid, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
@@ -393,7 +390,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
 
       if (rank /= 3) cycle
 
-      ! The field is created from gridset and complete fields, no error is thrown if
+      ! The field is created from and complete fields, no error is thrown if
       ! the field exists
       call MOSSCO_StateGetFieldList(exportState, exportFieldList, fieldCount=exportFieldCount, &
         itemSearch='vred_'//operator(1:4)//'_'//trim(itemName), rc=localrc)
@@ -402,8 +399,8 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
       if (exportFieldCount < 1) then
 
         call MOSSCO_CreateVerticallyReducedField(importFieldList(i), exportField, &
-          operator=trim(operator), offset=offset, scale_depth=scale_depth, &
-          name=trim(name), rc=localrc)
+          operator=trim(operator), offset=offset,  scale_depth=scale_depth, &
+          scale=scale_factor, name=trim(name), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
         call ESMF_StateAddReplace(exportState, (/exportField/), rc=localrc)
@@ -440,7 +437,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     character(len=ESMF_MAXSTR), pointer    :: filterExcludeList(:) => null()
     character(len=ESMF_MAXSTR), pointer    :: filterIncludeList(:) => null()
 
-    real(ESMF_KIND_R8)                     :: offset, scale, scale_depth
+    real(ESMF_KIND_R8)                     :: offset, scale_factor, scale_depth
     integer(ESMF_KIND_I4)                  :: localrc, rc_
     integer(ESMF_KIND_I8)                  :: advanceCount
     type(ESMF_Clock)                       :: clock
@@ -481,7 +478,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     call ESMF_AttributeGet(cplComp, name='operator_type', defaultValue='average', value=operator, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_AttributeGet(cplComp, name='scale_factor', defaultValue=1.0D0, value=scale, rc=localrc)
+    call ESMF_AttributeGet(cplComp, name='scale_factor', defaultValue=1.0D0, value=scale_factor, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_AttributeGet(cplComp, name='scale_depth', defaultValue=1.0D0, value=scale_depth, rc=localrc)
@@ -512,7 +509,6 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
       include=includeList, fieldCount=exportFieldCount, &
       fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-    deallocate(includeList)
 
     if (exportFieldCount < 1) then
       write(message,'(A)') trim(name)//' found no fields to reduce'
@@ -528,15 +524,16 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       importItemName = itemName(11:len_trim(itemName))
+      includeList(1) = importItemName
 
       call MOSSCO_StateGet(importState, fieldList=importFieldList, fieldCount=importFieldCount, &
-        itemSearch=trim(importItemName), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+        include=includeList, fieldStatus=ESMF_FIELDSTATUS_COMPLETE,rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       !> if not found, or if multiple fields with the same name, then skip this
       !> @todo add later capability for field bundles
       if (importFieldCount /= 1) then
-        write(message,'(A)') trim(name)//' found no matching field for '
+        write(message,'(A)') trim(name)//' did not find matching '//trim(importItemName)//' for '
         call MOSSCO_FieldString(exportFieldList(i), message)
         if  (advanceCount < 2) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         cycle
@@ -718,11 +715,11 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
       endif
 
       !if (advanceCount < 2) then
-        ! write(message,'(A)') trim(name)//' reduced '
-        ! call MOSSCO_FieldString(importFieldList(1), message)
-        ! call MOSSCO_MessageAdd(message,' to ')
-        ! call MOSSCO_FieldString(exportFieldList(i), message)
-        ! call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        write(message,'(A)') trim(name)//' reduced '
+        call MOSSCO_FieldString(importFieldList(1), message)
+        call MOSSCO_MessageAdd(message,' to ')
+        call MOSSCO_FieldString(exportFieldList(i), message)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       !endif
 
       if (allocated(weight)) deallocate(weight)
@@ -742,6 +739,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
 
     enddo
 
+    if (associated(includeList)) deallocate(includeList)
     if (allocated(weight)) deallocate(weight)
     if (associated(mask2)) deallocate(mask2)
     if (associated(mask3)) deallocate(mask3)
@@ -771,16 +769,19 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     character(ESMF_MAXSTR)                 :: exportName, importName, unitString
 
     integer(ESMF_KIND_I4)                  :: localrc, rc_, rank, i
-    real(ESMF_KIND_R8)                     :: scale_, offset_, scale_depth_
-    character(len=ESMF_MAXSTR)             :: operator_, name_
+    real(ESMF_KIND_R8)                     :: scale_factor, offset_, scale_depth_
+    character(len=ESMF_MAXSTR)             :: operator_, name_, message
     type(ESMF_FieldStatus_Flag)            :: fieldStatus
     type(ESMF_Grid)                        :: importGrid, exportGrid
     type(ESMF_TypeKind_Flag)               :: typeKind
 
+    scale_factor = 1.0D0
+    offset_ = 0.0D0
+    scale_depth_ = 0.0D0
     rc_ = ESMF_SUCCESS
     if (present(rc))  rc = rc_
     if (present(kwe)) rc_ = ESMF_SUCCESS
-    if (present(scale)) scale_ = scale
+    if (present(scale)) scale_factor = scale
     if (present(scale_depth)) scale_depth_ = scale_depth
     if (present(offset)) offset_ = offset
     if (present(operator)) operator_ = operator
@@ -867,6 +868,11 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
 
     call ESMF_AttributeSet(exportfield, name='units', value=trim(unitString),  rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    write(message,'(A)') trim(name)//' created '
+    call MOSSCO_FieldString(exportField, message)
+    call MOSSCO_MessageAdd(message,' with unit '//trim(unitString))
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
   end subroutine MOSSCO_CreateVerticallyReducedField
 
