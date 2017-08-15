@@ -819,6 +819,25 @@ module fabm_sediment_component
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       field = ESMF_FieldCreate(flux_grid, &
+               name='par_at_soil_surface', &
+               typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_AttributeSet(field,'units','W m-2', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message, '(A)') trim(name)//' created field'
+      call MOSSCO_FieldString(field, message, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      field = ESMF_FieldCreate(flux_grid, &
                name='temperature_at_soil_surface', &
                typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -1158,6 +1177,45 @@ module fabm_sediment_component
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    !> check for PAR
+    itemname='par_at_soil_surface'
+    call ESMF_StateGet(importState, trim(itemname), itemType=itemType, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (itemType==ESMF_STATEITEM_FIELD) then
+      call ESMF_StateGet(importState, trim(itemname), field=field, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_FieldGet(field, status=fieldstatus, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (fieldstatus==ESMF_FIELDSTATUS_COMPLETE) then
+        call ESMF_FieldGet(field, farrayPtr=ptr_f2, &
+               exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
+         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        sed%par_surface(1:_INUM_,1:_JNUM_)=ptr_f2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))
+        write(message,'(A)') trim(name)//' updated par_surface from'
+        call MOSSCO_FieldString(field, message, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+      else
+        write(message,'(A)') trim(name)//' received incomplete field'
+        call mossco_fieldString(field, message)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+
+        call MOSSCO_StateLog(importState, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        call MOSSCO_StateLog(exportState, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      end if
+    else
+      write(message,'(A)') trim(name)//' has no external surface radiation information'
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+    end if
 
     !> check for porosity
     itemname='porosity_at_soil_surface'
