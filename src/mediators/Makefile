@@ -46,7 +46,7 @@ endif
 
 libpelagicbenthic_mediator: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(pelagic_benthic_mediator.o)
 
-libverticalreduction: prefix $(MOSSCO_LIBRARY_PATH)/libverticalreduction.a
+libverticalreduction: libmossco_util prefix $(MOSSCO_LIBRARY_PATH)/libverticalreduction.a(vertical_reduction.o)
 libinoutcoupler: prefix $(MOSSCO_LIBRARY_PATH)/libinoutcoupler.a
 libxgridcoupler: prefix $(MOSSCO_LIBRARY_PATH)/libxgridcoupler.a
 libcopycoupler: prefix $(MOSSCO_LIBRARY_PATH)/libcopycoupler.a

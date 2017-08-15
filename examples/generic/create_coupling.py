@@ -2226,6 +2226,7 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'soil_pelagic_connector' : ['libmossco_mediator'],
         'pelagic_benthic_coupler' : ['libpelagicbenthiccoupler'],
         'benthic_pelagic_coupler' : ['libpelagicbenthiccoupler'],
+        'vertical_reduction' : ['libverticalreduction'],
         'calculator' : ['libmossco_calculator'],
         'xgrid_coupler' : ['libxgridcoupler'],
         'link_connector' : ['libmossco_connector'],
@@ -2324,7 +2325,7 @@ libsurfacescouplerlibaocoupler liblinkcoupler libxgridcoupler libregridcoupler l
 libmossco_connector:
 	$(MAKE) -C $(MOSSCO_DIR)/src/connectors $@
 
-libmossco_mediator libverticalreduction libmossco_calculator:
+libverticalreduction libmossco_calculator:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
 libremtc:
