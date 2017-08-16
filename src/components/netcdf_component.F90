@@ -405,14 +405,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         verbose = .true.
 
       else
-        call ESMF_AttributeGet(exportState, 'netcdf_id', value=nc%ncid, defaultValue=-1, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-        if (nc%ncid .ne. -1) then
-          nc%name = trim(fileName)
-        else
-          nc = mossco_netcdfOpen(fileName, timeUnit=timeUnit, state=importState, rc=localrc)
-        end if
+        nc = mossco_netcdfOpen(fileName, timeUnit=timeUnit, state=importState, rc=localrc)
         verbose = .false.
       end if
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -553,7 +546,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     endif
 
-    !call nc%close()
+    call nc%close()
 
     if (allocated(itemTypeList)) deallocate(itemTypeList)
     if (allocated(itemNameList)) deallocate(itemNameList)
@@ -613,10 +606,7 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
       importState=importState, exportState=exportState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeGet(exportState, 'netcdf_id', value=nc%ncid, defaultValue=-1, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    if (nc%ncid .ne. -1) call nc%close()
+    !call nc%close(rc=localrc)
 
     call ESMF_GridCompGet(gridComp, configIsPresent=isPresent, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)

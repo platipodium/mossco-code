@@ -49,7 +49,7 @@ module mossco_netcdf
   end type type_mossco_netcdf_variable
 
   type, public :: type_mossco_netcdf
-    integer      :: ncid=-1, nvars, natts
+    integer      :: ncid, nvars, natts
     integer      :: timeDimId, ndims
     integer, allocatable  :: dimlens(:)
     character(len=ESMF_MAXSTR), allocatable :: dimNames(:)
