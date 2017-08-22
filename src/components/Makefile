@@ -29,6 +29,9 @@ TARGETS+=libmossco_simplewave libmossco_info libmossco_filtration
 ifeq ($(MOSSCO_NETCDF),true)
   TARGETS += libmossco_netcdf libmossco_clm #libmossco_river
 endif
+ifeq ($(MOSSCO_OASIS),true)
+  TARGETS += libmossco_oasis #libmossco_river
+endif
 ifeq ($(MOSSCO_EROSED),true)
   TARGETS += libmossco_erosed
   ifeq ($(MOSSCO_BENTHOS),true)
@@ -72,20 +75,22 @@ libmossco_clm: libmossco_clm_driver libmossco_clm_component
 libmossco_clm_component: libmossco_clm_driver $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_netcdf_component.o)
 libmossco_clm_driver:    prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
 
+libmossco_oasis: $(MOSSCO_LIBRARY_PATH)/libmossco_oasis.a(oasis_component.o)
+
 libmossco_simplewave: libmossco_simplewave_driver libmossco_util \
   $(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a(simplewave_component.o)
 
 libmossco_grid: libmossco_util \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_grid.a(grid_component.o)
+  $(MOSSCO_LIBRARY_PATH)/libmossco_grid.a(grid_component.o)
 
 libmossco_location: libmossco_util \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_location.a(location_component.o)
+  $(MOSSCO_LIBRARY_PATH)/libmossco_location.a(location_component.o)
 
 libmossco_river: libmossco_river_driver libmossco_util \
-   $(MOSSCO_LIBRARY_PATH)/libmossco_river.a(river_component.o)
+  $(MOSSCO_LIBRARY_PATH)/libmossco_river.a(river_component.o)
+
 libmossco_river_driver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_river
-
 
 libmossco_netcdf: prefix libmossco_util \
   $(MOSSCO_LIBRARY_PATH)/libmossco_netcdf.a(netcdf_component.o) \
