@@ -294,7 +294,7 @@ contains
     if (p0<1) return
 
     !> Look for simple one trailing asterisk
-    if (p0 == len_trim(pattern)) then
+    if (p0 == len_trim(pattern) .and. len_trim(item) >= p0 - 1) then
       if (item(1:p0-1) == pattern(1:p0-1)) then
         isMatch = .true.
         return

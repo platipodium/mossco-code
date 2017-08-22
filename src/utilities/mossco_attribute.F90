@@ -1,7 +1,7 @@
 !> @brief Implementation of extensions to the ESMF Attribute utilities
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2015, 2016 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -743,9 +743,15 @@ contains
     if (.not.isPresent) return
 
     call ESMF_AttributeGet(gridComp, trim(label), value=attributeString, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) then
+      call ESMF_LogWrite(trim(label), ESMF_LOGMSG_ERROR)
+      if (present(rc)) then
+        rc=localrc
+        return
+      endif
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
+    endif
+    
     n=1
     do i=1,len_trim(attributeString)
       if (attributeString(i:i)==',') n=n+1
