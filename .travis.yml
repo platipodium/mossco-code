@@ -9,12 +9,26 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 
 language: c # There is no Fortran support yet in travis, so we emulate it
+
+cache:
+  apt: true
+  pip: true
+  directories:
+    - $HOME/.cache/pip
+    - $HOME/.local
+
 addons:
   apt:
     packages:
     - gfortran
-    - libnetcdff-dev
     - libnetcdf-dev
+    - libnetcdfc7
+    - libnetcdff5
+    - binutils
+    - cmake
+    - python2.7-pip
+    - python2.7-yaml
+    - doxygen
 
 before_install:
 - export DEPS=${TRAVIS_BUILD_DIR}/../dependencies
