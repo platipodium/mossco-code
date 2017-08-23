@@ -85,7 +85,7 @@ ifeq ($(wildcard $(MOSSCO_DIR)/external/erosed-svn),)
 endif
 	$(MAKE) erosed-svn-update
 	$(MAKE) flow2d3d-svn-export
-	
+
 erosed-svn-update:
 	svn update --set-depth infinity $(MOSSCO_DIR)/external/erosed-svn/include
 	svn update --set-depth infinity $(MOSSCO_DIR)/external/erosed-svn/modules

@@ -24,6 +24,7 @@ module oasis_component
   use mossco_component
   use mossco_field
   use mossco_state
+  use mod_oasis
 
   implicit none
 
@@ -144,6 +145,15 @@ module oasis_component
 
     call ESMF_StateValidate(exportState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call oasis_init_comp(10, trim(name), localrc)
+
+    !call oasis_get_localcomm(local_comm,ierror)
+    !if (ierror /= 0) call oasis_abort(compid,FILENAME//':'//_LINE_)
+
+    !call MPI_COMM_DUP(local_comm,comm_getm,ierror)
+
+    call oasis_enddef(localrc)
 
     !! Finally, log the successful completion of this function
     call MOSSCO_CompExit(gridComp, rc)
