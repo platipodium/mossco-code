@@ -1,13 +1,25 @@
 #!/bin/bash
 
+export TAGS=ESMF_7_1_0_beta_snapshot_27
+# The first optional argument is the base configuration dir, where the
+# environment variable file .esmf_.... is stored, and where the ESMF_DIR
+# is configured if not set
 
-TAGS=ESMF_7_1_0_beta_snapshot_27
-export TAGS
+if [ "x$1" == "x" ]; then
+  export CONFIG_DIR=${HOME}
+else
+  export CONFIG_DIR=${1}
+fi
 
-COMPS="intel" #"gfortranclang" # gfortranclang" # gfortran intel pgi gfortranclang pgigcc intelgcc
-COMMS="openmpi" #"openmpi" # openmpi" #"openmpi" #  mpiuni mpich2 intelmpi
+test -d ${CONFIG_DIR} || mkdir -p ${CONFIG_DIR}
 
-test -n ${ESMF_DIR} || export ESMF_DIR = ${HOME}/devel/ESMF/esmf-code
+# Environment variables COMPS, COMMS, ESMF_DIR and ESMF_INSTALL_PREFIX are honored
+# or filled with default values here
+
+test -n ${COMPS} || export COMPS="gfortran" #"gfortranclang" # gfortranclang" # gfortran intel pgi gfortranclang pgigcc intelgcc
+test -n ${COMMS} || export COMMS="openmpi" #"openmpi" # openmpi" #"openmpi" #  mpiuni mpich2 intelmpi
+
+test -n ${ESMF_DIR} || export ESMF_DIR = ${CONFIG_DIR}/devel/ESMF/esmf-code
 cd $ESMF_DIR && git pull origin master
 
 test -n ${ESMF_INSTALL_PREFIX} || export ESMF_INSTALL_PREFIX=/opt/esmf
@@ -86,7 +98,7 @@ for C in $COMMS ; do
        echo ESMFMKFILE=$ESMF_INSTALL_PREFIX/lib/libg/$ESMF_STRING/esmf.mk
        #test -f $ESMFMKFILE && continue
 
-cat << EOT > $HOME/.esmf_${ESMF_STRING}
+cat << EOT > $CONFIG_DIR/.esmf_${ESMF_STRING}
 export ESMF_DIR=${ESMF_DIR}
 export ESMF_BOPT=g
 export ESMF_ABI=${ESMF_ABI}
@@ -105,12 +117,12 @@ export ESMF_COMM=$C
 export ESMFMKFILE=$ESMF_INSTALL_PREFIX/lib/libg/${ESMF_STRING}/esmf.mk
 EOT
 
-       echo "export ESMF_XERCES=standard" >> $HOME/.esmf_${ESMF_STRING}
+       echo "export ESMF_XERCES=standard" >> $CONFIG_DIR/.esmf_${ESMF_STRING}
        echo "# Comment the following line if you have libxerces"
-       echo "unset ESMF_XERCES" >> $HOME/.esmf_${ESMF_STRING}
+       echo "unset ESMF_XERCES" >> $CONFIG_DIR/.esmf_${ESMF_STRING}
 
-       source $HOME/.esmf_${ESMF_STRING}
-       cat $HOME/.esmf_${ESMF_STRING}
+       source $CONFIG_DIR/.esmf_${ESMF_STRING}
+       cat $CONFIG_DIR/.esmf_${ESMF_STRING}
        echo $PATH
 
        #test -f $ESMFMKFILE || (make distclean && make -j12 lib && make install)
@@ -119,7 +131,7 @@ EOT
        test -f $ESMFMKFILE || continue
        test -f ${ESMF_INSTALL_PREFIX}/lib/libg/${ESMF_STRING}/libesmf.a || continue
        mkdir -p $ESMF_INSTALL_PREFIX/etc
-       mv $HOME/.esmf_${ESMF_STRING} $ESMF_INSTALL_PREFIX/etc/${ESMF_STRING}
+       mv $CONFIG_DIR/.esmf_${ESMF_STRING} $ESMF_INSTALL_PREFIX/etc/${ESMF_STRING}
        make info > $ESMF_INSTALL_PREFIX/etc/${ESMF_STRING}.info
 
        # Fix dylib relocation on Darwin

@@ -1,0 +1,33 @@
+# This travis configuration file is part of MOSSCO
+#
+# @copyright (C) 2017 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
+#
+# MOSSCO is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
+
+language: c # There is no Fortran support yet in travis, so we emulate it
+addons:
+  apt:
+    packages:
+    - gfortran
+    - libnetcdff-dev
+    - libnetcdf-dev
+
+before_install:
+- export DEPS=${TRAVIS_BUILD_DIR}/../dependencies
+- mkdir -p ${DEPS}
+- bash scripts/installation/install_esmf_versions.sh ${DEPS}
+- export NETCDF_VERSION=NETCDF4
+- export ESMFMKFILE
+- export ESMF_DIR=${TRAVIS_BUILD_DIR}/esmf
+- export COMMS="openmpi"
+- export COMPS="gfortran"
+
+script:
+- export MOSSCO_DIR=${TRAVIS_BUILD_DIR}
+- source ${TRAVIS_BUILD_DIR}/.esmf*
+- make external
+- make all
