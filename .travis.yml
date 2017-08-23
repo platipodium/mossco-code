@@ -17,6 +17,7 @@ cache:
     - $HOME/.cache/pip
     - $HOME/.local
 
+# A list of trusty packages is provided at https://packages.ubuntu.com/trusty/allpackages?format=txt.gz
 addons:
   apt:
     packages:
@@ -26,9 +27,13 @@ addons:
     - libnetcdff5
     - binutils
     - cmake
-    - python2.7-pip
-    - python2.7-yaml
     - doxygen
+    - openmpi-bin
+    - openmpi-common
+    - libmpich-dev
+    - mpich
+    - python2.7
+    - python-yaml
 
 before_install:
 - export DEPS=${TRAVIS_BUILD_DIR}/../dependencies
