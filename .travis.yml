@@ -17,6 +17,13 @@ cache:
     - $HOME/.cache/pip
     - $HOME/.local
 
+git:
+  depth: 3
+
+# @todo, add other branches, foremost master once travis is merged into master
+branches:
+  only: travis
+
 # A list of trusty packages is provided at https://packages.ubuntu.com/trusty/allpackages?format=txt.gz
 addons:
   apt:
@@ -35,18 +42,17 @@ addons:
     - python2.7
     - python-yaml
 
-before_install:
+before_script:
 - export DEPS=${TRAVIS_BUILD_DIR}/../dependencies
-- mkdir -p ${DEPS}
-- bash scripts/installation/install_esmf_versions.sh ${DEPS}
 - export NETCDF_VERSION=NETCDF4
 - export ESMFMKFILE
 - export ESMF_DIR=${TRAVIS_BUILD_DIR}/esmf
 - export COMMS="openmpi"
 - export COMPS="gfortran"
+- mkdir -p ${DEPS}
+- ./scripts/installation/install_esmf_versions.sh ${DEPS}
 
 script:
 - export MOSSCO_DIR=${TRAVIS_BUILD_DIR}
-- source ${TRAVIS_BUILD_DIR}/.esmf*
 - make external
 - make all
