@@ -38,6 +38,10 @@ ifeq ($(MOSSCO_EROSED),true)
     TARGETS+=libmossco_benthos
   endif
 endif
+ifeq ($MOSSCO_XIOS),true)
+  TARGETS += libmossco_xios
+endif
+
 ifeq ($(MOSSCO_FABM),true)
 TARGETS +=  libsediment libmossco_fabmpelagic
 TARGETS +=  libmossco_fabmbenthic libmossco_fabm0d
@@ -70,6 +74,8 @@ libmossco_benthos: libmossco_benthos_driver libmossco_util \
 libmossco_hamsom: libmossco_hamsom_driver libmossco_hamsom_component
 libmossco_hamsom_driver:  prefix $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a(hamsom_driver.o)
 libmossco_hamsom_component: libmossco_hamsom_driver $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a(hamsom_component.o)
+
+libmossco_xios: libmossco_xios $(MOSSCO_LIBRARY_PATH)/libmossco_xios.a(xios_component.o)
 
 libmossco_clm: libmossco_clm_driver libmossco_clm_component
 libmossco_clm_component: libmossco_clm_driver $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_netcdf_component.o)
@@ -186,6 +192,10 @@ hamsom_component.o: hamsom_component.F90
 	@echo "Compiling $<"
 	$(F90) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 #	$(F90) $(HAMSOM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) $(HAMSOM_FFLAGS) -c $< -o $@
+
+xios_component.o: xios_component.F90
+	@echo "Compiling $<"
+	$(F90) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
 hamsom_component.F90: dummy_component.F90
 	@echo "Creating dummy HAMSOM component $@"
