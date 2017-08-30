@@ -227,6 +227,21 @@ module pelagic_soil_connector
 
     ! Transfer water temperature from pelagic 3D import to a soil surface 2D
     ! export
+    !>@TODO Carsten: Was passiert, wenn wir kein PAR haben?
+    call mossco_state_get(importState, (/'photosynthetically_active_radiation_in_water'/),  &
+      ptr_f3, lbnd=lbnd, ubnd=ubnd, verbose=verbose, rc=localrc)
+    if (localrc == ESMF_SUCCESS) then
+      call mossco_state_get(exportState,(/'par_at_soil_surface'/), &
+        ptr_f2,verbose=verbose, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+print*,__LINE__, maxval(ptr_f3(RANGE2D,lbnd(3)))
+      ptr_f2 = ptr_f3(RANGE2D,lbnd(3)) !>@TODO: eine halbe schicht tiefer gehen, damit man das Licht "at soil surface" bekommt
+      nullify(ptr_f2)
+    end if
+    nullify(ptr_f3)
+
+    ! Transfer water temperature from pelagic 3D import to a soil surface 2D
+    ! export
     call mossco_state_get(importState, (/'temperature_in_water'/), ptr_f3, &
       lbnd=lbnd, ubnd=ubnd, verbose=verbose, rc=localrc)
     if (localrc == ESMF_SUCCESS) then
@@ -583,8 +598,7 @@ module pelagic_soil_connector
           write(message,'(A)') trim(name)//' calculates DIN = NH4 + NO3'
           if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         elseif (hasAmmonium) then
-          din(RANGE2D,lbnd(3)) = 2 *  &
-            + amm(AMMlbnd(1):AMMubnd(1),AMMlbnd(2):AMMubnd(2),AMMlbnd(3))
+          din(RANGE2D,lbnd(3)) = 2 * amm(AMMlbnd(1):AMMubnd(1),AMMlbnd(2):AMMubnd(2),AMMlbnd(3))
           write(message,'(A)') trim(name)//' calculates DIN = 2 * NH4'
           if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         else
