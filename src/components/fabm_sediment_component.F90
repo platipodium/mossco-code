@@ -237,7 +237,7 @@ module fabm_sediment_component
 
       call ESMF_AttributeSet(outputAlarm,'creator', trim(name), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-    end if
+    endif
 #endif
 
     !! read ugrid mesh to get number of sediment columns
@@ -273,7 +273,7 @@ module fabm_sediment_component
       else
         sed%grid%type=FOREIGN_GRID
       endif
-    end if
+    endif
 
     if (sed%grid%type==FOREIGN_GRID) then
 
@@ -327,7 +327,7 @@ module fabm_sediment_component
         write(message,'(A)') trim(name)//' could not create rank 2 grid'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
-      end if
+      endif
 
       call ESMF_GridGet(flux_grid, staggerloc=ESMF_STAGGERLOC_CENTER, localDe=0, &
         exclusiveLBound=lbnd2, exclusiveUBound=ubnd2, rc=localrc)
@@ -341,7 +341,7 @@ module fabm_sediment_component
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
       sed%grid%inum=1
       sed%grid%jnum=1
-    end if
+    endif
 
     !! The grid specification should also go to outside this routine, and update the grid of
     !! this component, numlayers and dzmin are read from nml
@@ -385,10 +385,10 @@ module fabm_sediment_component
           do j=1,sed%grid%jnum
             do k=1,sed%grid%knum
               sed%mask(i,j,k) = (gridmask(i,j).le.0)
-            end do
-          end do
-        end do
-      end if
+            enddo
+          enddo
+        enddo
+      endif
 
     if (.not.isPresent .or. localrc /= ESMF_SUCCESS) then
         write(message,'(A)') trim(name)//' found no mask in foreign grid, compute every sediment column'
@@ -459,7 +459,7 @@ module fabm_sediment_component
       if (trim(varname) == 'slow_detritus_C') fluxes(:,:,i)=pflux_sDet/86400.0_rk
       if (trim(varname) == 'detritus-P') fluxes(:,:,i)=pflux_DetP/86400.0_rk
       !write(0,*) i,trim(only_var_name(sed%model%state_variables(i)%long_name)),bdys(:,:,i+1),fluxes(:,:,i)
-    end do
+    enddo
 
     ! use Dirichlet boundary condition for pre-simulation
     sed%bcup_dissolved_variables = 2
@@ -467,18 +467,18 @@ module fabm_sediment_component
     sed1d%adaptive_solver_diagnostics = .true.
     do tidx=1,int(presimulation_years*365*24/(dt_spinup/3600.0_rk),kind=ESMF_KIND_I8)
       call ode_solver(sed1d,dt_spinup,ode_method)
-    end do
+    enddo
     if (ode_method == 2) then
       write (message,*) 'minimum dt:',sed1d%last_min_dt,' at cell ',sed1d%last_min_dt_grid_cell
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-    end if
+    endif
 
     do i=1,sed%inum
       do j=1,sed%jnum
         if (.not.sed%mask(i,j,1)) &
           sed%conc(i,j,:,:) = sed1d%conc(1,1,:,:)
-      end do
-    end do
+      enddo
+    enddo
 
     !> call the model equations in order to fill the diagnostic variables
     allocate(rhs(sed%inum,sed%jnum,sed%knum,sed%nvar))
@@ -497,12 +497,12 @@ module fabm_sediment_component
       write(funit,fmt='(A,A,A,A)',advance='no') 'time(s) ','depth(m) ','layer-height(m) ','porosity() '
       do n=1,sed%nvar
         write(funit,fmt='(A,A)',advance='no') ' ',trim(sed%model%state_variables(n)%name)
-      end do
+      enddo
       do n=1,size(sed%model%diagnostic_variables)
         write(funit,fmt='(A,A)',advance='no') ' ',trim(sed%model%diagnostic_variables(n)%name)
-      end do
+      enddo
       write(funit,*)
-    end if
+    endif
 
     if (sed%grid%type==UGRID) then
       !! create state mesh
@@ -529,7 +529,7 @@ module fabm_sediment_component
 
         do k=1,sed%grid%knum
           statemesh_ptr(k,:) = sed%export_states(n)%data(:,1,k)
-        end do
+        enddo
 
         write(message, '(A)') trim(name)//' created bulk field'
         call MOSSCO_FieldString(field, message, rc=localrc)
@@ -563,8 +563,8 @@ module fabm_sediment_component
           call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        end if
-      end do
+        endif
+      enddo
 #if 0
       do n=1,size(sed%model%diagnostic_variables)
         if (sed%model%diagnostic_variables(n)%output /= output_none) then
@@ -585,8 +585,8 @@ module fabm_sediment_component
           call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        end if
-      end do
+        endif
+      enddo
 #endif
 
       !! create boundary fields in import State
@@ -673,9 +673,9 @@ module fabm_sediment_component
 
             call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-          end if
-        end if
-      end do
+          endif
+        endif
+      enddo
     else ! sed%grid%use_ugrid
       if (sed%grid%type==LOCAL_GRID) then
         call ESMF_ArraySpecSet(flux_array, rank=2, typekind=ESMF_TYPEKIND_R8, rc=localrc)
@@ -709,7 +709,7 @@ module fabm_sediment_component
         call ESMF_GridAddCoord(state_grid, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      end if
+      endif
       ! by here, have flux_grid available
       call ESMF_GridGet(flux_grid, indexflag=indexflag,rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -776,8 +776,8 @@ module fabm_sediment_component
 
           call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        end if
-      end do
+        endif
+      enddo
       do n=1,size(sed%model%diagnostic_variables)
         if (sed%model%diagnostic_variables(n)%output /= output_none) then
           diag => sed%diagnostic_variables(n)
@@ -802,15 +802,14 @@ module fabm_sediment_component
 
           call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        end if
-      end do
+        endif
+      enddo
 
       !! create boundary fields in import State
-       !! create boundary fields in import State
       field = ESMF_FieldEmptyCreate(name='porosity_at_soil_surface', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      write(message, '(A)') trim(name)//' created empty field'
+      write(message, '(A)') trim(name)//' created field'
       call MOSSCO_FieldString(field, message, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
@@ -819,7 +818,7 @@ module fabm_sediment_component
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       field = ESMF_FieldCreate(flux_grid, &
-               name='par_at_soil_surface', &
+               name='photosynthetically_active_radiation_at_soil_surface', &
                typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -836,6 +835,25 @@ module fabm_sediment_component
 
       call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      ! optionally look light from any model or rate
+      field = ESMF_FieldEmptyCreate(name='bottom_downwelling_photosynthetic_radiative_flux', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_AttributeSet(field,'units','W m-2', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message, '(A)') trim(name)//' created field'
+      call MOSSCO_FieldString(field, message, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
 
       field = ESMF_FieldCreate(flux_grid, &
                name='temperature_at_soil_surface', &
@@ -897,9 +915,9 @@ module fabm_sediment_component
 
             call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-          end if
-        end if
-      end do
+          endif
+        endif
+      enddo
     endif ! self%use_ugrid
     call get_boundary_conditions(sed,importState,bdys,fluxes)
     !call ESMF_StatePrint(importState)
@@ -973,11 +991,11 @@ module fabm_sediment_component
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
         call ESMF_StateRemove(importState,(/ trim(itemname) /), rc=localrc)
         call ESMF_FieldDestroy(field)
-      end if
+      endif
     else
       write(message,'(A)') trim(name)//' has no external porosity information'
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-    end if
+    endif
 
     call MOSSCO_CompExit(gridComp, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -1091,7 +1109,7 @@ module fabm_sediment_component
       !         ubnd(:)-lbnd(:)+ (/1,1,1/)
       !       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
       !       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      ! end if
+      ! endif
 #ifdef DEBUG
           if (trim(varname) == 'porosity_in_soil') then
             write(0,*) 'debugging output just before restart update of porosity_in_soil'
@@ -1099,7 +1117,7 @@ module fabm_sediment_component
             write(0,*) 'export',sed%export_states(n)%data(:,1,1)
             write(0,*) 'mask',sed%mask(:,1,1)
             write(0,*) 'porosity',sed%porosity(:,1,1)
-          end if
+          endif
 #endif
         !   sed%export_states(n)%data = ptr_f3
         !   write(message,'(A)') trim(name)//' hotstarted field'
@@ -1109,8 +1127,8 @@ module fabm_sediment_component
         !   write(message,'(A)') trim(name)//' incomplete field'
         !   call mossco_fieldString(field, message)
         !   call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
-        ! end if
-      !end if
+        ! endif
+      !endif
 
       sed%export_states(n)%data(exportLbnd(1):exportUBnd(1),exportLbnd(2):exportUbnd(2), &
         exportLBnd(3):exportUBnd(3)) = ptr_f3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))
@@ -1118,7 +1136,7 @@ module fabm_sediment_component
       call MOSSCO_FieldString(field, message, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-    end do
+    enddo
 
     !call sed%update_export_states()
     !> check for valid grid and porosity
@@ -1173,13 +1191,38 @@ module fabm_sediment_component
     type(ESMF_FieldStatus_Flag) :: fieldStatus
     character(len=ESMF_MAXSTR)  :: itemName
     integer(ESMF_KIND_I4)       :: lbnd(2), ubnd(2)
+    character(len=ESMF_MAXSTR), pointer  :: includelist(:) => null()
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+!    !> check for PAR
+!    allocate( includelist(1) )
+!    includelist(1) = 'photosynthetically_active_radiation_at_soil_surface'
+!    !includelist(2) = 'bottom_downwelling_photosynthetic_radiative_flux'
+!    call MOSSCO_StateGet(importState, fieldList=fieldList, &
+!      fieldCount=fieldCount, fieldstatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+!    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+!    nullify(includelist)
+!
+!    if (fieldCount>0) then
+!      call ESMF_FieldGet(fieldlist(1), farrayPtr=ptr_f2, &
+!        exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
+!      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+!
+!      sed%par_surface(1:_INUM_,1:_JNUM_)=ptr_f2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))
+!      write(message,'(A)') trim(name)//' updated par_surface from'
+!      call MOSSCO_FieldString(field, message, rc=localrc)
+!      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+!      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+!    else
+!       write(message,'(A)') trim(name)//' has no external surface radiation information'
+!       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+!    endif
+
     !> check for PAR
-    itemname='par_at_soil_surface'
+    itemname='photosynthetically_active_radiation_at_soil_surface'
     call ESMF_StateGet(importState, trim(itemname), itemType=itemType, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -1251,11 +1294,11 @@ module fabm_sediment_component
 
         call MOSSCO_StateLog(exportState, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      end if
+      endif
     else
       write(message,'(A)') trim(name)//' has no external porosity information'
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-    end if
+    endif
 
     call get_boundary_conditions(sed, importState, bdys, fluxes)
     sed%bdys   => bdys
@@ -1317,9 +1360,9 @@ module fabm_sediment_component
 !!@todo This has to be adjusted for inum, jnum longer than 1
           if (sed%conc(1,1,k,n) .lt. sed%model%state_variables(n)%minimum) then
             sed%conc(_IRANGE_,_JRANGE_,k,n) = sed%model%state_variables(n)%minimum
-          end if
-        end do
-      end do
+          endif
+        enddo
+      enddo
     endif
 
       if (sed%do_output) then
@@ -1338,15 +1381,15 @@ module fabm_sediment_component
               ' ',sed%porosity(1,1,k)
             do n=1,sed%nvar
               write(funit,FMT='(A,E15.4E3)',advance='no') ' ',conc(1,1,k,n)
-            end do
+            enddo
             do n=1,size(sed%model%diagnostic_variables)
               diag => sed%diagnostic_variables(n)
               write(funit,FMT='(A,E15.4E3)',advance='no') ' ',diag(1,1,k)
-            end do
+            enddo
             write(funit,*)
-          end do
-        end if
-      end if
+          enddo
+        endif
+      endif
 
 
 
@@ -1372,7 +1415,7 @@ module fabm_sediment_component
 
         do k=1,sed%grid%knum
           statemesh_ptr(k,:) = sed%export_states(n)%data(:,1,k)
-        end do
+        enddo
         if (sed%export_states(n)%fabm_id /= -1) then
           call ESMF_StateGet(exportState, &
              trim(sed%export_states(n)%standard_name)//'_upward_flux_at_soil_surface', &
@@ -1383,7 +1426,7 @@ module fabm_sediment_component
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           fluxmesh_ptr = -fluxes(:,1,sed%export_states(n)%fabm_id)
-        end if
+        endif
       else
         call ESMF_StateGet(exportState, &
              trim(sed%export_states(n)%standard_name)//'_in_soil', &
@@ -1404,9 +1447,9 @@ module fabm_sediment_component
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           ptr_f2 = -fluxes(:,:,sed%export_states(n)%fabm_id)
-        end if
-      end if ! sed%grid%use_ugrid
-    end do
+        endif
+      endif ! sed%grid%use_ugrid
+    enddo
 
     if (allocated(fieldList)) deallocate(fieldlist)
 
@@ -1490,7 +1533,7 @@ module fabm_sediment_component
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         bdys(1:_INUM_,1:_JNUM_,1) = ptr_f2(1:_INUM_,1:_JNUM_)   ! get lowest vertical index for near-bed temperature
-      end if
+      endif
     endif
 
     do i=1,sed%nvar
@@ -1501,7 +1544,7 @@ module fabm_sediment_component
       !> otherwise use CF-ed version of long_name
         varname = trim(only_var_name( &
            sed%model%state_variables(i)%long_name))
-      end if
+      endif
       call ESMF_StateGet(importState,itemSearch=trim(varname)//'_at_soil_surface', &
                          itemCount=itemcount,rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -1541,7 +1584,7 @@ module fabm_sediment_component
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
             fluxes(_IRANGE_,_JRANGE_,i) = -ptr_f2(:,:)*ptr_vs_2d(:,:) ! downward flux is positive
-          end if
+          endif
 #ifdef DEBUG
             write(0,*) '  flux',-fluxes(1,1,i)
 #endif
@@ -1557,7 +1600,7 @@ module fabm_sediment_component
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
             bdys(:,:,i+1) = ptr_f2(:,:)
-          end if
+          endif
           if (sed%bcup_dissolved_variables .eq. 1) then
 
 !            call ESMF_StateGet(exportState, trim(varname), field=exportfield, rc=localrc)
@@ -1572,15 +1615,15 @@ module fabm_sediment_component
           else
             !> reset fluxes to zero
             fluxes(_IRANGE_,_JRANGE_,i) = 0.0d0
-          end if
+          endif
 #ifdef DEBUG
             write(0,*) '  bdys',ptr_f2(1,1)
 #endif
-        end if
+        endif
       endif
 
 
-    end do
+    enddo
 
   end subroutine get_boundary_conditions
 
@@ -1606,7 +1649,7 @@ module fabm_sediment_component
       !> otherwise use CF-ed version of long_name
         varname = trim(only_var_name( &
            sed%model%state_variables(n)%long_name))
-      end if
+      endif
       attbasename=trim(varname)//'_at_soil_surface'
       call set_item_flags(state,attbasename,requiredFlag=.true.,requiredRank=2)
 
@@ -1614,8 +1657,8 @@ module fabm_sediment_component
             'particulate',default=.false.)) then
         name = trim(varname)//'_z_velocity_at_soil_surface'
         call set_item_flags(state,name,requiredFlag=.true.,requiredRank=2)
-      end if
-    end do
+      endif
+    enddo
   end subroutine set_boundary_flags
 
 end module fabm_sediment_component
