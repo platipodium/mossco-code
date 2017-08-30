@@ -231,7 +231,7 @@ module pelagic_soil_connector
     call mossco_state_get(importState, (/'photosynthetically_active_radiation_in_water'/),  &
       ptr_f3, lbnd=lbnd, ubnd=ubnd, verbose=verbose, rc=localrc)
     if (localrc == ESMF_SUCCESS) then
-      call mossco_state_get(exportState,(/'par_at_soil_surface'/), &
+      call mossco_state_get(exportState,(/'photosynthetically_active_radiation_at_soil_surface'/), &
         ptr_f2,verbose=verbose, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 print*,__LINE__, maxval(ptr_f3(RANGE2D,lbnd(3)))

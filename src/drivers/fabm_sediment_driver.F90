@@ -737,7 +737,7 @@ subroutine get_all_export_states(self)
    self%export_states(4)%data => self%temp3d
    self%export_states(4)%units ='degC'
 
-   self%export_states(5)%standard_name='photosynthetically_available_radiation'
+   self%export_states(5)%standard_name='photosynthetically_active_radiation'
    self%export_states(5)%data => self%par
    self%export_states(5)%units ='W m-2'
 
