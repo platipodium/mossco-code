@@ -36,10 +36,10 @@ module soil_pelagic_connector
   real(ESMF_KIND_R8),dimension(:,:),   pointer :: DETCflux=>null(),DINflux=>null()
   real(ESMF_KIND_R8),dimension(:,:),   pointer :: DIPflux=>null(),OXYflux=>null()
   real(ESMF_KIND_R8),dimension(:,:),   pointer :: ODUflux=>null(),omexDETPflux=>null()
-  real(ESMF_KIND_R8),dimension(:,:),   pointer :: SDETCflux=>null(),fDETCflux=>null()
+  real(ESMF_KIND_R8),dimension(:,:),   pointer :: SDETCflux=>null(),LDETCflux=>null()
   real(ESMF_KIND_R8) :: dinflux_const=0.0
   real(ESMF_KIND_R8) :: dipflux_const=-1.
-  real(ESMF_KIND_R8) :: NC_fdet=0.20d0
+  real(ESMF_KIND_R8) :: NC_ldet=0.20d0
   real(ESMF_KIND_R8) :: NC_sdet=0.04d0
   public SetServices
 
@@ -136,7 +136,7 @@ module soil_pelagic_connector
     logical               :: isPresent
     integer               :: nmlunit=127, localrc
 
-    namelist /soil_pelagic_connector/ dinflux_const,dipflux_const,NC_fdet,NC_sdet
+    namelist /soil_pelagic_connector/ dinflux_const,dipflux_const,NC_ldet,NC_sdet
 
     rc=ESMF_SUCCESS
 
@@ -197,7 +197,7 @@ module soil_pelagic_connector
     character (len=ESMF_MAXSTR) :: timestring
     type(ESMF_Field)            :: field
     integer(ESMF_KIND_R8)       :: advanceCount
-    !> @todo read NC_fdet dynamically from fabm model info?  This would not comply with our aim to separate fabm/esmf
+    !> @todo read NC_ldet dynamically from fabm model info?  This would not comply with our aim to separate fabm/esmf
     integer(ESMF_KIND_I4)       :: rank, ubnd(2), lbnd(2), itemCount
     logical                     :: verbose=.true.
 
@@ -264,15 +264,15 @@ module soil_pelagic_connector
     end if
 
     !   Det flux:
-    call mossco_state_get(importState,(/'slow_detritus_C_upward_flux_at_soil_surface'/), &
+    call mossco_state_get(importState,(/'detritus_semilabile_carbon_upward_flux_at_soil_surface'/), &
       SDETCflux, verbose=verbose, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call mossco_state_get(importState,(/'fast_detritus_C_upward_flux_at_soil_surface'/), &
-      FDETCflux, verbose=verbose, rc=localrc)
+    call mossco_state_get(importState,(/'detritus_labile_carbon_upward_flux_at_soil_surface'/), &
+      LDETCflux, verbose=verbose, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call mossco_state_get(importState,(/'detritus-P_upward_flux_at_soil_surface'/), &
+    call mossco_state_get(importState,(/'detritus_phosphorus_upward_flux_at_soil_surface'/), &
       omexDETPflux, verbose=verbose, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -284,13 +284,13 @@ module soil_pelagic_connector
             DETNflux, verbose=verbose, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      DETNflux = NC_fdet*FDETCflux + NC_sdet*SDETCflux
+      DETNflux = NC_ldet*LDETCflux + NC_sdet*SDETCflux
 
       !> search for Detritus-C
       call mossco_state_get(exportState,(/ &
          'Detritus_Carbon_detC_upward_flux_at_soil_surface'/),DETCflux, verbose=verbose, rc=rc)
       if (rc == 0) then
-         DETCflux = FDETCflux + SDETCflux
+         DETCflux = LDETCflux + SDETCflux
       end if
 
       !> check for Detritus-P and calculate flux either N-based
