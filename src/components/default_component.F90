@@ -266,9 +266,12 @@ module default_component
           write(message,'(A)') trim(name)//' reads from file default_component.dat.  This feature is deprecated.'
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
         else
-          write(message,'(A)') trim(name)//' could not open file for reading.'
-          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+          !write(message,'(A)') trim(name)//' could not open file for reading.'
+          !call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+          write(message,'(A)') trim(name)//' could not open file default.dat (or alternatives) for reading.'
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
           file_readable=.false.
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
       endif
     endif
