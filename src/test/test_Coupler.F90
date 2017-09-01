@@ -43,9 +43,9 @@ varnames(1:8) = (/ &
   'mole_concentration_of_phosphate_upward_flux_at_soil_surface', &
   'dissolved_oxygen_upward_flux_at_soil_surface               ', &
   'dissolved_reduced_substances_upward_flux_at_soil_surface   ', &
-  'slow_detritus_C_upward_flux_at_soil_surface                ', &
-  'fast_detritus_C_upward_flux_at_soil_surface                ', &
-  'detritus-P_upward_flux_at_soil_surface                     ' /)
+  'detritus_semilabile_carbon_upward_flux_at_soil_surface     ', &
+  'detritus_labile_carbon_upward_flux_at_soil_surface         ', &
+  'detritus_phosphorus_upward_flux_at_soil_surface            ' /)
 
 do i=1,size(varnames)
   field = ESMF_FieldCreate(grid=grid, &

@@ -528,9 +528,9 @@ end subroutine MOSSCO_FieldCopy
 !denitrification_rate_in_soil
 !depth_averaged_x_velocity_in_water
 !depth_averaged_y_velocity_in_water
-!detritus-P_in_soil
-!detritus-P_sources-sinks_in_soil
-!detritus-P_upward_flux_at_soil_surface
+!detritus_phosphorus_in_soil
+!detritus_phosphorus_sources-sinks_in_soil
+!detritus_phosphorus_upward_flux_at_soil_surface
 !dissolved_ammonium_nh3_bottom_flux_hz
 !dissolved_ammonium_nh3_in_water
 !dissolved_ammonium_nh3_sources-sinks_in_water
@@ -557,9 +557,9 @@ end subroutine MOSSCO_FieldCopy
 !dissolved_reduced_substances_upward_flux_at_soil_surface
 !dtheta_fac4_in_water
 !dtheta_fac5_in_water
-!fast_detritus_C_in_soil
-!fast_detritus_C_sources-sinks_in_soil
-!fast_detritus_C_upward_flux_at_soil_surface
+!detritus_labile_carbon_in_soil
+!detritus_labile_carbon_sources-sinks_in_soil
+!detritus_labile_carbon_upward_flux_at_soil_surface
 !fraction_of_Rubisco_Rub_bottom_flux_hz
 !fraction_of_Rubisco_Rub_in_water
 !fraction_of_Rubisco_Rub_sources-sinks_in_water
@@ -577,9 +577,9 @@ end subroutine MOSSCO_FieldCopy
 !oxygen_flux_between_sea_water_and_air_hz
 !phosphate_adsorption_in_soil
 !porosity_in_soil
-!slow_detritus_C_in_soil
-!slow_detritus_C_sources-sinks_in_soil
-!slow_detritus_C_upward_flux_at_soil_surface
+!detritus_semilabile_carbon_in_soil
+!detritus_semilabile_carbon_sources-sinks_in_soil
+!detritus_semilabile_carbon_upward_flux_at_soil_surface
 !surface_downwelling_photosynthetic_radiative_flux
         case default
           standardName=trim(name)

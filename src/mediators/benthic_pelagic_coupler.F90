@@ -1,6 +1,6 @@
 !> @brief Implementation of an ESMF link coupling
 !>
-!> This computer program is part of MOSSCO. 
+!> This computer program is part of MOSSCO.
 !> @copyright Copyright (C) 2014, Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister
 
@@ -17,7 +17,7 @@
 #define ESMF_FILENAME "benthic_pelagic_coupler.F90"
 
 module benthic_pelagic_coupler
-    
+
   use esmf
   use mossco_state
   use mossco_field
@@ -51,7 +51,7 @@ module benthic_pelagic_coupler
     integer, intent(out) :: rc
 
     integer              :: localrc
-    
+
     rc = ESMF_SUCCESS
 
     call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_INITIALIZE, phase=0, &
@@ -70,9 +70,9 @@ module benthic_pelagic_coupler
 #undef  ESMF_METHOD
 #define ESMF_METHOD "InitializeP0"
   subroutine InitializeP0(cplComp, importState, exportState, parentClock, rc)
-  
+
     implicit none
-  
+
     type(ESMF_cplComp)    :: cplComp
     type(ESMF_State)      :: importState
     type(ESMF_State)      :: exportState
@@ -113,7 +113,7 @@ module benthic_pelagic_coupler
     type(ESMF_Clock)     :: externalclock
     type(ESMF_Field)     :: newfield
     integer, intent(out) :: rc
-    
+
     character(len=ESMF_MAXSTR)  :: name, message
     type(ESMF_Time)       :: currTime
     integer              :: nmlunit=127, localrc
@@ -237,9 +237,9 @@ module benthic_pelagic_coupler
       end if
 
       !   Det flux:
-      call mossco_state_get(importState,(/'slow_detritus_C_upward_flux_at_soil_surface'/),SDETCflux,rc=rc)
-      call mossco_state_get(importState,(/'fast_detritus_C_upward_flux_at_soil_surface'/),FDETCflux,rc=rc)
-      call mossco_state_get(importState,(/'detritus-P_upward_flux_at_soil_surface'/),omexDETPflux,rc=rc)
+      call mossco_state_get(importState,(/'detritus_semilabile_carbon_upward_flux_at_soil_surface'/),SDETCflux,rc=rc)
+      call mossco_state_get(importState,(/'detritus_labile_carbon_upward_flux_at_soil_surface'/),FDETCflux,rc=rc)
+      call mossco_state_get(importState,(/'detritus_phosphorus_upward_flux_at_soil_surface'/),omexDETPflux,rc=rc)
 
       call mossco_state_get(exportState,(/ &
             'detritus_upward_flux_at_soil_surface              ', &
@@ -285,11 +285,11 @@ module benthic_pelagic_coupler
     type(ESMF_State)     :: exportState
     type(ESMF_Clock)     :: externalclock
     integer,intent(out)  :: rc
-     
+
     character(len=ESMF_MAXSTR)  :: name, message
     type(ESMF_Time)       :: currTime
     integer :: localrc
-    
+
     call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 

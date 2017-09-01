@@ -455,9 +455,9 @@ module fabm_sediment_component
       if (trim(varname) == 'dissolved_phosphate') bdys(:,:,i+1)=pel_PO4
       if (trim(varname) == 'dissolved_oxygen') bdys(:,:,i+1)=pel_O2
       if (trim(varname) == 'dissolved_reduced_substances') bdys(:,:,i+1)=0.0_rk
-      if (trim(varname) == 'fast_detritus_C') fluxes(:,:,i)=pflux_fDet/86400.0_rk
-      if (trim(varname) == 'slow_detritus_C') fluxes(:,:,i)=pflux_sDet/86400.0_rk
-      if (trim(varname) == 'detritus-P') fluxes(:,:,i)=pflux_DetP/86400.0_rk
+      if (trim(varname) == 'detritus_labile_carbon') fluxes(:,:,i)=pflux_fDet/86400.0_rk
+      if (trim(varname) == 'detritus_semilabile_carbon') fluxes(:,:,i)=pflux_sDet/86400.0_rk
+      if (trim(varname) == 'detritus-phosphorus') fluxes(:,:,i)=pflux_DetP/86400.0_rk
       !write(0,*) i,trim(only_var_name(sed%model%state_variables(i)%long_name)),bdys(:,:,i+1),fluxes(:,:,i)
     enddo
 

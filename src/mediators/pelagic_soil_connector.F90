@@ -423,8 +423,7 @@ module pelagic_soil_connector
     end if
 
     call mossco_state_get(exportState, &
-        (/'detritus-P_z_velocity_at_soil_surface         ', &
-          'detritus_phosphorus_z_velocity_at_soil_surface'/), &
+        (/'detritus_phosphorus_z_velocity_at_soil_surface'/), &
         ptr_f2, verbose=verbose, rc=localrc)
     call mossco_state_get(importState,(/ &
               'detP_z_velocity_in_water                    ', &
