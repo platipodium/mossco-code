@@ -3536,32 +3536,24 @@ module mossco_netcdf
     implicit none
     class(type_mossco_netcdf)                    :: self
     integer(ESMF_KIND_I4), intent(out), optional :: rc
-    character(len=ESMF_MAXSTR)                   :: refTimeISOString
+    character(len=*), intent(out)                :: refTimeISOString
 
-    integer(ESMF_KIND_I4)                        :: i, rc_, itime_, localrc, varid
-    character(ESMF_MAXSTR)                       :: timeUnit
+    integer(ESMF_KIND_I4)                        :: i, rc_, localrc
+    type(ESMF_Time)                              :: refTime
 
     rc_ = ESMF_SUCCESS
 
-    localrc = nf90_inq_varid(self%ncid, 'time', varid)
-    if (localrc /= NF90_NOERR) then
-      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', no time variable for reference time', ESMF_LOGMSG_INFO)
-      if (present(rc)) rc=ESMF_RC_NOT_FOUND
-      return
-    endif
+    call mossco_netcdf_reftime(self, refTime, localrc)
+    if (localrc == ESMF_SUCCESS) then
 
-    localrc = nf90_get_att(self%ncid, varid, 'units', timeUnit)
-    if (localrc /= NF90_NOERR) then
-      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', no time unit for reference time', ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    endif
+      call ESMF_TimeGet(refTime, timeStringISOFrac=refTimeISOString, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    i=index(timeunit,'since ')
-    if (i<1) then
-      call ESMF_LogWrite('  no reference time given in unit '//trim(timeUnit), ESMF_LOGMSG_WARNING)
-      refTimeISOString=''
+    elseif (localrc == ESMF_RC_NOT_FOUND) then
+      rc_ = localrc
+      refTimeISOString = ''
     else
-      reftimeISOString=timeunit(i+6:len_trim(timeunit))
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
 
     if (present(rc)) rc=rc_
@@ -3578,7 +3570,7 @@ module mossco_netcdf
     type(ESMF_Time), intent(out)                 :: refTime
 
     integer(ESMF_KIND_I4)                        :: i, rc_, itime_, localrc, varid
-    character(ESMF_MAXSTR)                       :: timeUnit
+    character(ESMF_MAXSTR)                       :: timeUnit, ISOString
 
     rc_ = ESMF_SUCCESS
 
@@ -3603,12 +3595,17 @@ module mossco_netcdf
       return
     endif
 
+    timeunit = timeunit(i+6:len_trim(timeunit))
+    ! Make sure that this is in ISO format, i.e. YYYY-MM-DDThh:mm:ss
+    ! Some implementations do not write 4 (or 2) digits single digit components.
+    call timeString2ISOTimeString('2003-05-06T05:03', ISOString, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
     !> @todo consider "climatological month" as possible unit, and have a look at
     !> CF conventions on their climatological time handling.
 
-    call MOSSCO_TimeSet(refTime, timeunit(i+6:len_trim(timeunit)), localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call MOSSCO_TimeSet(refTime, ISOString, localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (present(rc)) rc=rc_
 
