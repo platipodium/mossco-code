@@ -33,4 +33,5 @@ test_units
 test_mossco_config
 test_mossco_time
 test_MOSSCO_StateGet
+test_interface
 
