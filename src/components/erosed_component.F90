@@ -6,7 +6,7 @@
 !  This computer program is part of MOSSCO.
 !> @copyright Copyright (C) 2013, 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
 !> @author Hassan Nasermoaddeli, Bundesanstalt für Wasserbau
-!> @author Carsten Lemmen
+!> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -287,7 +287,6 @@ module erosed_component
                      maxIndex=(/inum,jnum/), &
                      regDecomp=(/1,1/), &
                      coordSys=ESMF_COORDSYS_SPH_DEG, &
-                     indexflag=ESMF_INDEX_DELOCAL,  &
                      name="erosed", &
                      coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/), &
                      coorddep2=(/2/),rc=localrc)
@@ -889,7 +888,7 @@ module erosed_component
         allocate(importList(i)%data(exclusiveLBound(1):exclusiveUBound(1), &
           exclusiveLBound(2):exclusiveUBound(2)), stat=localrc)
 
-        call ESMF_FieldEmptyComplete(field, importList(i)%data, ESMF_INDEX_DELOCAL, rc=localrc)
+        call ESMF_FieldEmptyComplete(field, importList(i)%data, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         importList(i)%data = 0.0d0
