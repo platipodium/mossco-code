@@ -1,8 +1,3 @@
-!> @file test_Coupler.F90
-!! @brief Tests soil_pelagic_connector
-!! @author Richard Hofmeister
-!!
-
 !> @brief Implementation of generic interface test functions
 !>
 !> This computer program is part of MOSSCO.

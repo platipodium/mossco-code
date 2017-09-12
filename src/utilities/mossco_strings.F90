@@ -54,6 +54,7 @@ module mossco_strings
   interface MOSSCO_MessageAdd
     module procedure MOSSCO_MessageAddString
     module procedure MOSSCO_MessageAddList
+    !module procedure MOSSCO_MessageAddListPtr
   end interface
 
   interface MOSSCO_StringMatch
@@ -404,6 +405,41 @@ contains
     enddo
 
   end function MOSSCO_StringClean
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_MessageAddListPtr"
+!> @param character(len=*) message : string to add to [inout]
+!> @param character(len=*), dimension(:): string to add [in]
+!> @param integer [rc]: return code
+!> @desc Adds onto a string a list of strings, and observes the
+!> maximum length of the receiving string
+  subroutine MOSSCO_MessageAddListPtr(message, stringList, rc)
+
+    character(len=*), intent(inout)  :: message
+    character(len=*),  intent(in),  pointer :: stringList(:)
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)                  :: i, rc_, localrc
+
+    rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
+
+    if (.not.associated(stringList)) return
+
+    call MOSSCO_MessageAdd(message, stringList(lbound(stringList,1)), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    do i = lbound(stringList,1) + 1, ubound(stringList,1)
+
+      call MOSSCO_MessageAdd(message, ', '//stringList(i), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    enddo
+    return
+
+  end subroutine MOSSCO_MessageAddListPtr
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_MessageAddList"

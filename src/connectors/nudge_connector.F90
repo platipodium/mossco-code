@@ -128,7 +128,7 @@ module nudge_connector
     type(ESMF_Config)               :: config
     real(ESMF_KIND_R8)              :: weight
     logical                         :: labelIsPresent, isPresent, fileIsPresent
-    character(len=ESMF_MAXSTR), allocatable :: filterExcludeList(:), filterIncludeList(:)
+    character(len=ESMF_MAXSTR), pointer :: filterExcludeList(:), filterIncludeList(:)
 
     rc=ESMF_SUCCESS
 
@@ -199,7 +199,7 @@ module nudge_connector
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (allocated(filterExcludeList)) then
+      if (associated(filterExcludeList)) then
         call MOSSCO_AttributeSet(cplComp, 'filter_pattern_exclude', filterExcludeList, localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -209,7 +209,7 @@ module nudge_connector
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (allocated(filterIncludeList)) then
+      if (associated(filterIncludeList)) then
         call MOSSCO_AttributeSet(cplComp, 'filter_pattern_include', filterIncludeList, localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
