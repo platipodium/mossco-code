@@ -27,7 +27,7 @@ module mossco_strings
   implicit none
 
   private
-  public intformat, order, MOSSCO_MessageAdd, only_var_name, replace_character
+  public intformat, order, MOSSCO_MessageAdd, MOSSCO_MessageAddListPtr, only_var_name, replace_character
   public split_string, MOSSCO_StringMatch, MOSSCO_StringClean
   public MOSSCO_CheckUnits, MOSSCO_CleanUnit
 
