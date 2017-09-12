@@ -341,7 +341,7 @@ subroutine timeString2ISOTimeString(timeString, isoString, rc)
     exit
 
   enddo
-  write(isoString,'(I4.4,A,I2.2,AI2.2,AI2.2,A,I2.2,AI2.2)') y,'-',m,'-',d,'T', &
+  write(isoString,'(I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2)') y,'-',m,'-',d,'T', &
     hh,':',mm,':',int(ss)
 
   if (present(rc)) rc = rc_
