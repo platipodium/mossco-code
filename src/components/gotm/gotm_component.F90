@@ -478,10 +478,15 @@ module gotm_component
       character(len=*),parameter :: conc_suffix="_in_water"
       integer(ESMF_KIND_I4) :: localrc
       real(ESMF_KIND_R8), dimension(:,:,:), pointer  :: ptrf3
+      type(ESMF_Clock)                                   :: parentClock
+      type(ESMF_Time)                                    :: currTime
 
       rc=ESMF_SUCCESS
 
-      call MOSSCO_GridCompEntryLog(gridComp)
+      call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
+        importState=importState,exportState=exportState, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_StateGet(importState,"concentrations_in_water",concFieldBundle, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -613,8 +618,10 @@ module gotm_component
 
       end if
 
-    call MOSSCO_GridCompExitLog(gridComp)
-    rc = ESMF_SUCCESS
+      call MOSSCO_CompExit(gridComp, localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      rc=ESMF_SUCCESS
 
    end subroutine InitializeP2
 
@@ -652,10 +659,11 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     integer(ESMF_KIND_I4)   :: petCount, localPet
     integer(ESMF_KIND_I4)   :: seconds, hours, localrc
 
+
     rc = ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
-      exportState=exportState, rc=localrc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
+      importState=importState, exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -679,7 +687,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     write(message,'(A)') trim(message)//' '//trim(timeString)//' ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+    !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     do while (.not.ESMF_ClockIsStopTime(clock))
 
