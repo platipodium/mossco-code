@@ -125,8 +125,8 @@ module time_aggregation_component
     integer(ESMF_KIND_I4)      :: localrc
     logical                    :: configIsPresent, labelIsPresent, fileIsPresent
     type(ESMF_Config)          :: config
-    character(len=ESMF_MAXSTR), pointer :: filterExcludeList(:)
-    character(len=ESMF_MAXSTR), pointer :: filterIncludeList(:)
+    character(len=ESMF_MAXSTR), pointer :: filterExcludeList(:) => null()
+    character(len=ESMF_MAXSTR), pointer :: filterIncludeList(:) => null()
 
     rc  = ESMF_SUCCESS
 

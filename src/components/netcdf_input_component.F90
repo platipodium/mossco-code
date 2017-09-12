@@ -157,7 +157,8 @@ module netcdf_input_component
     type(ESMF_Field), allocatable :: fieldList(:)
     integer(ESMF_KIND_I4), allocatable    :: ungriddedUbnd(:), ungriddedLbnd(:)
     character(len=ESMF_MAXSTR), allocatable :: aliasList(:,:)
-    character(len=ESMF_MAXSTR), pointer :: filterExcludeList(:), filterIncludeList(:)
+    character(len=ESMF_MAXSTR), pointer :: filterExcludeList(:) => null()
+    character(len=ESMF_MAXSTR), pointer :: filterIncludeList(:) => null()
     character(len=ESMF_MAXSTR), allocatable :: climatologyList(:)
     logical                    :: isMatch, checkFile, hasTimeDim
 

@@ -128,7 +128,8 @@ module nudge_connector
     type(ESMF_Config)               :: config
     real(ESMF_KIND_R8)              :: weight
     logical                         :: labelIsPresent, isPresent, fileIsPresent
-    character(len=ESMF_MAXSTR), pointer :: filterExcludeList(:), filterIncludeList(:)
+    character(len=ESMF_MAXSTR), pointer :: filterExcludeList(:) => null()
+    character(len=ESMF_MAXSTR), pointer :: filterIncludeList(:) => null()
 
     rc=ESMF_SUCCESS
 

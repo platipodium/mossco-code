@@ -130,7 +130,8 @@ module transport_connector
     character (len=ESMF_MAXSTR) :: name
     type(ESMF_Time)             :: currTime
 
-    character(len=ESMF_MAXSTR), pointer     :: filterIncludeList(:), filterExcludeList(:)
+    character(len=ESMF_MAXSTR), pointer     :: filterIncludeList(:) => null()
+    character(len=ESMF_MAXSTR), pointer     :: filterExcludeList(:) => null()
     character(len=ESMF_MAXSTR)              :: configFileName, message
     logical                                 :: isPresent, createVelocity
     type(ESMF_Config)                       :: config
