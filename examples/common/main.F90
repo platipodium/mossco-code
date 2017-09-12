@@ -40,14 +40,14 @@ program main
   type(ESMF_State)           :: topState ! for import and export, empty
   type(ESMF_Clock)           :: mainClock,topClock
   type(ESMF_VM)              :: vm
-  integer(ESMF_KIND_I4)      :: localPet, petCount
+  integer(ESMF_KIND_I4)      :: localPet, petCount,argc,i
   logical                    :: ClockIsPresent
   character(len=ESMF_MAXSTR) :: message, formatstring, pidString
   type(ESMF_LogMsg_Flag), allocatable :: logMsgList(:)
   type(ESMF_LogKind_Flag)    :: logKindFlag
   logical                    :: fileIsPresent, labelIsPresent
   type(ESMF_Config)          :: config
-  character(len=ESMF_MAXSTR) :: configFileName='mossco.cfg'
+  character(len=ESMF_MAXSTR) :: configFileName='mossco.cfg', argv
   character(len=ESMF_MAXSTR) :: logLevel='all'
   character(len=ESMF_MAXSTR) :: logLevelZero='not_given'
   logical                    :: logFlush=.false.
@@ -70,8 +70,19 @@ program main
   namelist /mossco_run/ title,start,stop,logkind,loglevel,logflush,loglevelzero
 
   configfilename='mossco.cfg'
-  inquire(file=trim(configfilename), exist=fileIsPresent)
 
+  argc = command_argument_count()
+  do i=1,argc
+    call get_command_argument(i,argv)
+    if (len_trim(argv) == 0) exit
+    inquire(file=trim(argv), exist=fileIsPresent)
+    if (fileIsPresent) configFileName=trim(argv)
+  enddo
+
+  inquire(file=trim(configfilename), exist=fileIsPresent)
+  if (.not.fileIsPresent) configfilename='mossco.cfg'
+
+  inquire(file=trim(configfilename), exist=fileIsPresent)
   if (.not.fileIsPresent) then
     configfilename='mossco_run.nml'
     inquire(file=trim(configfilename), exist=fileIsPresent)
