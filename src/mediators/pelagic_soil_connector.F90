@@ -214,65 +214,33 @@ module pelagic_soil_connector
     rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_ClockGet(externalClock, advanceCount=advanceCount, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (advanceCount > 0) verbose=.false.
 
+    !> Try to obtain (optional) hydrodynamic pelagic 3D variables and map their
+    !> lowest layer to the surface layer
     call MOSSCO_MapThreeDTwoD(importState, &
       (/'photosynthetically_active_radiation_in_water      ',   &
         'downwelling_photosynthetic_radiative_flux_in_water'/), &
         exportState, (/'photosynthetically_active_radiation_at_soil_surface'/), &
-        rc=localrc)
+        verbose=verbose, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    ! Transfer water temperature from pelagic 3D import to a soil surface 2D
-    ! export
-    call mossco_state_get(importState, (/                      &
-      'photosynthetically_active_radiation_in_water      ',    &
-      'downwelling_photosynthetic_radiative_flux_in_water'/),  &
-      ptr_f3, lbnd=lbnd, ubnd=ubnd, verbose=verbose, rc=localrc)
-    if (localrc == ESMF_SUCCESS) then
-      call mossco_state_get(exportState,(/'photosynthetically_active_radiation_at_soil_surface'/), &
-        ptr_f2,verbose=verbose, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
-      ptr_f2 = ptr_f3(RANGE2D,lbnd(3)) !>@TODO: eine halbe schicht tiefer gehen, damit man das Licht "at soil surface" bekommt
-      nullify(ptr_f2)
-    end if
-    nullify(ptr_f3)
+    call MOSSCO_MapThreeDTwoD(importState, (/'temperature_in_water'/), &
+      exportState, (/'temperature_at_soil_surface'/), verbose=verbose, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    ! Transfer water temperature from pelagic 3D import to a soil surface 2D
-    ! export
-    call mossco_state_get(importState, (/'temperature_in_water'/), ptr_f3, &
-      lbnd=lbnd, ubnd=ubnd, verbose=verbose, rc=localrc)
-    if (localrc == ESMF_SUCCESS) then
-      call mossco_state_get(exportState,(/'temperature_at_soil_surface'/), &
-        ptr_f2,verbose=verbose, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    call MOSSCO_MapThreeDTwoD(importState, (/'practical_salinity_in_water', &
+                                             'salinity_in_water          '/), &
+        exportState, (/'practical_salinity_at_soil_surface'/), verbose=verbose, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      ptr_f2 = ptr_f3(RANGE2D,lbnd(3))
-      nullify(ptr_f2)
-    end if
-    nullify(ptr_f3)
-
-    ! Transfer water salinity from pelagic 3D import to a soil surface 2D
-    ! export
-    call mossco_state_get(importState, (/ &
-      'practical_salinity_in_water',      &
-      'salinity_in_water          '/), ptr_f3, &
-      lbnd=lbnd, ubnd=ubnd, verbose=verbose, rc=localrc)
-    if (localrc == ESMF_SUCCESS) then
-      call mossco_state_get(exportState,(/'practical_salinity_at_soil_surface'/), &
-        ptr_f2,verbose=verbose, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
-
-      ptr_f2 = ptr_f3(RANGE2D,lbnd(3))
-      nullify(ptr_f2)
-    end if
-    nullify(ptr_f3)
-
-    ! dissolved_oxygen:
+    !> Get oxygen, both positive and negative (odu), and transfer it to the
+    !> soil surface (optional )
     call mossco_state_get(importState,(/ &
         'concentration_of_dissolved_oxygen_in_water', &
         'oxygen_in_water                           ', &
@@ -316,12 +284,20 @@ module pelagic_soil_connector
     end if
     nullify(ptr_f3)
 
-      !   Det flux:
+    !> Get detritus and transfer it to the
+    !> soil surface (optional), if not found, then skip the rest of
+    !> this routine (@todo for now)
     call mossco_state_get(importState,(/ &
       'detritus_in_water              ', &
       'detN_in_water                  ', &
       'Detritus_Nitrogen_detN_in_water'/), &
       DETN,lbnd=lbnd,ubnd=ubnd, verbose=verbose, rc=localrc)
+
+    if (localrc == ESMF_RC_NOT_FOUND) then
+      call MOSSCO_CompExit(cplComp, localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+      return
+    endif
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
 #if DEBUG
