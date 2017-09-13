@@ -735,15 +735,16 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     end do
 
     !!> @todo bound checking and not restricting to 1 column in the following calls
-    variables_2d(1,1,1) = sum(variables_3d(1,1,:,2))
-    variables_2d(1,1,2) = variables_3d(1,1,1,2)
-    variables_2d(1,1,3) = sum (variables_3d(1,1,:,2) * variables_3d(1,1,:,5)) / variables_2d(1,1,1)
-    variables_2d(1,1,4) = sum (variables_3d(1,1,:,2) * variables_3d(1,1,:,6)) / variables_2d(1,1,1)
-    variables_2d(1,1,5) = variables_3d(1,1,1,5)
-    variables_2d(1,1,6) = variables_3d(1,1,1,6)
-    variables_2d(1,1,7) = variables_3d(1,1,1,1)
-    variables_2d(1,1,8) = gotm_tknu(1)
-    variables_2d(1,1,9) = gotm_radiation(nlev)
+    variables_2d(1,1, 1) = sum(variables_3d(1,1,:,2))
+    variables_2d(1,1, 2) = variables_3d(1,1,1,2)
+    variables_2d(1,1, 3) = sum (variables_3d(1,1,:,2) * variables_3d(1,1,:,5)) / variables_2d(1,1,1)
+    variables_2d(1,1, 4) = sum (variables_3d(1,1,:,2) * variables_3d(1,1,:,6)) / variables_2d(1,1,1)
+    variables_2d(1,1, 5) = variables_3d(1,1,1,5)
+    variables_2d(1,1, 6) = variables_3d(1,1,1,6)
+    variables_2d(1,1, 7) = variables_3d(1,1,1,1)
+    variables_2d(1,1, 8) = gotm_tknu(1)
+    variables_2d(1,1, 9) = gotm_radiation(nlev)
+    variables_2d(1,1,10) = gotm_radiation(1)
 
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
