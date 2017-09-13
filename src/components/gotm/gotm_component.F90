@@ -335,11 +335,17 @@ module gotm_component
 
     allocate(export_variables_3d(nexport_3d))
     export_variables_3d(1)%standard_name="temperature"
+    export_variables_3d(1)%units="degree_C"
     export_variables_3d(2)%standard_name="layer_height"
+    export_variables_3d(2)%units="m"
     export_variables_3d(3)%standard_name="practical_salinity"
+    export_variables_3d(3)%units="1E-3"
     export_variables_3d(4)%standard_name="downwelling_photosynthetic_radiative_flux"
+    export_variables_3d(4)%units="W m-2"
     export_variables_3d(5)%standard_name="x_velocity"
+    export_variables_3d(5)%units="m s-1"
     export_variables_3d(6)%standard_name="y_velocity"
+    export_variables_3d(6)%units="m s-1"
     allocate(variables_3d(farray_shape(1),farray_shape(2),0:farray_shape(3),nexport_3d))
 
     call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=localrc)
@@ -347,6 +353,7 @@ module gotm_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     do k=1,nexport_3d
+      export_variables_3d(k)%creator='gotm'
       farrayPtr => variables_3d(:,:,:,k)
       exportFieldList(k) = ESMF_FieldCreate(grid, farrayPtr=farrayPtr, name=trim(export_variables_3d(k)%standard_name)//'_in_water', &
         staggerloc=ESMF_STAGGERLOC_CENTER, &
@@ -375,16 +382,25 @@ module gotm_component
 
     allocate(export_variables_2d(nexport_2d))
     export_variables_2d( 1)%standard_name="water_depth_at_soil_surface"
+    export_variables_2d( 1)%units="m"
     export_variables_2d( 2)%standard_name="layer_height_at_soil_surface"
+    export_variables_2d( 2)%units="m"
     export_variables_2d( 3)%standard_name="depth_averaged_x_velocity_in_water"
+    export_variables_2d( 3)%units="m s-1"
     export_variables_2d( 4)%standard_name="depth_averaged_y_velocity_in_water"
+    export_variables_2d( 4)%units="m s-1"
     export_variables_2d( 5)%standard_name="x_velocity_at_soil_surface"
+    export_variables_2d( 5)%units="m s-1"
     export_variables_2d( 6)%standard_name="y_velocity_at_soil_surface"
+    export_variables_2d( 6)%units="m s-1"
     export_variables_2d( 7)%standard_name="temperature_at_soil_surface"
+    export_variables_2d( 7)%units="degree_C"
     export_variables_2d( 8)%standard_name="turbulent_diffusivity_of_momentum_at_soil_surface"
+    export_variables_2d( 8)%units="m2 s-2"
     export_variables_2d( 9)%standard_name="surface_downwelling_photosynthetic_radiative_flux"
+    export_variables_2d( 9)%units="W m-2"
     export_variables_2d(10)%standard_name="downwelling_photosynthetic_radiative_flux_at_soil_surface"
-
+    export_variables_2d(10)%units="W m-2"
 
 
     allocate(variables_2d(farray_shape(1),farray_shape(2),nexport_2d))
@@ -407,6 +423,7 @@ module gotm_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     do k=1,nexport_2d
+      export_variables_2d(k)%creator = 'gotm'
       ptr_f2 => variables_2d(:,:,k)
       exportFieldList(k) = ESMF_FieldCreate(grid2d, farrayPtr=ptr_f2, name=trim(export_variables_2d(k)%standard_name), &
         staggerloc=ESMF_STAGGERLOC_CENTER, &
