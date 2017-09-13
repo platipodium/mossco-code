@@ -836,23 +836,23 @@ module fabm_sediment_component
       call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      ! optionally look light from any model or rate
-      field = ESMF_FieldEmptyCreate(name='bottom_downwelling_photosynthetic_radiative_flux', rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      call ESMF_AttributeSet(field,'units','W m-2', rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      write(message, '(A)') trim(name)//' created field'
-      call MOSSCO_FieldString(field, message, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-      call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+!       ! optionally look light from any model or rate
+!       field = ESMF_FieldEmptyCreate(name='downwelling_photosynthetic_radiative_flux_at_soil_surface', rc=localrc)
+!       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+!
+!       call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+!       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+!
+!       call ESMF_AttributeSet(field,'units','W m-2', rc=localrc)
+!       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+!
+!       write(message, '(A)') trim(name)//' created field'
+!       call MOSSCO_FieldString(field, message, rc=localrc)
+!       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+!       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+!
+!       call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
+!       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
 
       field = ESMF_FieldCreate(flux_grid, &

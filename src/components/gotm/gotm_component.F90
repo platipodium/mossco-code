@@ -326,11 +326,11 @@ module gotm_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     nexport_3d = 6
-    nexport_2d = 9
+    nexport_2d = 10
     allocate(exportFieldList(nexport_3d + nexport_2d))
 
     !> Create 3d export fields and add them to export state, allocate the space for these
-    !> that will be filled later with data, copying of data is necessary to provide 3d fields
+    !> that will be filled lated with data, copying of data is necessary to provide 3d fields
     !> for ESMF
 
     allocate(export_variables_3d(nexport_3d))
@@ -374,30 +374,32 @@ module gotm_component
     !> for ESMF
 
     allocate(export_variables_2d(nexport_2d))
-    export_variables_2d(1)%standard_name="water_depth_at_soil_surface"
-    export_variables_2d(2)%standard_name="layer_height_at_soil_surface"
-    export_variables_2d(3)%standard_name="depth_averaged_x_velocity_in_water"
-    export_variables_2d(4)%standard_name="depth_averaged_y_velocity_in_water"
-    export_variables_2d(5)%standard_name="x_velocity_at_soil_surface"
-    export_variables_2d(6)%standard_name="y_velocity_at_soil_surface"
-    export_variables_2d(7)%standard_name="temperature_at_soil_surface"
-    export_variables_2d(8)%standard_name="turbulent_diffusivity_of_momentum_at_soil_surface"
-    export_variables_2d(9)%standard_name="surface_downwelling_photosynthetic_radiative_flux"
+    export_variables_2d( 1)%standard_name="water_depth_at_soil_surface"
+    export_variables_2d( 2)%standard_name="layer_height_at_soil_surface"
+    export_variables_2d( 3)%standard_name="depth_averaged_x_velocity_in_water"
+    export_variables_2d( 4)%standard_name="depth_averaged_y_velocity_in_water"
+    export_variables_2d( 5)%standard_name="x_velocity_at_soil_surface"
+    export_variables_2d( 6)%standard_name="y_velocity_at_soil_surface"
+    export_variables_2d( 7)%standard_name="temperature_at_soil_surface"
+    export_variables_2d( 8)%standard_name="turbulent_diffusivity_of_momentum_at_soil_surface"
+    export_variables_2d( 9)%standard_name="surface_downwelling_photosynthetic_radiative_flux"
+    export_variables_2d(10)%standard_name="downwelling_photosynthetic_radiative_flux_at_soil_surface"
 
 
 
     allocate(variables_2d(farray_shape(1),farray_shape(2),nexport_2d))
 
     !!> @todo bound checking and not restricting to 1 column in the following calls
-    variables_2d(1,1,1) = sum(variables_3d(1,1,:,2))
-    variables_2d(1,1,2) = variables_3d(1,1,1,2)
-    variables_2d(1,1,3) = sum (variables_3d(1,1,:,2) * variables_3d(1,1,:,5)) / variables_2d(1,1,1)
-    variables_2d(1,1,4) = sum (variables_3d(1,1,:,2) * variables_3d(1,1,:,6)) / variables_2d(1,1,1)
-    variables_2d(1,1,5) = variables_3d(1,1,1,5)
-    variables_2d(1,1,6) = variables_3d(1,1,1,6)
-    variables_2d(1,1,7) = variables_3d(1,1,1,1)
-    variables_2d(1,1,8) = gotm_tknu(1)
-    variables_2d(1,1,9) = gotm_radiation(nlev)
+    variables_2d(1,1, 1) = sum(variables_3d(1,1,:,2))
+    variables_2d(1,1, 2) = variables_3d(1,1,1,2)
+    variables_2d(1,1, 3) = sum (variables_3d(1,1,:,2) * variables_3d(1,1,:,5)) / variables_2d(1,1,1)
+    variables_2d(1,1, 4) = sum (variables_3d(1,1,:,2) * variables_3d(1,1,:,6)) / variables_2d(1,1,1)
+    variables_2d(1,1, 5) = variables_3d(1,1,1,5)
+    variables_2d(1,1, 6) = variables_3d(1,1,1,6)
+    variables_2d(1,1, 7) = variables_3d(1,1,1,1)
+    variables_2d(1,1, 8) = gotm_tknu(1)
+    variables_2d(1,1, 9) = gotm_radiation(nlev)
+    variables_2d(1,1,10) = gotm_radiation(1)
 
 
     call ESMF_ArraySpecSet(arrayspec, rank=2, typekind=ESMF_TYPEKIND_R8, rc=localrc)

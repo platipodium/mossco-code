@@ -228,10 +228,9 @@ module pelagic_soil_connector
     ! Transfer water temperature from pelagic 3D import to a soil surface 2D
     ! export
     !>@TODO Carsten: Was passiert, wenn wir kein PAR haben?
-    call mossco_state_get(importState, (/                &
-      'photosynthetically_active_radiation_in_water',    &
-      'radiation_in_water                          ',    &
-      'downwelling_photosynthetic_radiative_flux   '/),  &
+    call mossco_state_get(importState, (/                      &
+      'photosynthetically_active_radiation_in_water      ',    &
+      'downwelling_photosynthetic_radiative_flux_in_water'/),  &
       ptr_f3, lbnd=lbnd, ubnd=ubnd, verbose=verbose, rc=localrc)
     if (localrc == ESMF_SUCCESS) then
       call mossco_state_get(exportState,(/'photosynthetically_active_radiation_at_soil_surface'/), &
@@ -255,6 +254,20 @@ module pelagic_soil_connector
       nullify(ptr_f2)
     end if
     nullify(ptr_f3)
+
+!     ! Transfer water salinity from pelagic 3D import to a soil surface 2D
+!     ! export
+!     call mossco_state_get(importState, (/'practical_salinity_in_water'/), ptr_f3, &
+!       lbnd=lbnd, ubnd=ubnd, verbose=verbose, rc=localrc)
+!     if (localrc == ESMF_SUCCESS) then
+!       call mossco_state_get(exportState,(/'practical_salinity_at_soil_surface'/), &
+!         ptr_f2,verbose=verbose, rc=localrc)
+!       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+!
+!       ptr_f2 = ptr_f3(RANGE2D,lbnd(3))
+!       nullify(ptr_f2)
+!     end if
+!     nullify(ptr_f3)
 
     ! dissolved_oxygen:
     call mossco_state_get(importState,(/ &
