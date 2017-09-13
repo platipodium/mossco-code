@@ -718,7 +718,7 @@ module pelagic_soil_connector
       exclusiveLbound=lbnd2, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    farrayPtr2(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2)) = farrayPtr3(RANGE2D,1)
+    farrayPtr2(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2)) = farrayPtr3(RANGE2D,lbnd(3))
 
     nullify(farrayPtr3)
     nullify(farrayPtr3)
