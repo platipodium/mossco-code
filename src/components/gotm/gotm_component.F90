@@ -335,9 +335,9 @@ module gotm_component
 
     allocate(export_variables_3d(nexport_3d))
     export_variables_3d(1)%standard_name="temperature"
-    export_variables_3d(2)%standard_name="grid_height"
-    export_variables_3d(3)%standard_name="salinity"
-    export_variables_3d(4)%standard_name="radiation"
+    export_variables_3d(2)%standard_name="layer_height"
+    export_variables_3d(3)%standard_name="practical_salinity"
+    export_variables_3d(4)%standard_name="downwelling_photosynthetic_radiative_flux"
     export_variables_3d(5)%standard_name="x_velocity"
     export_variables_3d(6)%standard_name="y_velocity"
     allocate(variables_3d(farray_shape(1),farray_shape(2),0:farray_shape(3),nexport_3d))
