@@ -228,16 +228,22 @@ module pelagic_soil_connector
         'downwelling_photosynthetic_radiative_flux_in_water'/), &
         exportState, (/'photosynthetically_active_radiation_at_soil_surface'/), &
         verbose=verbose, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (localrc /= ESMF_RC_NOT_FOUND) then
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    endif
 
     call MOSSCO_MapThreeDTwoD(importState, (/'temperature_in_water'/), &
       exportState, (/'temperature_at_soil_surface'/), verbose=verbose, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (localrc /= ESMF_RC_NOT_FOUND) then
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    endif
 
     call MOSSCO_MapThreeDTwoD(importState, (/'practical_salinity_in_water', &
                                              'salinity_in_water          '/), &
         exportState, (/'practical_salinity_at_soil_surface'/), verbose=verbose, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (localrc /= ESMF_RC_NOT_FOUND) then
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    endif
 
     !> Get oxygen, both positive and negative (odu), and transfer it to the
     !> soil surface (optional )
