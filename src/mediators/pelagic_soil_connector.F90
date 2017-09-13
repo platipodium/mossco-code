@@ -221,6 +221,12 @@ module pelagic_soil_connector
 
     if (advanceCount > 0) verbose=.false.
 
+    call MOSSCO_MapThreeDTwoD(importState, &
+      (/'photosynthetically_active_radiation_in_water      ',   &
+        'downwelling_photosynthetic_radiative_flux_in_water'/), &
+        exportState, (/'photosynthetically_active_radiation_at_soil_surface'/), &
+        rc=localrc)
+
     ! Transfer water temperature from pelagic 3D import to a soil surface 2D
     ! export
     call mossco_state_get(importState, (/                      &
@@ -672,22 +678,33 @@ module pelagic_soil_connector
   end subroutine Finalize
 
   subroutine MOSSCO_MapThreeDTwoD(importState, importFieldList, exportState, &
-    exportFieldList, kwe, rc)
+    exportFieldList, kwe, verbose, rc)
 
     type(ESMF_State), intent(in)             :: importState
     type(ESMF_State), intent(inout)          :: exportState
-    character(len=*), intent(in), pointer             :: importFieldList(:)
-    character(len=*), intent(in), pointer             :: exportFieldList(:)
+    character(len=*), intent(in)             :: importFieldList(:)
+    character(len=*), intent(in)             :: exportFieldList(:)
     type(ESMF_KeywordEnforcer), optional, intent(in) :: kwe
+    logical, intent(in), optional            :: verbose
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)               :: localrc, fieldCount
     type(ESMF_Field), allocatable       :: fieldList(:)
     integer(ESMF_KIND_I4)               :: lbnd(3), ubnd(3), lbnd2(2), ubnd2(2)
     real(ESMF_KIND_R8), pointer         :: farrayPtr3(:,:,:), farrayPtr2(:,:)
+    logical                             :: verbose_
 
-    call MOSSCO_StateGet(importState, fieldList=fieldList, include=importFieldList, &
-      fieldstatus=ESMF_FIELDSTATUS_COMPLETE, fieldCount=fieldCount, rc=localrc)
+    if (present(rc)) rc = ESMF_SUCCESS
+    if (present(verbose)) then
+      verbose_ = verbose
+    else
+      verbose_ = .false.
+    endif
+    if (present(kwe)) verbose_ = verbose_
+
+    call MOSSCO_StateGet(importState, fieldList=fieldList, &
+      itemSearchList=importFieldList, fieldstatus=ESMF_FIELDSTATUS_COMPLETE, &
+      fieldCount=fieldCount, verbose=verbose_, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !> Return if import field not found
@@ -700,7 +717,8 @@ module pelagic_soil_connector
       exclusiveLbound=lbnd, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_StateGet(exportState, fieldList=fieldList, include=exportFieldList, &
+    call MOSSCO_StateGet(exportState, fieldList=fieldList, &
+      itemSearchList=exportFieldList, verbose=verbose_, &
       fieldCount=fieldCount, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
