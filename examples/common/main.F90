@@ -17,6 +17,8 @@
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "main.F90"
 
+#define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
 #undef  ESMF_METHOD
 #define ESMF_METHOD "main"
 program main
@@ -72,8 +74,14 @@ program main
   configfilename='mossco.cfg'
 
   argc = command_argument_count()
+  !if (argc == 0) then
+    !call ESMF_LogWrite('No command arguments present', ESMF_LOGMSG_INFO)
+  !endif
+
   do i=1,argc
     call get_command_argument(i,argv)
+    write(message,'(A,I1.1,A)') 'Command argument ',i,' is "'//trim(argv)//'"'
+    !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     if (len_trim(argv) == 0) exit
     inquire(file=trim(argv), exist=fileIsPresent)
     if (fileIsPresent) configFileName=trim(argv)
@@ -83,17 +91,27 @@ program main
   if (.not.fileIsPresent) configfilename='mossco.cfg'
 
   inquire(file=trim(configfilename), exist=fileIsPresent)
-  if (.not.fileIsPresent) then
-    configfilename='mossco_run.nml'
-    inquire(file=trim(configfilename), exist=fileIsPresent)
+  if (.not.fileIsPresent) configfilename='mossco_run.nml'
 
-    if (fileIsPresent) then
-      open(nmlunit,file=trim(configfilename),status='old',action='read',iostat=localrc)
-      if (localrc .eq. 0) then
-        read(nmlunit,nml=mossco_run)
-        close(nmlunit)
-      end if
-    endif
+  inquire(file=trim(configfilename), exist=fileIsPresent)
+  if (.not.fileIsPresent) configfilename='mossco.nml'
+
+  inquire(file=trim(configfilename), exist=fileIsPresent)
+  if (.not.fileIsPresent) then
+    configfilename=''
+    !call ESMF_LogWrite('Not using a configuration file', ESMF_LOGMSG_WARNING)
+  endif
+
+  if (index(configFileName, '.nml') > 1) then
+    inquire(file=trim(configfilename), exist=fileIsPresent)
+    open(nmlunit,file=trim(configfilename), status='old', action='read', iostat=localrc)
+    if (localrc .eq. 0) then
+      read(nmlunit, nml=mossco_run)
+      close(nmlunit)
+    else
+      write(0, '(A)') 'Fatal problem reading namelist from '//trim(configFileName)
+      !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+    end if
   endif
 
   !> Get the process id for tagging the PET log
