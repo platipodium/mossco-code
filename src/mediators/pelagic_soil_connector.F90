@@ -220,14 +220,9 @@ module pelagic_soil_connector
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
     if (advanceCount > 0) verbose=.false.
-    !> fdet + sdet = CN_det*det
-    !> NC_ldet*fdet + NC_sdet*sdet = det
-    !> fdet = fac_fdet*det
-    !> sdet = fac_sdet*det
 
     ! Transfer water temperature from pelagic 3D import to a soil surface 2D
     ! export
-    !>@TODO Carsten: Was passiert, wenn wir kein PAR haben?
     call mossco_state_get(importState, (/                      &
       'photosynthetically_active_radiation_in_water      ',    &
       'downwelling_photosynthetic_radiative_flux_in_water'/),  &
@@ -255,19 +250,21 @@ module pelagic_soil_connector
     end if
     nullify(ptr_f3)
 
-!     ! Transfer water salinity from pelagic 3D import to a soil surface 2D
-!     ! export
-!     call mossco_state_get(importState, (/'practical_salinity_in_water'/), ptr_f3, &
-!       lbnd=lbnd, ubnd=ubnd, verbose=verbose, rc=localrc)
-!     if (localrc == ESMF_SUCCESS) then
-!       call mossco_state_get(exportState,(/'practical_salinity_at_soil_surface'/), &
-!         ptr_f2,verbose=verbose, rc=localrc)
-!       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
-!
-!       ptr_f2 = ptr_f3(RANGE2D,lbnd(3))
-!       nullify(ptr_f2)
-!     end if
-!     nullify(ptr_f3)
+    ! Transfer water salinity from pelagic 3D import to a soil surface 2D
+    ! export
+    call mossco_state_get(importState, (/ &
+      'practical_salinity_in_water',      &
+      'salinity_in_water          '/), ptr_f3, &
+      lbnd=lbnd, ubnd=ubnd, verbose=verbose, rc=localrc)
+    if (localrc == ESMF_SUCCESS) then
+      call mossco_state_get(exportState,(/'practical_salinity_at_soil_surface'/), &
+        ptr_f2,verbose=verbose, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+      ptr_f2 = ptr_f3(RANGE2D,lbnd(3))
+      nullify(ptr_f2)
+    end if
+    nullify(ptr_f3)
 
     ! dissolved_oxygen:
     call mossco_state_get(importState,(/ &
@@ -368,6 +365,11 @@ module pelagic_soil_connector
     fac_fdet = (1.0d0-NC_sdet*CN_det)/(NC_ldet-NC_sdet)
 
 ! dirty=non-mass-conserving fix added by kw against unphysical partitioning
+
+!> fdet + sdet = CN_det*det
+!> NC_ldet*fdet + NC_sdet*sdet = det
+!> fdet = fac_fdet*det
+!> sdet = fac_sdet*det
 
     where (fac_fdet .gt. CN_det)
       fac_fdet = CN_det
@@ -668,5 +670,59 @@ module pelagic_soil_connector
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
   end subroutine Finalize
+
+  subroutine MOSSCO_MapThreeDTwoD(importState, importFieldList, exportState, &
+    exportFieldList, kwe, rc)
+
+    type(ESMF_State), intent(in)             :: importState
+    type(ESMF_State), intent(inout)          :: exportState
+    character(len=*), intent(in), pointer             :: importFieldList(:)
+    character(len=*), intent(in), pointer             :: exportFieldList(:)
+    type(ESMF_KeywordEnforcer), optional, intent(in) :: kwe
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)               :: localrc, fieldCount
+    type(ESMF_Field), allocatable       :: fieldList(:)
+    integer(ESMF_KIND_I4)               :: lbnd(3), ubnd(3), lbnd2(2), ubnd2(2)
+    real(ESMF_KIND_R8), pointer         :: farrayPtr3(:,:,:), farrayPtr2(:,:)
+
+    call MOSSCO_StateGet(importState, fieldList=fieldList, include=importFieldList, &
+      fieldstatus=ESMF_FIELDSTATUS_COMPLETE, fieldCount=fieldCount, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    !> Return if import field not found
+    if (fieldCount == 0) then
+      if (present(rc)) rc = ESMF_RC_NOT_FOUND
+      return
+    endif
+
+    call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr3, exclusiveUbound=ubnd, &
+      exclusiveLbound=lbnd, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call MOSSCO_StateGet(exportState, fieldList=fieldList, include=exportFieldList, &
+      fieldCount=fieldCount, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    !> Return if export field not found
+    if (fieldCount == 0) then
+      if (present(rc)) rc = ESMF_RC_NOT_FOUND
+      nullify(farrayPtr3)
+      return
+    endif
+
+    !> @todo handle case where the export field is not complete, then add the
+    !> import grid and typekind, also check rank
+
+    call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr2, exclusiveUbound=ubnd2, &
+      exclusiveLbound=lbnd2, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    farrayPtr2(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2)) = farrayPtr3(RANGE2D,1)
+
+    nullify(farrayPtr3)
+    nullify(farrayPtr3)
+
+  end subroutine MOSSCO_MapThreeDTwoD
 
 end module pelagic_soil_connector
