@@ -369,6 +369,7 @@ module simplewave_component
     integer, dimension(2)            :: exclusiveLBound, exclusiveUBound
     integer                          :: i, j
     character(len=ESMF_MAXSTR)       :: message
+    logical                          :: isPresent
 
     type :: allocatable_integer_array
       integer,dimension(:),allocatable :: data
@@ -406,23 +407,20 @@ module simplewave_component
       end do
     end do
 
-   !> The preferred interface would be to use isPresent, but htis only works in ESMF from Nov 2014
-   !> @todo replace if 0 by ESMF_VERSION macros
-#if 0
    call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, isPresent=isPresent, rc=localrc)
    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
    if (isPresent) then
-#else
-   call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask, rc=localrc)
-   !! Do not check for success here as NOT_FOUND is expected behaviour, @todo: check for NOT_FOUND flag
-   if (localrc .ne. ESMF_SUCCESS) then
-      call ESMF_LogWrite('ignore ERROR messages above related to GridGetItem - waiting for new ESMF release', &
+     call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask, rc=localrc)
+     if (localrc .ne. ESMF_SUCCESS) then
+       call ESMF_LogWrite('ignore ERROR messages above related to GridGetItem - waiting for new ESMF release', &
                          ESMF_LOGMSG_INFO,ESMF_CONTEXT)
+      endif
    end if
-   if (localrc == ESMF_SUCCESS) then
-#endif
-      call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask)
+
+   if (isPresent .and. localrc == ESMF_SUCCESS) then
+
+      call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
    else
       allocate(mask(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
@@ -445,7 +443,7 @@ module simplewave_component
 
         allocate(importList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
 
-        call ESMF_FieldEmptyComplete(field, importList(i)%data, ESMF_INDEX_DELOCAL, &
+        call ESMF_FieldEmptyComplete(field, importList(i)%data, &
                                      totalLWidth=int(exclusiveLBound-totalLBound),  &
                                      totalUWidth=int(totalUBound-exclusiveUBound),  &
                                      rc=localrc)
@@ -488,7 +486,7 @@ module simplewave_component
 
         allocate(exportList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
 
-        call ESMF_FieldEmptyComplete(field, exportList(i)%data, ESMF_INDEX_DELOCAL, &
+        call ESMF_FieldEmptyComplete(field, exportList(i)%data, &
                                      totalLWidth=int(exclusiveLBound-totalLBound),  &
                                      totalUWidth=int(totalUBound-exclusiveUBound),  &
                                      rc=localrc)
