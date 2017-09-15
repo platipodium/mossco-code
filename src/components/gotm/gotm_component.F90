@@ -167,6 +167,8 @@ module gotm_component
     use meanflow, only : gotm_v => v
     use meanflow, only: h
     use turbulence, only : gotm_tknu => num
+    use airsea, only : gotm_u10 => u10
+    use airsea, only : gotm_v10 => v10
 
     implicit none
 
@@ -326,7 +328,7 @@ module gotm_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     nexport_3d = 6
-    nexport_2d = 10
+    nexport_2d = 12
     allocate(exportFieldList(nexport_3d + nexport_2d))
 
     !> Create 3d export fields and add them to export state, allocate the space for these
@@ -342,7 +344,7 @@ module gotm_component
     export_variables_3d(3)%units="1E-3"
     export_variables_3d(4)%standard_name="downwelling_photosynthetic_radiative_flux"
     export_variables_3d(4)%units="W m-2"
-    export_variables_3d(5)%standard_name="x_velocity"
+    export_variables_3d(5)%standard_name="city"
     export_variables_3d(5)%units="m s-1"
     export_variables_3d(6)%standard_name="y_velocity"
     export_variables_3d(6)%units="m s-1"
@@ -401,7 +403,10 @@ module gotm_component
     export_variables_2d( 9)%units="W m-2"
     export_variables_2d(10)%standard_name="downwelling_photosynthetic_radiative_flux_at_soil_surface"
     export_variables_2d(10)%units="W m-2"
-
+    export_variables_2d(11)%standard_name="wind_x_velocity_at_10m"
+    export_variables_2d(11)%units="m s-1"
+    export_variables_2d(12)%standard_name="wind_y_velocity_at_10m"
+    export_variables_2d(12)%units="m s-1"
 
     allocate(variables_2d(farray_shape(1),farray_shape(2),nexport_2d))
 
@@ -416,7 +421,8 @@ module gotm_component
     variables_2d(1,1, 8) = gotm_tknu(1)
     variables_2d(1,1, 9) = gotm_radiation(nlev)
     variables_2d(1,1,10) = gotm_radiation(1)
-
+    variables_2d(1,1,11) = gotm_u10
+    variables_2d(1,1,12) = gotm_v10
 
     call ESMF_ArraySpecSet(arrayspec, rank=2, typekind=ESMF_TYPEKIND_R8, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -657,6 +663,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     use meanflow, only : gotm_u => u
     use meanflow, only : gotm_v => v
     use turbulence, only : gotm_tknu => num
+    use airsea, only : gotm_u10 => u10
+    use airsea, only : gotm_v10 => v10
+
 
     type(ESMF_GridComp)  :: gridComp
     type(ESMF_State)     :: importState, exportState
@@ -762,6 +771,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     variables_2d(1,1, 8) = gotm_tknu(1)
     variables_2d(1,1, 9) = gotm_radiation(nlev)
     variables_2d(1,1,10) = gotm_radiation(1)
+    variables_2d(1,1,11) = gotm_u10
+    variables_2d(1,1,12) = gotm_v10
 
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
