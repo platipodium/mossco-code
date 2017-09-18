@@ -671,7 +671,7 @@ module pelagic_soil_connector
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)               :: localrc, fieldCount
-    type(ESMF_Field), allocatable       :: fieldList(:)
+    type(ESMF_Field), allocatable       :: fieldList3(:), fieldList2(:)
     integer(ESMF_KIND_I4)               :: lbnd(3), ubnd(3), lbnd2(2), ubnd2(2)
     real(ESMF_KIND_R8), pointer         :: farrayPtr3(:,:,:), farrayPtr2(:,:)
     logical                             :: verbose_
@@ -684,7 +684,7 @@ module pelagic_soil_connector
     endif
     if (present(kwe)) verbose_ = verbose_
 
-    call MOSSCO_StateGet(importState, fieldList=fieldList, &
+    call MOSSCO_StateGet(importState, fieldList=fieldList3, &
       itemSearchList=importFieldList, fieldstatus=ESMF_FIELDSTATUS_COMPLETE, &
       fieldCount=fieldCount, verbose=verbose_, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -695,11 +695,7 @@ module pelagic_soil_connector
       return
     endif
 
-    call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr3, exclusiveUbound=ubnd, &
-      exclusiveLbound=lbnd, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    call MOSSCO_StateGet(exportState, fieldList=fieldList, &
+    call MOSSCO_StateGet(exportState, fieldList=fieldList2, &
       itemSearchList=exportFieldList, verbose=verbose_, &
       fieldCount=fieldCount, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -711,16 +707,10 @@ module pelagic_soil_connector
       return
     endif
 
-    !> @todo handle case where the export field is not complete, then add the
-    !> import grid and typekind, also check rank
-
-    call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr2, exclusiveUbound=ubnd2, &
-      exclusiveLbound=lbnd2, rc=localrc)
+    call MOSSCO_FieldReduce(fieldList3(1), fieldList2(1), indexmask=(/1/), &
+      owner='pelagic_soil_connector', rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    farrayPtr2(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2)) = farrayPtr3(RANGE2D,lbnd(3))
-
-    nullify(farrayPtr3)
     nullify(farrayPtr3)
 
   end subroutine MOSSCO_MapThreeDTwoD
