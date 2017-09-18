@@ -18,12 +18,17 @@
 
 #define RANGE2D lbnd(1):ubnd(1),lbnd(2):ubnd(2)
 #define RANGE3D lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)
+#define RANGE33D lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2),lbnd3(3):ubnd3(3)
+#define RANGE22D lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2)
+
+#define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 module mossco_field
 
   use mossco_memory
   use mossco_strings
   use mossco_attribute
+  use mossco_grid
   use esmf
 
   implicit none
@@ -1759,5 +1764,234 @@ end subroutine MOSSCO_FieldCopy
 
   end subroutine MOSSCO_FieldMatchFields
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_FieldReduce"
+  subroutine MOSSCO_FieldReduce(field3, field2, kwe, operator, indexmask, owner, rc)
+
+    type(ESMF_Field), intent(in)                  :: field3
+    type(ESMF_Field), intent(inout)               :: field2
+    type(ESMF_KeywordEnforcer), optional          :: kwe
+    integer(ESMF_KIND_I4),dimension(:), intent(in), optional :: indexmask
+    character(len=*), optional, intent(in)        :: operator
+    character(len=*), optional, intent(in)        :: owner
+    integer(ESMF_KIND_I4), intent(out), optional  :: rc
+
+    integer(ESMF_KIND_I4)           :: rc_, localrc, ubnd3(3), lbnd3(3), i
+    integer(ESMF_KIND_I4)           :: ubnd2(2), lbnd2(2), rank2, rank3
+    integer(ESMF_KIND_I4), allocatable  :: indexMask_(:)
+
+    type(ESMF_Grid)                 :: grid2, grid3
+    character(ESMF_MAXSTR)          :: name2, name3, message, operator_
+    real(ESMF_KIND_R8), pointer     :: farrayPtr2(:,:) => null()
+    real(ESMF_KIND_R8), pointer     :: farrayPtr3(:,:,:) => null()
+    real(ESMF_KIND_R8), pointer     :: layer_height(:,:,:) => null()
+    integer(ESMF_KIND_I4), pointer  :: mask3(:,:,:) => null()
+    real(ESMF_KIND_R8), allocatable :: weight(:,:,:), sum_weight(:,:)
+    logical                         :: isPresent
+    type(ESMF_StaggerLoc)           :: staggerloc
+
+    rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
+    if (present(kwe)) rc_ = rc_
+    if (present(indexMask)) then
+      allocate(indexMask_(size(indexMask)))
+      indexMask_ = indexMask
+    endif
+
+    if (present(operator)) then
+      operator_ = trim(operator)
+    elseif (.not.(present(indexMask))) then
+      operator_ = 'average'
+    endif
+
+    !> Obtain rank information and see whether it matches
+    call ESMF_FieldGet(field3, rank=rank3, name=name3, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (rank3 /= 3) then
+      if (present(owner)) then
+        write(message,'(A)') trim(owner)//' expected field to have rank 3. Skipped '
+      else
+        write(message,'(A)') '   expected field to have rank 3. Skipped '
+      endif
+      call MOSSCO_FieldString(field3, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      if (present(rc)) rc = ESMF_RC_ARG_INCOMP
+      return
+    endif
+
+    call ESMF_FieldGet(field2, rank=rank2, name=name2, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (rank2 /= 2) then
+      if (present(owner)) then
+        write(message,'(A)') trim(owner)//' expected field to have rank 2. Skipped '
+      else
+        write(message,'(A)') '   expected field to have rank 2. Skipped '
+      endif
+      call MOSSCO_FieldString(field2, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      if (present(rc)) rc = ESMF_RC_ARG_INCOMP
+      return
+    endif
+
+    !> Obtain bounds information
+    call ESMF_FieldGetBounds(field3, exclusiveLBound=lbnd3, &
+      exclusiveUbound=ubnd3, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    !> Obtain bounds information
+    call ESMF_FieldGetBounds(field2, exclusiveLBound=lbnd2, &
+      exclusiveUbound=ubnd2, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (any(ubnd3(1:2)-lbnd3(1:2)-(ubnd2(1:2)-lbnd2(1:2)) > 0)) then
+      if (present(owner)) then
+        write(message,'(A)') trim(owner)//' lateral bounds mismatch. Skipped '
+      else
+        write(message,'(A)') '   lateral bounds mismatch. Skipped  '
+      endif
+      call MOSSCO_FieldString(field3, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      if (present(rc)) rc = ESMF_RC_ARG_INCOMP
+      return
+    endif
+
+    !> Obtain staggerlocs
+    call ESMF_FieldGet(field2, staggerloc=staggerloc, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (.not. (staggerloc == ESMF_STAGGERLOC_CENTER)) then
+      if (present(owner)) then
+        write(message,'(A)') trim(owner)//' does not implement the stagger location in'
+      else
+        write(message,'(A)') '   does not implement the stagger location in '
+      endif
+      call MOSSCO_FieldString(field2, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      if (present(rc)) rc = ESMF_RC_ARG_INCOMP
+      return
+    endif
+
+    call ESMF_FieldGet(field3, staggerloc=staggerloc, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (.not. (staggerloc == ESMF_STAGGERLOC_CENTER .or. &
+      staggerloc == ESMF_STAGGERLOC_CENTER_VFACE)) then
+      if (present(owner)) then
+        write(message,'(A)') trim(owner)//' does not implement the stagger location in'
+      else
+        write(message,'(A)') '   does not implement the stagger location in '
+      endif
+      call MOSSCO_FieldString(field3, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      if (present(rc)) rc = ESMF_RC_ARG_INCOMP
+      return
+    endif
+
+    !> Obtain grid to identify masks
+    call ESMF_FieldGet(field3, grid=grid3, staggerloc=staggerloc, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_GridGetItem(grid3, ESMF_GRIDITEM_MASK, &
+      staggerloc=staggerloc, isPresent=isPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (isPresent) then
+      call ESMF_GridGetItem(grid3, ESMF_GRIDITEM_MASK, &
+      staggerloc=ESMF_STAGGERLOC_CENTER, farrayPtr=mask3, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    else
+      if (associated(mask3)) deallocate(mask3)
+      allocate(mask3(RANGE33D))
+      mask3(RANGE33D) = 1
+    endif
+
+    if (.not.allocated(indexMask_)) then
+      allocate(indexMask_(1:ubnd3(3)-lbnd3(3)+1))
+      indexMask_(:) = 1
+    endif
+
+    do i=1, ubnd3(3)-lbnd3(3)+1
+      if (indexMask_(i) == 0) mask3(RANGE22D,lbnd3(3)-1+i) = 0
+    enddo
+
+    if (operator_ == 'average' .or. operator_ == 'total') then
+      !> The weight is generated from layer height
+      call MOSSCO_GridGetDepth(grid3, height=layer_height, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
+    !> Calculate the weight for weighted averages
+    if (operator_ == 'average') then
+      if (allocated(weight)) deallocate(weight)
+      allocate(weight(RANGE33D), stat=localrc)
+      weight(RANGE33D) = 0.0
+
+      if (allocated(sum_weight)) deallocate(sum_weight)
+      allocate(sum_weight(RANGE22D), stat=localrc)
+      sum_weight(RANGE22D) = 0.0
+
+      sum_weight(RANGE22D) = sum(layer_height(RANGE33D), dim=3, mask=(mask3(RANGE33D)>0))
+
+      do i = lbnd3(3), ubnd3(3)
+        where (layer_height(RANGE22D,i) > 0)
+          weight(RANGE22D,i) = layer_height(RANGE22D,i)/sum_weight(RANGE22D)
+        endwhere
+      enddo
+    endif
+
+    call ESMF_FieldGet(field3, farrayPtr=farrayPtr3, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_FieldGet(field2, farrayPtr=farrayPtr2, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    select case(trim(operator))
+    case ('total')
+        farrayPtr2(RANGE22D) = &
+          sum(farrayPtr3(RANGE33D) * layer_height(RANGE33D), dim=3, mask=(mask3(RANGE33D)>0))
+
+    case ('average')
+      farrayPtr2(RANGE22D) = &
+        sum(farrayPtr3(RANGE33D) * weight(RANGE33D), dim=3, mask=(mask3(RANGE33D)>0))
+
+    case ('minimum' )
+      call ESMF_LogWrite('FR:',ESMF_LOGMSG_INFO,ESMF_CONTEXT)
+      farrayPtr2(RANGE22D) = -maxval(-farrayPtr3(RANGE33D), dim=3, mask=(mask3(RANGE33D)>0))
+
+      write(message,'(ES10.3,X,ES10.3)') maxval(farrayPtr3(RANGE33D),mask=(mask3(RANGE33D)>0)),minval(farrayPtr3(RANGE33D),mask=(mask3(RANGE33D)>0))
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO,ESMF_CONTEXT)
+
+    case ('maximum' )
+      farrayPtr2(RANGE22D) = maxval(farrayPtr3(RANGE33D), dim=3, mask=(mask3(RANGE33D)>0))
+      write(message,'(ES10.3,X,ES10.3)') maxval(farrayPtr3(RANGE33D),mask=(mask3(RANGE33D)>0)),minval(farrayPtr3(RANGE33D),mask=(mask3(RANGE33D)>0))
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO,ESMF_CONTEXT)
+
+    case default
+      rc = ESMF_RC_NOT_IMPL
+      call ESMF_LogWrite('   operator '//trim(operator)//' not implemented', ESMF_LOGMSG_ERROR)
+      return
+    end select
+
+  !if (advanceCount < 2) then
+    if (present(owner)) then
+      write(message,'(A)') trim(owner)//' reduced '
+    else
+      write(message,'(A)') '   reduced '
+    endif
+    call MOSSCO_FieldString(field3, message)
+    call MOSSCO_MessageAdd(message,' to ')
+    call MOSSCO_FieldString(field2, message)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+  !endif
+
+    if (allocated(weight)) deallocate(weight)
+    nullify(layer_height)
+    nullify(mask3)
+    nullify(farrayPtr3)
+    nullify(farrayPtr2)
+
+  end subroutine MOSSCO_FieldReduce
 
 end module mossco_field
