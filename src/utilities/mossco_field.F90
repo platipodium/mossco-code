@@ -1913,7 +1913,7 @@ end subroutine MOSSCO_FieldCopy
     endif
 
     do i=1, ubnd3(3)-lbnd3(3)+1
-      if (indexMask_(i) == 0) mask3(RANGE22D,lbnd3(3)-1+i) = 0
+      if (.not.any(indexMask_ == i)) mask3(RANGE22D,lbnd3(3)-1+i) = 0
     enddo
 
     if (operator_ == 'average' .or. operator_ == 'total') then
