@@ -344,7 +344,7 @@ module gotm_component
     export_variables_3d(3)%units="1E-3"
     export_variables_3d(4)%standard_name="downwelling_photosynthetic_radiative_flux"
     export_variables_3d(4)%units="W m-2"
-    export_variables_3d(5)%standard_name="city"
+    export_variables_3d(5)%standard_name="x_velocity"
     export_variables_3d(5)%units="m s-1"
     export_variables_3d(6)%standard_name="y_velocity"
     export_variables_3d(6)%units="m s-1"
@@ -357,11 +357,19 @@ module gotm_component
     do k=1,nexport_3d
       export_variables_3d(k)%creator='gotm'
       farrayPtr => variables_3d(:,:,:,k)
-      exportFieldList(k) = ESMF_FieldCreate(grid, farrayPtr=farrayPtr, name=trim(export_variables_3d(k)%standard_name)//'_in_water', &
-        staggerloc=ESMF_STAGGERLOC_CENTER, &
-        totalLWidth=(/0,0,1/), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (k==4) then
+         exportFieldList(k) = ESMF_FieldCreate(grid, farrayPtr=farrayPtr, name=trim(export_variables_3d(k)%standard_name)//'_in_water', &
+           staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
+           totalLWidth=(/0,0,0/), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      else
+         exportFieldList(k) = ESMF_FieldCreate(grid, farrayPtr=farrayPtr, name=trim(export_variables_3d(k)%standard_name)//'_in_water', &
+           staggerloc=ESMF_STAGGERLOC_CENTER, &
+           totalLWidth=(/0,0,1/), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
       call ESMF_StateAddReplace(exportState,(/exportFieldList(k)/),rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -419,8 +427,8 @@ module gotm_component
     variables_2d(1,1, 6) = variables_3d(1,1,1,6)
     variables_2d(1,1, 7) = variables_3d(1,1,1,1)
     variables_2d(1,1, 8) = gotm_tknu(1)
-    variables_2d(1,1, 9) = gotm_radiation(nlev)
-    variables_2d(1,1,10) = gotm_radiation(1)
+    variables_2d(1,1, 9) = gotm_radiation(nlev) ! @gotm/temperature.F90: rad(nlev)=I_0               ! at watersurface
+    variables_2d(1,1,10) = gotm_radiation(0)    ! @gotm/temperature.F90: rad(0)=I_O*A*exp(-sum(h)/g) ! at soilsurface
     variables_2d(1,1,11) = gotm_u10
     variables_2d(1,1,12) = gotm_v10
 
@@ -769,8 +777,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     variables_2d(1,1, 6) = variables_3d(1,1,1,6)
     variables_2d(1,1, 7) = variables_3d(1,1,1,1)
     variables_2d(1,1, 8) = gotm_tknu(1)
-    variables_2d(1,1, 9) = gotm_radiation(nlev)
-    variables_2d(1,1,10) = gotm_radiation(1)
+    variables_2d(1,1, 9) = gotm_radiation(nlev) ! @gotm/temperature.F90: rad(nlev)=I_0               ! at watersurface
+    variables_2d(1,1,10) = gotm_radiation(0)    ! @gotm/temperature.F90: rad(0)=I_O*A*exp(-sum(h)/g) ! at soilsurface
     variables_2d(1,1,11) = gotm_u10
     variables_2d(1,1,12) = gotm_v10
 
