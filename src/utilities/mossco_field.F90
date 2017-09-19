@@ -1785,6 +1785,7 @@ end subroutine MOSSCO_FieldCopy
     real(ESMF_KIND_R8), pointer     :: farrayPtr2(:,:) => null()
     real(ESMF_KIND_R8), pointer     :: farrayPtr3(:,:,:) => null()
     real(ESMF_KIND_R8), pointer     :: layer_height(:,:,:) => null()
+    real(ESMF_KIND_R8), pointer     :: interface_depth(:,:,:) => null()
     integer(ESMF_KIND_I4), pointer  :: mask3(:,:,:) => null()
     real(ESMF_KIND_R8), allocatable :: weight(:,:,:), sum_weight(:,:)
     logical                         :: isPresent
@@ -1896,7 +1897,7 @@ end subroutine MOSSCO_FieldCopy
 
     if (isPresent) then
       call ESMF_GridGetItem(grid3, ESMF_GRIDITEM_MASK, &
-      staggerloc=ESMF_STAGGERLOC_CENTER, farrayPtr=mask3, rc=localrc)
+      staggerloc=staggerloc, farrayPtr=mask3, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     else
       if (associated(mask3)) deallocate(mask3)
@@ -1913,27 +1914,47 @@ end subroutine MOSSCO_FieldCopy
       if (.not.any(indexMask_ == i)) mask3(RANGE22D,lbnd3(3)-1+i) = 0
     enddo
 
+    !> Allocate weight field for averaging/totalling
     if (operator_ == 'average' .or. operator_ == 'total') then
-      !> The weight is generated from layer height
-      call MOSSCO_GridGetDepth(grid3, height=layer_height, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-    endif
-
-    !> Calculate the weight for weighted averages
-    if (operator_ == 'average') then
       if (allocated(weight)) deallocate(weight)
       allocate(weight(RANGE33D), stat=localrc)
-      weight(RANGE33D) = 0.0
+      weight(RANGE33D) = 1.0 ! default for totalling
+    endif
+
+    !> Change the weight with vertical resolution
+    if (operator == 'average') then
+
+      call MOSSCO_GridGetDepth(grid3, height=layer_height, &
+        interface=interface_depth, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       if (allocated(sum_weight)) deallocate(sum_weight)
       allocate(sum_weight(RANGE22D), stat=localrc)
       sum_weight(RANGE22D) = 0.0
 
-      sum_weight(RANGE22D) = sum(layer_height(RANGE33D), dim=3, mask=(mask3(RANGE33D)>0))
+      if (staggerloc == ESMF_STAGGERLOC_CENTER) then
+        do i = lbnd3(3), ubnd3(3)
+          where (layer_height(RANGE22D,i) > 0)
+            weight(RANGE22D,i) = layer_height(RANGE22D,i)
+          endwhere
+        enddo
+        sum_weight(RANGE22D) = sum(weight, dim=3, mask=mask3(RANGE33D)>0)
 
+      elseif (staggerloc == ESMF_STAGGERLOC_CENTER_VFACE) then
+        weight(RANGE22D,lbnd3(3)) = 0.5*interface_depth(RANGE22D,lbnd3(3)+1)
+        do i = lbnd3(3)+1, ubnd3(3)-1
+          weight(RANGE22D,i) = 0.5*(interface_depth(RANGE22D,lbnd3(3)+i+1)-interface_depth(RANGE22D,lbnd3(3)+i-1))
+        enddo
+        weight(RANGE22D,ubnd3(3)) = 0.5*(interface_depth(RANGE22D,ubnd3(3))-interface_depth(RANGE22D,ubnd3(3)-1))
+        sum_weight(RANGE22D) = sum(weight, dim=3, mask=mask3(RANGE33D)>0)
+      else
+        if (present(rc)) rc = ESMF_RC_NOT_IMPL
+        call ESMF_LogWrite('   operator '//trim(operator_)//' not implemented', ESMF_LOGMSG_ERROR)
+        return
+      endif
       do i = lbnd3(3), ubnd3(3)
-        where (layer_height(RANGE22D,i) > 0)
-          weight(RANGE22D,i) = layer_height(RANGE22D,i)/sum_weight(RANGE22D)
+        where(sum_weight(RANGE22D) > 0)
+          weight(RANGE22D,i) = weight(RANGE22D,i)/sum_weight(RANGE22D)
         endwhere
       enddo
     endif
@@ -1966,7 +1987,7 @@ end subroutine MOSSCO_FieldCopy
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO,ESMF_CONTEXT)
 
     case default
-      rc = ESMF_RC_NOT_IMPL
+      if (present(rc)) rc = ESMF_RC_NOT_IMPL
       call ESMF_LogWrite('   operator '//trim(operator_)//' not implemented', ESMF_LOGMSG_ERROR)
       return
     end select
