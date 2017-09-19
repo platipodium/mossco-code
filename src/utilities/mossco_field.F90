@@ -1766,15 +1766,15 @@ end subroutine MOSSCO_FieldCopy
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_FieldReduce"
-  subroutine MOSSCO_FieldReduce(field3, field2, kwe, operator, indexmask, owner, rc)
+  subroutine MOSSCO_FieldReduce(field3, field2, kwe, indexmask, operator, owner, rc)
 
-    type(ESMF_Field), intent(in)                  :: field3
-    type(ESMF_Field), intent(inout)               :: field2
-    type(ESMF_KeywordEnforcer), optional          :: kwe
-    integer(ESMF_KIND_I4),dimension(:), intent(in), optional :: indexmask
-    character(len=*), optional, intent(in)        :: operator
-    character(len=*), optional, intent(in)        :: owner
-    integer(ESMF_KIND_I4), intent(out), optional  :: rc
+    type(ESMF_Field),                   intent(in)            :: field3
+    type(ESMF_Field),                   intent(inout)         :: field2
+    type(ESMF_KeywordEnforcer),         intent(in),  optional :: kwe
+    integer(ESMF_KIND_I4),dimension(:), intent(in),  optional :: indexmask
+    character(len=*),                   intent(in),  optional :: operator
+    character(len=*),                   intent(in),  optional :: owner
+    integer(ESMF_KIND_I4),              intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)           :: rc_, localrc, ubnd3(3), lbnd3(3), i
     integer(ESMF_KIND_I4)           :: ubnd2(2), lbnd2(2), rank2, rank3
@@ -1798,11 +1798,8 @@ end subroutine MOSSCO_FieldCopy
       indexMask_ = indexMask
     endif
 
-    if (present(operator)) then
-      operator_ = trim(operator)
-    elseif (.not.(present(indexMask))) then
-      operator_ = 'average'
-    endif
+    operator_ = 'average' ! set default operator
+    if (present(operator)) operator_ = trim(operator)
 
     !> Obtain rank information and see whether it matches
     call ESMF_FieldGet(field3, rank=rank3, name=name3, rc=localrc)
@@ -1947,7 +1944,7 @@ end subroutine MOSSCO_FieldCopy
     call ESMF_FieldGet(field2, farrayPtr=farrayPtr2, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    select case(trim(operator))
+    select case(trim(operator_))
     case ('total')
         farrayPtr2(RANGE22D) = &
           sum(farrayPtr3(RANGE33D) * layer_height(RANGE33D), dim=3, mask=(mask3(RANGE33D)>0))
@@ -1970,7 +1967,7 @@ end subroutine MOSSCO_FieldCopy
 
     case default
       rc = ESMF_RC_NOT_IMPL
-      call ESMF_LogWrite('   operator '//trim(operator)//' not implemented', ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite('   operator '//trim(operator_)//' not implemented', ESMF_LOGMSG_ERROR)
       return
     end select
 
