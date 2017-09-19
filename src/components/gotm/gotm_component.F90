@@ -385,6 +385,7 @@ module gotm_component
       variables_3d(:,:,k,5) = gotm_u(k)
       variables_3d(:,:,k,6) = gotm_v(k)
     end do
+    variables_3d(:,:,0,4) = gotm_radiation(0)
 
     !> Create 2d export fields and add them to export state, allocate the space for these
     !> that will be filled later with data, copying of data is necessary to provide 2d fields
@@ -767,6 +768,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       variables_3d(:,:,k,5) = gotm_u(k)
       variables_3d(:,:,k,6) = gotm_v(k)
     end do
+    variables_3d(:,:,0,4) = gotm_radiation(0)
 
     !!> @todo bound checking and not restricting to 1 column in the following calls
     variables_2d(1,1, 1) = sum(variables_3d(1,1,:,2))
