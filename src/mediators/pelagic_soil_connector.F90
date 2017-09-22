@@ -210,6 +210,7 @@ module pelagic_soil_connector
     integer(ESMF_KIND_I8)       :: advanceCount
     logical                     :: verbose=.true.
     type(ESMF_Field), allocatable :: fieldList(:)
+    character(len=ESMF_MAXSTR), pointer :: includeList(:) => null()
 
     rc = ESMF_SUCCESS
 
@@ -461,12 +462,14 @@ module pelagic_soil_connector
       if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     endif
 
-    call MOSSCO_StateGet(importState, fieldList, itemSearchList= (/ &
-    'nutrients_in_water                            ', &
-    'DIN_in_water                                  ', &
-    'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water'/), &
+    allocate(includeList(3))
+    includeList(1) = 'nutrients_in_water'
+    includeList(2) = 'DIN_in_water'
+    includeList(3) = 'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water'
+    call MOSSCO_StateGet(importState, fieldList, include=includeList, &
       fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    deallocate(includeList)
 
     if (fieldCount > 0) then
       hasDIN = .true.

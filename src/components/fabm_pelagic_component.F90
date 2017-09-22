@@ -1253,6 +1253,7 @@ module fabm_pelagic_component
     integer, intent(out)  :: rc
 
     type(ESMF_Field), allocatable  :: fieldList(:)
+    character(len=ESMF_MAXSTR), pointer :: nameList(:) => null()
     type(ESMF_Time)            :: currTime
     character(len=ESMF_MAXSTR) :: message, name
     integer(ESMF_KIND_I4)      :: localrc, fieldCount
@@ -1269,11 +1270,13 @@ module fabm_pelagic_component
     !call ReadRestart(gridComp, importState, exportState, parentClock, rc=localrc)
 
     !> get volume_flux pointer
-    call MOSSCO_StateGetFieldList(importState, fieldList, itemSearch='volume_flux_in_water', &
+    allocate(nameList(1))
+    nameList(1) = 'volume_flux_in_water'
+    call MOSSCO_StateGetFieldList(importState, fieldList, include=nameList, &
       fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    if (fieldCount == 1) then
+    if (fieldCount > 0) then
       call ESMF_FieldGet(fieldList(1), farrayPtr=pel%volume_flux, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
