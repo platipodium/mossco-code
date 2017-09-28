@@ -1536,6 +1536,7 @@ module fabm_sediment_component
       endif
     endif
 
+    if (sed%bcup_dissolved_variables .gt. 0) then
     do i=1,sed%nvar
       if (sed%model%state_variables(i)%standard_variable%name/='') then
         varname = &
@@ -1564,9 +1565,8 @@ module fabm_sediment_component
         if (sed%model%state_variables(i)%properties%get_logical( &
             'particulate',default=.false.)) then
           !write(0,*) 'try to get ',trim(varname)//'_z_velocity'
-          call ESMF_StateGet(importState,trim(varname)//'_z_velocity_at_soil_surface', &
-                             vs_field,rc=localrc)
-                             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          call ESMF_StateGet(importState,trim(varname)//'_z_velocity_at_soil_surface', vs_field,rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           if (sed%grid%use_ugrid) then
             call ESMF_FieldGet(field,farrayPtr=fluxmesh_ptr,rc=localrc)
@@ -1621,9 +1621,8 @@ module fabm_sediment_component
 #endif
         endif
       endif
-
-
     enddo
+    endif !if (sed%bcup_dissolved_variables .gt. 0)
 
   end subroutine get_boundary_conditions
 
