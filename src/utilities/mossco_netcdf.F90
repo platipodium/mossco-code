@@ -57,6 +57,8 @@ module mossco_netcdf
 
     character(len=ESMF_MAXSTR) :: name, timeUnit
     type(type_mossco_netcdf_variable), pointer, dimension(:) :: variables
+
+
     contains
     procedure :: close => mossco_netcdf_close
     procedure :: add_timestep => mossco_netcdf_add_timestep
@@ -80,6 +82,11 @@ module mossco_netcdf
     procedure :: timeIndex => mossco_netcdf_find_time_index
     procedure :: timeGet => MOSSCO_NcGetTime
     procedure :: getatt => mossco_netcdf_var_get_att
+    procedure :: putattstring => MOSSCO_NcPutAttString
+    procedure :: putattint => MOSSCO_NcPutAttInt
+    procedure :: putattdouble => MOSSCO_NcPutAttDouble
+    procedure :: putattfloat => MOSSCO_NcPutAttFloat
+
   end type type_mossco_netcdf
 
   integer, parameter :: MOSSCO_NC_ERROR=-1
@@ -748,7 +755,7 @@ module mossco_netcdf
       do i=ubound(dimids,1)-3,1,-1
         write(coordinates,'(A)') trim(coordinates)//' '//trim(geomName)//'_'//trim(coordnames(i))
       enddo
-      write(0,*) 'COORD', trim(coordinates)
+      !write(0,*) 'COORD', trim(coordinates)
     endif
 
     !! define variable
@@ -906,11 +913,12 @@ module mossco_netcdf
         call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot define variable '//trim(varname),ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
-      ncStatus = nf90_put_att(self%ncid,varid,'mossco_name','persistent_execution_thread')
+      call self%putattstring(varid,'mossco_name','persistent_execution_thread', rc=localrc)
       ncStatus = nf90_put_att(self%ncid,varid,'long_name','persistent execution thread')
       ncStatus = nf90_put_att(self%ncid,varid,'coordinates',trim(coordinates))
       ncStatus = nf90_put_att(self%ncid,varid,'units','1')
       ncStatus = nf90_put_att(self%ncid,varid,'missing_value',-1)
+      ncStatus = nf90_put_att(self%ncid,varid,'valid_min',0)
       ncStatus = nf90_put_att(self%ncid,varid,'_FillValue',-1)
 
       call ESMF_VMGetGlobal(vm=vm, rc=localrc)
@@ -1850,27 +1858,10 @@ module mossco_netcdf
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
     endif
 
-    localrc = nf90_put_att(self%ncid, varid, 'units', '1')
-    if (localrc /= NF90_NOERR) then
-      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot put attribute in file '//trim(self%name), ESMF_LOGMSG_ERROR)
-      if (present(rc)) then
-        rc = ESMF_RC_FILE_WRITE
-        return
-      else
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
-    endif
-
-    localrc = nf90_put_att(self%ncid, varid, 'mossco_name', 'speedup')
-    if (localrc /= NF90_NOERR) then
-      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot put attribute in file '//trim(self%name), ESMF_LOGMSG_ERROR)
-      if (present(rc)) then
-        rc = ESMF_RC_FILE_WRITE
-        return
-      else
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
-    endif
+    call self%putattstring(varid, 'units', '1', rc=localrc)
+    call self%putattstring(varid, 'mossco_name', 'speedup', rc=localrc)
+    call self%putattfloat(varid, 'valid_min', 0.0, rc=localrc)
+    call self%putattfloat(varid, 'missing_value', -1E30, rc=localrc)
 
     localrc = nf90_def_var(self%ncid, 'elapsed_wallclock_time', NF90_DOUBLE, (/self%timeDimId/), varid)
     if (localrc==NF90_ENAMEINUSE) then
@@ -3536,32 +3527,24 @@ module mossco_netcdf
     implicit none
     class(type_mossco_netcdf)                    :: self
     integer(ESMF_KIND_I4), intent(out), optional :: rc
-    character(len=ESMF_MAXSTR)                   :: refTimeISOString
+    character(len=*), intent(out)                :: refTimeISOString
 
-    integer(ESMF_KIND_I4)                        :: i, rc_, itime_, localrc, varid
-    character(ESMF_MAXSTR)                       :: timeUnit
+    integer(ESMF_KIND_I4)                        :: i, rc_, localrc
+    type(ESMF_Time)                              :: refTime
 
     rc_ = ESMF_SUCCESS
 
-    localrc = nf90_inq_varid(self%ncid, 'time', varid)
-    if (localrc /= NF90_NOERR) then
-      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', no time variable for reference time', ESMF_LOGMSG_INFO)
-      if (present(rc)) rc=ESMF_RC_NOT_FOUND
-      return
-    endif
+    call mossco_netcdf_reftime(self, refTime, localrc)
+    if (localrc == ESMF_SUCCESS) then
 
-    localrc = nf90_get_att(self%ncid, varid, 'units', timeUnit)
-    if (localrc /= NF90_NOERR) then
-      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', no time unit for reference time', ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    endif
+      call ESMF_TimeGet(refTime, timeStringISOFrac=refTimeISOString, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    i=index(timeunit,'since ')
-    if (i<1) then
-      call ESMF_LogWrite('  no reference time given in unit '//trim(timeUnit), ESMF_LOGMSG_WARNING)
-      refTimeISOString=''
+    elseif (localrc == ESMF_RC_NOT_FOUND) then
+      rc_ = localrc
+      refTimeISOString = ''
     else
-      reftimeISOString=timeunit(i+6:len_trim(timeunit))
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
 
     if (present(rc)) rc=rc_
@@ -3578,7 +3561,7 @@ module mossco_netcdf
     type(ESMF_Time), intent(out)                 :: refTime
 
     integer(ESMF_KIND_I4)                        :: i, rc_, itime_, localrc, varid
-    character(ESMF_MAXSTR)                       :: timeUnit
+    character(ESMF_MAXSTR)                       :: timeUnit, ISOString
 
     rc_ = ESMF_SUCCESS
 
@@ -3603,12 +3586,17 @@ module mossco_netcdf
       return
     endif
 
+    timeunit = timeunit(i+6:len_trim(timeunit))
+    ! Make sure that this is in ISO format, i.e. YYYY-MM-DDThh:mm:ss
+    ! Some implementations do not write 4 (or 2) digits single digit components.
+    call timeString2ISOTimeString('2003-05-06T05:03', ISOString, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
     !> @todo consider "climatological month" as possible unit, and have a look at
     !> CF conventions on their climatological time handling.
 
-    call MOSSCO_TimeSet(refTime, timeunit(i+6:len_trim(timeunit)), localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call MOSSCO_TimeSet(refTime, ISOString, localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (present(rc)) rc=rc_
 
@@ -4363,5 +4351,113 @@ module mossco_netcdf
 
   end subroutine create
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_NcPutAttString"
+  subroutine MOSSCO_NcPutAttString(self, varid, key, value, kwe, rc)
+
+    class(type_mossco_netcdf)                           :: self
+    integer, intent(in)                                 :: varid
+    character(len=*), intent(in)                        :: key, value
+    type(ESMF_KeyWordEnforcer), optional, intent(in)    :: kwe
+    integer(ESMF_KIND_I4), intent(out), optional        :: rc
+
+    integer(ESMF_KIND_I4)                  :: localrc, rc_
+
+    rc_ = ESMF_SUCCESS
+
+    localrc = nf90_put_att(self%ncid, varid, trim(key), trim(value))
+    if (localrc /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc)), ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite('   cannot write attribute "'//trim(key)//'"="'//trim(value) &
+        //'" to file "'//trim(self%name)//'"', ESMF_LOGMSG_ERROR)
+      rc_ = ESMF_RC_FILE_WRITE
+    endif
+
+    if (present(rc)) rc = rc_
+  end subroutine MOSSCO_NcPutAttString
+
+#undef ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_NcPutAttInt"
+  subroutine MOSSCO_NcPutAttInt(self, varid, key, value, kwe, rc)
+
+    class(type_mossco_netcdf)                           :: self
+    integer, intent(in)                                 :: varid
+    character(len=*), intent(in)                        :: key
+    integer(ESMF_KIND_I4)                               :: value
+    type(ESMF_KeyWordEnforcer), optional, intent(in)    :: kwe
+    integer(ESMF_KIND_I4), intent(out), optional        :: rc
+
+    integer(ESMF_KIND_I4)                  :: localrc, rc_
+    character(len=ESMF_MAXSTR)             :: message
+
+    rc_ = ESMF_SUCCESS
+
+    localrc = nf90_put_att(self%ncid, varid, trim(key), value)
+    if (localrc /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc)), ESMF_LOGMSG_ERROR)
+      write(message,'(A,ES9.3,A)') '   cannot write attribute "'//trim(key)//'"="', &
+        value,'" to file "'//trim(self%name)//'"'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      rc_ = ESMF_RC_FILE_WRITE
+    endif
+
+    if (present(rc)) rc = rc_
+  end subroutine MOSSCO_NcPutAttInt
+
+#undef ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_NcPutAttDouble"
+    subroutine MOSSCO_NcPutAttDouble(self, varid, key, value, kwe, rc)
+
+      class(type_mossco_netcdf)                           :: self
+      integer, intent(in)                                 :: varid
+      character(len=*), intent(in)                        :: key
+      real(ESMF_KIND_R8)                                  :: value
+      type(ESMF_KeyWordEnforcer), optional, intent(in)    :: kwe
+      integer(ESMF_KIND_I4), intent(out), optional        :: rc
+
+      integer(ESMF_KIND_I4)                  :: localrc, rc_
+      character(len=ESMF_MAXSTR)             :: message
+
+      rc_ = ESMF_SUCCESS
+
+      localrc = nf90_put_att(self%ncid, varid, trim(key), value)
+      if (localrc /= NF90_NOERR) then
+        call ESMF_LogWrite('  '//trim(nf90_strerror(localrc)), ESMF_LOGMSG_ERROR)
+        write(message,'(A,ES9.3,A)') '   cannot write attribute "'//trim(key)//'"="', &
+          value,'" to file "'//trim(self%name)//'"'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        rc_ = ESMF_RC_FILE_WRITE
+      endif
+
+      if (present(rc)) rc = rc_
+    end subroutine MOSSCO_NcPutAttDouble
+
+#undef ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_NcPutAttFloat"
+  subroutine MOSSCO_NcPutAttFloat(self, varid, key, value, kwe, rc)
+
+    class(type_mossco_netcdf)                           :: self
+    integer, intent(in)                                 :: varid
+    character(len=*), intent(in)                        :: key
+    real(ESMF_KIND_R4)                                  :: value
+    type(ESMF_KeyWordEnforcer), optional, intent(in)    :: kwe
+    integer(ESMF_KIND_I4), intent(out), optional        :: rc
+
+    integer(ESMF_KIND_I4)                  :: localrc, rc_
+    character(len=ESMF_MAXSTR)             :: message
+
+    rc_ = ESMF_SUCCESS
+
+    localrc = nf90_put_att(self%ncid, varid, trim(key), value)
+    if (localrc /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc)), ESMF_LOGMSG_ERROR)
+      write(message,'(A,ES9.3,A)') '   cannot write attribute "'//trim(key)//'"="', &
+        value,'" to file "'//trim(self%name)//'"'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      rc_ = ESMF_RC_FILE_WRITE
+    endif
+
+    if (present(rc)) rc = rc_
+  end subroutine MOSSCO_NcPutAttFloat
 
 end module

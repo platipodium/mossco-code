@@ -447,6 +447,12 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         exclude=filterExcludeList, verbose=verbose, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+    if (ubound(fieldList,1) /= fieldCount) then
+      write(0,*) fieldCount, shape(fieldList), lbound(fieldList,1), ubound(fieldList,1)
+      localrc = ESMF_RC_ARG_OUTOFRANGE
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    endif
+
     do i=1, fieldCount
 
       call ESMF_FieldGet(fieldList(i), name=fieldName, rc=localrc)

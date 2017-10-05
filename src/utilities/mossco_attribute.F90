@@ -31,10 +31,10 @@ public MOSSCO_AttributeGet, MOSSCO_AttributeSet
 !> types
 interface MOSSCO_AttributeSet
   module procedure MOSSCO_StateAttributeSetLogical
-  module procedure MOSSCO_StateAttributeSetList1
+  !module procedure MOSSCO_StateAttributeSetList1
   module procedure MOSSCO_StateAttributeSetList2
   module procedure MOSSCO_StateAttributeSetInt4List1
-  module procedure MOSSCO_CplCompAttributeSetList1
+  !module procedure MOSSCO_CplCompAttributeSetList1
   module procedure MOSSCO_CplCompAttributeSetStringListPtr
   module procedure MOSSCO_StateAttributeSetStringListPtr
   module procedure MOSSCO_CplCompAttributeSetList2

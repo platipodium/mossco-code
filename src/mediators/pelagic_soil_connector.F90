@@ -210,50 +210,44 @@ module pelagic_soil_connector
     integer(ESMF_KIND_I8)       :: advanceCount
     logical                     :: verbose=.true.
     type(ESMF_Field), allocatable :: fieldList(:)
+    character(len=ESMF_MAXSTR), pointer :: includeList(:) => null()
 
     rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_ClockGet(externalClock, advanceCount=advanceCount, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (advanceCount > 0) verbose=.false.
-    !> fdet + sdet = CN_det*det
-    !> NC_ldet*fdet + NC_sdet*sdet = det
-    !> fdet = fac_fdet*det
-    !> sdet = fac_sdet*det
 
-    ! Transfer water temperature from pelagic 3D import to a soil surface 2D
-    ! export
-    !>@TODO Carsten: Was passiert, wenn wir kein PAR haben?
-    call mossco_state_get(importState, (/'photosynthetically_active_radiation_in_water'/),  &
-      ptr_f3, lbnd=lbnd, ubnd=ubnd, verbose=verbose, rc=localrc)
-    if (localrc == ESMF_SUCCESS) then
-      call mossco_state_get(exportState,(/'photosynthetically_active_radiation_at_soil_surface'/), &
-        ptr_f2,verbose=verbose, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
-      ptr_f2 = ptr_f3(RANGE2D,lbnd(3)) !>@TODO: eine halbe schicht tiefer gehen, damit man das Licht "at soil surface" bekommt
-      nullify(ptr_f2)
-    end if
-    nullify(ptr_f3)
+    !> Try to obtain (optional) hydrodynamic pelagic 3D variables and map their
+    !> lowest layer to the surface layer
+    call MOSSCO_MapThreeDTwoD(importState, &
+      (/'photosynthetically_active_radiation_in_water      ',   &
+        'downwelling_photosynthetic_radiative_flux_in_water'/), &
+        exportState, (/'photosynthetically_active_radiation_at_soil_surface'/), &
+        verbose=verbose, rc=localrc)
+    if (localrc /= ESMF_RC_NOT_FOUND) then
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    endif
 
-    ! Transfer water temperature from pelagic 3D import to a soil surface 2D
-    ! export
-    call mossco_state_get(importState, (/'temperature_in_water'/), ptr_f3, &
-      lbnd=lbnd, ubnd=ubnd, verbose=verbose, rc=localrc)
-    if (localrc == ESMF_SUCCESS) then
-      call mossco_state_get(exportState,(/'temperature_at_soil_surface'/), &
-        ptr_f2,verbose=verbose, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    call MOSSCO_MapThreeDTwoD(importState, (/'temperature_in_water'/), &
+      exportState, (/'temperature_at_soil_surface'/), verbose=verbose, rc=localrc)
+    if (localrc /= ESMF_RC_NOT_FOUND) then
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    endif
 
-      ptr_f2 = ptr_f3(RANGE2D,lbnd(3))
-      nullify(ptr_f2)
-    end if
-    nullify(ptr_f3)
+    call MOSSCO_MapThreeDTwoD(importState, (/'practical_salinity_in_water', &
+                                             'salinity_in_water          '/), &
+        exportState, (/'practical_salinity_at_soil_surface'/), verbose=verbose, rc=localrc)
+    if (localrc /= ESMF_RC_NOT_FOUND) then
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    endif
 
-    ! dissolved_oxygen:
+    !> Get oxygen, both positive and negative (odu), and transfer it to the
+    !> soil surface (optional )
     call mossco_state_get(importState,(/ &
         'concentration_of_dissolved_oxygen_in_water', &
         'oxygen_in_water                           ', &
@@ -297,12 +291,20 @@ module pelagic_soil_connector
     end if
     nullify(ptr_f3)
 
-      !   Det flux:
+    !> Get detritus and transfer it to the
+    !> soil surface (optional), if not found, then skip the rest of
+    !> this routine (@todo for now)
     call mossco_state_get(importState,(/ &
       'detritus_in_water              ', &
       'detN_in_water                  ', &
       'Detritus_Nitrogen_detN_in_water'/), &
       DETN,lbnd=lbnd,ubnd=ubnd, verbose=verbose, rc=localrc)
+
+    if (localrc == ESMF_RC_NOT_FOUND) then
+      call MOSSCO_CompExit(cplComp, localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+      return
+    endif
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
 #if DEBUG
@@ -352,6 +354,11 @@ module pelagic_soil_connector
     fac_fdet = (1.0d0-NC_sdet*CN_det)/(NC_ldet-NC_sdet)
 
 ! dirty=non-mass-conserving fix added by kw against unphysical partitioning
+
+!> fdet + sdet = CN_det*det
+!> NC_ldet*fdet + NC_sdet*sdet = det
+!> fdet = fac_fdet*det
+!> sdet = fac_sdet*det
 
     where (fac_fdet .gt. CN_det)
       fac_fdet = CN_det
@@ -455,12 +462,14 @@ module pelagic_soil_connector
       if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     endif
 
-    call MOSSCO_StateGet(importState, fieldList, itemSearchList= (/ &
-    'nutrients_in_water                            ', &
-    'DIN_in_water                                  ', &
-    'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water'/), &
+    allocate(includeList(3))
+    includeList(1) = 'nutrients_in_water'
+    includeList(2) = 'DIN_in_water'
+    includeList(3) = 'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water'
+    call MOSSCO_StateGet(importState, fieldList, include=includeList, &
       fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    deallocate(includeList)
 
     if (fieldCount > 0) then
       hasDIN = .true.
@@ -652,5 +661,61 @@ module pelagic_soil_connector
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
   end subroutine Finalize
+
+  subroutine MOSSCO_MapThreeDTwoD(importState, importFieldList, exportState, &
+    exportFieldList, kwe, verbose, rc)
+
+    type(ESMF_State), intent(in)             :: importState
+    type(ESMF_State), intent(inout)          :: exportState
+    character(len=*), intent(in)             :: importFieldList(:)
+    character(len=*), intent(in)             :: exportFieldList(:)
+    type(ESMF_KeywordEnforcer), optional, intent(in) :: kwe
+    logical, intent(in), optional            :: verbose
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)               :: localrc, fieldCount
+    type(ESMF_Field), allocatable       :: fieldList3(:), fieldList2(:)
+    integer(ESMF_KIND_I4)               :: lbnd(3), ubnd(3), lbnd2(2), ubnd2(2)
+    real(ESMF_KIND_R8), pointer         :: farrayPtr3(:,:,:), farrayPtr2(:,:)
+    logical                             :: verbose_
+
+    if (present(rc)) rc = ESMF_SUCCESS
+    if (present(verbose)) then
+      verbose_ = verbose
+    else
+      verbose_ = .false.
+    endif
+    if (present(kwe)) verbose_ = verbose_
+
+    call MOSSCO_StateGet(importState, fieldList=fieldList3, &
+      itemSearchList=importFieldList, fieldstatus=ESMF_FIELDSTATUS_COMPLETE, &
+      fieldCount=fieldCount, verbose=verbose_, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    !> Return if import field not found
+    if (fieldCount == 0) then
+      if (present(rc)) rc = ESMF_RC_NOT_FOUND
+      return
+    endif
+
+    call MOSSCO_StateGet(exportState, fieldList=fieldList2, &
+      itemSearchList=exportFieldList, verbose=verbose_, &
+      fieldCount=fieldCount, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    !> Return if export field not found
+    if (fieldCount == 0) then
+      if (present(rc)) rc = ESMF_RC_NOT_FOUND
+      nullify(farrayPtr3)
+      return
+    endif
+
+    call MOSSCO_FieldReduce(fieldList3(1), fieldList2(1), indexmask=(/1/), &
+      owner='pelagic_soil_connector', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    nullify(farrayPtr3)
+
+  end subroutine MOSSCO_MapThreeDTwoD
 
 end module pelagic_soil_connector

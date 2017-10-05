@@ -2,7 +2,7 @@
 # This script is is part of MOSSCO. It creates from YAML descriptions of
 # couplings a toplevel_component.F90 source file
 #
-# @copyright (C) 2014,2015,2016,2017 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -25,10 +25,6 @@ except:
 if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
-     filename = 'fabm_benthic_pelagic+wave.yaml'
-     #filename = 'constant_fabm_sediment_netcdf.yaml'
-     filename = 'constant_constant_netcdf.yaml'
-     filename = 'getm--fabm_pelagic--netcdf.yaml'
      filename='gotm--fabm_pelagic--fabm_sediment'
 
 if not filename.endswith('yaml'):
@@ -37,7 +33,7 @@ if not filename.endswith('yaml'):
 print sys.argv, len(sys.argv)
 if not os.path.exists(filename):
     print 'File ' + filename + ' does not exist.'
-    exit(1)
+    sys.exit(1)
 
 print 'Using ' + filename + ' ...'
 
@@ -59,7 +55,7 @@ coupling_properties = []
 if not type(config) is dict:
   print 'File ' + filename + ' does not contain data or does not contain a'
   print 'dictionary.'
-  exit(1)
+  sys.exit(1)
 
 if config.has_key('author'):
     author = config.pop('author')
@@ -69,7 +65,7 @@ else:
 if config.has_key('copyright'):
     copyright = config.pop('copyright')
 else:
-    copyright = 'Copyright (C) 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht'
+    copyright = 'Copyright (C) 2014, 2015, 2016 2017 Helmholtz-Zentrum Geesthacht'
 
 if config.has_key('dependencies'):
   dependencies = config.pop('dependencies')
@@ -83,8 +79,7 @@ else:
 
 componentList=[]
 gridCompList=[]
-cplCompList=['link_connector','rename_connector']
-#cplCompList=['link_connector']
+cplCompList=['link_connector']
 couplingList=[]
 petList=[]
 foreignGrid={}
@@ -95,7 +90,7 @@ directions = []
 if not config.has_key('coupling'):
   print 'File ' + filename + ' must contain a coupling dictionary.'
   print 'Try adding a first line consisting only of the word "coupling:".'
-  exit(1)
+  sys.exit(1)
 
 coupling = config.pop("coupling")
 
@@ -106,7 +101,7 @@ if not (type(coupling) is list):
 if len(coupling)<1:
   print 'File ' + filename + ' contains an empty coupling list.'
   print coupling
-  exit(1)
+  sys.exit(1)
 
 # Loop over the list of couuplings.  Each entry in this list is a dictionary
 # that has at least the key 'components:'
@@ -355,9 +350,6 @@ for jtem in instanceList:
     if jtem.find('_mediator')>0 or jtem.find('_connector')>0 or jtem == 'vertical_reduction' or jtem == 'calculator' :
       fid.write('  use ' + jtem + ', only : ' + jtem + '_SetServices => SetServices \n')
     else: fid.write('  use ' + jtem + '_component, only : ' + jtem + '_SetServices => SetServices \n')
-
-#for jtem in cplCompList:
-#    fid.write('  use ' + jtem + ', only : ' + jtem + '_SetServices => SetServices \n')
 
 fid.write('\n  implicit none\n\n  private\n\n  public SetServices\n')
 fid.write('''
@@ -1298,6 +1290,13 @@ fid.write('''
     write(message,'(A)') trim(myName)//' '//trim(childName)//' alarms ring next at '//trim(timestring)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
+    stringList(1,1)='Name';               stringList(1,2)='Carsten Lemmen'
+    stringList(2,1)='Abbreviation';       stringList(2,2)='cl'
+    stringList(3,1)='PhysicalAddress';    stringList(3,2)='Helmholtz-Zentrum Geesthacht'
+    stringList(4,1)='EmailAddress';       stringList(4,2)='carsten.lemmen@hzg.de'
+    stringList(5,1)='ResponsiblePartyRole';   stringList(5,2)='Contact'
+    stringList(6,1)='URL';   stringList(6,2)='http://www.hzg.de'
+
     !> @todo te following code throws attribute warnings in ESMF7, this needs
     !> to be investigated and is disabled for now.
 
@@ -1305,12 +1304,6 @@ fid.write('''
     !> Write Responsible party ISO 19115 attributes
     convention = 'ISO 19115'
     purpose    = 'RespParty'
-    stringList(1,1)='Name';               stringList(1,2)='Carsten Lemmen'
-    stringList(2,1)='Abbreviation';       stringList(2,2)='cl'
-    stringList(3,1)='PhysicalAddress';    stringList(3,2)='Helmholtz-Zentrum Geesthacht'
-    stringList(4,1)='EmailAddress';       stringList(4,2)='carsten.lemmen@hzg.de'
-    stringList(5,1)='ResponsiblePartyRole';   stringList(5,2)='Contact'
-    stringList(6,1)='URL';   stringList(6,2)='http://www.hzg.de'
 
     do i=1,6
       call ESMF_AttributeSet(gridComp, trim(stringList(i,1)), trim(stringList(i,2)), &

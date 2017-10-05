@@ -190,7 +190,7 @@ bioturbation_depth = 5.0 ! cm
 bioturbation_min = 0.2 ! cm2/d
 porosity_max  = 0.7
 porosity_fac  = 0.9 ! per m
-k_par         = 2.0d-3 ! 1/m
+k_par         = 2.0d-3 ! light absorption length (m) (2.0 mm)
 pom_flux_max  = 2.0d4  ! so far mmol/m2/d
 
 read(33,nml=sed_nml)
@@ -485,12 +485,16 @@ real(rk),dimension(1:rhs_driver%inum,1:rhs_driver%jnum)                     :: c
 
 integer :: n,i,j,k,bcup=1,bcdown=3
 
-do k=1,rhs_driver%knum
-   cumdepth=sum(rhs_driver%grid%dz(:,:,1:k),dim=3)
+! calculate environmental properties in sediment
+do k = 1, rhs_driver%knum
+   if (k == 1) then
+      cumdepth = 0.0
+   else
+      cumdepth = sum(rhs_driver%grid%dz(:,:,1:k-1),dim=3)  ! light is calculated at upper layer interfaces
+   endif
    where (.not.rhs_driver%mask(:,:,k))
-     rhs_driver%temp3d(:,:,k) = rhs_driver%bdys(:,:,1)
-     rhs_driver%par(:,:,k) = &
-           rhs_driver%par_surface * exp(-cumdepth/rhs_driver%k_par)
+      rhs_driver%temp3d(:,:,k) = rhs_driver%bdys(:,:,1)
+      rhs_driver%par(:,:,k) = rhs_driver%par_surface * exp(-cumdepth/rhs_driver%k_par)
    end where
 end do
 

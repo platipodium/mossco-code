@@ -3,21 +3,22 @@ module mossco_variable_types
 #ifdef ESMF
   use esmf
 #else
-#define ESMF_MAXSTR 256 
+#define ESMF_MAXSTR 256
 #define ESMF_MAXPATHLEN 512
 #endif
 
   implicit none
 
   type, public, abstract :: MOSSCO_VariableInfo
+    !character(len=ESMF_MAXSTR) :: csdms_name  = ''  ! CSDMS/GSN name
     character(len=ESMF_MAXSTR) :: name  = ''   ! Short name
     character(len=ESMF_MAXSTR) :: units = ''    ! Units
     character(len=ESMF_MAXSTR) :: standard_name = '' ! CF standard name
+    character(len=ESMF_MAXSTR) :: creator = '' !
     character(len=ESMF_MAXPATHLEN) :: description = '' ! long description
     logical            :: optional = .false.
     contains
       procedure :: as_yaml
-
   end type
 
 #ifdef ESMF

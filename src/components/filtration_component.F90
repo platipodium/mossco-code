@@ -211,8 +211,10 @@ module filtration_component
       endif
 
       write(message,'(A)') trim(name)//' filters '//trim(filterSpecies(1))
-      write(message,'(A)') trim(message)//' => '//trim(filterSpecies(2))
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      if (ubound(filterSpecies,1) > 1) then
+        write(message,'(A)') trim(message)//' => '//trim(filterSpecies(2))
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
 
       call MOSSCO_ConfigGet(config, 'other', filterSpeciesList, &
         isPresent=labelIsPresent, rc=localrc)
@@ -266,7 +268,12 @@ module filtration_component
         call MOSSCO_AttributeSet(gridComp, 'diagnostic_variables', diagNameList, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
-
+    else
+      if (.not.allocated(filterSpecies)) then
+        allocate(filterSpecies(2))
+        filterSpecies(1) = 'phytoplankton' ! Main variable to filter
+        filterSpecies(2) = 'detritus'      ! What the main variable is converted to
+      endif
     endif
 
     call MOSSCO_AttributeSet(gridComp, 'filter_species', filterspecies, rc=localrc)
