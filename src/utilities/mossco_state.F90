@@ -636,7 +636,7 @@ contains
           rc=ESMF_SUCCESS
         endif
 
-        if (len_trim(message) + len_trim(characterValueList(1)) + 1 <= len(message)) then
+        if (len_trim(message) + len_trim(characterValueList(1)) + 3 <= len(message)) then
           write(message,'(A)') trim(message)//' "'//trim(characterValueList(1))//'"'
           do j=2, itemCount-1
             write(string,'(A,A)') ', "',trim(characterValueList(j))//'"'
