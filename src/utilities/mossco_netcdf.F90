@@ -3589,7 +3589,7 @@ module mossco_netcdf
     timeunit = timeunit(i+6:len_trim(timeunit))
     ! Make sure that this is in ISO format, i.e. YYYY-MM-DDThh:mm:ss
     ! Some implementations do not write 4 (or 2) digits single digit components.
-    call timeString2ISOTimeString('2003-05-06T05:03', ISOString, rc=localrc)
+    call timeString2ISOTimeString(timeUnit, ISOString, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     !> @todo consider "climatological month" as possible unit, and have a look at
@@ -3623,7 +3623,7 @@ module mossco_netcdf
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)                        :: i, rc_, itime_, localrc, varid, ntime, index_
-    character(ESMF_MAXSTR)                       :: timeUnit, message
+    character(ESMF_MAXSTR)                       :: timeUnit, message, timeString
     type(ESMF_TimeInterval)                      :: timeInterval
     real(ESMF_KIND_R8), allocatable              :: farray(:)
     type(ESMF_Time)                              :: refTime_
@@ -3642,26 +3642,32 @@ module mossco_netcdf
     endif
 
     if (present(refTime)) refTime=refTime_
+      
+    call ESMF_TimeGet(refTime_, timeStringISOFrac=timeString, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    write(message,'(A)') 'mossco_netcdf ref time is '//trim(timeString)
+    !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
 
     ! Default time is refTime
     currTime = refTime_
 
     localrc = nf90_inq_varid(self%ncid, 'time', varid)
     if (localrc /= NF90_NOERR) then
-      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', no time variable to get time', ESMF_LOGMSG_INFO)
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', no time variable to get time', ESMF_LOGMSG_INFO, ESMF_CONTEXT)
       if (present(rc)) rc=ESMF_RC_NOT_FOUND
       return
     endif
 
     localrc = nf90_get_att(self%ncid, varid, 'units', timeUnit)
     if (localrc /= NF90_NOERR) then
-      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', no time unit', ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', no time unit', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
     i=index(timeUnit,'since ')
     if (i<1) then
-      call ESMF_LogWrite('  unknown time unit "'//trim(timeUnit)//'"', ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite('  unknown time unit "'//trim(timeUnit)//'"', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
@@ -3670,15 +3676,13 @@ module mossco_netcdf
     ntime = self%dimlens(self%timeDimId)
     if (allocated(farray)) deallocate(farray)
     allocate(farray(ntime), stat=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (index_ < 1) index_ = 1
     if (index_ > ntime) index_ = ntime
 
     localrc = nf90_get_var(self%ncid, varid, farray)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (size(farray) == 0) then
       currTime = refTime_
@@ -3687,25 +3691,38 @@ module mossco_netcdf
     endif
 
     call MOSSCO_TimeIntervalFromTimeValue(timeInterval, timeUnit, farray(index_), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     currTime = refTime_ + timeInterval
+    call ESMF_TimeGet(currTime, timeStringISOFrac=timeString, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    write(message,'(A)') 'mossco_netcdf cur time is '//trim(timeString)
+    !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
 
     if (present(startTime)) then
       call MOSSCO_TimeIntervalFromTimeValue(timeInterval, timeUnit, farray(1), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       startTime = refTime_ + timeInterval
+
+      call ESMF_TimeGet(startTime, timeStringISOFrac=timeString, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message,'(A)') 'mossco_netcdf start time is '//trim(timeString)
+      !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
     endif
 
     if (present(stopTime)) then
       call MOSSCO_TimeIntervalFromTimeValue(timeInterval, timeUnit, farray(1), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       stopTime = refTime_ + timeInterval
+      call ESMF_TimeGet(stopTime, timeStringISOFrac=timeString, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message,'(A)') 'mossco_netcdf stop time is '//trim(timeString)
+      !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
     endif
 
     if (allocated(farray)) deallocate(farray)

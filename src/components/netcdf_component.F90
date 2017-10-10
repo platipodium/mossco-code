@@ -122,10 +122,10 @@ module netcdf_component
 
     character(len=ESMF_MAXSTR) :: name, configFileName, fileName
     character(len=4096)        :: message
-    character(len=ESMF_MAXSTR) :: timeString, timeUnit
+    character(len=ESMF_MAXSTR) :: timeString, timeUnit, form
     type(ESMF_Time)            :: currTime, refTime
     type(ESMF_Clock)           :: clock
-    integer(ESMF_KIND_I4)      :: localrc
+    integer(ESMF_KIND_I4)      :: localrc, localPet, petCount, j
     logical                    :: fileIsPresent, configIsPresent, labelIsPresent
     type(ESMF_Config)          :: config
     character(len=ESMF_MAXSTR), pointer :: filterExcludeList(:) => null()
@@ -252,6 +252,21 @@ module netcdf_component
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     write(timeUnit,'(A)') 'seconds since '//timeString(1:10)//' '//timestring(12:len_trim(timestring))
+
+    call ESMF_GridCompGet(gridComp, petCount=petCount, localPet=localPet, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_AttributeGet(importState, name='filename', value=fileName, &
+      defaultValue=trim(name)//'.nc', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    j=index(fileName,'.nc',back=.true.)
+    if (j < len_trim(fileName)-2) fileName=trim(fileName)//'.nc'
+
+    if (petCount>1) then
+      write(form,'(A)')  '(A,'//trim(intformat(int(petCount-1,kind=8)))//',A)'
+      write(fileName,form) filename(1:index(filename,'.nc')-1)//'.',localPet,'.nc'
+    endif
 
     nc = mossco_netcdfCreate(fileName, timeUnit=timeUnit, state=importState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -389,25 +404,39 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     if (.true.) then
 
+      call ESMF_TimeGet(startTime, timeStringISOFrac=timeString, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message,'(A)') trim(name)//' start time is '//trim(timeString)
+      !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+
+      call ESMF_TimeGet(currTime, timeStringISOFrac=timeString, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message,'(A)') trim(name)//' curr  time is '//trim(timeString)
+      !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+
       call ESMF_TimeGet(refTime, timeStringISOFrac=timeString, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      write(timeUnit,'(A)') 'seconds since '//timeString(1:10)//' '//timestring(12:len_trim(timestring))
+      write(message,'(A)') trim(name)//' ref   time is '//trim(timeString)
+      !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
 
+      write(timeUnit,'(A)') 'seconds since '//timeString(1:10)//' '//timestring(12:len_trim(timestring))
+      
       call ESMF_TimeIntervalGet(currTime-refTime, s_r8=seconds, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (currTime == startTime) then
-        nc = mossco_netcdfCreate(fileName, timeUnit=timeUnit, state=importState, rc=localrc)
-        call ESMF_AttributeSet(exportState, 'netcdf_id', nc%ncid, rc=localrc)
-        call ESMF_AttributeSet(exportState, 'netcdf_file_name', &
-          trim(fileName), rc=localrc)
+        !nc = mossco_netcdfCreate(fileName, timeUnit=timeUnit, state=importState, rc=localrc)
+        !call ESMF_AttributeSet(exportState, 'netcdf_id', nc%ncid, rc=localrc)
+        !call ESMF_AttributeSet(exportState, 'netcdf_file_name', trim(fileName), rc=localrc)
         verbose = .true.
 
       else
-        nc = mossco_netcdfOpen(fileName, timeUnit=timeUnit, state=importState, rc=localrc)
         verbose = .false.
       end if
+        nc = mossco_netcdfOpen(fileName, timeUnit=timeUnit, state=importState, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call nc%update()
@@ -420,7 +449,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       if (localrc == ESMF_RC_NOT_FOUND .or. maxTime < currTime) then
         call nc%add_timestep(seconds, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
+        
       elseif (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       elseif (maxTime > currTime) then
@@ -428,6 +457,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         write(message, '(A)')  trim(name)//' '//trim(timeString)//' cannot insert time before'
+        localrc = ESMF_RC_NOT_IMPL
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        
         call ESMF_TimeGet(maxTime, timeStringISOFrac=timeString, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
