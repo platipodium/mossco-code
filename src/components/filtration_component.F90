@@ -681,6 +681,7 @@ module filtration_component
     type(ESMF_StateItem_Flag)   :: itemType
     real(ESMF_KIND_R8),parameter:: pi=3.141592653589793d0
     integer(ESMF_KIND_I8)       :: advanceCount
+    real(ESMF_KIND_R8), parameter :: respiration_fraction=0.2
 
     rc = ESMF_SUCCESS
 
@@ -1077,7 +1078,47 @@ module filtration_component
       !write(string,'(F6.3)') maxval(-fractionalLossRate(RANGE3D),mask=mask(RANGE3D))*100.0*3600.0
       !call MOSSCO_MessageAdd(message,' mmol m-3 s-1 or '//trim(string)//'% h-1')
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      
+      !> Add the produkt of the main filter species
+      if (filterSpecies(2) /= '') then
+        write(fluxName,'(A)') trim(filterSpecies(2))//'_flux_in_water'
 
+        ! Get flux species, be careful to look at the creator attribute to choose
+        ! the right one, i.e. those created as export states from this component
+        call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
+            itemSearch=trim(fluxName), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        do i=1, fieldCount
+          call ESMF_AttributeGet(fieldList(i), 'creator', creatorName, defaultValue='none', rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if (trim(creatorName) /= trim(name)) then
+            fieldCount=fieldCount - 1
+            cycle
+          endif
+          field=fieldList(i)
+        enddo
+
+        if (fieldCount /= 1) then
+          write(message,'(A)') trim(name)//' did not find unique complete field with name '//trim(fluxName)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+          call MOSSCO_StateLog(importState)
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
+        
+        call ESMF_FieldGet(fieldList(1), farrayPtr=concentration, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        where(mask(RANGE3D))
+          concentration(RANGE3D) =  -lossRate(RANGE3D) * (1-respiration_fraction)
+        endwhere
+        
+      endif
+      
+      ! Now add co-filtered items
       call MOSSCO_AttributeGet(gridComp, 'filter_other_species', filterSpeciesList, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1189,13 +1230,13 @@ module filtration_component
           cycle
         endif
 
-        call ESMF_FieldGet(field, farrayPtr=lossRate,  rc=localrc)
+        call ESMF_FieldGet(field, farrayPtr=concentration,  rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         !> This assumes that the educt and product share the same unit
         where(mask(RANGE3D))
-          lossRate(RANGE3D) = -fractionalLossRate(RANGE3D) * concentration(RANGE3D) ! mmol s-1 m-3
+          concentration(RANGE3D) = -lossRate(RANGE3D)
         endwhere
 
       enddo
