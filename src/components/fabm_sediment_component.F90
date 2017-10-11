@@ -21,7 +21,6 @@
 #define _IRANGE_ 1:_INUM_
 #define _JRANGE_ 1:_JNUM_
 #define _KRANGE_ 1:_KNUM_
-
 #define _RK4_ 1
 #define _ADAPTIVE_EULER_ 2
 
@@ -465,6 +464,7 @@ module fabm_sediment_component
     sed%bcup_dissolved_variables = 2
     sed1d%bcup_dissolved_variables = 2
     sed1d%adaptive_solver_diagnostics = .true.
+    sed1d%bioturbation_profile=0
     do tidx=1,int(presimulation_years*365*24/(dt_spinup/3600.0_rk),kind=ESMF_KIND_I8)
       call ode_solver(sed1d,dt_spinup,ode_method)
     enddo
