@@ -52,7 +52,7 @@ module fabm_sediment_component
   integer   :: presimulation_years=-1
   integer   :: bcup_dissolved_variables=2
   real(rk)  :: pel_NO3=5.0_rk, pel_NH4=5.0_rk, pel_PO4=0.5_rk, pel_O2=250_rk
-  real(rk)  :: pflux_fDet=10.0_rk, pflux_sDet=10.0_rk, pflux_DetP=0.2_rk, pel_Temp=5.0_rk
+  real(rk)  :: pflux_lDet=10.0_rk, pflux_sDet=10.0_rk, pflux_DetP=0.2_rk, pel_Temp=5.0_rk
   real(rk),dimension(:,:,:,:),allocatable,target :: conc
   real(rk),dimension(:,:,:),pointer              :: diag
   real(rk),dimension(:,:,:),allocatable,target   :: bdys,fluxes
@@ -67,7 +67,7 @@ module fabm_sediment_component
 
   namelist /run_nml/ numyears,dt,output,numlayers,dzmin,ode_method,presimulation_years, &
                      dt_min,relative_change_min,ugrid_name, bcup_dissolved_variables, &
-                     pel_Temp, pel_NO3, pel_NH4, pel_PO4, pel_O2, pflux_fDet, pflux_sDet ,pflux_DetP
+                     pel_Temp, pel_NO3, pel_NH4, pel_PO4, pel_O2, pflux_lDet, pflux_sDet ,pflux_DetP
 
   public SetServices
 
@@ -454,7 +454,7 @@ module fabm_sediment_component
       if (trim(varname) == 'dissolved_phosphate') bdys(:,:,i+1)=pel_PO4
       if (trim(varname) == 'dissolved_oxygen') bdys(:,:,i+1)=pel_O2
       if (trim(varname) == 'dissolved_reduced_substances') bdys(:,:,i+1)=0.0_rk
-      if (trim(varname) == 'detritus_labile_carbon') fluxes(:,:,i)=pflux_fDet/86400.0_rk
+      if (trim(varname) == 'detritus_labile_carbon') fluxes(:,:,i)=pflux_lDet/86400.0_rk
       if (trim(varname) == 'detritus_semilabile_carbon') fluxes(:,:,i)=pflux_sDet/86400.0_rk
       if (trim(varname) == 'detritus-phosphorus') fluxes(:,:,i)=pflux_DetP/86400.0_rk
       !write(0,*) i,trim(only_var_name(sed%model%state_variables(i)%long_name)),bdys(:,:,i+1),fluxes(:,:,i)
