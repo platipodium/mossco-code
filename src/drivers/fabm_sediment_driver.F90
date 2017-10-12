@@ -803,8 +803,12 @@ end function get_export_state_by_diag_id
 subroutine get_all_export_states(self)
    class(type_sed) :: self
    integer  :: n,fabm_id
+   integer  :: nvar_export
 
-   allocate(self%export_states(self%nvar+7))
+   nvar_export = self%nvar+5
+   if (self%bioturbation_profile.eq.3) nvar_export=nvar_export+2
+   allocate(self%export_states(nvar_export))
+
    self%export_states(1)%standard_name='porosity'
    self%export_states(1)%data => self%porosity
    self%export_states(1)%units ='m3 m-3'
