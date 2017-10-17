@@ -42,6 +42,8 @@ module pelagic_soil_connector
   real(ESMF_KIND_R8) :: sinking_factor=0.3d0 !> 30% of Det sinks into sediment
   real(ESMF_KIND_R8) :: NC_ldet=0.20d0
   real(ESMF_KIND_R8) :: NC_sdet=0.04d0
+  real(ESMF_KIND_R8) :: convertN=1.0d0
+  real(ESMF_KIND_R8) :: convertP=1.0d0
   real(ESMF_KIND_R8) :: sinking_factor_min=0.02 !> minimum of 2% of Det sinks always into sediment
   real(ESMF_KIND_R8) :: half_sedimentation_depth=0.1 !> [m] use 50% of prescribed sinking factor at this depth
   real(ESMF_KIND_R8) :: half_sedimentation_tke=1.0d3 !> [m2/s2] use 50% of prescribed sinking factor for this tke
@@ -149,7 +151,7 @@ module pelagic_soil_connector
 
     namelist /pelagic_soil_connector/ sinking_factor,sinking_factor_min,NC_ldet,NC_sdet, &
                                       half_sedimentation_depth,critical_detritus, &
-                                      half_sedimentation_tke
+                                      half_sedimentation_tke,convertN,convertP
 
     rc = ESMF_SUCCESS
 
@@ -402,11 +404,11 @@ module pelagic_soil_connector
 
     call mossco_state_get(exportState, (/'detritus_labile_carbon_at_soil_surface'/), &
       ptr_f2, verbose=verbose, rc=localrc)
-    if (localrc==0) ptr_f2 = fac_fdet * DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+    if (localrc==0) ptr_f2 = fac_fdet * convertN*DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
 
     call mossco_state_get(exportState, (/'detritus_semilabile_carbon_at_soil_surface'/),&
       ptr_f2, verbose=verbose, rc=localrc)
-    if(localrc==0) ptr_f2 = fac_sdet * DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+    if(localrc==0) ptr_f2 = fac_sdet * convertN*DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
 
     call mossco_state_get(exportState, (/'detritus_labile_carbon_z_velocity_at_soil_surface'/), &
       ptr_f2, verbose=verbose, rc=localrc)
@@ -428,7 +430,7 @@ module pelagic_soil_connector
     if (localrc == 0) then
         ptr_f2 = DETP(Plbnd(1):Pubnd(1),Plbnd(2):Pubnd(2),plbnd(3))
     else
-        ptr_f2 = 1.0d0/16.0d0 * DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+        ptr_f2 = 1.0d0/16.0d0 * convertN*DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
     end if
 
     call mossco_state_get(exportState, (/ &
@@ -528,17 +530,17 @@ module pelagic_soil_connector
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
     if (hasAmmonium) then
-      ptr_f2 = amm(AMMlbnd(1):AMMubnd(1),AMMlbnd(2):AMMubnd(2),AMMlbnd(3))
+      ptr_f2 = convertN*amm(AMMlbnd(1):AMMubnd(1),AMMlbnd(2):AMMubnd(2),AMMlbnd(3))
     elseif (hasDIN .and. hasNitrate) then
-      ptr_f2 = din(RANGE2D,lbnd(3)) - nit(RANGE2D,lbnd(3))
+      ptr_f2 = convertN*(din(RANGE2D,lbnd(3)) - nit(RANGE2D,lbnd(3)))
       write(message,'(A)') trim(name)//' calculates NH4 as DIN - NO3'
       if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     elseif (hasDIN) then
-      ptr_f2 = 0.5d0 * DIN(RANGE2D,lbnd(3))
+      ptr_f2 = convertN*0.5d0 * DIN(RANGE2D,lbnd(3))
       write(message,'(A)') trim(name)//' calculates NH4 as 0.5 * DIN'
       if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     elseif (hasNitrate) then
-      ptr_f2 = nit(RANGE2D,lbnd(3))
+      ptr_f2 = convertN*nit(RANGE2D,lbnd(3))
       write(message,'(A)') trim(name)//' calculates NH4 as equal to NO3'
       if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     else
@@ -559,18 +561,18 @@ module pelagic_soil_connector
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
     if (hasNitrate) then
-      ptr_f2 = nit(RANGE2D,lbnd(3))
+      ptr_f2 = convertN*nit(RANGE2D,lbnd(3))
     elseif (hasAmmonium .and. hasDIN) then
-      ptr_f2 = din(RANGE2D,lbnd(3)) &
+      ptr_f2 = convertN*din(RANGE2D,lbnd(3)) &
         - amm(AMMlbnd(1):AMMubnd(1),AMMlbnd(2):AMMubnd(2),AMMlbnd(3))
       write(message,'(A)') trim(name)//' calculates NO3 = DIN - NH4'
       if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     elseif (hasDIN) then
-      ptr_f2 = 0.5d0 * DIN(RANGE2D,lbnd(3))
+      ptr_f2 = convertN*0.5d0 * DIN(RANGE2D,lbnd(3))
       write(message,'(A)') trim(name)//' calculates NO3 = 0.5 * DIN'
       if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     elseif (hasAmmonium) then
-      ptr_f2 = amm(AMMlbnd(1):AMMubnd(1),AMMlbnd(2):AMMubnd(2),AMMlbnd(3))
+      ptr_f2 = convertN*amm(AMMlbnd(1):AMMubnd(1),AMMlbnd(2):AMMubnd(2),AMMlbnd(3))
       write(message,'(A)') trim(name)//' calculates NO3 equal to NH4'
       if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     else
@@ -621,7 +623,7 @@ module pelagic_soil_connector
 
       if (.not.(associated(dip))) allocate(dip(RANGE2D,1))
 
-      dip(RANGE2D,1) = 1.0d0/16.0d0 * DIN(RANGE2D,lbnd(3))
+      dip(RANGE2D,1) = 1.0d0/16.0d0 * convertN*DIN(RANGE2D,lbnd(3))
       write(message,'(A)') trim(name)//' calculates DIP from Redfield DIN'
       if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
@@ -634,7 +636,7 @@ module pelagic_soil_connector
     call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f2,rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
-    ptr_f2 = DIP(RANGE2D,Plbnd(3))
+    ptr_f2 = convertP*DIP(RANGE2D,Plbnd(3))
 
     call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
