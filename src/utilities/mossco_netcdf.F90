@@ -1071,7 +1071,7 @@ module mossco_netcdf
 
     type(ESMF_Time)                  :: refTime, wallTime
     type(ESMF_TimeInterval)          :: timeInterval
-    integer(ESMF_KIND_I4)            :: doy
+    integer(ESMF_KIND_I4)            :: doy, yy
     character(ESMF_MAXSTR)           :: timeString, refTimeISOString
 
     rc_ = ESMF_SUCCESS
@@ -1194,6 +1194,36 @@ module mossco_netcdf
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
       endif
+      
+      ncStatus = nf90_inq_varid(self%ncid, 'year', varid)
+      if (ncStatus /= NF90_NOERR) then
+        write(message,'(A)') '  '//trim(nf90_strerror(ncStatus))//', cannot find variable year'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        if (present(rc)) then
+          rc = ESMF_RC_NOT_FOUND
+          return
+        else
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
+      endif
+ 
+      call ESMF_TimeGet(refTime + timeInterval, yy=yy, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+       ncStatus = nf90_put_var(self%ncid, varid, yy, start=(/dimlen+1/))
+      if (ncStatus /= NF90_NOERR) then
+        write(message,'(A)') '  '//trim(nf90_strerror(ncStatus))//', cannot write variable year'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        if (present(rc)) then
+          rc = ESMF_RC_FILE_WRITE
+          return
+        else
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
+      endif
+
+      
 
       ncStatus = nf90_inq_varid(self%ncid, 'date_string', varid)
       if (ncStatus /= NF90_NOERR) then
@@ -1780,6 +1810,37 @@ module mossco_netcdf
     endif
 
     localrc = nf90_put_att(self%ncid, varid, 'mossco_name', 'day_of_year')
+    if (localrc /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot put attribute in file '//trim(self%name), ESMF_LOGMSG_ERROR)
+      if (present(rc)) then
+        rc = ESMF_RC_FILE_WRITE
+        return
+      else
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+    endif
+
+
+    localrc = nf90_def_var(self%ncid, 'year', NF90_INT, self%timeDimId, varid)
+    if (localrc==NF90_ENAMEINUSE) then
+      rc_ = MOSSCO_NC_EXISTING
+    elseif (localrc /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot define variable yer in file '//trim(self%name), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    endif
+
+    localrc = nf90_put_att(self%ncid, varid, 'units', 'a')
+    if (localrc /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot put attribute in file '//trim(self%name), ESMF_LOGMSG_ERROR)
+      if (present(rc)) then
+        rc = ESMF_RC_FILE_WRITE
+        return
+      else
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+    endif
+
+    localrc = nf90_put_att(self%ncid, varid, 'mossco_name', 'year_in_common_era')
     if (localrc /= NF90_NOERR) then
       call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot put attribute in file '//trim(self%name), ESMF_LOGMSG_ERROR)
       if (present(rc)) then
