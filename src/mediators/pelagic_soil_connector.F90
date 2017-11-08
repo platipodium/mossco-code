@@ -417,7 +417,9 @@ module pelagic_soil_connector
 
     !> check for Detritus-P and calculate flux either N-based
     !> or as present through the Detritus-P pool
-    call mossco_state_get(exportState, (/'detritus_phosphorus_at_soil_surface'/), &
+    call mossco_state_get(exportState, (/ &
+          'detritus_phosphorus_at_soil_surface       ',   &
+          'detritus_labile_phosphorus_at_soil_surface'/), &
        ptr_f2, verbose=verbose, rc=localrc)
     call mossco_state_get(importState,(/ &
           'detP_in_water                    ', &
@@ -429,8 +431,9 @@ module pelagic_soil_connector
         ptr_f2 = 1.0d0/16.0d0 * DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
     end if
 
-    call mossco_state_get(exportState, &
-        (/'detritus_phosphorus_z_velocity_at_soil_surface'/), &
+    call mossco_state_get(exportState, (/ &
+        'detritus_phosphorus_z_velocity_at_soil_surface       ',   &
+        'detritus_labile_phosphorus_z_velocity_at_soil_surface'/), &
         ptr_f2, verbose=verbose, rc=localrc)
     call mossco_state_get(importState,(/ &
               'detP_z_velocity_in_water                    ', &
