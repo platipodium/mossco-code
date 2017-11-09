@@ -408,9 +408,9 @@ module fabm_sediment_component
     call sed%init_concentrations()
     !> Allocate boundary conditions and initialize with zero
     allocate(bdys(_INUM_,_JNUM_,sed%nvar+1))
-    bdys(1:_INUM_,1:_JNUM_,1:9) = 0.0_rk
+    bdys(_IRANGE_,_JRANGE_,:) = 0.0_rk
     allocate(fluxes(_INUM_,_JNUM_,sed%nvar))
-    fluxes(_IRANGE_,_JRANGE_,1:8) = 0.0_rk
+    fluxes(_IRANGE_,_JRANGE_,:) = 0.0_rk
 
     call set_boundary_flags(sed,importState)
     !> create list of state variables for export
