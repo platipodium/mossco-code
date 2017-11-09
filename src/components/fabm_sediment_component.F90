@@ -52,7 +52,8 @@ module fabm_sediment_component
   integer   :: presimulation_years=-1
   integer   :: bcup_dissolved_variables=2
   real(rk)  :: pel_NO3=5.0_rk, pel_NH4=5.0_rk, pel_PO4=0.5_rk, pel_O2=250_rk
-  real(rk)  :: pflux_lDet=10.0_rk, pflux_sDet=10.0_rk, pflux_DetP=0.2_rk, pel_Temp=5.0_rk
+  real(rk)  :: pflux_lDetC=10.0_rk, pflux_sDetC=10.0_rk, pflux_lDetN=1.5_rk
+  real(rk)  :: pflux_sDetN=1.5_rk, pflux_lDetP=0.2_rk, pel_Temp=5.0_rk
   real(rk),dimension(:,:,:,:),allocatable,target :: conc
   real(rk),dimension(:,:,:),pointer              :: diag
   real(rk),dimension(:,:,:),allocatable,target   :: bdys,fluxes
@@ -67,7 +68,8 @@ module fabm_sediment_component
 
   namelist /run_nml/ numyears,dt,output,numlayers,dzmin,ode_method,presimulation_years, &
                      dt_min,relative_change_min,ugrid_name, bcup_dissolved_variables, &
-                     pel_Temp, pel_NO3, pel_NH4, pel_PO4, pel_O2, pflux_lDet, pflux_sDet ,pflux_DetP
+                     pel_Temp, pel_NO3, pel_NH4, pel_PO4, pel_O2, pflux_lDetC, pflux_sDetC, &
+                     pflux_lDetN, pflux_sDetN, pflux_lDetP
 
   public SetServices
 
@@ -449,14 +451,17 @@ module fabm_sediment_component
     bdys(:,:,1) = pel_Temp !degC
     do i=1,size(sed%model%state_variables)
       varname = trim(only_var_name(sed%model%state_variables(i)%long_name))
-      if (trim(varname) == 'dissolved_nitrate') bdys(:,:,i+1)=pel_NO3
-      if (trim(varname) == 'dissolved_ammonium') bdys(:,:,i+1)=pel_NH4
-      if (trim(varname) == 'dissolved_phosphate') bdys(:,:,i+1)=pel_PO4
-      if (trim(varname) == 'dissolved_oxygen') bdys(:,:,i+1)=pel_O2
+      if (trim(varname) == 'dissolved_nitrate')            bdys(:,:,i+1)=pel_NO3
+      if (trim(varname) == 'dissolved_ammonium')           bdys(:,:,i+1)=pel_NH4
+      if (trim(varname) == 'dissolved_phosphate')          bdys(:,:,i+1)=pel_PO4
+      if (trim(varname) == 'dissolved_oxygen')             bdys(:,:,i+1)=pel_O2
       if (trim(varname) == 'dissolved_reduced_substances') bdys(:,:,i+1)=0.0_rk
-      if (trim(varname) == 'detritus_labile_carbon') fluxes(:,:,i)=pflux_lDet/86400.0_rk
-      if (trim(varname) == 'detritus_semilabile_carbon') fluxes(:,:,i)=pflux_sDet/86400.0_rk
-      if (trim(varname) == 'detritus-phosphorus') fluxes(:,:,i)=pflux_DetP/86400.0_rk
+      if (trim(varname) == 'detritus_labile_carbon')       fluxes(:,:,i)=pflux_lDetC/86400.0_rk
+      if (trim(varname) == 'detritus_semilabile_carbon')   fluxes(:,:,i)=pflux_sDetC/86400.0_rk
+      if (trim(varname) == 'detritus_labile_nitrogen')     fluxes(:,:,i)=pflux_lDetN/86400.0_rk
+      if (trim(varname) == 'detritus_semilabile_nitrogen') fluxes(:,:,i)=pflux_sDetN/86400.0_rk
+      if (trim(varname) == 'detritus_phosphorus')          fluxes(:,:,i)=pflux_lDetP/86400.0_rk
+      if (trim(varname) == 'detritus_labile_phosphorus')   fluxes(:,:,i)=pflux_lDetP/86400.0_rk
       !write(0,*) i,trim(only_var_name(sed%model%state_variables(i)%long_name)),bdys(:,:,i+1),fluxes(:,:,i)
     enddo
 
@@ -1501,7 +1506,7 @@ module fabm_sediment_component
     real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: ptr_f3,ptr_vs
     type(ESMF_Field)    :: field,vs_field
     type(ESMF_Array)    :: array,vs_array
-    integer             :: i,rc,itemcount
+    integer             :: n,rc,itemcount
     character(len=ESMF_MAXSTR) :: string
     character(len=ESMF_MAXSTR) :: varname
     real(rk),dimension(_IRANGE_,_JRANGE_),target :: vs,pom
@@ -1537,14 +1542,14 @@ module fabm_sediment_component
     endif
 
     if (sed%bcup_dissolved_variables .gt. 0) then
-    do i=1,sed%nvar
-      if (sed%model%state_variables(i)%standard_variable%name/='') then
+    do n=1,sed%nvar
+      if (sed%model%state_variables(n)%standard_variable%name/='') then
         varname = &
-          trim(sed%model%state_variables(i)%standard_variable%name)
+          trim(sed%model%state_variables(n)%standard_variable%name)
       else
       !> otherwise use CF-ed version of long_name
         varname = trim(only_var_name( &
-           sed%model%state_variables(i)%long_name))
+           sed%model%state_variables(n)%long_name))
       endif
       call ESMF_StateGet(importState,itemSearch=trim(varname)//'_at_soil_surface', &
                          itemCount=itemcount,rc=localrc)
@@ -1562,7 +1567,7 @@ module fabm_sediment_component
         if (localrc == ESMF_SUCCESS) write(0,*) 'found field ',trim(varname)
 #endif
 
-        if (sed%model%state_variables(i)%properties%get_logical( &
+        if (sed%model%state_variables(n)%properties%get_logical( &
             'particulate',default=.false.)) then
           !write(0,*) 'try to get ',trim(varname)//'_z_velocity'
           call ESMF_StateGet(importState,trim(varname)//'_z_velocity_at_soil_surface', vs_field,rc=localrc)
@@ -1575,7 +1580,7 @@ module fabm_sediment_component
             call ESMF_FieldGet(vs_field,farrayPtr=fluxmesh_ptr_vs,rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-            fluxes(_IRANGE_,1,i) = -fluxmesh_ptr(:)*fluxmesh_ptr_vs(:) ! downward flux is positive
+            fluxes(_IRANGE_,1,n) = -fluxmesh_ptr(:)*fluxmesh_ptr_vs(:) ! downward flux is positive
           else
             call ESMF_FieldGet(field,farrayPtr=ptr_f2,rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -1583,13 +1588,13 @@ module fabm_sediment_component
             call ESMF_FieldGet(vs_field,farrayPtr=ptr_vs_2d,rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-            fluxes(_IRANGE_,_JRANGE_,i) = -ptr_f2(:,:)*ptr_vs_2d(:,:) ! downward flux is positive
+            fluxes(_IRANGE_,_JRANGE_,n) = -ptr_f2(:,:)*ptr_vs_2d(:,:) ! downward flux is positive
           endif
 #ifdef DEBUG
-            write(0,*) '  flux',-fluxes(1,1,i)
+          write(0,*) '  flux',-fluxes(1,1,n)
 #endif
         else
-          ptr_f2 => bdys(:,:,i+1)
+          ptr_f2 => bdys(:,:,n+1)
           if (sed%grid%use_ugrid) then
             call ESMF_FieldGet(field,farrayPtr=fluxmesh_ptr,rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -1599,7 +1604,7 @@ module fabm_sediment_component
             call ESMF_FieldGet(field,farrayPtr=ptr_f2,rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-            bdys(:,:,i+1) = ptr_f2(:,:)
+            bdys(:,:,n+1) = ptr_f2(:,:)
           endif
           if (sed%bcup_dissolved_variables .eq. 1) then
 
@@ -1609,18 +1614,18 @@ module fabm_sediment_component
 !        (/'turbulent_kinetic_energy_at_soil_surface'/), tke, verbose=verbose, rc=localrc)
 !tke(lbnd(1):ubnd(1),lbnd(2):ubnd(2))
 
-            fluxes(_IRANGE_,_JRANGE_,i) = -(sed%conc(:,:,1,i)-bdys(:,:,i+1))/ &
+            fluxes(_IRANGE_,_JRANGE_,n) = -(sed%conc(:,:,1,n)-bdys(:,:,n+1))/ &
               sed%grid%dz(:,:,1)*(sed%bioturbation + sed%diffusivity+bdys(:,:,1) * &
               0.035d0)*sed%porosity(:,:,1)/86400._rk/10000._rk
           else
             !> reset fluxes to zero
-            fluxes(_IRANGE_,_JRANGE_,i) = 0.0d0
+            fluxes(_IRANGE_,_JRANGE_,n) = 0.0d0
           endif
 #ifdef DEBUG
-            write(0,*) '  bdys',ptr_f2(1,1)
+          write(0,*) '  bdys',ptr_f2(1,1)
 #endif
-        endif
-      endif
+        endif !if "particulate"
+      endif !if (itemcount==0)
     enddo
     endif !if (sed%bcup_dissolved_variables .gt. 0)
 
