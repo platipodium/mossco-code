@@ -174,7 +174,7 @@ module fabm_sediment_component
     type(ESMF_Field), allocatable, dimension(:) :: fieldList
     type(ESMF_Field)     :: field
     type(ESMF_Array)     :: array
-    integer              :: i,j,k
+    integer              :: n,i,j,k
     type(ESMF_DistGrid)  :: distGrid_3d,distGrid_2d
     type(ESMF_Grid)      :: state_grid,flux_grid, grid
     type(ESMF_Mesh)      :: surface_mesh, state_mesh
@@ -449,20 +449,20 @@ module fabm_sediment_component
 
     ! set boundary conditions for pre-simulation
     bdys(:,:,1) = pel_Temp !degC
-    do i=1,size(sed%model%state_variables)
-      varname = trim(only_var_name(sed%model%state_variables(i)%long_name))
-      if (trim(varname) == 'dissolved_nitrate')            bdys(:,:,i+1)=pel_NO3
-      if (trim(varname) == 'dissolved_ammonium')           bdys(:,:,i+1)=pel_NH4
-      if (trim(varname) == 'dissolved_phosphate')          bdys(:,:,i+1)=pel_PO4
-      if (trim(varname) == 'dissolved_oxygen')             bdys(:,:,i+1)=pel_O2
-      if (trim(varname) == 'dissolved_reduced_substances') bdys(:,:,i+1)=0.0_rk
-      if (trim(varname) == 'detritus_labile_carbon')       fluxes(:,:,i)=pflux_lDetC/86400.0_rk
-      if (trim(varname) == 'detritus_semilabile_carbon')   fluxes(:,:,i)=pflux_sDetC/86400.0_rk
-      if (trim(varname) == 'detritus_labile_nitrogen')     fluxes(:,:,i)=pflux_lDetN/86400.0_rk
-      if (trim(varname) == 'detritus_semilabile_nitrogen') fluxes(:,:,i)=pflux_sDetN/86400.0_rk
-      if (trim(varname) == 'detritus_phosphorus')          fluxes(:,:,i)=pflux_lDetP/86400.0_rk
-      if (trim(varname) == 'detritus_labile_phosphorus')   fluxes(:,:,i)=pflux_lDetP/86400.0_rk
-      !write(0,*) i,trim(only_var_name(sed%model%state_variables(i)%long_name)),bdys(:,:,i+1),fluxes(:,:,i)
+    do n=1,size(sed%model%state_variables)
+      varname = trim(only_var_name(sed%model%state_variables(n)%long_name))
+      if (trim(varname) == 'dissolved_nitrate')            bdys(:,:,n+1)=pel_NO3
+      if (trim(varname) == 'dissolved_ammonium')           bdys(:,:,n+1)=pel_NH4
+      if (trim(varname) == 'dissolved_phosphate')          bdys(:,:,n+1)=pel_PO4
+      if (trim(varname) == 'dissolved_oxygen')             bdys(:,:,n+1)=pel_O2
+      if (trim(varname) == 'dissolved_reduced_substances') bdys(:,:,n+1)=0.0_rk
+      if (trim(varname) == 'detritus_labile_carbon')       fluxes(:,:,n)=pflux_lDetC/86400.0_rk
+      if (trim(varname) == 'detritus_semilabile_carbon')   fluxes(:,:,n)=pflux_sDetC/86400.0_rk
+      if (trim(varname) == 'detritus_labile_nitrogen')     fluxes(:,:,n)=pflux_lDetN/86400.0_rk
+      if (trim(varname) == 'detritus_semilabile_nitrogen') fluxes(:,:,n)=pflux_sDetN/86400.0_rk
+      if (trim(varname) == 'detritus_phosphorus')          fluxes(:,:,n)=pflux_lDetP/86400.0_rk
+      if (trim(varname) == 'detritus_labile_phosphorus')   fluxes(:,:,n)=pflux_lDetP/86400.0_rk
+      !write(0,*) i,trim(only_var_name(sed%model%state_variables(i)%long_name)),bdys(:,:,n+1),fluxes(:,:,i)
     enddo
 
     ! use Dirichlet boundary condition for pre-simulation
@@ -470,9 +470,11 @@ module fabm_sediment_component
     sed1d%bcup_dissolved_variables = 2
     sed1d%adaptive_solver_diagnostics = .true.
     sed1d%bioturbation_profile=0
-    do tidx=1,int(presimulation_years*365*24/(dt_spinup/3600.0_rk),kind=ESMF_KIND_I8)
-      call ode_solver(sed1d,dt_spinup,ode_method)
-    enddo
+    if (presimulation_years.gt.0) then
+      do tidx=1,int(presimulation_years*365*24/(dt_spinup/3600.0_rk),kind=ESMF_KIND_I8)
+        call ode_solver(sed1d,dt_spinup,ode_method)
+      enddo
+    endif
     if (ode_method == 2) then
       write (message,*) 'minimum dt:',sed1d%last_min_dt,' at cell ',sed1d%last_min_dt_grid_cell
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
@@ -480,8 +482,7 @@ module fabm_sediment_component
 
     do i=1,sed%inum
       do j=1,sed%jnum
-        if (.not.sed%mask(i,j,1)) &
-          sed%conc(i,j,:,:) = sed1d%conc(1,1,:,:)
+        if (.not.sed%mask(i,j,1)) sed%conc(i,j,:,:) = sed1d%conc(1,1,:,:)
       enddo
     enddo
 
