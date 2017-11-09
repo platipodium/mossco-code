@@ -323,7 +323,7 @@ sed%L1   = bioturb_L1
 sed%L2   = bioturb_L2
 sed%beta = bioturb_beta
 sed%b    = bioturb_b
-! hard-coded two-class POC model, later replace by name-based 
+! hard-coded two-class POC model, later replace by name-based
 ! link to state variables
 allocate(sed%poc_classes(2))
 sed%poc_classes(1)%data => null()
@@ -562,7 +562,7 @@ call fabm_link_bulk_data(rhs_driver%model,standard_variables%downwelling_photosy
 if (rhs_driver%bioturbation_profile .eq. 3) then
   ! calculate bioturbation depending on infauna biomass, which is
   ! estimated from steady-state dependency on the TOC profile
-  ! following Zhang & Wirtz (2017). 
+  ! following Zhang & Wirtz (2017).
   f_T = _ONE_
   rhs_driver%bioturbation=_ONE_
   ! calculate weighted TOC profile
@@ -593,8 +593,13 @@ endif
 do n=1,size(rhs_driver%model%state_variables)
    rhs_driver%diff = rhs_driver%bioturbation * f_T / 86400.0_rk / 10000_rk * &
               (rhs_driver%ones3d - rhs_driver%intf_porosity)*rhs_driver%bioturbation_factor
+
+! print*,'fabm_sediment_driver#606 ',   trim(rhs_driver%model%state_variables(n)%long_name), &
+!         rhs_driver%model%state_variables(n)%properties%get_logical('particulate',default=.false.), &
+!         rhs_driver%conc(1,1,:,n)
    if (rhs_driver%model%state_variables(n)%properties%get_logical('particulate',default=.false.)) then
       bcup = rhs_driver%bcup_particulate_variables
+
       !write(0,*) rhs_driver%diff(1,1,:),'fac',rhs_driver%bioturbation_factor(1,1,:)
       !stop
       conc_insitu = rhs_driver%conc(:,:,:,n)*rhs_driver%porosity!/ &
@@ -605,10 +610,15 @@ do n=1,size(rhs_driver%model%state_variables)
               bcup, bcdown, rhs_driver%diff, &
               rhs_driver%ones3d - rhs_driver%porosity, intFlux, &
               rhs_driver%transport(:,:,:,n),flux_cap=rhs_driver%flux_cap)
+! do k=1,2
+!       print*,'fabm_sediment_driver#616 ',   conc_insitu(1,1,k), rhs_driver%transport(1,1,k,n), &
+!               rhs_driver%bdys(1,1,n+1), rhs_driver%fluxes(1,1,n), intFlux(1,1,k)
+! enddo
       rhs_driver%transport(:,:,:,n) = rhs_driver%transport(:,:,:,n) * &
               (rhs_driver%ones3d - rhs_driver%porosity)/rhs_driver%porosity
    else
       bcup = rhs_driver%bcup_dissolved_variables
+
       rhs_driver%diff = rhs_driver%diff+(rhs_driver%diffusivity + rhs_driver%temp3d * 0.035d0) &
              * rhs_driver%intf_porosity / 86400.0_rk / 10000_rk
 
