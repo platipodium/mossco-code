@@ -66,10 +66,11 @@ module fabm_sediment_component
   type(type_sed),save :: sed
   type(type_sed),save :: sed1d
 
-  namelist /run_nml/ numyears,dt,output,numlayers,dzmin,ode_method,presimulation_years, &
-                     dt_min,relative_change_min,ugrid_name, bcup_dissolved_variables, &
-                     pel_Temp, pel_NO3, pel_NH4, pel_PO4, pel_O2, pflux_lDetC, pflux_sDetC, &
-                     pflux_lDetN, pflux_sDetN, pflux_lDetP
+  namelist /run_nml/ numyears, dt, output, numlayers, dzmin,                          &
+                     ode_method, dt_min, relative_change_min,                         &
+                     ugrid_name, bcup_dissolved_variables, presimulation_years,       &
+                     pel_Temp, pel_NO3, pel_NH4, pel_PO4, pel_O2,                     &
+                     pflux_lDetC, pflux_sDetC, pflux_lDetN, pflux_sDetN, pflux_lDetP
 
   public SetServices
 
