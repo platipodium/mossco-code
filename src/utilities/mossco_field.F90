@@ -1787,6 +1787,7 @@ end subroutine MOSSCO_FieldCopy
     real(ESMF_KIND_R8), pointer     :: layer_height(:,:,:) => null()
     real(ESMF_KIND_R8), pointer     :: interface_depth(:,:,:) => null()
     integer(ESMF_KIND_I4), pointer  :: mask3(:,:,:) => null()
+    integer(ESMF_KIND_I4), pointer  :: gridmask3(:,:,:) => null()
     real(ESMF_KIND_R8), allocatable :: weight(:,:,:), sum_weight(:,:)
     logical                         :: isPresent
     type(ESMF_StaggerLoc)           :: staggerloc
@@ -1897,8 +1898,11 @@ end subroutine MOSSCO_FieldCopy
 
     if (isPresent) then
       call ESMF_GridGetItem(grid3, ESMF_GRIDITEM_MASK, &
-      staggerloc=staggerloc, farrayPtr=mask3, rc=localrc)
+      staggerloc=staggerloc, farrayPtr=gridmask3, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      if (associated(mask3)) deallocate(mask3)
+      allocate(mask3(RANGE33D))
+      mask3 = gridmask3
     else
       if (associated(mask3)) deallocate(mask3)
       allocate(mask3(RANGE33D))
