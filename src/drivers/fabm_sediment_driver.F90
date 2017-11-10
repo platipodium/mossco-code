@@ -87,6 +87,7 @@ type,extends(type_rhs_driver), public :: type_sed !< sediment driver class (exte
    real(rk),dimension(:,:),allocatable     :: zeros2d
    real(rk),dimension(:,:,:),pointer     :: flux_cap
    real(rk),dimension(:,:,:),pointer     :: biomass=>null()
+   real(rk),dimension(:,:,:),pointer     :: weighted_toc=>null()
 
 contains
    procedure :: initialize
@@ -241,6 +242,8 @@ allocate(sed%intf_porosity(_INUM_,_JNUM_,_KNUM_))
 allocate(sed%bioturbation_factor(_INUM_,_JNUM_,_KNUM_))
 allocate(sed%biomass(_INUM_,_JNUM_,_KNUM_))
 sed%biomass=0.0d0
+allocate(sed%weighted_toc(_INUM_,_JNUM_,_KNUM_))
+sed%weighted_toc=0.0d0
 allocate(sed%temp(_INUM_,_JNUM_,_KNUM_))
 allocate(sed%par (_INUM_,_JNUM_,_KNUM_))
 sed%par = 0.0d0
@@ -575,6 +578,8 @@ if (rhs_driver%bioturbation_profile .eq. 3) then
       averaged_weighted_toc(i,j) = sum(rhs_driver%grid%dz(i,j,:)*weighted_toc(i,j,:))/cumdepth(i,j)
     end do
   end do
+  ! save diagnostic values for output
+  rhs_driver%weighted_toc(1:rhs_driver%inum,1:rhs_driver%jnum,1:rhs_driver%knum) = weighted_toc(1:rhs_driver%inum,1:rhs_driver%jnum,1:rhs_driver%knum)
 
   ! calculate infauna biomass [100 g/m2]
   do k=1,rhs_driver%knum
@@ -816,7 +821,7 @@ subroutine get_all_export_states(self)
    integer  :: nvar_export
 
    nvar_export = self%nvar+5
-   if (self%bioturbation_profile.eq.3) nvar_export=nvar_export+2
+   if (self%bioturbation_profile.eq.3) nvar_export=nvar_export+3
    allocate(self%export_states(nvar_export))
 
    self%export_states(1)%standard_name='porosity'
@@ -851,6 +856,10 @@ subroutine get_all_export_states(self)
      self%export_states(7+self%nvar)%standard_name='bioturbation'
      self%export_states(7+self%nvar)%data => self%bioturbation_factor
      self%export_states(7+self%nvar)%units ='cm2 d-1'
+
+     self%export_states(8+self%nvar)%standard_name='weighted_toc'
+     self%export_states(8+self%nvar)%data => self%weighted_toc
+     self%export_states(8+self%nvar)%units ='mg/g-dry_weight'
    end if
 
 end subroutine get_all_export_states
