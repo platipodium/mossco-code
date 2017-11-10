@@ -309,6 +309,7 @@ module soil_pelagic_connector
       DETNflux, verbose=verbose, rc=localrc)
     if (localrc == ESMF_SUCCESS) then
       if (associated(includeList)) deallocate(includeList)
+      allocate(includeList(1))
       includeList(1) = 'detritus*nitrogen_upward_flux_at_soil_surface'
 
       call MOSSCO_StateGet(importState, importFieldList, fieldCount=fieldCount, &
@@ -335,6 +336,7 @@ module soil_pelagic_connector
     if (localrc == ESMF_SUCCESS) then
 
       if (associated(includeList)) deallocate(includeList)
+      allocate(includeList(1))
       includeList(1) = 'detritus*phosphorous_upward_flux_at_soil_surface'
 
       call MOSSCO_StateGet(importState, importFieldList, fieldCount=fieldCount, &
