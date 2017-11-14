@@ -40,8 +40,8 @@ module pelagic_soil_connector
 
   !> parameters
   real(ESMF_KIND_R8) :: sinking_factor=0.3d0 !> 30% of Det sinks into sediment
-  real(ESMF_KIND_R8) :: NC_ldet=0.20d0
-  real(ESMF_KIND_R8) :: NC_sdet=0.04d0
+  real(ESMF_KIND_R8) :: NC_ldet=0.23d0 !> CAUTION!!! make sure this parameter is set according to omexdia namelist
+  real(ESMF_KIND_R8) :: NC_sdet=0.01d0 !> CAUTION!!! make sure this parameter is set according to omexdia namelist
   real(ESMF_KIND_R8) :: convertN=1.0d0
   real(ESMF_KIND_R8) :: convertP=1.0d0
   real(ESMF_KIND_R8) :: sinking_factor_min=0.02 !> minimum of 2% of Det sinks always into sediment
@@ -199,8 +199,10 @@ module pelagic_soil_connector
     character (len=ESMF_MAXSTR) :: timestring
     type(ESMF_Field)            :: field
     real(ESMF_KIND_R8),dimension(:,:),pointer :: CN_det=>null()
-    real(ESMF_KIND_R8),dimension(:,:),pointer :: fac_fdet=>null()
+    real(ESMF_KIND_R8),dimension(:,:),pointer :: fac_ldet=>null()
     real(ESMF_KIND_R8),dimension(:,:),pointer :: fac_sdet=>null()
+    real(ESMF_KIND_R8),dimension(:,:),pointer :: frac_ldet=>null()
+    real(ESMF_KIND_R8),dimension(:,:),pointer :: frac_sdet=>null()
     real(ESMF_KIND_R8),dimension(:,:),pointer :: fac_env=>null()
     real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3 => null()
     real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3_2nd => null()
@@ -320,17 +322,20 @@ module pelagic_soil_connector
 #endif
 
     call mossco_state_get(importState,(/ &
-            'detritus_z_velocity_in_water              ', &
-            'detN_z_velocity_in_water                  ', &
-            'Detritus_Nitrogen_detN_z_velocity_in_water'/),vDETN, verbose=verbose, rc=localrc)
+            'detritus_z_velocity_in_water              ',   &
+            'detN_z_velocity_in_water                  ',   &
+            'Detritus_Nitrogen_detN_z_velocity_in_water'/), &
+            vDETN, verbose=verbose, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
     inum=ubnd(1)-lbnd(1)+1
     jnum=ubnd(2)-lbnd(2)+1
-    if (.not.associated(CN_det)) allocate(CN_det(1:inum,1:jnum))
-    if (.not.associated(fac_fdet)) allocate(fac_fdet(1:inum,1:jnum))
-    if (.not.associated(fac_sdet)) allocate(fac_sdet(1:inum,1:jnum))
-    if (.not.associated(fac_env)) allocate(fac_env(1:inum,1:jnum))
+    if (.not.associated(CN_det))    allocate(CN_det(1:inum,1:jnum))
+    if (.not.associated(fac_ldet))  allocate(fac_ldet(1:inum,1:jnum))
+    if (.not.associated(fac_sdet))  allocate(fac_sdet(1:inum,1:jnum))
+    if (.not.associated(frac_ldet)) allocate(frac_ldet(1:inum,1:jnum))
+    if (.not.associated(frac_sdet)) allocate(frac_sdet(1:inum,1:jnum))
+    if (.not.associated(fac_env))   allocate(fac_env(1:inum,1:jnum))
 
     !> search for Detritus-C, if present, use Detritus C-to-N ratio and apply flux
     call mossco_state_get(importState,(/'Detritus_Carbon_detC_in_water'/), &
@@ -353,25 +358,29 @@ module pelagic_soil_connector
 
     end if
 
-    fac_fdet = (1.0d0-NC_sdet*CN_det)/(NC_ldet-NC_sdet)
+    fac_ldet  = (1.0d0-NC_sdet*CN_det)/(NC_ldet-NC_sdet)
+    frac_ldet = (1.0d0-NC_sdet*CN_det)/(NC_ldet-NC_sdet) *NC_ldet
 
 ! dirty=non-mass-conserving fix added by kw against unphysical partitioning
 
-!> fdet + sdet = CN_det*det
-!> NC_ldet*fdet + NC_sdet*sdet = det
-!> fdet = fac_fdet*det
+!> ldet + sdet = CN_det*det
+!> NC_ldet*ldet + NC_sdet*sdet = det
+!> ldet = fac_ldet*det
 !> sdet = fac_sdet*det
 
-    where (fac_fdet .gt. CN_det)
-      fac_fdet = CN_det
+    where (fac_ldet .gt. CN_det)
+      fac_ldet  = CN_det
+      frac_ldet = 1.0d0
     endwhere
 
-    where (fac_fdet .lt. 0.0d0)
-      fac_fdet = 0.0d0
+    where (fac_ldet .lt. 0.0d0)
+      fac_ldet  = 0.0d0
+      frac_ldet = 0.0d0
     endwhere
 
-    fac_sdet = CN_det - fac_fdet
+    fac_sdet = CN_det - fac_ldet
 !    fac_sdet = (1.0d0-NC_ldet*CN_det)/(NC_sdet-NC_ldet)
+    frac_sdet = 1.0d0 - frac_ldet
 
     ! get depth from exportState, where the physical model has put its data
     call mossco_state_get(exportState, &
@@ -402,9 +411,10 @@ module pelagic_soil_connector
       end if
     end if
 
+    !> check for Detritus-C and calculate N-based flux
     call mossco_state_get(exportState, (/'detritus_labile_carbon_at_soil_surface'/), &
       ptr_f2, verbose=verbose, rc=localrc)
-    if (localrc==0) ptr_f2 = fac_fdet * convertN*DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+    if (localrc==0) ptr_f2 = fac_ldet * convertN*DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
 
     call mossco_state_get(exportState, (/'detritus_semilabile_carbon_at_soil_surface'/),&
       ptr_f2, verbose=verbose, rc=localrc)
@@ -417,14 +427,32 @@ module pelagic_soil_connector
         ptr_f2, verbose=verbose, rc=localrc)
     if (localrc==0) ptr_f2 = sinking_factor * fac_env * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
 
+    !> check for Detritus-N and N-based flux
+    call mossco_state_get(exportState, (/'detritus_labile_nitrogen_at_soil_surface'/), &
+      ptr_f2, verbose=verbose, rc=localrc)
+    if (localrc==0) ptr_f2 = frac_ldet * convertN*DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+    !if (localrc==0) ptr_f2 = fac_ldet * convertN*DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))*NC_ldet
+
+    call mossco_state_get(exportState, (/'detritus_semilabile_nitrogen_at_soil_surface'/),&
+      ptr_f2, verbose=verbose, rc=localrc)
+    if(localrc==0) ptr_f2 = frac_sdet * convertN*DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+    !if(localrc==0) ptr_f2 = fac_sdet * convertN*DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))*NC_sdet
+
+    call mossco_state_get(exportState, (/'detritus_labile_nitrogen_z_velocity_at_soil_surface'/), &
+      ptr_f2, verbose=verbose, rc=localrc)
+    if (localrc==0) ptr_f2 = sinking_factor * fac_env * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+    call mossco_state_get(exportState, (/'detritus_semilabile_nitrogen_z_velocity_at_soil_surface'/), &
+        ptr_f2, verbose=verbose, rc=localrc)
+    if (localrc==0) ptr_f2 = sinking_factor * fac_env * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+
     !> check for Detritus-P and calculate flux either N-based
     !> or as present through the Detritus-P pool
     call mossco_state_get(exportState, (/ &
           'detritus_phosphorus_at_soil_surface       ',   &
           'detritus_labile_phosphorus_at_soil_surface'/), &
-       ptr_f2, verbose=verbose, rc=localrc)
+          ptr_f2, verbose=verbose, rc=localrc)
     call mossco_state_get(importState,(/ &
-          'detP_in_water                    ', &
+          'detP_in_water                    ',   &
           'Detritus_Phosphorus_detP_in_water'/), &
           DETP,lbnd=Plbnd,ubnd=Pubnd, verbose=verbose, rc=localrc)
     if (localrc == 0) then
@@ -434,18 +462,19 @@ module pelagic_soil_connector
     end if
 
     call mossco_state_get(exportState, (/ &
-        'detritus_phosphorus_z_velocity_at_soil_surface       ',   &
-        'detritus_labile_phosphorus_z_velocity_at_soil_surface'/), &
-        ptr_f2, verbose=verbose, rc=localrc)
+         'detritus_phosphorus_z_velocity_at_soil_surface       ',   &
+         'detritus_labile_phosphorus_z_velocity_at_soil_surface'/), &
+         ptr_f2, verbose=verbose, rc=localrc)
     call mossco_state_get(importState,(/ &
-              'detP_z_velocity_in_water                    ', &
-              'Detritus_Phosphorus_detP_z_velocity_in_water'/), &
-              vDETP, verbose=verbose, rc=localrc)
+         'detP_z_velocity_in_water                    ', &
+         'Detritus_Phosphorus_detP_z_velocity_in_water'/), &
+         vDETP, verbose=verbose, rc=localrc)
     if (localrc==0) then
         ptr_f2 = sinking_factor * fac_env * vDETP(Plbnd(1):Pubnd(1),Plbnd(2):Pubnd(2),Plbnd(3))
     else
         ptr_f2 = sinking_factor * fac_env * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
     end if
+
 
     ! Dissolved inorganic matter, i.e. nitrate, ammonium or DIN
     call MOSSCO_StateGet(importState, fieldList, itemSearchList= (/ &
