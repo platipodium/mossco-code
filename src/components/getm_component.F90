@@ -57,6 +57,7 @@ module getm_component
   real(ESMF_KIND_R8),pointer :: T3D  (:,:,:)=>NULL(),Tbot  (:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: S3D  (:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: swr(:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: bioshade(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: SS3D (:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: NN3D (:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: num3D(:,:,:)=>NULL(),numbot(:,:)=>NULL()
@@ -397,6 +398,10 @@ module getm_component
     end select
     if (associated(taubmax)) then
       call getmCmp_StateAddPtr("maximum_bottom_stress",taubmax,exportState,"Pa",name)
+    end if
+
+    if (associated(bioshade)) then
+      call getmCmp_StateAddPtr("bioshading",bioshade,importState,"",name)
     end if
 
     fieldBundle = ESMF_FieldBundleCreate(name='concentrations_in_water',multiflag=.true.,rc=localrc)
@@ -866,6 +871,7 @@ module getm_component
 #ifndef NO_BAROCLINIC
    use m3d            ,only: calc_temp,calc_salt
    use variables_3d   ,only: T,S,NN
+   use variables_3d   ,only: bioshade_=>bioshade
 #endif
 #endif
    use meteo          ,only: metforcing,met_method,calc_met
@@ -924,6 +930,8 @@ module getm_component
 #else
             allocate(T3D(imin:imax,jmin:jmax,1:kmax))
 #endif
+            allocate(bioshade(I3DFIELD))
+            bioshade = 1.0d0
          end if
          if (calc_salt) then
 #ifdef FOREIGN_GRID
@@ -984,6 +992,7 @@ module getm_component
 #else
             T3D => T(imin:imax,jmin:jmax,1:kmax)
 #endif
+            bioshade => bioshade_
          end if
          if (calc_salt) then
 #ifdef FOREIGN_GRID
@@ -1309,6 +1318,14 @@ module getm_component
 ! !DESCRIPTION:
 !
 ! !USES:
+   use initialise  ,only: runtype
+#ifndef NO_3D
+#ifndef NO_BAROCLINIC
+   use m3d         ,only: calc_temp
+   use variables_3d,only: bioshade_=>bioshade
+#endif
+#endif
+
    IMPLICIT NONE
 !
 ! !INPUT/OUTPUT PARAMETERS:
@@ -1328,6 +1345,17 @@ module getm_component
    write(debug,*) 'getmCmp_update_importState() # ',Ncall
 #endif
 
+   if (noKindMatch) then
+#ifndef NO_3D
+      if (runtype .gt. 1) then
+#ifndef NO_BAROCLINIC
+         if (calc_temp) then
+            bioshade_ = bioshade
+         end if
+#endif
+      end if
+#endif
+   end if
 
 #ifdef DEBUG
    write(debug,*) 'getmCmp_update_importState()'
