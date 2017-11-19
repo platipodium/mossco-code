@@ -1,10 +1,10 @@
 #!/bin/bash
 
 
-TAGS=ESMF_7_1_0_beta_snapshot_27
+TAGS=ESMF_7_1_0_beta_snapshot_39
 export TAGS
 
-COMPS="intel" #"gfortranclang" # gfortranclang" # gfortran intel pgi gfortranclang pgigcc intelgcc
+COMPS="gfortranclang" #"gfortranclang" # gfortranclang" # gfortran intel pgi gfortranclang pgigcc intelgcc
 COMMS="openmpi" #"openmpi" # openmpi" #"openmpi" #  mpiuni mpich2 intelmpi
 
 test -n ${ESMF_DIR} || export ESMF_DIR = ${HOME}/devel/ESMF/esmf-code
