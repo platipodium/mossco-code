@@ -78,6 +78,8 @@ $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities libmossco_util
 
 clean: extraclean
+	$(RM) *.o
+
 extraclean:
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_gotm.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_fabmgotm.a
