@@ -36,8 +36,7 @@ all: $(TARGETS)
 
 libmossco_gotm: prefix libgotm_external libmossco_util \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_gotm.a(gotm_component.o) \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_gotm.a(gotm_transport_component.o) \
-	$(MOSSCO_MODULE_PATH)/gotm_component.mod
+	$(MOSSCO_LIBRARY_PATH)/libmossco_gotm.a(gotm_transport_component.o)
 
 libmossco_fabmgotm: prefix libmossco_fabmgotm_driver \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_fabmgotm.a(fabm_gotm_component.o)
@@ -45,25 +44,8 @@ libmossco_fabmgotm: prefix libmossco_fabmgotm_driver \
 libmossco_gotmfabm: prefix libmossco_fabmpelagic libmossco_gotm libmossco_fabmgotm \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a(gotmfabm_component.o)
 
-gotm_component.o: gotm_component.F90
-	@echo "Compiling $<"
-	$(F90) $(GOTM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
-
-$(MOSSCO_MODULE_PATH)/gotm_component.mod: gotm_component.F90
-	@echo "Compiling $<"
-	$(F90) $(GOTM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o gotm_component.o
-
-
-gotm_transport_component.o: gotm_transport_component.F90
-	@echo "Compiling $<"
-	$(F90) $(GOTM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
-
-fabm_gotm_component.o: fabm_gotm_component.F90
-	@echo "Compiling $<"
-	$(F90) $(GOTM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
-
-gotmfabm_component.o: gotmfabm_component.F90
-	@echo "Compiling $<"
+%.o: %.F90
+	@echo "Compiling components/gotm/$<"
 	$(F90) $(GOTM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
 libmossco_fabmpelagic:
@@ -72,9 +54,7 @@ libmossco_fabmpelagic:
 libmossco_fabmgotm_driver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_fabmgotm
 
-libmossco_util: prefix $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
-
-$(MOSSCO_MODULE_PATH)/mossco_variable_types.mod:
+libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities libmossco_util
 
 clean: extraclean
