@@ -62,7 +62,7 @@ fabm_gotm_component.o: fabm_gotm_component.F90
 	@echo "Compiling $<"
 	$(F90) $(GOTM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
-gotmfabm_component.o: gotmfabm_component.F90
+gotmfabm_component.o: gotmfabm_component.F90 gotm_transport_component.o
 	@echo "Compiling $<"
 	$(F90) $(GOTM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
