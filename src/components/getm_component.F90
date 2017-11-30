@@ -1254,7 +1254,7 @@ module getm_component
    end if
 
    if (runtype .ge. 2) then
-      if (associated(taubmax)) taubmax = rho_0 * taubmax_3d
+      taubmax = rho_0 * taubmax_3d
    end if
 #endif
 
