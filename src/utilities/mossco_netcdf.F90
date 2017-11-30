@@ -2070,9 +2070,11 @@ module mossco_netcdf
     endif
 
     self%ndims=ndims
-
-    allocate(self%dimlens(ndims))
-    allocate(self%dimNames(ndims))
+   
+    if (ndims > 0) then  
+      if ( .not. allocated(self%dimlens)) allocate(self%dimlens(ndims), stat=localrc)
+      if ( .not. allocated(self%dimNames)) allocate(self%dimNames(ndims), stat=localrc)
+    endif
 
     do i=1, ndims
       localrc=nf90_inquire_dimension(self%ncid, i, len=self%dimlens(i), name=self%dimNames(i))
