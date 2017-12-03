@@ -646,8 +646,16 @@ fid.write('''
         name=trim(gridCompNameList(i))//'Export')
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_LogWrite('toplevel reconciles '//trim(gridCompNameList(i))//'Export', ESMF_LOGMSG_INFO)
+      call ESMF_StateReconcile(gridExportStateList(i), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       gridImportStateList(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED, &
         name=trim(gridCompNameList(i))//'Import')
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_LogWrite('toplevel reconciles '//trim(gridCompNameList(i))//'Import', ESMF_LOGMSG_INFO)
+      call ESMF_StateReconcile(gridImportStateList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
@@ -1052,9 +1060,11 @@ fid.write('    !! End of ReadRestart \n\n')
 
 fid.write('''
     do i=1, numGridComp
-      !call ESMF_StateReconcile(state=gridImportStateList(i), rc=localrc)
+      call ESMF_LogWrite('toplevel reconciles '//trim(gridCompNameList(i))//'Import', ESMF_LOGMSG_INFO)
+      call ESMF_StateReconcile(state=gridImportStateList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      !call ESMF_StateReconcile(state=gridExportStateList(i), rc=localrc)
+      call ESMF_LogWrite('toplevel reconciles '//trim(gridCompNameList(i))//'Export', ESMF_LOGMSG_INFO)
+      call ESMF_StateReconcile(state=gridExportStateList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
  ''')
@@ -1798,6 +1808,12 @@ fid.write('''
         !! phases
         do phase=1,gridCompPhaseCountList(i)
           !call MOSSCO_GridCompFieldsTable(gridCompList(i), importState=gridImportStateList(i), exportState=gridExportStateList(i),rc=localrc)
+          call ESMF_LogWrite('toplevel reconciles '//trim(gridCompNameList(i))//'Import', ESMF_LOGMSG_INFO)
+	  call ESMF_StateReconcile(gridImportStateList(i), rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call ESMF_LogWrite('toplevel reconciles '//trim(gridCompNameList(i))//'Export', ESMF_LOGMSG_INFO)
+	  call ESMF_StateReconcile(gridExportStateList(i), rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           call ESMF_GridCompRun(gridCompList(i),importState=gridImportStateList(i),&
             exportState=gridExportStateList(i), clock=controlClock, phase=phase, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
