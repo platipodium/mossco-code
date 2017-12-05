@@ -1194,7 +1194,7 @@ module mossco_netcdf
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
       endif
-      
+
       ncStatus = nf90_inq_varid(self%ncid, 'year', varid)
       if (ncStatus /= NF90_NOERR) then
         write(message,'(A)') '  '//trim(nf90_strerror(ncStatus))//', cannot find variable year'
@@ -1206,7 +1206,7 @@ module mossco_netcdf
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
       endif
- 
+
       call ESMF_TimeGet(refTime + timeInterval, yy=yy, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1223,7 +1223,7 @@ module mossco_netcdf
         endif
       endif
 
-      
+
 
       ncStatus = nf90_inq_varid(self%ncid, 'date_string', varid)
       if (ncStatus /= NF90_NOERR) then
@@ -1712,6 +1712,7 @@ module mossco_netcdf
 
     nc%name=trim(filename)
 
+
   end function mossco_netcdfCreate
 
 #undef  ESMF_METHOD
@@ -2070,8 +2071,8 @@ module mossco_netcdf
     endif
 
     self%ndims=ndims
-   
-    if (ndims > 0) then  
+
+    if (ndims > 0) then
       if ( .not. allocated(self%dimlens)) allocate(self%dimlens(ndims), stat=localrc)
       if ( .not. allocated(self%dimNames)) allocate(self%dimNames(ndims), stat=localrc)
     endif
@@ -3705,7 +3706,7 @@ module mossco_netcdf
     endif
 
     if (present(refTime)) refTime=refTime_
-      
+
     call ESMF_TimeGet(refTime_, timeStringISOFrac=timeString, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -4475,7 +4476,7 @@ module mossco_netcdf
     localrc = nf90_put_att(self%ncid, varid, trim(key), value)
     if (localrc /= NF90_NOERR) then
       call ESMF_LogWrite('  '//trim(nf90_strerror(localrc)), ESMF_LOGMSG_ERROR)
-      write(message,'(A,ES9.3,A)') '   cannot write attribute "'//trim(key)//'"="', &
+      write(message,'(A,ES10.3,A)') '   cannot write attribute "'//trim(key)//'"="', &
         value,'" to file "'//trim(self%name)//'"'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       rc_ = ESMF_RC_FILE_WRITE
@@ -4503,7 +4504,7 @@ module mossco_netcdf
       localrc = nf90_put_att(self%ncid, varid, trim(key), value)
       if (localrc /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(localrc)), ESMF_LOGMSG_ERROR)
-        write(message,'(A,ES9.3,A)') '   cannot write attribute "'//trim(key)//'"="', &
+        write(message,'(A,ES10.3,A)') '   cannot write attribute "'//trim(key)//'"="', &
           value,'" to file "'//trim(self%name)//'"'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         rc_ = ESMF_RC_FILE_WRITE
@@ -4531,7 +4532,7 @@ module mossco_netcdf
     localrc = nf90_put_att(self%ncid, varid, trim(key), value)
     if (localrc /= NF90_NOERR) then
       call ESMF_LogWrite('  '//trim(nf90_strerror(localrc)), ESMF_LOGMSG_ERROR)
-      write(message,'(A,ES9.3,A)') '   cannot write attribute "'//trim(key)//'"="', &
+      write(message,'(A,ES10.3,A)') '   cannot write attribute "'//trim(key)//'"="', &
         value,'" to file "'//trim(self%name)//'"'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       rc_ = ESMF_RC_FILE_WRITE

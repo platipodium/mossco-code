@@ -1666,6 +1666,7 @@ contains
     type(ESMF_Field)                    :: field
 
     rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
 
     call ESMF_StateGet(state, name=name, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -2298,7 +2299,8 @@ contains
     character(len=*), intent(in), optional       :: itemSearch
     integer(ESMF_KIND_I4), intent(out), optional :: fieldCount
     type(ESMF_FieldStatus_Flag), intent(in), optional   :: fieldStatus
-    character(len=*), intent(in), optional, pointer      :: include(:), exclude(:)
+    character(len=*), intent(in), optional, pointer      :: include(:) => null()
+    character(len=*), intent(in), optional, pointer      :: exclude(:) => null()
     character(len=*), intent(in), optional       :: owner
     logical, intent(in), optional                :: verbose
     integer(ESMF_KIND_I4), intent(out), optional :: rc
