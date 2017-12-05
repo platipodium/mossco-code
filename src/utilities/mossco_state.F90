@@ -2299,8 +2299,8 @@ contains
     character(len=*), intent(in), optional       :: itemSearch
     integer(ESMF_KIND_I4), intent(out), optional :: fieldCount
     type(ESMF_FieldStatus_Flag), intent(in), optional   :: fieldStatus
-    character(len=*), intent(in), optional, pointer      :: include(:) => null()
-    character(len=*), intent(in), optional, pointer      :: exclude(:) => null()
+    character(len=*), intent(in), optional, pointer      :: include(:)
+    character(len=*), intent(in), optional, pointer      :: exclude(:)
     character(len=*), intent(in), optional       :: owner
     logical, intent(in), optional                :: verbose
     integer(ESMF_KIND_I4), intent(out), optional :: rc

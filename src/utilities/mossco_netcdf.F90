@@ -387,6 +387,11 @@ module mossco_netcdf
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           endif
         endif
+      else
+        where (ncarray4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)) /= &
+              ncarray4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)))
+          ncarray4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4))=missingValue
+        endwhere
       endif
 
       if (checkInf_) then
@@ -462,7 +467,12 @@ module mossco_netcdf
         else
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
-      endif
+        endif
+      else
+        where (ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) /= &
+                ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)))
+          ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) = missingValue
+        endwhere
       endif
 
       if (checkInf_) then
@@ -514,19 +524,24 @@ module mossco_netcdf
       end if
 
       if (checkNaN_) then
-      if (any(ncarray2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) /= &
+        if (any(ncarray2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) /= &
               ncarray2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)))) then
-        call self%close()
-        write(message,'(A)')  '  NaN detected in field '
-        call MOSSCO_FieldString(field, message, rc=localrc)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-        if (present(rc)) then
-          rc = ESMF_RC_VAL_OUTOFRANGE
-          return
-        else
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call self%close()
+          write(message,'(A)')  '  NaN detected in field '
+          call MOSSCO_FieldString(field, message, rc=localrc)
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+          if (present(rc)) then
+            rc = ESMF_RC_VAL_OUTOFRANGE
+            return
+          else
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          endif
         endif
-      endif
+      else
+        where (ncarray2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) /= &
+              ncarray2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)))
+          ncarray2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) = missingValue
+        endwhere
       endif
 
       if (checkInf_) then
