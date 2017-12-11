@@ -476,8 +476,13 @@ module grid_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_FieldEmptyComplete(field, typeKind=ESMF_TYPEKIND_I4, &
-      totalUWidth=(/halo,halo,0/), totalLWidth=(/halo,halo,0/), rc=localrc)
+    if (nlayer > 0) then
+      call ESMF_FieldEmptyComplete(field, typeKind=ESMF_TYPEKIND_I4, &
+        totalUWidth=(/halo,halo,0/), totalLWidth=(/halo,halo,0/), rc=localrc)
+    else
+      call ESMF_FieldEmptyComplete(field, typeKind=ESMF_TYPEKIND_I4, &
+        totalUWidth=(/halo,halo/), totalLWidth=(/halo,halo/), rc=localrc)
+    endif
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
