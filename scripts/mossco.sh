@@ -90,8 +90,8 @@ function predict_time() {
 
   S=1500
   NP=$1
-  START=$(cat ${NML} | grep start| awk -F"'" '{print $2}' | awk -F" " '{print $1}')
-  STOP=$(cat ${NML} | grep stop| awk -F"'" '{print $2}' | awk -F" " '{print $1}')
+  START=$(cat ${NML} | grep -v --regexp ' *!'| grep stop | awk -F"'" '{print $2}' | awk -F" " '{print $1}')
+  STOP=$(cat ${NML} | grep -v --regexp ' *!'| grep stop | awk -F"'" '{print $2}' | awk -F" " '{print $1}')
   Y1=$(echo ${START} | cut -d"-" -f1)
   Y2=$(echo ${STOP}  | cut -d"-" -f1)
   M1=$(echo ${START} | cut -d"-" -f2)
