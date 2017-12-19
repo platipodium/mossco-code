@@ -77,7 +77,7 @@ libmossco_util libmossco_db:
 $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(pelagic_benthic_mediator.o): pelagic_benthic_mediator.F90 pelagic_benthic_mediator.o
 	$(AR) cruvs $@ pelagic_benthic_mediator.o
 
-$(MOSSCO_LIBRARY_PATH)/libregridcoupler.a: regrid_coupler.o
+$(MOSSCO_LIBRARY_PATH)/libregridcoupler.a: regrid_coupler.o regrid_coupler.F90
 	$(AR) cruvs $@ regrid_coupler.o
 
 $(MOSSCO_LIBRARY_PATH)/libverticalreduction.a: vertical_reduction.o
