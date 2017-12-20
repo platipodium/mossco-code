@@ -194,7 +194,7 @@ module grid_component
       _CATCH_ERROR_ABORT_
 
       if (labelIsPresent) then
-        write(message,'(A)') trim(name)// 'found filename = '//trim(gridFileName)
+        write(message,'(A)') trim(name)// ' found filename = '//trim(gridFileName)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
