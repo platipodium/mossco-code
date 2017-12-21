@@ -987,6 +987,14 @@ module fabm_sediment_component
                exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+        if  (  (ubnd(1)-lbnd(1) /= _INUM_ - 1) .or. (ubnd(2)-lbnd(2) /= _JNUM_ - 1) ) then
+          write(message,'(A)') trim(name)//' received incompatible bounds in '
+          call MOSSCO_FieldString(field, message)
+          localrc = ESMF_RC_ARG_BAD
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        endif
+
         sed%porosity(1:_INUM_,1:_JNUM_,1)=ptr_f2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))
         call sed%update_porosity(from_surface=.true.)
         write(message,'(A)') trim(name)//' updated porosity from'
