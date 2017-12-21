@@ -2392,6 +2392,7 @@ module mossco_netcdf
     type(ESMF_CoordSys_Flag)                         :: coordSys
     integer(ESMF_KIND_I4), dimension(:), allocatable :: coordDimCount, exclusiveCount
     integer(ESMF_KIND_I4)                            :: dimCount, attributeCount, i, j ,k
+    integer(ESMF_KIND_I4)                            :: staggerLocCount
     type(ESMF_Array)                                 :: array
     logical                                          :: isPresent
     real(ESMF_KIND_R8)                               :: missingValue
@@ -2406,7 +2407,7 @@ module mossco_netcdf
     type(ESMF_Field)                 :: field
 
     call ESMF_GridGet(grid, coordSys=coordSys, dimCount=dimCount, &
-      name=geomName, rc=localrc)
+      name=geomName, staggerLocCount=staggerLocCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
