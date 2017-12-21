@@ -16,7 +16,7 @@
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "grid_component.F90"
 
-#define _CATCH_ERROR_ABORT_ if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+#define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 module grid_component
 
@@ -121,6 +121,8 @@ module grid_component
 #undef  ESMF_METHOD
 #define ESMF_METHOD "InitializeP1"
   subroutine InitializeP1(gridComp, importState, exportState, parentClock, rc)
+
+    use mossco_variable_types
     implicit none
 
     type(ESMF_GridComp)  :: gridComp
@@ -156,6 +158,9 @@ module grid_component
     integer(ESMF_KIND_I4), allocatable :: exclusiveCount(:), coordDimIds(:)
     integer(ESMF_KIND_I4)              :: rank, dimCount
     type(ESMF_CoordSys_Flag)           :: coordSys
+    type(type_mossco_netcdf)           :: nc
+    type(type_mossco_netcdf_variable),pointer  :: var => null()
+
 
     rc = ESMF_SUCCESS
     hasGrid = .false.
@@ -166,14 +171,14 @@ module grid_component
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
       importState=importState, exportState=exportState, rc=localrc)
-    _CATCH_ERROR_ABORT_
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
-    _CATCH_ERROR_ABORT_
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_GridCompGet(gridComp, petCount=petCount, localPet=localPet, &
       name=name, rc=localrc)
-    _CATCH_ERROR_ABORT_
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     configfilename=trim(name)//'.cfg'
     inquire(file=trim(configfilename), exist=fileIsPresent)
@@ -184,14 +189,14 @@ module grid_component
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       config = ESMF_ConfigCreate(rc=localrc)
-      _CATCH_ERROR_ABORT_
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_ConfigLoadFile(config, trim(configfilename), rc=localrc)
-      _CATCH_ERROR_ABORT_
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call MOSSCO_ConfigGet(config, label='filename', value=gridFileName, &
         defaultValue='grid.nc', isPresent=labelIsPresent, rc = localrc)
-      _CATCH_ERROR_ABORT_
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (labelIsPresent) then
         write(message,'(A)') trim(name)// ' found filename = '//trim(gridFileName)
@@ -216,7 +221,7 @@ module grid_component
 
         call MOSSCO_ConfigGet(config, label='dimensions', value=dimList, &
           isPresent=labelIsPresent, rc = localrc)
-        _CATCH_ERROR_ABORT_
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         if (labelIsPresent) then
           write(message,'(A)') trim(name)//' found dimensions'
@@ -225,7 +230,7 @@ module grid_component
 
         call MOSSCO_ConfigGet(config, label='corners', value=cornerList, &
           isPresent=labelIsPresent, rc = localrc)
-        _CATCH_ERROR_ABORT_
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         if (labelIsPresent) then
           write(message,'(A)') trim(name)//' found corners'
@@ -236,7 +241,7 @@ module grid_component
       else
         call MOSSCO_ConfigGet(config, label='format', value=fileFormat, &
           defaultValue='SCRIP', rc = localrc)
-        _CATCH_ERROR_ABORT_
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         if (labelIsPresent) then
           write(message,'(A)') trim(name)//' found format = '//trim(fileFormat)
@@ -247,7 +252,7 @@ module grid_component
       endif
 
       call MOSSCO_ConfigGet(config, label='decomposition', value=decompositionList, isPresent=labelIsPresent, rc = localrc)
-      _CATCH_ERROR_ABORT_
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (labelIsPresent) then
         write(message,'(A)') trim(name)//' found decomposition'
@@ -255,7 +260,7 @@ module grid_component
       endif
 
       call MOSSCO_ConfigGet(config, label='layers', value=nlayer, defaultValue=nlayer, isPresent=labelIsPresent, rc = localrc)
-      _CATCH_ERROR_ABORT_
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (labelIsPresent) then
         write(message,'(A,I3)') trim(name)//' found layers = ',nlayer
@@ -264,7 +269,7 @@ module grid_component
 
       call MOSSCO_ConfigGet(config, label='halo', value=halo, &
         defaultValue=halo, isPresent=labelisPresent, rc = localrc)
-      _CATCH_ERROR_ABORT_
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (labelIsPresent) then
         write(message,'(A,I1)') trim(name)//' found halo = ',halo
@@ -272,12 +277,12 @@ module grid_component
       endif
 
       call ESMF_GridCompSet(gridComp, config=config, rc=localrc)
-      _CATCH_ERROR_ABORT_
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
 
     if (.not.allocated(decompositionList)) then
       allocate(decompositionList(2), stat=localrc)
-      _CATCH_ERROR_ABORT_
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       decompositionList(:) = (/petCount,1/)
     endif
 
@@ -289,8 +294,7 @@ module grid_component
         return
       endif
       call MOSSCO_AttributeSet(gridComp, 'decomposition_list', decompositionList, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
 
     !> @todo handle cases where decompositionList exceeds number of processors
@@ -301,16 +305,13 @@ module grid_component
     endif
 
     call MOSSCO_AttributeSet(gridComp, 'decomposition_list', decompositionList, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_AttributeSet(gridComp, 'number_of_vertical_layers', nlayer, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_AttributeSet(gridComp, 'width_of_halo', halo, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     inquire(file=trim(gridFileName), exist=isPresent)
     if (isPresent) then
@@ -319,19 +320,19 @@ module grid_component
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       call ESMF_AttributeSet(gridComp, 'grid_file', trim(gridFileName), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_AttributeSet(gridComp, 'file_format', trim(fileFormat), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (trim(fileFormat) == 'SCRIP') then
-        grid2 = ESMF_GridCreate(filename=trim(gridFileName), fileFormat=ESMF_FILEFORMAT_SCRIP, &
+        grid = ESMF_GridCreate(filename=trim(gridFileName), fileFormat=ESMF_FILEFORMAT_SCRIP, &
           regDecomp=decompositionList, isSphere=.false., rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       elseif (trim(fileFormat) == 'GRIDSPEC') then
-        grid2 = ESMF_GridCreate(filename=trim(gridFileName), fileFormat=ESMF_FILEFORMAT_GRIDSPEC, &
+        grid = ESMF_GridCreate(filename=trim(gridFileName), fileFormat=ESMF_FILEFORMAT_GRIDSPEC, &
           regDecomp=decompositionList, isSphere=.false., rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       else
         write(message, '(A)') trim(name)//' wrong file format '//trim(fileformat)//', valid options are SCRIP or GRIDSPEC'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
@@ -339,9 +340,48 @@ module grid_component
         return
       endif
 
-      grid3 = MOSSCO_GridCreateFromOtherGrid(grid2, nlayer=nlayer, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
+      call ESMF_GridGet(grid, rank=rank, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message, '(A,I1)') trim(name)//' read grid of rank ',rank
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      if (rank == 2) then
+        grid2 = grid
+        grid3 = MOSSCO_GridCreateFromOtherGrid(grid2, nlayer=nlayer, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      elseif (rank == 3) then
+        grid3 = grid
+        grid2 = MOSSCO_GridCreateFromOtherGrid(grid3, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      else
+        write(message, '(A,I1,A)') trim(name)//' wrong rank ',rank,' valid ranks are 2 or 3'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        rc = ESMF_RC_NOT_IMPL
+        return
+      endif
+
+      !if (trim(fileFormat) == 'GRIDSPEC' .and. rank==2) then
+    !    nc = MOSSCO_NetcdfOpen(trim(gridFileName), rc=localrc)
+    !    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        !var=>nc%getvarvar('getmGrid3D_z', rc=localrc)
+        !if (localrc == ESMF_SUCCESS) then
+        !  call nc%getvar(field, var, rc=localrc)
+        !  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        !  call ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=localrc)
+        !  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          !grid3 = MOSSCO_GridCreateWithVertical3()
+
+      !  elseif (localrc /= ESMF_RC_NOT_FOUND ) then
+      !    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      !  endif
+
+      !  call nc%close()
+      !endif
+
       call ESMF_GridGet(grid3, name=geomName)
 
       write(message, '(A)') trim(name)//' created grid from file '//trim(gridFileName)
