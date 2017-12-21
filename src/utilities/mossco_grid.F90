@@ -19,6 +19,8 @@
 #define RANGE3D lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)
 #define RANGE3DDIM lbnd(1):ubnd(1)-1,lbnd(2):ubnd(2)-1,lbnd(3):ubnd(3)
 
+#define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
 module mossco_grid
 
   use esmf
@@ -400,6 +402,115 @@ end function MOSSCO_GridCreateRegional2D
     if (present(rc)) rc = rc_
 
   end function MOSSCO_GridCreateFromOtherGrid
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_GridCreateWithVertical3"
+  function MOSSCO_GridCreateWithVertical3(grida, kwe, farrayPtr3, rc) result(gridb)
+
+    implicit none
+
+    type(ESMF_Grid), intent(in)                  :: gridA
+    logical, intent(in), optional                :: kwe
+    real(ESMF_KIND_R8), pointer                  :: farrayPtr3(:,:,:)
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+    type(ESMF_Grid)                              :: gridB
+
+    integer(ESMF_KIND_I4)                     :: rc_, localrc, rank, deCount, nlayer_, i
+    type(ESMF_DistGrid)                       :: distGridA, distGridB
+    type(ESMF_CoordSys_Flag)                  :: coordSys
+    integer(ESMF_KIND_I4)                     :: coordDimCount2(2), coordDimMap2(2,2)
+    integer(ESMF_KIND_I4)                     :: coordDimCount3(3), coordDimMap3(3,3)
+    integer(ESMF_KIND_I4), allocatable        :: ubnd(:), lbnd(:)
+    type(ESMF_DeLayout)                       :: deLayout
+    integer(ESMF_KIND_I4)                     :: ubndb(3), lbndb(3)
+    !integer(ESMF_KIND_I4)                     :: distGridToArrayMap(2)
+    integer,dimension(:,:)  ,allocatable,target :: minIndexPDe,maxIndexPDe
+    integer,dimension(:,:,:),allocatable,target :: deBlockList
+    character(len=ESMF_MAXSTR)                :: message, nameA, nameB
+    real(ESMF_KIND_R8), pointer               :: coordB3(:,:,:) => null()
+
+
+    nameA='gridA'
+    nameB='gridB'
+
+    rc_ = ESMF_SUCCESS
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+
+    call ESMF_GridGet(grida, rank=rank, distGrid=distGridA, name=nameA, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if ((rank) /= 2) then
+      write(message,'(A)') '  only rank 2 is allowed'
+      if (present(rc)) rc = ESMF_RC_ARG_BAD
+      return
+    endif
+
+    allocate(ubnd(rank))
+    allocate(lbnd(rank))
+
+    call ESMF_DistGridGet(distGridA, deLayout=deLayout, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_DeLayoutGet(deLayout, deCount=deCount, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_GridGet(grida, coordSys=coordSys, coordDimCount=coordDimCount2, &
+      coordDimMap=coordDimMap2, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    coordDimCount3 = (/coordDimCount2(1), coordDimCount2(2), 3/)
+    coordDimMap3(1:2,1:2) = coordDimMap2(:,:)
+    coordDimMap3(3,:) = (/1,2,3/)
+    coordDimMap3(:,3) = 3
+
+    if (.not.associated(farrayPtr3)) then
+      localrc = ESMF_RC_ARG_BAD
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
+    allocate(minIndexPDe(2,deCount))
+    allocate(maxIndexPDe(2,deCount))
+    allocate(deBlockList(3,2,deCount))
+
+    call ESMF_DistGridGet(distGridA, minIndexPDe=minIndexPDe, &
+      maxIndexPDe=maxIndexPDe, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    deBlockList(1:rank,1,:) = minIndexPDe
+    deBlockList(1:rank,2,:) = maxIndexPDe
+    deBlockList(rank+1,1,:) = 1
+    deBlockList(rank+1,2,:) = size(farrayPtr3, dim=3)
+
+
+    distGridB = ESMF_DistGridCreate(minval(deBlockList(:,1,:),2), &
+      maxval(deBlockList(:,2,:),2), deBlockList, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    gridb = ESMF_GridCreate(distGridB, name=trim(nameB), gridAlign=(/1,1,1/), &
+      coordSys=coordSys, coordDimCount=coordDimCount3, &
+      coordDimMap=int(coordDimMap3(:,:)), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_GridAddCoord(gridb, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call MOSSCO_GridCopyCoords(grida, gridb, coordDims=(/1,2/), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_GridGetCoordBounds(gridb,coordDim=3,localDE=0, &
+      exclusiveLBound=lbndB, exclusiveUBound=ubndB, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_GridGetCoord(gridb, coordDim=3, localDE=0, &
+      staggerloc=ESMF_STAGGERLOC_CENTER, farrayPtr=coordB3, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    coordB3(lbndB(1):ubndB(1),lbndB(2):ubndB(2),lbndB(3):ubndB(3)) &
+      = farrayPtr3(:,:,:)
+
+    if (present(rc)) rc = rc_
+
+  end function MOSSCO_GridCreateWithVertical3
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_GridCopyCoords"
