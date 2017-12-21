@@ -30,6 +30,8 @@
 #define ESMF_FILENAME "fabm_sediment_component.F90"
 #define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+#define _MOSSCO_LOG_ERROR if (ESMF_LogFoundError(ESMF_RC_ARG_BAD, ESMF_ERR_PASSTHRU, ESMF_CONTEXT)) continue
+
 module fabm_sediment_component
 
   use esmf
