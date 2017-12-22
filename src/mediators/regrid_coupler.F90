@@ -21,9 +21,10 @@
 module regrid_coupler
 
   use esmf
-!  use mossco_state
+  use mossco_state
 !  use mossco_field
   use mossco_component
+  use mossco_config
 
   implicit none
 
@@ -88,24 +89,41 @@ module regrid_coupler
     integer(ESMF_KIND_I4)       :: rank, localDeCount
     type(ESMF_FieldStatus_Flag) :: status
     type(ESMF_Mesh)             :: mesh
-    type(ESMF_Grid)             :: grid
+    type(ESMF_Grid)             :: grid, targetGrid, sourceGrid
     type(ESMF_GeomType_Flag)    :: geomType
     character(ESMF_MAXSTR)      :: geomName
     integer                     :: numOwnedNodes, dimCount
     integer                     :: keycount
+
+    type(ESMF_Field), allocatable :: importFieldList(:)
 
     rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(CplComp, parentClock, name, currTime, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    !> Feature to do implement target grid spec
-    ! 1. read a .cfg (ESMF resource file)
-    ! 2. read a target grid file name as config
-    ! 3. read the grid file and create a target grid
+    !> Feature to do implement target/source grid spec
+    call read_config(cplComp, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    !> Feature to implement filter of names
+    !> The get_FieldList call returns a list of ESMF_COMPLETE fields in the
+    !> import state, including lists that previously were located within
+    !> fieldBundles; this subroutine also considers exclusion/inclusion
+    !> patterns defined in the config file
+    call get_FieldList(cplComp, importState, importFieldList, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+    itemCount = ubound(importFieldList,1)
+
+    if (itemCount < 1) then
+      write(message,'(A)') trim(name)//' no couplable items in '//trim(importName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+    else
+      if (allocated(itemNameList)) deallocate(itemNameList)
+      allocate(itemNameList(itemCount))
+    endif
+
+    ! @todo 3. read the grid file and create a target grid
 
     !> Search for all fields that are present in both import and export state,
     !! for each combination of fields
@@ -115,32 +133,17 @@ module regrid_coupler
     call ESMF_StateGet(exportState, name=exportName, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_StateGet(importState, itemCount=itemCount, name=importName, rc=localrc)
+    call ESMF_StateGet(importState, name=importName, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    if (itemCount>0) then
-      allocate(itemNameList(itemCount))
-      allocate(itemTypeList(itemCount))
-
-      call ESMF_StateGet(importState, itemNameList=itemNameList, &
-        itemTypeList=itemTypeList, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    else
-      write(message,'(A)') trim(name)//' no couplable items in '//trim(importName)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-    endif
-
-    ! Loop over all items in importState
+    ! Loop over all fields in importFieldList
     do i=1,itemCount
 
-      !> @todo expand functionality to fieldbundles as well
-      if (itemTypeList(i) /= ESMF_STATEITEM_FIELD) then
-        write(message,'(A)') trim(name)//' skipped non-field item '//trim(itemNameList(i))
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-        cycle
-      endif
+      importField = importFieldList(i)
+      call ESMF_FieldGet(importFieldList(i), name=itemNameList(i), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+      !> look for matching field in exportState
       call ESMF_StateGet(exportState, itemName=itemNameList(i), itemType=itemType, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -155,9 +158,6 @@ module regrid_coupler
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
           cycle
       endif
-
-      call ESMF_StateGet(importState, itemNameList(i), importField, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_StateGet(exportState, itemNameList(i), exportField, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -449,6 +449,208 @@ module regrid_coupler
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Finalize
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "get_FieldList"
+
+  subroutine get_FieldList(cplComp, state, fieldList, kwe, rc)
+
+    implicit none
+
+    type(ESMF_CplComp), intent(inout)  :: cplComp
+    type(ESMF_State), intent(inout)    :: state
+    type(ESMF_Field), allocatable, dimension(:) :: fieldList
+    type(ESMF_KeyWordEnforcer), intent(in), optional :: kwe
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)             :: rc_, localrc, fieldcount
+    logical                           :: configIsPresent, configFileIsPresent
+    type(ESMF_Config)                 :: config
+    character(len=ESMF_MAXSTR), pointer :: filterExcludeList(:) => null()
+    character(len=ESMF_MAXSTR), pointer :: filterIncludeList(:) => null()
+    logical                           :: verbose
+
+    rc_ = ESMF_SUCCESS
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
+    verbose = .true.
+
+    call MOSSCO_AttributeGet(cplComp, 'filter_pattern_exclude', filterExcludeList, localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call MOSSCO_AttributeGet(cplComp, 'filter_pattern_include', filterIncludeList, localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (allocated (fieldList)) deallocate(fieldList)
+
+    call MOSSCO_StateGet(state, fieldList, fieldCount=fieldCount, &
+        fieldStatus=ESMF_FIELDSTATUS_COMPLETE, include=filterIncludeList, &
+        exclude=filterExcludeList, verbose=verbose, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  end subroutine get_FieldList
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "read_config"
+
+  subroutine read_config(cplComp, kwe, rc)
+
+    implicit none
+
+    type(ESMF_CplComp), intent(inout)    :: cplComp
+    type(ESMF_KeyWordEnforcer), intent(in), optional :: kwe
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)             :: rc_, localRc
+    character(len=ESMF_MAXSTR)        :: configFileName, srcGridFileName, message
+    character(len=ESMF_MAXSTR)        :: cplCompName, dstGridFileName
+    logical                           :: labelIsPresent, fileIsPresent
+    logical                           :: configIsPresent, configFileIsPresent
+    type(ESMF_Config)                 :: config
+    character(len=ESMF_MAXSTR), pointer :: filterExcludeList(:) => null()
+    character(len=ESMF_MAXSTR), pointer :: filterIncludeList(:) => null()
+
+    rc_ = ESMF_SUCCESS
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
+
+    call ESMF_CplCompGet(cplComp, configIsPresent=configIsPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (configIsPresent) then
+      call ESMF_CplCompGet(cplComp, configIsPresent=configIsPresent, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    else
+      config = ESMF_ConfigCreate(rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_CplCompSet(cplComp, config=config, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    endif
+
+    call ESMF_CplCompGet(cplComp, configFileIsPresent=configFileIsPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_CplCompGet(cplComp, name=cplCompName, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (configFileIsPresent) then
+      call ESMF_CplCompGet(cplComp, configFile=configFileName, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    else
+      configFileName=trim(cplCompName)//'.cfg'
+    endif
+
+    inquire(file=trim(configfilename), exist=fileIsPresent)
+
+    if (.not. fileIsPresent) return
+
+    write(message,'(A)')  trim(cplCompName)//' reads configuration from '//trim(configFileName)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    call ESMF_ConfigLoadFile(config, trim(configfilename), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call MOSSCO_ConfigGet(config, label='source', value=srcGridFileName, &
+      defaultValue=trim(cplCompName)//'_src.nc', isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (labelIsPresent) then
+      write(message,'(A)') trim(cplCompName)// ' found config item filename = '//trim(srcGridFileName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      call ESMF_AttributeSet(cplComp, 'source_grid_filename', trim(srcGridFileName), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
+    !> Find out whether the label was specified.  If yes, then require
+    !> the file to be present, and return if not found
+    inquire(file=trim(srcgridFileName), exist=fileIsPresent)
+
+    if (labelIsPresent .and..not. fileIsPresent) then
+      write(message, '(A)') trim(cplCompName)//' cannot find '//trim(srcGridFileName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      if (present(rc)) then
+        rc = ESMF_RC_NOT_FOUND
+        return
+      else
+        localrc = ESMF_RC_FILE_OPEN
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      endif
+    endif
+
+    call MOSSCO_ConfigGet(config, label='destination', value=dstGridFileName, &
+      defaultValue=trim(cplCompName)//'_dst.nc', isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (labelIsPresent) then
+      write(message,'(A)') trim(cplCompName)// ' found config item filename = '//trim(dstGridFileName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      call ESMF_AttributeSet(cplComp, 'destination_grid_filename', trim(dstGridFileName), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
+    !> Find out whether the label was specified.  If yes, then require
+    !> the file to be present, and return if not found
+    inquire(file=trim(dstGridFileName), exist=fileIsPresent)
+
+    if (labelIsPresent .and..not. fileIsPresent) then
+      write(message, '(A)') trim(cplCompName)//' cannot find '//trim(dstGridFileName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      if (present(rc)) then
+        rc = ESMF_RC_NOT_FOUND
+        return
+      else
+        localrc = ESMF_RC_FILE_OPEN
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      endif
+    endif
+
+    call MOSSCO_ConfigGet(config, 'exclude', filterExcludeList, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (associated(filterExcludeList)) then
+      call MOSSCO_AttributeSet(cplComp, 'filter_pattern_exclude', filterExcludeList, localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      deallocate(filterExcludeList)
+
+      call MOSSCO_AttributeGet(cplComp, 'filter_pattern_exclude', filterExcludeList, localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message,'(A)') trim(cplCompName)//' uses exclude patterns:'
+      call MOSSCO_MessageAddListPtr(message, filterExcludeList, localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    endif
+
+    call MOSSCO_ConfigGet(config, 'include', filterIncludeList, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (associated(filterIncludeList)) then
+      call MOSSCO_AttributeSet(cplComp, 'filter_pattern_include', filterIncludeList, localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      deallocate(filterIncludeList)
+
+      call MOSSCO_AttributeGet(cplComp, 'filter_pattern_include', filterIncludeList, localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message,'(A)') trim(cplCompName)//' uses include patterns:'
+      call MOSSCO_MessageAddListPtr(message, filterIncludeList, localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    endif
+
+  end subroutine read_config
 
 end module regrid_coupler
 
