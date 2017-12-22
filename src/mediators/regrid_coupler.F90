@@ -92,6 +92,7 @@ module regrid_coupler
     type(ESMF_GeomType_Flag)    :: geomType
     character(ESMF_MAXSTR)      :: geomName
     integer                     :: numOwnedNodes, dimCount
+    integer                     :: keycount
 
     rc = ESMF_SUCCESS
 
@@ -168,12 +169,16 @@ module regrid_coupler
           cycle
       endif
 
+      ! grid match to see fields are on the same grid
+
       write(message,'(A)') trim(name)//' considering '//trim(itemNameList(i))
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
 
       call ESMF_FieldGet(importField, status=status, localDeCount=localDeCount, rank=rank, &
         geomType=geomType, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      ! check that Field status is COMPLETE
 
       if (geomType == ESMF_GEOMTYPE_GRID) then
 
@@ -194,10 +199,21 @@ module regrid_coupler
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           write(message,'(A,I5,A)') trim(name)//' mesh with ',numOwnedNodes,' nodes'
+
+      elseif (geomType == ESMF_GEOMTYPE_LOCSTREAM) then
+
+          call ESMF_FieldGet(importField, locstream=locstream, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          call ESMF_LocStreamGet(locstream, keycount=keycount, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          write(message,'(A,I5,A)') trim(name)//' locstream with ',keycount,' keycount'
+
       else
+
           write(message,'(A)') trim(name)//' other geomtype, skipped'
           cycle
-          !! ESMF_GEOMTYPE_XGRID ESMF_TYPEKIND_LOCSTREAM
       endif
 
       call ESMF_FieldGet(exportField, status=status, localDeCount=localDeCount, rank=rank, &
@@ -215,44 +231,74 @@ module regrid_coupler
 
       elseif (geomType == ESMF_GEOMTYPE_MESH) then
 
-        call ESMF_FieldGet(importField, mesh=mesh, rc=localrc)
+        call ESMF_FieldGet(exportField, mesh=mesh, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call ESMF_MeshGet(mesh, numOwnedNodes=numOwnedNodes, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           write(message,'(A,I5,A)') trim(message)//' --> mesh with ',numOwnedNodes,' nodes.'
+
+      elseif (geomType == ESMF_GEOMTYPE_LOCSTREAM) then
+
+          call ESMF_FieldGet(exportField, locstream=locstream, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          call ESMF_LocStreamGet(locstream, keycount=keycount, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          write(message,'(A,I5,A)') trim(name)//' locstream with ',keycount,' keys'
+
       else
         write(message,'(A)') trim(name)//' --> other geomtype skipped'
         cycle
-           !! ESMF_GEOMTYPE_XGRID ESMF_TYPEKIND_LOCSTREAM
       endif
 
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      call ESMF_FieldRegridStore(srcField=importField, dstField=exportField,&
-        routeHandle=routehandle, regridmethod=ESMF_REGRIDMETHOD_CONSERVE, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-        !! ESMF_FieldRegrid.F90:2018 ESMF_FieldRegridGetIwts Invalid argument
-        !! - - can't currently regrid a grid       that contains a DE of width less than 2
-
+      ! look to see if this field pair already has a routehandle
+      !! search for the correct routeHandle
       if (.not.associated(currHandle)) then
         allocate(fieldsHandle)
-        currHandle=>fieldsHandle
       endif
 
-      do while(associated(currHandle%next))
-        currHandle=>currHandle%next
+      currHandle=>fieldsHandle
+      do while (associated(currHandle%next))
+        if (.not.((currHandle%srcField==importField).and.(currHandle%dstField==exportField))) &
+          currHandle=>currHandle%next
       enddo
-      allocate (currHandle%next)
-      currHandle=>currHandle%next
+      ! this field pair has not already been "handled"
+      if (.not. associated(currHandle%next))
 
-      currHandle%srcField=importField
-      currHandle%dstField=exportField
-      currHandle%srcState=importState
-      currHandle%dstState=exportState
-      currHandle%routeHandle=routeHandle
+        call ESMF_FieldRegridStore(srcField=importField, dstField=exportField,&
+          routeHandle=routehandle, regridmethod=ESMF_REGRIDMETHOD_CONSERVE, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+  
+          !! ESMF_FieldRegrid.F90:2018 ESMF_FieldRegridGetIwts Invalid argument
+          !! - - can't currently regrid a grid       that contains a DE of width less than 2
+  
+        allocate (currHandle%next)
+        currHandle=>currHandle%next
+  
+        currHandle%srcField=importField
+        currHandle%dstField=exportField
+        currHandle%srcState=importState
+        currHandle%dstState=exportState
+        currHandle%routeHandle=routeHandle
+
+      ! this field pair has already been "handled", continue!
+      else
+        write(message,'(A)') trim(name)//' field '//trim(itemNameList(i)) &
+          //' has already been handled, skipping.'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        cycle
+      endif
+
+        ! generic list cycling code..
+        ! do while(associated(currHandle%next))
+        !   currHandle=>currHandle%next
+        ! enddo
+
 
     enddo
 
@@ -304,61 +350,61 @@ module regrid_coupler
         itemTypeList=itemTypeList, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      do i=1,itemCount
-        if (itemTypeList(i) /= ESMF_STATEITEM_FIELD) then
-          write(message,'(A)') trim(name)//' skipped non-field item '//trim(itemNameList(i))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-          cycle
-        endif
-
-        call ESMF_StateGet(exportState, itemName=itemNameList(i), itemType=itemType, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-        if (itemType==ESMF_STATEITEM_NOTFOUND) then
-          write(message,'(A)') trim(name)//' skipped field '//trim(itemNameList(i)) &
-            //' (not in '//trim(exportName)//')'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-          cycle
-        elseif (itemType/=ESMF_STATEITEM_FIELD) then
-          write(message,'(A)') trim(name)//' skipped field '//trim(itemNameList(i)) &
-            //' (not a field in '//trim(exportName)//')'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-          cycle
-        endif
-
-        call ESMF_StateGet(importState, itemNameList(i), importField, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-        call ESMF_StateGet(exportState, itemNameList(i), exportField, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-        if (importField==exportField) then
-          write(message,'(A)') trim(name)//' skipped field '//trim(itemNameList(i)) &
-            //' (already the same in '//trim(exportName)//')'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-          cycle
-        endif
-
-        !! search for the correct routeHandle
-        currHandle=>fieldsHandle
-        do while (associated(currHandle%next))
-          if (.not.((currHandle%srcField==importField).and.(currHandle%dstField==exportField))) &
-            currHandle=>currHandle%next
-        enddo
-        routeHandle=currHandle%routeHandle
-
-        call ESMF_FieldRegrid(srcField=importField, dstField=exportField,&
-          routeHandle=routehandle, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        !! ESMF_FieldRegrid.F90:2018 ESMF_FieldRegridGetIwts Invalid argument
-        !! - - can't currently regrid a grid       that contains a DE of width less than 2
-
-      enddo
-
     else
       write(message,'(A)') trim(name)//' no couplable fields in '//trim(importName)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
     endif
+
+    do i=1,itemCount
+      if (itemTypeList(i) /= ESMF_STATEITEM_FIELD) then
+        write(message,'(A)') trim(name)//' skipped non-field item '//trim(itemNameList(i))
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        cycle
+      endif
+
+      call ESMF_StateGet(exportState, itemName=itemNameList(i), itemType=itemType, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (itemType==ESMF_STATEITEM_NOTFOUND) then
+        write(message,'(A)') trim(name)//' skipped field '//trim(itemNameList(i)) &
+          //' (not in '//trim(exportName)//')'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        cycle
+      elseif (itemType/=ESMF_STATEITEM_FIELD) then
+        write(message,'(A)') trim(name)//' skipped field '//trim(itemNameList(i)) &
+          //' (not a field in '//trim(exportName)//')'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        cycle
+      endif
+
+      call ESMF_StateGet(importState, itemNameList(i), importField, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_StateGet(exportState, itemNameList(i), exportField, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (importField==exportField) then
+        write(message,'(A)') trim(name)//' skipped field '//trim(itemNameList(i)) &
+          //' (already the same in '//trim(exportName)//')'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        cycle
+      endif
+
+      !! search for the correct routeHandle
+      currHandle=>fieldsHandle
+      do while (associated(currHandle%next))
+        if (.not.((currHandle%srcField==importField).and.(currHandle%dstField==exportField))) &
+          currHandle=>currHandle%next
+      enddo
+      routeHandle=currHandle%routeHandle
+
+      call ESMF_FieldRegrid(srcField=importField, dstField=exportField,&
+        routeHandle=routehandle, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      !! ESMF_FieldRegrid.F90:2018 ESMF_FieldRegridGetIwts Invalid argument
+      !! - - can't currently regrid a grid       that contains a DE of width less than 2
+
+    enddo
 
     call MOSSCO_CompExit(cplComp, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
