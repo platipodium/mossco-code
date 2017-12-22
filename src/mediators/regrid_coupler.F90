@@ -78,9 +78,7 @@ module regrid_coupler
     type(ESMF_Time)             :: currTime
     integer(ESMF_KIND_I4)       :: petCount, localPet, i, itemCount
     character(len=ESMF_MAXSTR)  :: message, name, timeString, exportName, importName
-    character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
-    type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
-    type(ESMf_StateItem_Flag)   :: itemType
+    character(len=ESMF_MAXSTR)  :: exportFieldName, importFieldName
     type(ESMF_RouteHandle)      :: routeHandle
     class(type_mossco_fields_handle), pointer :: currHandle=>null()
     type(ESMF_Field)            :: importField, exportField
@@ -89,14 +87,17 @@ module regrid_coupler
     integer(ESMF_KIND_I4)       :: rank, localDeCount
     type(ESMF_FieldStatus_Flag) :: status
     type(ESMF_Mesh)             :: mesh
-    type(ESMF_Grid)             :: grid, targetGrid, sourceGrid
-    type(ESMF_LocStream)             :: locstream
+    type(ESMF_Grid)             :: grid, externalGrid
+    type(ESMF_LocStream)        :: locstream
     type(ESMF_GeomType_Flag)    :: geomType
     character(ESMF_MAXSTR)      :: geomName
     integer                     :: numOwnedNodes, dimCount
-    integer                     :: keycount
+    integer(ESMF_KIND_I4)       :: keycount, matchIndex, importFieldCount
+    integer(ESMF_KIND_I4)       :: exportFieldCount
+    logical                     :: gridIsPresent
 
     type(ESMF_Field), allocatable :: importFieldList(:)
+    type(ESMF_Field), allocatable :: exportFieldList(:)
 
     rc = ESMF_SUCCESS
 
@@ -104,33 +105,39 @@ module regrid_coupler
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !> Read (optionally) the associated config file and configure
-    !> targetGrid, sourceGrid, include and exclude patterns
+    !> external target grid, include and exclude patterns
     call read_config(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    !> The get_FieldList call returns a list of ESMF_COMPLETE fields in the
-    !> import state, including lists that previously were located within
+    call ESMF_AttributeGet(cplComp, 'grid_filename',  &
+      isPresent=gridIsPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    !> The get_FieldList call returns a list of ESMF_COMPLETE fields in a
+    !>  state, including lists that previously were located within
     !> fieldBundles; this subroutine also considers exclusion/inclusion
     !> patterns defined in the config file
     call get_FieldList(cplComp, importState, importFieldList, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    itemCount = ubound(importFieldList,1)
-
-    if (itemCount < 1) then
+    if (allocated(importFieldList)) importFieldCount = ubound(importFieldList,1)
+    if (importFieldCount < 1) then
       write(message,'(A)') trim(name)//' no couplable items in '//trim(importName)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-    else
-      if (allocated(itemNameList)) deallocate(itemNameList)
-      allocate(itemNameList(itemCount))
     endif
 
-    ! @todo 3. read the grid file and create a target grid
+    if (.not.gridIsPresent) then
+      call get_FieldList(cplComp, exportState, exportFieldList, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    else
+      localrc = ESMF_RC_NOT_IMPL
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      !> @todo read the destination grid, and create with this all the
+      !> states in exportState
+      ! @todo read the grid file and create a target grid
+    endif
 
-    !> Search for all fields that are present in both import and export state,
-    !! for each combination of fields
-    !! - if they are defined on different grids, create a route handle and
-    !!   name it with the name of the two grids for identification (todo)
+    if (allocated(exportFieldList)) exportFieldCount = ubound(exportFieldList,1)
 
     call ESMF_StateGet(exportState, name=exportName, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -138,49 +145,44 @@ module regrid_coupler
     call ESMF_StateGet(importState, name=importName, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    ! Loop over all fields in importFieldList
-    do i=1,itemCount
+    !> Search for all fields that are present in both import and export state,
+    !! for each combination of fields
+    !! - if they are defined on different grids, create a route handle and
+    !!   name it with the name of the two grids for identification (todo)
+
+    do i=1, importFieldCount
 
       importField = importFieldList(i)
-      call ESMF_FieldGet(importFieldList(i), name=itemNameList(i), rc=localrc)
+      call ESMF_FieldGet(importField, name=importFieldName, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      !> look for matching field in exportState
-      call ESMF_StateGet(exportState, itemName=itemNameList(i), itemType=itemType, rc=localrc)
+      !> look for matching field in exportState, this matching is performed
+      !> on the field name and a maximum of the attributes
+      call MOSSCO_FieldMatchFields(importFieldList(i), exportFieldList, &
+        index=matchIndex, owner=trim(name), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (itemType == ESMF_STATEITEM_NOTFOUND)   then
-          write(message,'(A)') trim(name)//' skipped field '//trim(itemNameList(i)) &
-            //' (not in '//trim(exportName)//')'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-          cycle
-      elseif (itemType /= ESMF_STATEITEM_FIELD) then
-          write(message,'(A)') trim(name)//' skipped field '//trim(itemNameList(i)) &
-            //' (not a field in '//trim(exportName)//')'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-          cycle
-      endif
+      if (matchIndex<1) cycle
 
-      call ESMF_StateGet(exportState, itemNameList(i), exportField, rc=localrc)
+      exportField = exportFieldList(matchIndex)
+      call ESMF_FieldGet(exportField, name=exportFieldName, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (importField == exportField) then
-          write(message,'(A)') trim(name)//' skipped field '//trim(itemNameList(i)) &
-            //' (already the same in '//trim(exportName)//')'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-          cycle
+        write(message,'(A)') trim(name)//' skipped  '//trim(importFieldName) &
+          //' (already the same in '//trim(exportName)//')'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        cycle
       endif
 
       ! grid match to see fields are on the same grid
 
-      write(message,'(A)') trim(name)//' considering '//trim(itemNameList(i))
+      write(message,'(A)') trim(name)//' considering '//trim(importFieldName)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
 
-      call ESMF_FieldGet(importField, status=status, localDeCount=localDeCount, rank=rank, &
+      call ESMF_FieldGet(importField, localDeCount=localDeCount, rank=rank, &
         geomType=geomType, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      ! check that Field status is COMPLETE
 
       if (geomType == ESMF_GEOMTYPE_GRID) then
 
@@ -275,13 +277,13 @@ module regrid_coupler
         call ESMF_FieldRegridStore(srcField=importField, dstField=exportField,&
           routeHandle=routehandle, regridmethod=ESMF_REGRIDMETHOD_CONSERVE, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-  
+
           !! ESMF_FieldRegrid.F90:2018 ESMF_FieldRegridGetIwts Invalid argument
           !! - - can't currently regrid a grid       that contains a DE of width less than 2
-  
+
         allocate (currHandle%next)
         currHandle=>currHandle%next
-  
+
         currHandle%srcField=importField
         currHandle%dstField=exportField
         currHandle%srcState=importState
@@ -290,7 +292,7 @@ module regrid_coupler
 
       ! this field pair has already been "handled", continue!
       else
-        write(message,'(A)') trim(name)//' field '//trim(itemNameList(i)) &
+        write(message,'(A)') trim(name)//' field '//trim(importFieldName) &
           //' has already been handled, skipping.'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         cycle
@@ -303,9 +305,6 @@ module regrid_coupler
 
 
     enddo
-
-    if (allocated(itemNameList)) deallocate(itemNameList)
-    if (allocated(itemTypeList)) deallocate(itemTypeList)
 
     call MOSSCO_CompExit(cplComp, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -553,41 +552,14 @@ module regrid_coupler
     call ESMF_ConfigLoadFile(config, trim(configfilename), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call MOSSCO_ConfigGet(config, label='source', value=srcGridFileName, &
-      defaultValue=trim(cplCompName)//'_src.nc', isPresent=labelIsPresent, rc = localrc)
+    call MOSSCO_ConfigGet(config, label='grid', value=dstGridFileName, &
+      defaultValue=trim(cplCompName)//'_grid.nc', isPresent=labelIsPresent, rc = localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (labelIsPresent) then
-      write(message,'(A)') trim(cplCompName)// ' found config item filename = '//trim(srcGridFileName)
+      write(message,'(A)') trim(cplCompName)// ' found config item grid = '//trim(dstGridFileName)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      call ESMF_AttributeSet(cplComp, 'source_grid_filename', trim(srcGridFileName), rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-    endif
-
-    !> Find out whether the label was specified.  If yes, then require
-    !> the file to be present, and return if not found
-    inquire(file=trim(srcgridFileName), exist=fileIsPresent)
-
-    if (labelIsPresent .and..not. fileIsPresent) then
-      write(message, '(A)') trim(cplCompName)//' cannot find '//trim(srcGridFileName)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      if (present(rc)) then
-        rc = ESMF_RC_NOT_FOUND
-        return
-      else
-        localrc = ESMF_RC_FILE_OPEN
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-      endif
-    endif
-
-    call MOSSCO_ConfigGet(config, label='destination', value=dstGridFileName, &
-      defaultValue=trim(cplCompName)//'_dst.nc', isPresent=labelIsPresent, rc = localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-    if (labelIsPresent) then
-      write(message,'(A)') trim(cplCompName)// ' found config item filename = '//trim(dstGridFileName)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      call ESMF_AttributeSet(cplComp, 'destination_grid_filename', trim(dstGridFileName), rc=localrc)
+      call ESMF_AttributeSet(cplComp, 'grid_filename', trim(dstGridFileName), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
 
