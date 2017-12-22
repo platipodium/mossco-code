@@ -90,7 +90,7 @@ module regrid_coupler
     type(ESMF_Grid)             :: grid, externalGrid
     type(ESMF_LocStream)        :: locstream
     type(ESMF_GeomType_Flag)    :: geomType
-    character(ESMF_MAXSTR)      :: geomName
+    character(ESMF_MAXSTR)      :: geomName, gridFileName
     integer                     :: numOwnedNodes, dimCount
     integer(ESMF_KIND_I4)       :: keycount, matchIndex, importFieldCount
     integer(ESMF_KIND_I4)       :: exportFieldCount
@@ -130,11 +130,49 @@ module regrid_coupler
       call get_FieldList(cplComp, exportState, exportFieldList, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     else
-      localrc = ESMF_RC_NOT_IMPL
+
+      call ESMF_AttributeGet(cplComp, 'grid_filename',  gridFileName, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      !> @todo read the destination grid, and create with this all the
-      !> states in exportState
-      ! @todo read the grid file and create a target grid
+
+      !> @todo how to deal with decomposition?
+      !> First try SCRIP format
+      externalGrid = ESMF_GridCreate(filename=trim(gridFileName), &
+        fileFormat=ESMF_FILEFORMAT_SCRIP, isSphere=.false., rc=localrc)
+
+      if (localrc /= ESMF_SUCCESS) then
+        externalGrid = ESMF_GridCreate(filename=trim(gridFileName), fileFormat=ESMF_FILEFORMAT_GRIDSPEC, &
+          isSphere=.false., rc=localrc)
+      endif
+
+      if (localrc /= ESMF_SUCCESS) then
+        write(message, '(A)') trim(name)//' could not read file '//trim(gridFileName)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        localrc = ESMF_RC_NOT_IMPL
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      endif
+
+      !> @todo create with this grid all states in exportState
+      do i=1, importFieldCount
+
+        importField = importFieldList(i)
+        call ESMF_FieldGet(importField, name=importFieldName, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        exportField = ESMF_FieldEmptyCreate(name=trim(importFieldName), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        call ESMF_FieldEmptySet(exportField, grid=externalGrid, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        call ESMF_StateAddReplace(exportState, (/exportField/), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        write(message, '(A)') trim(name)//' created '
+        call MOSSCO_FieldString(exportField, message)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+        !> @todo copy over all attributes (look for FieldCopy function in mossco_field)
+      enddo
     endif
 
     if (allocated(exportFieldList)) exportFieldCount = ubound(exportFieldList,1)
