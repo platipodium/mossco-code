@@ -24,6 +24,7 @@ module regrid_coupler
 !  use mossco_state
 !  use mossco_field
   use mossco_component
+  use mossco_config
 
   implicit none
 
@@ -98,13 +99,12 @@ module regrid_coupler
     call MOSSCO_CompEntry(CplComp, parentClock, name, currTime, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    !> Feature to do implement target grid spec
-    ! 1. read a .cfg (ESMF resource file)
-    ! 2. read a target grid file name as config
-    ! 3. read the grid file and create a target grid
+    !> Feature to do implement target/source grid spec
+    call read_config(cplComp, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    ! @todo 3. read the grid file and create a target grid
 
     !> Feature to implement filter of names
-
 
     !> Search for all fields that are present in both import and export state,
     !! for each combination of fields
@@ -403,6 +403,121 @@ module regrid_coupler
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Finalize
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "read_config"
+
+  subroutine read_config(cplComp, kwe, rc)
+
+    implicit none
+
+    type(ESMF_CplComp), intent(inout)    :: cplComp
+    type(ESMF_KeyWordEnforcer), intent(in), optional :: kwe
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)             :: rc_, localRc
+    character(len=ESMF_MAXSTR)        :: configFileName, srcGridFileName, message
+    character(len=ESMF_MAXSTR)        :: cplCompName, dstGridFileName
+    logical                           :: labelIsPresent, fileIsPresent
+    logical                           :: configIsPresent, configFileIsPresent
+    type(ESMF_Config)                 :: config
+
+    rc_ = ESMF_SUCCESS
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
+
+    call ESMF_CplCompGet(cplComp, configIsPresent=configIsPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (configIsPresent) then
+      call ESMF_CplCompGet(cplComp, configIsPresent=configIsPresent, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    else
+      config = ESMF_ConfigCreate(rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_CplCompSet(cplComp, config=config, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    endif
+
+    call ESMF_CplCompGet(cplComp, configFileIsPresent=configFileIsPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_CplCompGet(cplComp, name=cplCompName, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (configFileIsPresent) then
+      call ESMF_CplCompGet(cplComp, configFile=configFileName, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    else
+      configFileName=trim(cplCompName)//'.cfg'
+    endif
+
+    inquire(file=trim(configfilename), exist=fileIsPresent)
+
+    if (.not. fileIsPresent) return
+
+    write(message,'(A)')  trim(cplCompName)//' reads configuration from '//trim(configFileName)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    call ESMF_ConfigLoadFile(config, trim(configfilename), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call MOSSCO_ConfigGet(config, label='source', value=srcGridFileName, &
+      defaultValue=trim(cplCompName)//'_src.nc', isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (labelIsPresent) then
+      write(message,'(A)') trim(cplCompName)// ' found config item filename = '//trim(srcGridFileName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      call ESMF_AttributeSet(cplComp, 'source_grid_filename', trim(srcGridFileName), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
+    !> Find out whether the label was specified.  If yes, then require
+    !> the file to be present, and return if not found
+    inquire(file=trim(srcgridFileName), exist=fileIsPresent)
+
+    if (labelIsPresent .and..not. fileIsPresent) then
+      write(message, '(A)') trim(cplCompName)//' cannot find '//trim(srcGridFileName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      if (present(rc)) then
+        rc = ESMF_RC_NOT_FOUND
+        return
+      else
+        localrc = ESMF_RC_FILE_OPEN
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      endif
+    endif
+
+    call MOSSCO_ConfigGet(config, label='destination', value=dstGridFileName, &
+      defaultValue=trim(cplCompName)//'_dst.nc', isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (labelIsPresent) then
+      write(message,'(A)') trim(cplCompName)// ' found config item filename = '//trim(dstGridFileName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      call ESMF_AttributeSet(cplComp, 'destination_grid_filename', trim(dstGridFileName), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
+    !> Find out whether the label was specified.  If yes, then require
+    !> the file to be present, and return if not found
+    inquire(file=trim(dstGridFileName), exist=fileIsPresent)
+
+    if (labelIsPresent .and..not. fileIsPresent) then
+      write(message, '(A)') trim(cplCompName)//' cannot find '//trim(dstGridFileName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      if (present(rc)) then
+        rc = ESMF_RC_NOT_FOUND
+        return
+      else
+        localrc = ESMF_RC_FILE_OPEN
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      endif
+    endif
+
+  end subroutine read_config
 
 end module regrid_coupler
 
