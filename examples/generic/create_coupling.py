@@ -752,7 +752,7 @@ fid.write('''
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       gridCompPhaseCountList(i)=phaseCount
-      GridCompHasPhaseZeroList(i)=hasPhaseZero
+      gridCompHasPhaseZeroList(i)=hasPhaseZero
     enddo
 
     !! Go through all phase 0 if components have it
@@ -892,7 +892,8 @@ if (True):
         fid.write('      !! linking ' + item + ' and ' + jtem + '\n')
         fid.write('      if (gridCompPhaseCountList( ' + str(i+1) + ')>= phase .or. gridCompPhaseCountList( ' + str(j+1) + ')>= phase) then\n')
         for c in couplingList:
-          if c[1]=='nudge_connector': continue
+          if instanceDict[c[1]] == 'nudge_connector' : continue
+          if instanceDict[c[1]] == 'regrid_coupler' : continue
           if c[0]==item and c[-1]==jtem:
             fid.write('        !! linking ' + item + 'Export to ' + jtem + 'Import\n')
             fid.write('        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(' + str(i+1) +'))//"Export to "//trim(gridCompNameList(' + str(j+1)+'))//"Import"\n')
