@@ -126,10 +126,7 @@ module regrid_coupler
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
     endif
 
-    if (.not.gridIsPresent) then
-      call get_FieldList(cplComp, exportState, exportFieldList, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-    else
+    if (gridIsPresent) then
 
       call ESMF_AttributeGet(cplComp, 'grid_filename',  gridFileName, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -152,6 +149,8 @@ module regrid_coupler
       endif
 
       !> @todo create with this grid all states in exportState
+      allocate(exportFieldList(importFieldCount))
+
       do i=1, importFieldCount
 
         importField = importFieldList(i)
@@ -171,8 +170,12 @@ module regrid_coupler
         call MOSSCO_FieldString(exportField, message)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
+        exportFieldList(i) = exportField
         !> @todo copy over all attributes (look for FieldCopy function in mossco_field)
       enddo
+    else
+      call get_FieldList(cplComp, exportState, exportFieldList, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
 
     if (allocated(exportFieldList)) exportFieldCount = ubound(exportFieldList,1)
