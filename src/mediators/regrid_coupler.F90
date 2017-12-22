@@ -105,12 +105,24 @@ module regrid_coupler
     call read_config(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+    !> The get_FieldList call returns a list of ESMF_COMPLETE fields in the
+    !> import state, including lists that previously were located within
+    !> fieldBundles; this subroutine also considers exclusion/inclusion
+    !> patterns defined in the config file
     call get_FieldList(cplComp, importState, importFieldList, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    ! @todo 3. read the grid file and create a target grid
+    itemCount = ubound(importFieldList,1)
 
-    !> Feature to implement filter of names
+    if (itemCount < 1) then
+      write(message,'(A)') trim(name)//' no couplable items in '//trim(importName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+    else
+      if (allocated(itemNameList)) deallocate(itemNameList)
+      allocate(itemNameList(itemCount))
+    endif
+
+    ! @todo 3. read the grid file and create a target grid
 
     !> Search for all fields that are present in both import and export state,
     !! for each combination of fields
@@ -120,32 +132,17 @@ module regrid_coupler
     call ESMF_StateGet(exportState, name=exportName, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_StateGet(importState, itemCount=itemCount, name=importName, rc=localrc)
+    call ESMF_StateGet(importState, name=importName, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    if (itemCount>0) then
-      allocate(itemNameList(itemCount))
-      allocate(itemTypeList(itemCount))
-
-      call ESMF_StateGet(importState, itemNameList=itemNameList, &
-        itemTypeList=itemTypeList, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    else
-      write(message,'(A)') trim(name)//' no couplable items in '//trim(importName)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-    endif
-
-    ! Loop over all items in importState
+    ! Loop over all fields in importFieldList
     do i=1,itemCount
 
-      !> @todo expand functionality to fieldbundles as well
-      if (itemTypeList(i) /= ESMF_STATEITEM_FIELD) then
-        write(message,'(A)') trim(name)//' skipped non-field item '//trim(itemNameList(i))
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-        cycle
-      endif
+      importField = importFieldList(i)
+      call ESMF_FieldGet(importFieldList(i), name=itemNameList(i), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+      !> look for matching field in exportState
       call ESMF_StateGet(exportState, itemName=itemNameList(i), itemType=itemType, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -160,9 +157,6 @@ module regrid_coupler
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
           cycle
       endif
-
-      call ESMF_StateGet(importState, itemNameList(i), importField, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_StateGet(exportState, itemNameList(i), exportField, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
