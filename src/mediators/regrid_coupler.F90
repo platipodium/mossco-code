@@ -232,7 +232,7 @@ module regrid_coupler
 
       call ESMF_FieldRegridStore(srcField=importField, dstField=exportField,&
         routeHandle=routehandle, regridmethod=ESMF_REGRIDMETHOD_CONSERVE, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         !! ESMF_FieldRegrid.F90:2018 ESMF_FieldRegridGetIwts Invalid argument
         !! - - can't currently regrid a grid       that contains a DE of width less than 2
@@ -288,15 +288,13 @@ module regrid_coupler
     rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(CplComp, parentClock, name, currTime, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_StateGet(exportState, name=exportName, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
     call ESMF_StateGet(importState, itemCount=itemCount, name=importName, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (itemCount>0) then
       allocate(itemNameList(itemCount))
@@ -304,8 +302,7 @@ module regrid_coupler
 
       call ESMF_StateGet(importState, itemNameList=itemNameList, &
         itemTypeList=itemTypeList, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       do i=1,itemCount
         if (itemTypeList(i) /= ESMF_STATEITEM_FIELD) then
@@ -315,8 +312,7 @@ module regrid_coupler
         endif
 
         call ESMF_StateGet(exportState, itemName=itemNameList(i), itemType=itemType, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         if (itemType==ESMF_STATEITEM_NOTFOUND) then
           write(message,'(A)') trim(name)//' skipped field '//trim(itemNameList(i)) &
@@ -331,11 +327,10 @@ module regrid_coupler
         endif
 
         call ESMF_StateGet(importState, itemNameList(i), importField, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
         call ESMF_StateGet(exportState, itemNameList(i), exportField, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         if (importField==exportField) then
           write(message,'(A)') trim(name)//' skipped field '//trim(itemNameList(i)) &
@@ -354,8 +349,7 @@ module regrid_coupler
 
         call ESMF_FieldRegrid(srcField=importField, dstField=exportField,&
           routeHandle=routehandle, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         !! ESMF_FieldRegrid.F90:2018 ESMF_FieldRegridGetIwts Invalid argument
         !! - - can't currently regrid a grid       that contains a DE of width less than 2
 
@@ -367,8 +361,7 @@ module regrid_coupler
     endif
 
     call MOSSCO_CompExit(cplComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Run
 
@@ -393,8 +386,7 @@ module regrid_coupler
     rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(CplComp, parentClock, name, currTime, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (allocated(fieldsHandle)) then
       currHandle=>fieldsHandle
@@ -405,12 +397,10 @@ module regrid_coupler
     endif
 
     if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_CompExit(cplComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Finalize
 
