@@ -90,6 +90,7 @@ module regrid_coupler
     type(ESMF_FieldStatus_Flag) :: status
     type(ESMF_Mesh)             :: mesh
     type(ESMF_Grid)             :: grid, targetGrid, sourceGrid
+    type(ESMF_LocStream)             :: locstream
     type(ESMF_GeomType_Flag)    :: geomType
     character(ESMF_MAXSTR)      :: geomName
     integer                     :: numOwnedNodes, dimCount
@@ -268,7 +269,7 @@ module regrid_coupler
           currHandle=>currHandle%next
       enddo
       ! this field pair has not already been "handled"
-      if (.not. associated(currHandle%next))
+      if (.not. associated(currHandle%next)) then
 
         call ESMF_FieldRegridStore(srcField=importField, dstField=exportField,&
           routeHandle=routehandle, regridmethod=ESMF_REGRIDMETHOD_CONSERVE, rc=localrc)
