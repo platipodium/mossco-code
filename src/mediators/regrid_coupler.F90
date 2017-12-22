@@ -103,7 +103,8 @@ module regrid_coupler
     call MOSSCO_CompEntry(CplComp, parentClock, name, currTime, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    !> Feature to do implement target/source grid spec
+    !> Read (optionally) the associated config file and configure
+    !> targetGrid, sourceGrid, include and exclude patterns
     call read_config(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
