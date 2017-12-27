@@ -22,7 +22,7 @@ module regrid_coupler
 
   use esmf
   use mossco_state
-!  use mossco_field
+  use mossco_field
   use mossco_component
   use mossco_config
 
@@ -34,8 +34,8 @@ module regrid_coupler
 
   type type_mossco_fields_handle
     type(ESMF_RouteHandle) :: routehandle
-    type(ESMF_Field) :: srcField, dstField
-    type(ESMF_State) :: srcState, dstState
+    type(ESMF_Field) :: srcField, dstField ! should these be pointers?
+    type(ESMF_State) :: srcState, dstState ! should these be pointers?
     type(type_mossco_fields_handle), pointer :: next=>null()
   end type
 
@@ -94,7 +94,7 @@ module regrid_coupler
     integer                     :: numOwnedNodes, dimCount
     integer(ESMF_KIND_I4)       :: keycount, matchIndex, importFieldCount
     integer(ESMF_KIND_I4)       :: exportFieldCount
-    logical                     :: gridIsPresent
+    logical                     :: gridIsPresent, isPresent
 
     type(ESMF_Field), allocatable :: importFieldList(:)
     type(ESMF_Field), allocatable :: exportFieldList(:)
@@ -117,10 +117,15 @@ module regrid_coupler
     !>  state, including lists that previously were located within
     !> fieldBundles; this subroutine also considers exclusion/inclusion
     !> patterns defined in the config file
-    call get_FieldList(cplComp, importState, importFieldList, rc=localrc)
+    call get_FieldList(cplComp, importState, importFieldList, verbose=.true., &
+      rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    if (allocated(importFieldList)) importFieldCount = ubound(importFieldList,1)
+    importFieldCount = 0
+    if (allocated(importFieldList)) then
+      importFieldCount = ubound(importFieldList,1)
+    endif
+
     if (importFieldCount < 1) then
       write(message,'(A)') trim(name)//' no couplable items in '//trim(importName)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
@@ -147,13 +152,26 @@ module regrid_coupler
         localrc = ESMF_RC_NOT_IMPL
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
+    endif
 
+
+    if (gridIsPresent) then
       !> @todo create with this grid all states in exportState
       allocate(exportFieldList(importFieldCount))
 
       do i=1, importFieldCount
 
+        call MOSSCO_FieldInFieldsHandle(importFieldList(i), fieldsHandle, &
+          isPresent=isPresent, handle=currHandle, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        if (isPresent) then
+          exportFieldList(i) = currHandle%dstfield
+          cycle
+        endif
+
         importField = importFieldList(i)
+
         call ESMF_FieldGet(importField, name=importFieldName, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -166,19 +184,30 @@ module regrid_coupler
         call ESMF_StateAddReplace(exportState, (/exportField/), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+        call MOSSCO_FieldCopy(exportField, importField, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        call ESMF_AttributeSet(exportField, 'creator', trim(name), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
         write(message, '(A)') trim(name)//' created '
         call MOSSCO_FieldString(exportField, message)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
         exportFieldList(i) = exportField
-        !> @todo copy over all attributes (look for FieldCopy function in mossco_field)
       enddo
     else
-      call get_FieldList(cplComp, exportState, exportFieldList, rc=localrc)
+      call get_FieldList(cplComp, exportState, exportFieldList, verbose=.true., rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
 
     if (allocated(exportFieldList)) exportFieldCount = ubound(exportFieldList,1)
+
+    !do i=1,exportFieldCount
+    !  write(message, '(A)') trim(name)//' export item  '
+    !  call MOSSCO_FieldString(exportFieldList(i), message)
+    !  call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    !enddo
 
     call ESMF_StateGet(exportState, name=exportName, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -197,19 +226,30 @@ module regrid_coupler
       call ESMF_FieldGet(importField, name=importFieldName, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+      write(message,'(A)') trim(name)//' trying to match '
+      call MOSSCO_FieldString(importField, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
       !> look for matching field in exportState, this matching is performed
       !> on the field name and a maximum of the attributes
       call MOSSCO_FieldMatchFields(importFieldList(i), exportFieldList, &
-        index=matchIndex, owner=trim(name), rc=localrc)
+        index=matchIndex, owner=trim(name), verbose=.true., rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (matchIndex<1) cycle
 
       exportField = exportFieldList(matchIndex)
+
+      write(message,'(A)') trim(name)//' matched  '
+      call MOSSCO_FieldString(exportField, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
       call ESMF_FieldGet(exportField, name=exportFieldName, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (importField == exportField) then
+        !> @todo add a zero-action routehandle for those fields that area
+        !> already on the proper export grid
         write(message,'(A)') trim(name)//' skipped  '//trim(importFieldName) &
           //' (already the same in '//trim(exportName)//')'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
@@ -217,9 +257,6 @@ module regrid_coupler
       endif
 
       ! grid match to see fields are on the same grid
-
-      write(message,'(A)') trim(name)//' considering '//trim(importFieldName)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
 
       call ESMF_FieldGet(importField, localDeCount=localDeCount, rank=rank, &
         geomType=geomType, rc=localrc)
@@ -315,9 +352,18 @@ module regrid_coupler
       ! this field pair has not already been "handled"
       if (.not. associated(currHandle%next)) then
 
-        call ESMF_FieldRegridStore(srcField=importField, dstField=exportField,&
-          routeHandle=routehandle, regridmethod=ESMF_REGRIDMETHOD_CONSERVE, rc=localrc)
+        write(message,'(A)') trim(name)//' field '//trim(importFieldName) &
+          //' creating routeHandle'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+        !> @todo this call is problematic and throws an error
+        !call ESMF_FieldRegridStore(srcField=importField, dstField=exportField,&
+        !  routeHandle=routehandle, regridmethod=ESMF_REGRIDMETHOD_BILINEAR, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        write(message,'(A)') trim(name)//' field '//trim(importFieldName) &
+          //' created routeHandle'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
           !! ESMF_FieldRegrid.F90:2018 ESMF_FieldRegridGetIwts Invalid argument
           !! - - can't currently regrid a grid       that contains a DE of width less than 2
@@ -343,7 +389,6 @@ module regrid_coupler
         ! do while(associated(currHandle%next))
         !   currHandle=>currHandle%next
         ! enddo
-
 
     enddo
 
