@@ -27,9 +27,10 @@ module mossco_strings
   implicit none
 
   private
+  
   public intformat, order, MOSSCO_MessageAdd, MOSSCO_MessageAddListPtr, only_var_name, replace_character
   public split_string, MOSSCO_StringMatch, MOSSCO_StringClean
-  public MOSSCO_CheckUnits, MOSSCO_CleanUnit
+  public MOSSCO_CheckUnits, MOSSCO_CleanUnit, MOSSCO_StringCopy
 
   !> @brief Returns the order of magnitude of its input argument
   !> @param <integer|real>(kind=4|8)
@@ -771,6 +772,35 @@ contains
 
     isTrue = .false.
   end function isReal
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_StringCopy"
+  subroutine MOSSCO_StringCopy(to, from, rc)
+
+    character(len=*), intent(inout)    :: to
+    character(len=*), intent(in)       :: from
+    integer(ESMF_KIND_I4), optional    :: rc
+
+    integer(ESMF_KIND_I4)   :: toLen, fromLen
+
+    toLen = len(to)
+    fromLen = len(from)
+    to(:)=''
+
+    if (toLen >= fromLen) then
+      to(1:fromLen) = from(1:fromLen)
+      return
+    endif
+
+    fromLen = len_trim(from)
+    if (toLen >= fromLen) then
+      to(1:fromLen) = from(1:fromLen)
+      return
+    endif
+
+    to(1:toLen) = from(1:toLen)
+
+  end subroutine MOSSCO_StringCopy
 
 end module mossco_strings
 
