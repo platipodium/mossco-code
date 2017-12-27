@@ -540,7 +540,7 @@ module regrid_coupler
 #undef  ESMF_METHOD
 #define ESMF_METHOD "get_FieldList"
 
-  subroutine get_FieldList(cplComp, state, fieldList, kwe, rc)
+  subroutine get_FieldList(cplComp, state, fieldList, kwe, verbose, rc)
 
     implicit none
 
@@ -548,6 +548,7 @@ module regrid_coupler
     type(ESMF_State), intent(inout)    :: state
     type(ESMF_Field), allocatable, dimension(:) :: fieldList
     type(ESMF_KeyWordEnforcer), intent(in), optional :: kwe
+    logical, intent(in), optional                    :: verbose
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)             :: rc_, localrc, fieldcount
@@ -555,12 +556,14 @@ module regrid_coupler
     type(ESMF_Config)                 :: config
     character(len=ESMF_MAXSTR), pointer :: filterExcludeList(:) => null()
     character(len=ESMF_MAXSTR), pointer :: filterIncludeList(:) => null()
-    logical                           :: verbose
+    logical                           :: verbose_
 
     rc_ = ESMF_SUCCESS
+    verbose_ = .false.
+
     if (present(kwe)) rc_ = ESMF_SUCCESS
     if (present(rc)) rc = rc_
-    verbose = .true.
+    if (present(verbose)) verbose_ = verbose
 
     call MOSSCO_AttributeGet(cplComp, 'filter_pattern_exclude', filterExcludeList, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -572,7 +575,7 @@ module regrid_coupler
 
     call MOSSCO_StateGet(state, fieldList, fieldCount=fieldCount, &
         fieldStatus=ESMF_FIELDSTATUS_COMPLETE, include=filterIncludeList, &
-        exclude=filterExcludeList, verbose=verbose, rc=localrc)
+        exclude=filterExcludeList, verbose=verbose_, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine get_FieldList
@@ -711,6 +714,68 @@ module regrid_coupler
     endif
 
   end subroutine read_config
+
+#undef ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_FieldInFieldsHandle"
+  subroutine MOSSCO_FieldInFieldsHandle(field, fieldsHandle, kwe, isPresent, &
+    handle, rc)
+
+    type(ESMF_Field), intent(in)                      :: field
+    class(type_mossco_fields_handle), intent(in), allocatable, target  :: fieldsHandle
+    type(ESMF_KeyWordEnforcer), intent(in), optional  :: kwe
+    logical, intent(out), optional                    :: isPresent
+    type(type_mossco_fields_handle), pointer, optional, intent(out) :: handle
+    integer(ESMF_KIND_I4), intent(out), optional      :: rc
+
+    integer(ESMF_KIND_I4)             :: rc_, localrc
+    logical                           :: isPresent_
+    type(type_mossco_fields_handle), pointer :: currHandle=>null()
+    character(len=ESMF_MAXSTR)               :: message
+
+    rc_ = ESMF_SUCCESS
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
+    if (present(handle)) handle => null()
+
+    if (.not.allocated(fieldsHandle)) then
+      if (present(isPresent)) then
+        isPresent = .false.
+      elseif (present(rc)) then
+        rc = ESMF_RC_NOT_FOUND
+      else
+        localrc = ESMF_RC_NOT_FOUND
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      endif
+      return
+    endif
+
+    currHandle => fieldsHandle
+
+    do while (.true.)
+
+      call MOSSCO_FieldString(currHandle%srcField, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+
+      if (currHandle%srcField == field) then
+        if (present(isPresent)) isPresent = .true.
+        if (present(handle)) handle = currHandle
+        return
+      endif
+
+      if (.not.associated(currHandle%next)) exit
+      currHandle => currHandle%next
+    enddo
+
+    if (present(isPresent)) then
+      isPresent = .false.
+    elseif (present(rc)) then
+      rc = ESMF_RC_NOT_FOUND
+    else
+      localrc = ESMF_RC_NOT_FOUND
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
+  end subroutine  MOSSCO_FieldInFieldsHandle
 
 end module regrid_coupler
 
