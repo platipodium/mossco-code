@@ -41,8 +41,8 @@ if (3==3): ## 1x12 box, mussel experiment
   ur_lat=55
 if (4==4): # Alpha Ventus Wind park 54.008333°, 6.598333°
   delta_lon,delta_lat = 0.05, 0.05
-  ll_lon, ll_lat = 6.5, 52.9
-  ur_lon, ur_lat = 6.7, 53.1
+  ll_lon, ll_lat = 6.2, 52.6
+  ur_lon, ur_lat = 7.0, 53.4
 
 if __name__ == '__main__':
 
