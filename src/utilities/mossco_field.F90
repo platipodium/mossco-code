@@ -22,6 +22,8 @@
 #define RANGE22D lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2)
 
 #define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+#define _MOSSCO_LOG_ALLOC_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundAllocError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
 
 module mossco_field
 
@@ -908,6 +910,80 @@ end subroutine MOSSCO_FieldCopyContent
     return
 
   end subroutine MOSSCO_FieldGetMissingValueR8
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_FieldIsConformableField"
+  function MOSSCO_FieldIsConformableField(importField, exportField, kwe, &
+    verbose, owner, layers, rc) result(isConformable)
+
+    type(ESMF_Field), intent(in)                 :: importField, exportField
+    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+    character(len=*), optional, intent(in)       :: owner
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+    integer(ESMF_KIND_I4), intent(inout), optional :: layers
+    logical, intent(in), optional                :: verbose
+
+    logical                                      :: isConformable
+
+    integer(ESMF_KIND_I4)                        :: localrc, rc_, layers_
+    integer(ESMF_KIND_I4)                        :: importRank, exportRank
+    integer(ESMF_KIND_I4), allocatable           :: importLBound(:), importUBound(:)
+    integer(ESMF_KIND_I4), allocatable           :: exportLBound(:), exportUBound(:)
+    logical                                      :: verbose_
+    character(len=ESMF_MAXSTR)                   :: message
+    character(len=ESMF_MAXSTR)                   :: owner_
+
+    owner_ = '--'
+    verbose_ = .false.
+    rc_ = ESMF_SUCCESS
+
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+    if (present(verbose)) verbose_ = verbose
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
+
+    call ESMF_FieldGet(importField, rank=importRank, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    allocate(importLBound(importRank), stat=localrc)
+    _MOSSCO_LOG_ALLOC_FINALIZE_ON_ERROR_(rc_)
+    allocate(importUBound(importRank), stat=localrc)
+    _MOSSCO_LOG_ALLOC_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_FieldGetBounds(importField, localDe=0, exclusiveLBound=importLBound, &
+      exclusiveUBound=importUBound, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_FieldGet(exportField, rank=exportRank, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    allocate(exportLBound(exportRank), stat=localrc)
+    _MOSSCO_LOG_ALLOC_FINALIZE_ON_ERROR_(rc_)
+    allocate(exportUBound(exportRank), stat=localrc)
+    _MOSSCO_LOG_ALLOC_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_FieldGetBounds(exportField, localDe=0, exclusiveLBound=exportLBound, &
+      exclusiveUBound=exportUBound, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    !> @todo add degenerate dimension grids (with last dimension == 1)
+    isConformable = .false.
+    if (importRank == exportRank) then
+      if (all(importUBound-importLBound == exportUBound - exportLBound)) isConformable = .true.
+    elseif (importRank == exportRank - 1 .and. present(layers)) then
+      if (all(importUBound(1:importRank)-  importLBound(1:importRank) &
+        == exportUBound(1:importRank) - exportLBound(1:importRank))) isConformable = .true.
+        layers = exportUBound(exportRank) - exportLBound(exportRank) - 1
+    elseif (exportRank == importRank - 1 .and. present(layers)) then
+      if (all(importUBound(1:exportRank)-  importLBound(1:exportRank) &
+        == exportUBound(1:exportRank) - exportLBound(1:exportRank))) isConformable = .true.
+        layers = importUBound(importRank) - importLBound(importRank) - 1
+    endif
+
+    deallocate(exportUBound, stat=localrc)
+    deallocate(exportLBound, stat=localrc)
+    deallocate(importLBound, stat=localrc)
+    deallocate(importUBound, stat=localrc)
+
+  end function MOSSCO_FieldIsConformableField
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_FieldAttributesIdentical"
