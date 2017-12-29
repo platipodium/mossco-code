@@ -157,9 +157,8 @@ module regrid_coupler
       endif
     endif
 
-
     if (gridIsPresent) then
-      !> @todo create with this grid all states in exportState
+
       allocate(exportFieldList(importFieldCount))
 
       do i=1, importFieldCount
@@ -167,7 +166,7 @@ module regrid_coupler
         if (allocated(fieldsHandle)) then
           call fieldsHandle%MOSSCO_FieldInFieldsHandle(importFieldList(i), &
             isPresent=isPresent, dstField=exportField, rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           if (isPresent) then
             exportFieldList(i) = exportField
@@ -366,7 +365,8 @@ module regrid_coupler
 
         !> @todo this call is problematic and throws an error
         call ESMF_FieldRegridStore(srcField=importField, dstField=exportField,&
-          routeHandle=routehandle, regridmethod=ESMF_REGRIDMETHOD_BILINEAR, rc=localrc)
+          routeHandle=routehandle, regridmethod=ESMF_REGRIDMETHOD_BILINEAR,  &
+          unmappedaction=ESMF_UNMAPPEDACTION_IGNORE, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         write(message,'(A)') trim(name)//' field '//trim(importFieldName) &
@@ -442,13 +442,9 @@ module regrid_coupler
 
     do i=1, importFieldCount
 
-      call ESMF_LogWrite('bla', ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
-
       call fieldsHandle%MOSSCO_FieldInFieldsHandle(importFieldList(i), &
         isPresent=isPresent, dstField=exportField, routeHandle=routeHandle, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      call ESMF_LogWrite('blub', ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
 
       if (.not.isPresent) cycle
 
@@ -482,7 +478,8 @@ module regrid_coupler
     integer, intent(out)  :: rc
     integer :: localrc
 
-    class(type_mossco_fields_handle), pointer :: currHandle=>null()
+    type(type_mossco_fields_handle), pointer :: currHandle=>null()
+    type(type_mossco_fields_handle), pointer :: oldHandle=>null()
 
     integer(ESMF_KIND_I4)   :: petCount, localPet
     character(ESMF_MAXSTR)  :: name, message, timeString
@@ -496,11 +493,13 @@ module regrid_coupler
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (allocated(fieldsHandle)) then
-      currHandle=>fieldsHandle
+      currHandle => fieldsHandle
       do while (associated(currHandle%next))
+        oldHandle => currHandle
         currHandle=>currHandle%next
-        deallocate(fieldsHandle)
+        !if (associated(oldHandle)) deallocate(oldHandle)
       enddo
+      !if (associated(currHandle)) deallocate(currHandle)
     endif
 
     !call ESMF_CplCompGet(cplComp, clockIsPresent=clockIsPresent, rc=localrc)
@@ -521,19 +520,19 @@ module regrid_coupler
 
     implicit none
 
-    type(ESMF_CplComp), intent(inout)  :: cplComp
-    type(ESMF_State), intent(inout)    :: state
-    type(ESMF_Field), allocatable, dimension(:) :: fieldList
+    type(ESMF_CplComp), intent(inout)                :: cplComp
+    type(ESMF_State), intent(inout)                  :: state
+    type(ESMF_Field), allocatable, dimension(:)      :: fieldList
     type(ESMF_KeyWordEnforcer), intent(in), optional :: kwe
     logical, intent(in), optional                    :: verbose
-    integer(ESMF_KIND_I4), intent(out), optional :: rc
+    integer(ESMF_KIND_I4), intent(out), optional     :: rc
 
-    integer(ESMF_KIND_I4)             :: rc_, localrc, fieldcount
-    logical                           :: configIsPresent, configFileIsPresent
-    type(ESMF_Config)                 :: config
+    integer(ESMF_KIND_I4)               :: rc_, localrc, fieldcount
+    logical                             :: configIsPresent, configFileIsPresent
+    type(ESMF_Config)                   :: config
     character(len=ESMF_MAXSTR), pointer :: filterExcludeList(:) => null()
     character(len=ESMF_MAXSTR), pointer :: filterIncludeList(:) => null()
-    logical                           :: verbose_
+    logical                             :: verbose_
 
     rc_ = ESMF_SUCCESS
     verbose_ = .false.
@@ -646,49 +645,46 @@ module regrid_coupler
     endif
 
     call MOSSCO_ConfigGet(config, 'exclude', filterExcludeList, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (associated(filterExcludeList)) then
       call MOSSCO_AttributeSet(cplComp, 'filter_pattern_exclude', filterExcludeList, localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       deallocate(filterExcludeList)
-
-      call MOSSCO_AttributeGet(cplComp, 'filter_pattern_exclude', filterExcludeList, localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      write(message,'(A)') trim(cplCompName)//' uses exclude patterns:'
-      call MOSSCO_MessageAddListPtr(message, filterExcludeList, localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
+    else
+      call ESMF_AttributeSet(cplComp, 'filter_pattern_exclude', value='none', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
 
+    call MOSSCO_AttributeGet(cplComp, 'filter_pattern_exclude', filterExcludeList, localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    write(message,'(A)') trim(cplCompName)//' uses exclude patterns:'
+    call MOSSCO_MessageAddListPtr(message, filterExcludeList, localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
     call MOSSCO_ConfigGet(config, 'include', filterIncludeList, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (associated(filterIncludeList)) then
       call MOSSCO_AttributeSet(cplComp, 'filter_pattern_include', filterIncludeList, localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       deallocate(filterIncludeList)
-
-      call MOSSCO_AttributeGet(cplComp, 'filter_pattern_include', filterIncludeList, localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      write(message,'(A)') trim(cplCompName)//' uses include patterns:'
-      call MOSSCO_MessageAddListPtr(message, filterIncludeList, localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    else
+      call ESMF_AttributeSet(cplComp, 'filter_pattern_include', value='*', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
+
+    call MOSSCO_AttributeGet(cplComp, 'filter_pattern_include', filterIncludeList, localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    write(message,'(A)') trim(cplCompName)//' uses include patterns:'
+    call MOSSCO_MessageAddListPtr(message, filterIncludeList, localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
   end subroutine read_config
 
@@ -717,34 +713,20 @@ module regrid_coupler
 
     currHandle => self
 
-    !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
-
     do while (associated(currHandle%next))
-
-      _MOSSCO_LINE_
 
       currHandle => currHandle%next
       call MOSSCO_FieldString(currHandle%srcField, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
 
       if (currHandle%srcField == field) then
-        _MOSSCO_LINE_
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
-        _MOSSCO_LINE_
         if (present(isPresent)) isPresent = .true.
-        _MOSSCO_LINE_
         if (present(routeHandle)) routeHandle=currHandle%routeHandle
-        _MOSSCO_LINE_
         if (present(dstField)) dstField=currHandle%dstField
-        _MOSSCO_LINE_
         if (present(srcField)) srcField=currHandle%srcField
-        _MOSSCO_LINE_
         return
       endif
-      _MOSSCO_LINE_
     enddo
-
-    _MOSSCO_LINE_
 
     if (present(isPresent)) then
       isPresent = .false.
