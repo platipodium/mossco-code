@@ -17,6 +17,7 @@
 #define ESMF_FILENAME "regrid_coupler.F90"
 
 #define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+#define _MOSSCO_LINE_ call ESMF_LogWrite('',ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
 
 module regrid_coupler
 
@@ -82,7 +83,7 @@ module regrid_coupler
     character(len=ESMF_MAXSTR)  :: message, name, timeString, exportName, importName
     character(len=ESMF_MAXSTR)  :: exportFieldName, importFieldName
     type(ESMF_RouteHandle)      :: routeHandle
-    class(type_mossco_fields_handle), pointer :: currHandle=>null()
+    type(type_mossco_fields_handle), pointer :: currHandle=>null()
     type(ESMF_Field)            :: importField, exportField
     integer                     :: localrc
 
@@ -163,13 +164,15 @@ module regrid_coupler
 
       do i=1, importFieldCount
 
-        call fieldsHandle%MOSSCO_FieldInFieldsHandle(importFieldList(i), &
-          isPresent=isPresent, handle=currHandle, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        if (allocated(fieldsHandle)) then
+          call fieldsHandle%MOSSCO_FieldInFieldsHandle(importFieldList(i), &
+            isPresent=isPresent, dstField=exportField, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        if (isPresent) then
-          exportFieldList(i) = currHandle%dstfield
-          cycle
+          if (isPresent) then
+            exportFieldList(i) = exportField
+            cycle
+          endif
         endif
 
         importField = importFieldList(i)
@@ -347,10 +350,13 @@ module regrid_coupler
       endif
 
       currHandle=>fieldsHandle
+
+      !> @todo revise loop for final break condition
       do while (associated(currHandle%next))
-        if (.not.((currHandle%srcField==importField).and.(currHandle%dstField==exportField))) &
-          currHandle=>currHandle%next
+        currHandle=>currHandle%next
+        if ((currHandle%srcField==importField).and.(currHandle%dstField==exportField)) exit
       enddo
+
       ! this field pair has not already been "handled"
       if (.not. associated(currHandle%next)) then
 
@@ -378,6 +384,9 @@ module regrid_coupler
         currHandle%srcState=importState
         currHandle%dstState=exportState
         currHandle%routeHandle=routeHandle
+
+        call ESMF_RouteHandlePrint(routehandle, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       ! this field pair has already been "handled", continue!
       else
@@ -412,11 +421,12 @@ module regrid_coupler
     type(ESMF_Time)             :: currTime
     integer(ESMF_KIND_I4)       :: petCount, localPet, i, importFieldCount
     character(len=ESMF_MAXSTR)  :: message, name
-    class(type_mossco_fields_handle), pointer :: currHandle=>null()
+    type(type_mossco_fields_handle), pointer :: currHandle=>null()
     integer                       :: localrc
     logical                       :: isPresent
     type(ESMF_Field), allocatable :: importFieldList(:)
     type(ESMF_Field)              :: exportField
+    type(ESMF_RouteHandle)        :: routeHandle
 
     rc = ESMF_SUCCESS
 
@@ -435,7 +445,7 @@ module regrid_coupler
       call ESMF_LogWrite('bla', ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
 
       call fieldsHandle%MOSSCO_FieldInFieldsHandle(importFieldList(i), &
-        isPresent=isPresent, handle=currHandle, rc=localrc)
+        isPresent=isPresent, dstField=exportField, routeHandle=routeHandle, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_LogWrite('blub', ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
@@ -443,14 +453,14 @@ module regrid_coupler
       if (.not.isPresent) cycle
 
       write(message,'(A)') trim(name)//' regridding '
-      call MOSSCO_FieldString(currHandle%srcField, message)
+      call MOSSCO_FieldString(importFieldList(i), message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       write(message,'(A)') trim(name)//' onto '
-      call MOSSCO_FieldString(currHandle%dstField, message)
+      call MOSSCO_FieldString(exportField, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      call ESMF_FieldRegrid(srcField=currHandle%srcField, dstField=currHandle%dstField,&
-        routeHandle=currHandle%routehandle, rc=localrc)
+      call ESMF_FieldRegrid(srcField=importFieldList(i), dstField=exportField,&
+        routeHandle=routehandle, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       !! ESMF_FieldRegrid.F90:2018 ESMF_FieldRegridGetIwts Invalid argument
       !! - - can't currently regrid a grid       that contains a DE of width less than 2
@@ -493,10 +503,10 @@ module regrid_coupler
       enddo
     endif
 
-    call ESMF_CplCompGet(cplComp, clockIsPresent=clockIsPresent, rc=localrc)
+    !call ESMF_CplCompGet(cplComp, clockIsPresent=clockIsPresent, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=localrc)
+    !if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_CompExit(cplComp, localrc)
@@ -685,13 +695,14 @@ module regrid_coupler
 #undef ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_FieldInFieldsHandle"
   subroutine MOSSCO_FieldInFieldsHandle(self, field, kwe, isPresent, &
-    handle, rc)
+    routeHandle, srcField, dstField, rc)
 
     class(type_mossco_fields_handle), target          :: self
     type(ESMF_Field), intent(in)                      :: field
+    type(ESMF_Field), intent(out), optional           :: srcField, dstField
+    type(ESMF_RouteHandle, intent(out), optional      :: routeHandle
     type(ESMF_KeyWordEnforcer), intent(in), optional  :: kwe
     logical, intent(out), optional                    :: isPresent
-    type(type_mossco_fields_handle), pointer, optional, intent(out) :: handle
     integer(ESMF_KIND_I4), intent(out), optional      :: rc
 
     integer(ESMF_KIND_I4)             :: rc_, localrc
@@ -703,30 +714,37 @@ module regrid_coupler
     rc_ = ESMF_SUCCESS
     if (present(kwe)) rc_ = ESMF_SUCCESS
     if (present(rc)) rc = rc_
-    if (present(handle)) handle => null()
 
     currHandle => self
 
     !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
 
-    do while (.true.)
+    do while (associated(currHandle%next))
 
-      !call MOSSCO_FieldString(currHandle%srcField, message)
+      _MOSSCO_LINE_
+
+      currHandle => currHandle%next
+      call MOSSCO_FieldString(currHandle%srcField, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
 
       if (currHandle%srcField == field) then
+        _MOSSCO_LINE_
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+        _MOSSCO_LINE_
         if (present(isPresent)) isPresent = .true.
-        if (present(handle)) handle = currHandle
+        _MOSSCO_LINE_
+        if (present(routeHandle)) routeHandle=currHandle%routeHandle
+        _MOSSCO_LINE_
+        if (present(dstField)) dstField=currHandle%dstField
+        _MOSSCO_LINE_
+        if (present(srcField)) srcField=currHandle%srcField
+        _MOSSCO_LINE_
         return
       endif
-
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
-      if (.not.associated(currHandle%next)) exit
-      currHandle => currHandle%next
+      _MOSSCO_LINE_
     enddo
 
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+    _MOSSCO_LINE_
 
     if (present(isPresent)) then
       isPresent = .false.
