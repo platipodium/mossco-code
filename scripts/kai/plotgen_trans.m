@@ -55,7 +55,7 @@ for im=1:length(vli)
 %% process min-max value
   minval = cell2mat(var{i}(3)); maxVal = cell2mat(var{i}(4)); 
   if maxVal<-1, maxVal=1.05*max(max(value)); end
-  if minval>0 & maxVal/minval > 30, islog=1; else  islog=0; end
+  if minval>0 & maxVal/minval > 13, islog=1; else  islog=0; end
 %if minval>0 & maxVal/minval > 30,set(gca,'YScale','Log','YTick',power(10,ceil(log10(minval)):ceil(log10(maxVal))));end
   if(islog) 
     value(find(value<minval*1.1))=minval*1.1;
@@ -96,6 +96,7 @@ for im=1:length(vli)
   ylim([-Dmax*0.95 0]); xlim([min(tx(iix))+0.02  max(tx(iix))]);
 %caxis([minval maxVal])
   set(h,'edgecolor','none');
+  colormap(coljm);
 %% find and print min+max
   col=[0.95 0.94 0.97];
  % annotation('textbox',tpos+[0.1*dxp -0.14*dyp 0 0],'String',[num2str(minval,5) '-' num2str(maxVal,5) units],'Color',col,'Fontweight','bold','FontSize',fs,'LineStyle','none');

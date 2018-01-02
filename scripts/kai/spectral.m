@@ -19,6 +19,7 @@ if(mod(six1-six0,2)==0)
   else six1=six1-1; end
 end
 
+suf=0.5;
 siy=sum(isnan(value),1);
 siy0=min(find(siy<suf*snx));
 siy1=max(find(siy<suf*snx));
@@ -62,7 +63,12 @@ siy=find(abs(fy)<=floor(n/2) & fy<floor(n/2));
 
 Pf=rotavg(impf(six,siy));
 
-frad=(0:n/2)/n*pi/2;
+frad=(1:n/2+1)/n*pi/2;
+check=1; 
+%frad(1:10) Pf(1:10)'
+%plot(frad,Pf,'LineWidth',2)
+%set(gca,'Xlim',[2E-2 0.4],'Ylim',[4E2 2E7])
+%set(gca,'YScale','Log','XScale','Log');
 
 %loglog(f1,Pf)
 end

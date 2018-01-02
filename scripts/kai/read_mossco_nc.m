@@ -1,4 +1,5 @@
-offtime=[datenum('01-Feb-0000')  datenum('21-May-0001')];
+offtime=[datenum('01-Jan-0000')  datenum('21-May-0001')];
+%offtime=[datenum('01-Jan-0009')  datenum('21-May-0001')];
 ivalue=[];oduvala=[];time=[];
 
 for fi=1:1
@@ -24,6 +25,8 @@ for id=0:nvar-1
    end
    %dimv(id+1)= natts-2;
    %if (ismember(id,vid_tshow))  
+   if (strcmp(varname,'dissolved_oxygen_upward_flux_at_soil_surface') )varid=id; end  
+   if (strcmp(varname,'dissolved_reduced_substances_upward_flux_at_soil_surface') )odu_id=id; end
 if(id==varid | id==odu_id )
 fprintf('\n ******************** \n %s==%s ?\n',varn{id+1},varna);
 end
@@ -89,7 +92,7 @@ end
 
 %hour=mod(round((time-time(1))./3600),24);
 doy=floor(mod(time,365.25)+1);
-year=2001+floor(time./(365.25));
+year=2000+floor(time./(365.25));
 years=unique(year);
 nti=length(time);
 fprintf('time %d\t%1.1f %1.1f ... %1.1f\n',nti,time(1),time(2),time(end));

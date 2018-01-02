@@ -11,93 +11,50 @@
 %	long name		short name  min max fac	fig row col type
 %	1			2           3   4   5	6   7	8   9
 %						    5:is depth index in 3D for maps
+unitv={'';'';'';'';'';'gCHL/mol-C';'gCHL/mol-C';'-';'-';'-';'-';'mol-N/mol-P';'mol-N/mol-P';'mgCHL/m**3';'';'';'';'';'';'';'';'';'';'';'';};
 var={
- % {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';0.4;120; 1.0;	1; 1;1;'L0'};
-  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';1.;220; 1.0;	1; 1;1;'L1'};
-%{'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0.;2.3; 1.;	2; 1;1;'L0'};
-{'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0.;2.5; 1.;	1; 2;1;'L1'};
-%  {'Phytplankton_Carbon_phyC_in_water';'PhyC';4;200; 0.3;	1; 1;2;'L1'};
-  {'Chl_chl_in_water';'chl';0.5;50; 1;				2; 1;1;'L1'};
-%  {'Chl_chl_in_water';'chl';0.5;40; 1;				1; 1;1;'LM'};
-%  {'Chl_chl_in_water';'chl';0.7;40; 1;				2; 1;1;'L0'};
+  {'Chl_chl_in_water';'chl';0.5;50; 1;				1; 1;1;'N'};
   {'Phytplankton_Carbon_phyC_in_water';'PhyC';4;200; 0.3;       1; 1;1;'N'};
-%%  {'Chl_chl_in_water';'CHL';1.;30;2;                            1; 1;0;'Mi'};
-%%  {'Chl_chl_in_water';'CHL';1.;30;2;                            2; 1;0;'Mi'};
-%%  {'Chl_chl_in_water';'CHL';1.;30;2;                            3; 1;0;'Mi'};
-%%  {'Chl_chl_in_water';'CHL';1.;30;2;                            4; 1;0;'Mi'};
-%  {'Chl_chl_in_water';'CHL';1.;30; 1;                          10; 1;0;'Mi'};
-%  {'Chl_chl_in_water';'CHL';1.;30; 1;                          11; 1;0;'Mi'};
- %%  {'Chl_chl_in_water';'CHL';1.;30; 2;					5; 1;0;'Mi'};
-%%  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';1;70; 2;	4; 1;0;'Mi'};
-%  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';1;50; 2;	5; 1;0;'Mi'};
-%%  {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0.;1.; 2.; 5; 1;0;'Mi'};
-%%  {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0.;1.; 2.; 6; 1;0;'Mi'};
-   {'Zooplankton_Carbon_zooC_in_water';'ZooC';0.01;15; 1;	2; 2;1;'L1'};
 %   {'Detritus_Carbon_detC_in_water';'DetC';0;8; 0.001;		1; 2;1;'N'};
 %   {'c log(1E-1+DetC)';'lDetC';0;8; 2;				3; 2;1;'L0'};
-   {'Virus_C_density_in_cells_vir_in_water';'VirC';0;2; 1.;	2; 1;1;'N'};
-   {'c VirC./(PhyC+1E-2)';'vir';0;5; 4;				2; 2;1;'L1'};
-  {'Phytplankton_Nitrogen_phyN_in_water';'PhyN';0;-9; 1.0;	1; 2;1;'N'};
-  {'Phytplankton_Phosphorus_phyP_in_water';'PhyP';0;-9; 1.0;	1; 2;1;'N'};
-%  {'c PhyN./(PhyC+1E-2)';'N:C';0;0.4; 1.0;			1; 2;2;'LM'};
-%  {'c PhyP./(PhyC+1E-2)';'P:C';0;0.4; 15;			1; 2;2;'LM'};
-%%    {'c chl./(PhyC+1E-2)';'Chl2C';0.1;0.5; 4;			15; 1;0;'Mi'};
-%%    {'N2C';'N:C';0.06;0.35; 1;				2; 1;0;'M0369'};
-%%    {'P2C';'P:C';0;0.05; 1;					2; 2;0;'M0369'};
-   {'fraction_of_Rubisco_Rub_in_water';'Rub';0;-9; 1.0;		1; 1;1;'N'};
-   {'c Rub./(PhyC+1E-2)';'fRub';0;0.5; 1.0;			2; 2;1;'N'};
-   {'c Rub./(PhyC+1E-2)';'fRub';0.1;0.5; 2;			1; 1;0;'Mi'};
-    {'c Rub./(PhyC+1E-2)';'fRub';0.2;0.6; 2;			2; 1;0;'Mi'};
-    {'c Rub./(PhyC+1E-2)';'fRub';0.2;0.6; 2;			3; 1;0;'Mi'};
-    {'c Rub./(PhyC+1E-2)';'fRub';0.2;0.6; 2;			4; 1;0;'Mi'};
-   {'c Rub./(PhyC+1E-2)';'fRub';0.1;0.5; 2;			5; 1;0;'Mi'};
-    {'c Rub./(PhyC+1E-2)';'fRub';0.2;0.6; 2;			6; 1;0;'Mi'};
-    {'c chl./(PhyC+1E-2)';'Chl2C';0.25;0.5; 2;			7; 1;0;'Mi'};
-    {'c chl./(PhyC+1E-2)';'Chl2C';0.25;0.5; 2;			8; 1;0;'Mi'};
-    {'c chl./(PhyC+1E-2)';'Chl2C';0.25;0.5; 2;			9; 1;0;'Mi'};
-    {'c chl./(PhyC+1E-2)';'Chl2C';0.25;0.5; 2;			10; 1;0;'Mi'};
-  {'c PhyP./(PhyC+1E-2)';'P:C';0.005;0.02; 1;			3; 2;1;'L1'};
-  {'c PhyP./(PhyC+1E-2)';'P:C';0.005;0.02; 1;			3; 2;1;'L0'};
-  {'c PhyP./(PhyC+1E-2)';'P:C';0.005;0.012; 2;			11; 1;0;'Mi'};
-  {'c PhyP./(PhyC+1E-2)';'P:C';0.005;0.012; 2;			12; 1;0;'Mi'};
-  {'c PhyP./(PhyC+1E-2)';'P:C';0.005;0.012; 2;			13; 1;0;'Mi'};
-  {'c PhyN./(PhyC+1E-2)';'N:C';0;0.2; 1;			3; 1;1;'L1'};
-  {'c PhyN./(PhyC+1E-2)';'N:C';0;0.2; 1;			3; 1;1;'L0'};
-  {'c PhyN./(PhyC+1E-2)';'N:C';0.06;0.18; 2;			14; 1;0;'Mi'};
-  {'c PhyN./(PhyC+1E-2)';'N:C';0.06;0.18; 2;			15; 1;0;'Mi'};
-  {'c PhyN./(PhyC+1E-2)';'N:C';0.06;0.18; 2;			16; 1;0;'Mi'};
-  {'c PhyN./(PhyP+1E-4)';'N:P';15;30; 1;			4; 1;1;'L1'};
-  {'c PhyN./(PhyP+1E-4)';'N:P';15;30; 1;			4; 1;1;'L0'};
-  {'c PhyN./(PhyP+1E-4)';'N:P';15;30; 2;			17; 1;0;'Mi'};
-  {'c PhyN./(PhyP+1E-4)';'N:P';15;30; 2;			18; 1;0;'Mi'};
-  {'c PhyN./(PhyP+1E-4)';'N:P';15;30; 2;			19; 1;0;'Mi'};
-  {'c PhyN./(PhyP+1E-4)';'N:P';15;30; 2;			20; 1;0;'Mi'};
-  {'c PhyN./(PhyP+1E-4)';'N:P';15;30; 2;			21; 1;0;'Mi'};
-  {'c PhyN./(PhyP+1E-4)';'N:P';15;30; 2;			22; 1;0;'Mi'};
-   {'c Rub./(PhyC+1E-2)';'fRub';0;0.5; 1.0;			4; 2;1;'L1'};
-   {'c Rub./(PhyC+1E-2)';'fRub';0;0.5; 1.0;			4; 2;1;'L0'};
+%   {'Virus_C_density_in_cells_vir_in_water';'VirC';0;2; 1.;	2; 1;1;'N'};
+%   {'c VirC./(PhyC+1E-2)';'vir';0;5; 4;			2; 2;1;'L1'};
+  {'Phytplankton_Nitrogen_phyN_in_water';'PhyN';0;-9; 1.0;	1; 1;1;'N'};
+  {'Phytplankton_Phosphorus_phyP_in_water';'PhyP';0;-9; 1.0;	1; 1;1;'N'};
+  {'fraction_of_Rubisco_Rub_in_water';'Rub';0;-9; 1;		1; 1;1;'N'};
+  {'c chl./(PhyC+1E-2)';'Chl2C';0.15;0.4; 2;			1; 1;0;'Mi'};
+  {'c chl./(PhyC+1E-2)';'Chl2C';0.15;0.4; 2;			2; 1;0;'Mi'};
+  {'c Rub./(PhyC+1E-2)';'fRub';0.15;0.45; 2;			3; 1;0;'Mi'};
+  {'c Rub./(PhyC+1E-2)';'fRub';0.15;0.45; 2;			4; 1;0;'Mi'};
+%   {'c Rub./(PhyC+1E-2)';'fRub';0.1;0.5; 2;			5; 1;0;'Mi'};
+%    {'c Rub./(PhyC+1E-2)';'fRub';0.2;0.6; 2;			6; 1;0;'Mi'};
+  {'c 1-(Rub+chl)./(PhyC+1E-2)';'fNut';0.35;0.55; 2;		5; 1;0;'Mi'};
+  {'c 1-(Rub+chl)./(PhyC+1E-2)';'fNut';0.35;0.55; 2;		6; 1;0;'Mi'};
+%  {'c PhyP./(PhyC+1E-2)';'P:C';0.005;0.02; 1;			3; 2;1;'L1'};
+%  {'c PhyP./(PhyC+1E-2)';'P:C';0.005;0.02; 1;			3; 2;1;'L0'};
+%  {'c PhyP./(PhyC+1E-2)';'P:C';0.005;0.012; 2;			11; 1;0;'Mi'};
+%  {'c PhyN./(PhyC+1E-2)';'N:C';0;0.2; 1;			3; 1;1;'L1'};
+%  {'c PhyN./(PhyC+1E-2)';'N:C';0;0.2; 1;			3; 1;1;'L0'};
+%  {'c PhyN./(PhyC+1E-2)';'N:C';0.06;0.18; 2;			14; 1;0;'Mi'};
+%  {'c PhyN./(PhyC+1E-2)';'N:C';0.06;0.18; 2;			15; 1;0;'Mi'};
+  {'c PhyN./(PhyP+1E-4)';'N:P';12;20; 2;			7; 1;0;'Mi'};
+  {'c PhyN./(PhyP+1E-4)';'N:P';12;20; 2;			8; 1;0;'Mi'};
 %  {'c 1-(Rub+0.6*CHL)./(PhyC+1E-2)';'fNut';0;1.; 1.0;		1; 1;3;'LM'};
 %  {'denitrification_rate_in_soil';'denit';0;50; 1.0;		4; 1;1;'DC'};
 %  {'N2flux';'N2 flux';0.;6; 1.; 				3; 1;1;'LM'};
 %  {'N2flux';'N2 flux';0.1;5; 1;                      6; 1;0;'Mi'};
-%  {'N2flux';'N2 flux';0.1;5; 1;                      7; 1;0;'Mi'};
-%  {'N2flux';'N2 flux';0.1;5; 1;                      8; 1;0;'Mi'};
 %  {'mole_concentration_of_nitrate_upward_flux_at_soil_surface';'NO3 flux';0;1.; 86400.;1; 2;1;'LM'};
 %  {'mole_concentration_of_ammonium_upward_flux_at_soil_surface';'NH4 flux';0;1.; 86400.; 1; 2;1;'LM'};
 %  {'dissolved_oxygen_upward_flux_at_soil_surface';'O2flux';-30;0; 1.; 1; 1;1;'N'};
 %  {'dissolved_reduced_substances_upward_flux_at_soil_surface';'ODU flux';-6;0; 1.; 1; 1; 1;'N'};
 % {'c ODUflux-O2flux';'O2 flux';5;40; 86400; 				9; 1;0;'Mi'};
 % {'c ODUflux-O2flux';'O2 flux';5;40; 86400; 				10; 1;0;'Mi'};
-% {'c ODUflux-O2flux';'O2 flux';5;40; 86400; 				11; 1;0;'Mi'};
-% {'c ODUflux-O2flux';'O2 flux';5;40; 86400; 				12; 1;0;'Mi'};
 % {'c ODUflux-O2flux';'O2 flux';0;50; 86400; 				3; 2;1;'LM'};
 %  {'slow_detritus_C_in_soil';'TOC slow';5E2;5E4; 1.0; 			1; 3;2;'LM'};
 %%  {'detritus-P_in_soil';'POP';5E2;5E4; 1.0; 			1; 1;3;'L1'};
 %%  {'temperature_in_water';'Temw';0;20; 1.0; 		1; 1;1;'N'};
 %%  {'c Temw(:,:,4,:)-Temw(:,:,1,:)';'dTemw';-3;7; 1.0; 		5; 1;0;'Mi'};
 %%  {'c Temw(:,:,4,:)-Temw(:,:,1,:)';'dTemw';-3;7; 1.0; 		6; 1;0;'Mi'};
-%%  {'c Temw(:,:,4,:)-Temw(:,:,1,:)';'dTemw';-3;7; 1.0; 		7; 1;0;'Mi'};
-%%  {'c Temw(:,:,4,:)-Temw(:,:,1,:)';'dTemw';-3;7; 1.0; 		8; 1;0;'Mi'};
 %%  {'mole_concentration_of_phosphate_in_soil';'PO4s';5E2;5E4; 1.0; 		1; 1;3;'L1'};
 %%  {'_datt_in_water';'att';0.1;3; 1.0; 		1; 1;3;'N'};
 %%  {'c 1.89/att';'secchi';0.;10; 1.0; 		1; 1;3;'L1'};
@@ -105,30 +62,4 @@ var={
 %  {'mole_concentration_of_ammonium_in_soil';'NH4';3E2;2E3; 1.0; 		1; 3;2;'DC'};
  };
 
-%mole_concentration_of_nitrate_in_soildenitrification_rate_in_soil,detritus-P_in_soil,dissolved_oxygen_in_soil,dissolved_reduced_substances_in_soil,Zooplankton_Carbon_zooC_in_water,fraction_of_Rubisco_Rub_in_water,mole_concentration_of_ammonium_in_soil,mole_concentration_of_phosphate_in_soil,porosity_in_soil,radiation_in_water,slow_detritus_C_in_soil,temperature_in_water,detritus-P_upward_flux_at_soil_surface,dissolved_reduced_substances_upward_flux_at_soil_surface,fast_detritus_C_upward_flux_at_soil_surface,mole_concentration_of_nitrate_upward_flux_at_soil_surface,mole_concentration_of_phosphate_upward_flux_at_soil_surface,Detritus_Carbon_detC_in_water
-IsWater=false; IsSoil=false; 
-
-% number of variables to plot
-nvar=length(var); nfig=1; nfigm=0; IsStore=zeros(nvar,1);
-
-% retrieve or set major meta-info
-for i=1:nvar
- Zt(i)=1;
- varn=cell2mat(var{i}(1));
- if strfind(varn,'soil'),  IsSoil=true; Zt(i)=2; end
- if strfind(varn,'water'), IsWater=true; end
- if strfind(varn,'c ')
-  for j=1:nvar
-    varshort=cell2mat(var{j}(2)); % stored for later calculation ? 
-    if strfind(varn,varshort(1:3)), IsStore(j)=1; end
-  end
- end
- % number of figures needed
- ptag=cell2mat(var{i}(9));% tag with plot type and depth/time index
- if (ptag(1)~='M' & cell2mat(var{i}(6))>nfig)  nfig=cell2mat(var{i}(6)); end
- if (ptag(1)=='M' & ntags*cell2mat(var{i}(6))>nfigm) nfigm=ntags*cell2mat(var{i}(6)); end
-end
-nfig0 = nfig;
-nfig  = nfig *size(loc,1);  % duplication of figures according to sites
-lx0=1;lx1=0;ly0=1;ly1=0;
- 
+setvar_post

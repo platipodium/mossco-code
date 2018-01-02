@@ -13,8 +13,9 @@ else
 #cdo setmisstoc,0 -setmissval,-999 $infile tmp.nc
 
 #declare -a exnam=("rate" "flux" "velocity")
-ncap2 -O -s "Zooplankton_Carbon_zooC_in_water=hzg_maecs_nutN; fraction_of_Rubisco_Rub_in_water=hzg_maecs_nutN; Phytplankton_Carbon_phyC_in_water=hzg_maecs_nutN; Phytplankton_Phosphorus_phyP_in_water=hzg_maecs_nutN; Phytplankton_Nitrogen_phyN_in_water=hzg_maecs_nutN; Chl_chl_in_water=hzg_maecs_nutN; Virus_C_density_in_cells_vir_in_water=hzg_maecs_nutN;" $infile tmp.nc
-ncap2 -O -s "where(hzg_maecs_nutN>0) {Zooplankton_Carbon_zooC_in_water=2.; fraction_of_Rubisco_Rub_in_water=1-0.05*hzg_maecs_nutN; Phytplankton_Carbon_phyC_in_water=7-0.35*hzg_maecs_nutN; Phytplankton_Phosphorus_phyP_in_water=0.07-0.0035*hzg_maecs_nutN; Phytplankton_Nitrogen_phyN_in_water=1-0.05*hzg_maecs_nutN; Chl_chl_in_water=1-0.05*hzg_maecs_nutN; Virus_C_density_in_cells_vir_in_water=0.1-0.005*hzg_maecs_nutN; }" tmp.nc $outfile
+ncap2 -O -s 'Zooplankton_Carbon_zooC_in_water=hzg_maecs_nutN; fraction_of_Rubisco_Rub_in_water=hzg_maecs_nutN; Phytplankton_Carbon_phyC_in_water=hzg_maecs_nutN; Phytplankton_Phosphorus_phyP_in_water=hzg_maecs_nutN; Phytplankton_Nitrogen_phyN_in_water=hzg_maecs_nutN; Chl_chl_in_water=hzg_maecs_nutN; Virus_C_density_in_cells_vir_in_water=hzg_maecs_nutN;' $infile tmp.nc
+ncap2 -O -s 'where(hzg_maecs_nutN>0) {Zooplankton_Carbon_zooC_in_water=0.2; fraction_of_Rubisco_Rub_in_water=1-0.05*hzg_maecs_nutN; Phytplankton_Carbon_phyC_in_water=7-0.35*hzg_maecs_nutN; Phytplankton_Phosphorus_phyP_in_water=0.07-0.0035*hzg_maecs_nutN; Phytplankton_Nitrogen_phyN_in_water=1-0.05*hzg_maecs_nutN; Chl_chl_in_water=1-0.05*hzg_maecs_nutN; Virus_C_density_in_cells_vir_in_water=0.01-0.0005*hzg_maecs_nutN; }' tmp.nc $outfile
+#ncap2 -O -s "$outfile $outfile
 
 #cdo setmisstoc,-2E20 -setmissval,-2E20 tmp.nc $outfile
 
