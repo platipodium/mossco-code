@@ -224,6 +224,15 @@ module fabm_pelagic_component
 
     !! Initialize FABM
     pel = mossco_create_fabm_pelagic()
+    write(message,'(A)') trim(name)// ' from commit '//trim(pel%fabm_git_sha)// &
+      ' on branch '//trim(pel%fabm_git_branch)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    call ESMF_AttributeSet(exportState, 'fabm_git_sha', trim(pel%fabm_git_sha), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_AttributeSet(exportState, 'fabm_git_branch', trim(pel%fabm_git_branch), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_GridCompGet(gridComp, name=name, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -558,6 +567,28 @@ module fabm_pelagic_component
     endif
 
     pel = mossco_create_fabm_pelagic(fabm_nml)
+
+    write(message,'(A)') trim(name)// ' uses FABM commit '//trim(pel%fabm_git_sha)// &
+      ' on branch '//trim(pel%fabm_git_branch)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    call ESMF_AttributeSet(exportState, 'fabm_git_sha', trim(pel%fabm_git_sha), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_AttributeSet(exportState, 'fabm_git_branch', trim(pel%fabm_git_branch), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (allocated(pel%fabm_modules)) then
+      do i=1, ubound(pel%fabm_modules,1)
+        write(message,'(A)') trim(name)//' uses module '//trim(pel%fabm_modules(i))
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+        write(message,'(A,I2.2)') 'fabm_module_',i
+        call ESMF_AttributeSet(exportState, trim(message), trim(pel%fabm_modules(i)), &
+          rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      enddo
+    endif
 
     ! set background extinction
     pel%background_extinction=background_extinction

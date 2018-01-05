@@ -27,9 +27,11 @@
   use solver_library
   use mossco_strings
   use fabm
+  use fabm_version
   use fabm_types
   use fabm_expressions
   use fabm_standard_variables
+
   implicit none
   private
 
@@ -68,6 +70,8 @@
     real(rk), dimension(:,:,:), pointer  :: time_integrated_horizontal_variables => null()
     integer, dimension(:), pointer       :: int_idx_from_diag_idx
     integer, dimension(:), pointer       :: int_idx_from_hor_diag_idx
+    character(len=255), allocatable      :: fabm_modules(:)
+    character(len=255)                   :: fabm_git_sha, fabm_git_branch
     contains
     procedure :: get_rhs
     procedure :: get_dependencies
@@ -98,6 +102,7 @@
     logical            :: particulate=.false.
     real(rk),dimension(:,:,:),pointer   :: conc => null()
     real(rk),dimension(:,:,:),pointer   :: ws => null()
+    type(type_version), pointer :: fabm_version
   end type
 
   contains
@@ -111,10 +116,11 @@
     integer, optional, intent(out) :: rc
     type(type_mossco_fabm_pelagic), allocatable :: pf
 
-    integer  :: n
+    integer  :: n, i
     integer  :: namlst_unit=123
     real(rk) :: dt
     logical  :: fileIsPresent
+    type(type_version), pointer :: version => null()
 
     allocate(pf)
     pf%fabm_ready=.false.
@@ -170,6 +176,24 @@
         pf%int_idx_from_hor_diag_idx(n) = pf%ndiag_hz_int
       end if
     end do
+
+    pf%fabm_git_sha = trim(git_commit_id)
+    pf%fabm_git_branch = trim(git_branch_name)
+    version => first_module_version
+    i = 0
+    do while (associated(version))
+      i = i + 1
+      version => version%next
+    enddo
+    if (.not.allocated(pf%fabm_modules)) allocate(pf%fabm_modules(i))
+
+    version => first_module_version
+    i = 0
+    do while (associated(version))
+      i = i+1
+      pf%fabm_modules(i) = trim(version%module_name)//' version '//trim(version%version_string)
+      version => version%next
+    enddo
 
     ! initialise the export states and dependencies
     call pf%get_all_export_states()
@@ -564,6 +588,7 @@
 
     export_state%fabm_id=fabm_id
     export_state%conc => null()
+    export_state%fabm_version => null()
   !  !! memory handling should be shifted to component, which has total grid layout
   !  export_state%conc => pf%conc(:,:,:,export_state%fabm_id)
   !  allocate(export_state%ws(pf%inum,pf%jnum,pf%knum))
