@@ -698,7 +698,7 @@ module filtration_component
     !>   = 32,4324622642 mg-DW mmol-C-1
 
     mgCpermmolC = 12.011
-    mmolCpermgC = 1/mgCPermmolC
+    mmolCpermgC = 1/mgCpermmolC
     mgDWPermmolC = 32.4324622642
     mmolCPermgDW = 1/mgDWPermmolC
 
@@ -1078,7 +1078,7 @@ module filtration_component
       !write(string,'(F6.3)') maxval(-fractionalLossRate(RANGE3D),mask=mask(RANGE3D))*100.0*3600.0
       !call MOSSCO_MessageAdd(message,' mmol m-3 s-1 or '//trim(string)//'% h-1')
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      
+
       !> Add the produkt of the main filter species
       if (filterSpecies(2) /= '') then
         write(fluxName,'(A)') trim(filterSpecies(2))//'_flux_in_water'
@@ -1107,7 +1107,7 @@ module filtration_component
           call MOSSCO_StateLog(importState)
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
-        
+
         call ESMF_FieldGet(fieldList(1), farrayPtr=concentration, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1115,9 +1115,9 @@ module filtration_component
         where(mask(RANGE3D))
           concentration(RANGE3D) =  -lossRate(RANGE3D) * (1-respiration_fraction)
         endwhere
-        
+
       endif
-      
+
       ! Now add co-filtered items
       call MOSSCO_AttributeGet(gridComp, 'filter_other_species', filterSpeciesList, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &

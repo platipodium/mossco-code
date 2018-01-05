@@ -1168,31 +1168,30 @@ end subroutine MOSSCO_FieldCopyContent
 
     isSame = .false.
 
+    !> Return for type mismatch logical/char/numeric
+    !> @todo this could be expanded for matching the string ".true." with logical .true. etc
+    if (importTypeKind == ESMF_TYPEKIND_LOGICAL .and.  exportTypeKind /= ESMF_TYPEKIND_LOGICAL) return
+    if (importTypeKind /= ESMF_TYPEKIND_LOGICAL .and.  exportTypeKind == ESMF_TYPEKIND_LOGICAL) return
+    if (importTypeKind == ESMF_TYPEKIND_CHARACTER .and. exportTypeKind /= ESMF_TYPEKIND_CHARACTER) return
+    if (importTypeKind /= ESMF_TYPEKIND_CHARACTER .and. exportTypeKind == ESMF_TYPEKIND_CHARACTER) return
+
+    !> Look for matching strings in char types
     if (importTypeKind == ESMF_TYPEKIND_CHARACTER .and. exportTypeKind == ESMF_TYPEKIND_CHARACTER) then
       if (trim(exportString) == trim(importString)) then
         isSame = .true.
-        return
       endif
+      return
     endif
 
+    !> Look for matching boolean in logical types
     if (importTypeKind == ESMF_TYPEKIND_LOGICAL .and. exportTypeKind == ESMF_TYPEKIND_LOGICAL) then
       if (importBool .eqv. exportBool) then
         isSame = .true.
-        return
       endif
-    endif
-
-    if (importTypeKind == ESMF_TYPEKIND_LOGICAL .and.  exportTypeKind /= ESMF_TYPEKIND_LOGICAL) then
-      isSame = .false.
       return
     endif
 
-    if (importTypeKind == ESMF_TYPEKIND_CHARACTER .and.  exportTypeKind /= ESMF_TYPEKIND_CHARACTER) then
-      isSame = .false.
-      return
-    endif
-
-    ! Disregard numeric precision here
+    ! Disregard numeric precision here and compare real8 value of numeric types
     if (importReal8 == exportReal8) then
       isSame = .true.
     endif
@@ -1917,7 +1916,7 @@ end subroutine MOSSCO_FieldCopyAttribute
       if (trim(matchName) /= trim(fieldName)) cycle
 
       matchScore(i) = MOSSCO_FieldAttributesIdentical(field, fieldList(i), &
-        verbose=verbose_, rc=localrc)
+        verbose=verbose_, owner=trim(owner_), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       !write(message,'(A,I2,X,I2,A,I2)') '-- ',i,fieldCount,' score ',matchScore(i)
