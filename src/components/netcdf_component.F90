@@ -423,7 +423,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
 
       write(timeUnit,'(A)') 'seconds since '//timeString(1:10)//' '//timestring(12:len_trim(timestring))
-      
+
       call ESMF_TimeIntervalGet(currTime-refTime, s_r8=seconds, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -449,7 +449,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       if (localrc == ESMF_RC_NOT_FOUND .or. maxTime < currTime) then
         call nc%add_timestep(seconds, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        
+
       elseif (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       elseif (maxTime > currTime) then
@@ -459,7 +459,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         write(message, '(A)')  trim(name)//' '//trim(timeString)//' cannot insert time before'
         localrc = ESMF_RC_NOT_IMPL
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        
+
         call ESMF_TimeGet(maxTime, timeStringISOFrac=timeString, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -786,11 +786,11 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
 #define ESMF_METHOD "nc_field_write"
   subroutine nc_field_write(field, kwe, postFix, checkNaN, checkInf, rc)
 
-    type(ESMF_Field), intent(inout)        :: field
-    type(ESMF_KeywordEnforcer), optional   :: kwe
-    logical, optional, intent(in)          :: checkNaN, checkInf
-    character(len=*), intent(in), optional :: postFix
-    integer(ESMF_KIND_I4), intent(out), optional   :: rc
+    type(ESMF_Field), intent(inout)                    :: field !> @todo check inout
+    type(ESMF_KeywordEnforcer), optional, intent(in)   :: kwe
+    logical, optional, intent(in)                      :: checkNaN, checkInf
+    character(len=*), intent(in), optional             :: postFix
+    integer(ESMF_KIND_I4), intent(out), optional       :: rc
 
     integer(ESMF_KIND_I4)               :: localDeCount, localrc, rc_
     character(ESMF_MAXSTR)              :: fieldName
@@ -803,22 +803,18 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     if (present(checkInf)) checkInf_ = checkInf
 
     call ESMF_FieldGet(field, name=fieldName, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_FieldGet(field, localDeCount=localDeCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (localDeCount < 1) return
 
     if (present(postFix)) fieldName=trim(fieldName)//'_'//trim(postFix)
-    if (localDeCount>0) then
-      call nc%put_variable(field, name=trim(fieldName), &
-        checkNaN=checkNaN_, checkInf=checkInf_, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    endif
 
-    if (present(rc)) rc=localrc
+    call nc%put_variable(field, name=trim(fieldName), &
+      checkNaN=checkNaN_, checkInf=checkInf_, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   end subroutine nc_field_write
 

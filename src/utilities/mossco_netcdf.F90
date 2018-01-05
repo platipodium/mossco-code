@@ -3862,7 +3862,7 @@ module mossco_netcdf
     if(present(rc)) rc=ESMF_SUCCESS
 
     unit=start
-    do unit=1, huge(unit)
+    do unit=1, huge(unit) - 1
       inquire(unit=unit, opened=isopen, iostat=localrc)
       if (localrc /= 0) cycle
       if (.not.isopen) return
