@@ -1876,7 +1876,7 @@ end subroutine MOSSCO_FieldCopyAttribute
     type(ESMF_Field), intent(in)                  :: field
     type(ESMF_Field), intent(in), allocatable     :: fieldList(:)
     integer(ESMF_KIND_I4), intent(out)            :: index
-    type(ESMF_KeywordEnforcer), optional          :: kwe
+    type(ESMF_KeywordEnforcer), optional, intent(in) :: kwe
     integer(ESMF_KIND_I4), intent(out), optional  :: score
     character(len=*), optional, intent(in)        :: owner
     logical, optional, intent(in)                 :: verbose
