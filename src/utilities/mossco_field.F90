@@ -1296,7 +1296,8 @@ end subroutine MOSSCO_FieldCopyAttribute
     real(ESMF_KIND_R8), pointer            :: importPtr3(:,:,:), exportPtr3(:,:,:)
     real(ESMF_KIND_R8), pointer            :: importPtr2(:,:), exportPtr2(:,:)
     logical, allocatable                   :: mask2(:,:), mask3(:,:,:)
-    integer(ESMF_KIND_I4), pointer         :: gridMask2(:,:), gridMask3(:,:,:)
+    integer(ESMF_KIND_I4), pointer         :: gridMask2(:,:) => null()
+    integer(ESMF_KIND_I4), pointer         :: gridMask3(:,:,:) => null()
     logical                                :: tagOnly_, isPresent
     real(ESMF_KIND_R8)                     :: exportMissingValue, importMissingValue
     real(ESMF_KIND_R8)                     :: weight_, real8
@@ -1940,9 +1941,9 @@ end subroutine MOSSCO_FieldCopyAttribute
     real(ESMF_KIND_R8), pointer         :: farrayPtr4(:,:,:,:) => null()
     real(ESMF_KIND_R8), pointer         :: farrayPtr3(:,:,:) => null()
     real(ESMF_KIND_R8), pointer         :: farrayPtr2(:,:) => null()
-    real(ESMF_KIND_R8), pointer         :: gridMask3(:,:,:) => null()
-    real(ESMF_KIND_R8), pointer         :: gridMask2(:,:) => null()
     real(ESMF_KIND_R8), pointer         :: farrayPtr1(:) => null()
+    integer(ESMF_KIND_I4), pointer      :: gridMask2(:,:) => null()
+    integer(ESMF_KIND_I4), pointer      :: gridMask3(:,:,:) => null()
     integer(ESMF_KIND_I4), allocatable  :: ubnd(:), lbnd(:)
     type(ESMF_FieldStatus_Flag)         :: fieldStatus
 
@@ -2061,7 +2062,7 @@ end subroutine MOSSCO_FieldCopyAttribute
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
         if (present(isNaN)) then
-          if (any(farrayPtr3(RANGE3D) /= farrayPtr3(RANGE3D) .and. gridMask3 > 0)) then
+          if (any(farrayPtr3(RANGE3D) /= farrayPtr3(RANGE3D) .and. gridMask3(RANGE3D) > 0)) then
             write(message,'(A)')  trim(owner_)//' detected NaN in '
             call MOSSCO_FieldString(field, message, rc=localrc)
             call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
@@ -2070,7 +2071,7 @@ end subroutine MOSSCO_FieldCopyAttribute
           endif
         endif
         if (present(isInf)) then
-          if (any(abs(farrayPtr3(RANGE3D)) > huge(0.0_ESMF_KIND_R8) .and. gridMask3 > 0)) then
+          if (any(abs(farrayPtr3(RANGE3D)) > huge(0.0_ESMF_KIND_R8) .and. gridMask3(RANGE3D) > 0)) then
             write(message,'(A)')  trim(owner_)//' detected Inf in '
             call MOSSCO_FieldString(field, message, rc=localrc)
             call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
