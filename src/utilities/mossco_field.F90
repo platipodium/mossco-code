@@ -993,7 +993,7 @@ end subroutine MOSSCO_FieldCopyContent
     type(ESMF_Field), intent(in)                 :: importField, exportField
     type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
     character(len=*), dimension(*), optional     :: exclude(:)
-    character(len=*), allocatable, optional, intent(inout)   :: differList(:)
+    character(len=*), allocatable, optional, intent(out)   :: differList(:)
     character(len=*), optional, intent(in)       :: owner
     integer(ESMF_KIND_I4), intent(out), optional :: rc
     integer(ESMF_KIND_I4)                        :: differCount

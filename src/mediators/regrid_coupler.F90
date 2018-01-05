@@ -696,7 +696,7 @@ module regrid_coupler
     class(type_mossco_fields_handle), target          :: self
     type(ESMF_Field), intent(in)                      :: field
     type(ESMF_Field), intent(out), optional           :: srcField, dstField
-    type(ESMF_RouteHandle, intent(out), optional      :: routeHandle
+    type(ESMF_RouteHandle), intent(out), optional     :: routeHandle
     type(ESMF_KeyWordEnforcer), intent(in), optional  :: kwe
     logical, intent(out), optional                    :: isPresent
     integer(ESMF_KIND_I4), intent(out), optional      :: rc
