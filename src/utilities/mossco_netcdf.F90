@@ -112,12 +112,12 @@ module mossco_netcdf
     class(type_mossco_netcdf)                    :: self
     type(ESMF_Field), intent(inout)              :: field
     logical, intent(in), optional                :: kwe
-    real(ESMF_KIND_R8), intent(in),optional      :: seconds
-    character(len=*),optional                    :: name
+    real(ESMF_KIND_R8), intent(in), optional     :: seconds
+    character(len=*), optional                   :: name
     logical, intent(in), optional                :: checkNaN
     logical, intent(in), optional                :: checkInf
     character(len=*),intent(in), optional        :: precision
-    integer(ESMF_KIND_I4), intent(out), optional  :: rc
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer                     :: ncStatus, varid, rc_, rank=0, localrc
     integer                     :: nDims=0, nAtts, udimid, dimlen
@@ -136,6 +136,7 @@ module mossco_netcdf
     real(ESMF_KIND_R8), pointer, dimension(:,:,:,:)  :: ncarray4=>null()
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)    :: ncarray3=>null()
     real(ESMF_KIND_R8), pointer, dimension(:,:)      :: ncarray2=>null()
+    real(ESMF_KIND_R8), pointer, dimension(:)        :: ncarray1=>null()
     real(ESMF_KIND_R4)                               :: missingValueR4=-1.0E30
     real(ESMF_KIND_R8)                               :: missingValueR8=-1.0D30, missingValue=-1.0D30
     real(ESMF_KIND_I4)                               :: missingValueI4=-9999
@@ -185,11 +186,10 @@ module mossco_netcdf
 
     !> If the variable does not exist, create it
     if (.not.self%variable_present(varname)) then
-      if (present(precision)) then
-        precision_=precision
-      else
-        precision_=self%precision
-      endif
+
+      precision_=self%precision
+      if (present(precision)) precision_=precision
+
       call self%create_variable(field, trim(varname), precision=precision_, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
@@ -461,6 +461,7 @@ module mossco_netcdf
         write(message,'(A)')  '  NaN detected in field '
         call MOSSCO_FieldString(field, message, rc=localrc)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+
         if (present(rc)) then
           rc = ESMF_RC_VAL_OUTOFRANGE
           return
