@@ -40,6 +40,9 @@ test_Redist: test_Redist.F90 libmossco_technical
 test_Coupler: test_Coupler.F90 libmossco_mediator
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_mediator $(SQLITE_LIBS) -lmossco_util $(LIBS)
 
+test_MOSSCO_Field: test_MOSSCO_Field.F90 libmossco_technical
+		$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_technical  -lmossco_util $(LIBS)
+		
 libmossco_mediator:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
