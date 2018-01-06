@@ -634,6 +634,7 @@ module filtration_component
     real(ESMF_KIND_R8), pointer, dimension(:,:)    :: abundanceAtSoil => null()
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: abundance => null()
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: lossRate => null()
+    real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: productionRate => null()
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: layerHeight => null()
     real(ESMF_KIND_R8), allocatable, dimension(:,:,:)  :: layerWeight
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: maximumFiltrationRate=> null(), fractionalLossRate=> null()
@@ -906,13 +907,24 @@ module filtration_component
       call ESMF_AttributeGet(fieldList(1), 'units', value=string, &
         defaultValue='', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
       call MOSSCO_MessageAdd(message,' '//trim(string))
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      write(fluxName,'(A)') trim(filterSpecies(1))//'_flux_in_water'
+      !> Get all fields in export and initialize them to zero
+      call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
+        fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      do i=1, fieldCount
+        call MOSSCO_FieldInitialize(fieldList(i), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      enddo
 
       ! Get flux species, be careful to look at the creator attribute to choose
       ! the right one, i.e. those created as export states from this component
+      write(fluxName,'(A)') trim(filterSpecies(1))//'_flux_in_water'
+
       call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
         itemSearch=trim(fluxName), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -1020,7 +1032,6 @@ module filtration_component
 
       ! Cap the fractional loss rate at 30% of integration_timestep. Then correct
       ! also the absolute loss rate
-
       write(message,'(A)') trim(name)
       if (any(-fractionalLossRate(RANGE3D) * integration_timestep > maximumRelativeChange)) then
 
@@ -1036,8 +1047,16 @@ module filtration_component
 
       write(string,'(ES10.3)') maxval(-lossRate(RANGE3D),mask=mask(RANGE3D))
       call MOSSCO_MessageAdd(message,trim(string))
-      !write(string,'(F6.3)') maxval(-fractionalLossRate(RANGE3D),mask=mask(RANGE3D))*100.0*3600.0
-      !call MOSSCO_MessageAdd(message,' mmol m-3 s-1 or '//trim(string)//'% h-1')
+      call ESMF_AttributeGet(field, 'units', value=string, &
+        defaultValue='', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      call MOSSCO_MessageAdd(message,' '//trim(string)//' ')
+      call MOSSCO_FieldString(field,message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      write(message,'(A)') trim(name)//' equivalent to '
+      write(string,'(F6.1)') maxval(-fractionalLossRate(RANGE3D),mask=mask(RANGE3D))*100.0*3600.0
+      call MOSSCO_MessageAdd(message,' '//trim(string)//'% h-1')
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       !> Add the produkt of the main filter species
@@ -1070,13 +1089,23 @@ module filtration_component
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
 
-        call ESMF_FieldGet(fieldList(1), farrayPtr=concentration, rc=localrc)
+        call ESMF_FieldGet(fieldList(1), farrayPtr=productionRate, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         where(mask(RANGE3D))
-          concentration(RANGE3D) =  -lossRate(RANGE3D) * (1-respiration_fraction)
+          productionRate(RANGE3D) =  -lossRate(RANGE3D) * (1-respiration_fraction)
         endwhere
 
+        write(message,'(A,F5.1,A)') trim(name)//' produces with ', &
+          respiration_fraction*100.0,'% resp. loss up to '
+        write(string,'(ES10.3)') maxval(productionRate(RANGE3D),mask=mask(RANGE3D))
+        call MOSSCO_MessageAdd(message,trim(string))
+        call ESMF_AttributeGet(fieldList(1), 'units', value=string, &
+          defaultValue='', rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        call MOSSCO_MessageAdd(message,' '//trim(string))
+        call MOSSCO_FieldString(fieldList(1),message)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
       ! Now add co-filtered items
@@ -1117,7 +1146,7 @@ module filtration_component
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
 
-        call ESMF_FieldGet(field, farrayPtr=lossRate,  rc=localrc)
+        call ESMF_FieldGet(field, farrayPtr=productionRate,  rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         !> Get concentrations from import state
@@ -1152,10 +1181,16 @@ module filtration_component
 
         where(mask(RANGE3D))
           lossRate(RANGE3D) = fractionalLossRate(RANGE3D) * concentration(RANGE3D) ! mmol s-1 m-3
+          productionRate(RANGE3D) = LossRate(RANGE3D) + productionRate(RANGE3D) ! mmol s-1 m-3
         endwhere
 
-        write(message,'(A,ES10.3,A)') trim(name)//' is co-filtering up to ', &
-            maxval(-lossRate(RANGE3D),mask=mask(RANGE3D)),' XXX s-1'
+        write(message,'(A,ES10.3)') trim(name)//' is co-filtering up to ', &
+          maxval(-lossRate(RANGE3D),mask=mask(RANGE3D))
+        call ESMF_AttributeGet(field, 'units', value=string, &
+          defaultValue='', rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        call MOSSCO_MessageAdd(message,' '//trim(string))
+        call MOSSCO_FieldString(fieldList(1),message)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
         !> If there is a product from the educt, then add the lossRate previously calculated
@@ -1186,13 +1221,22 @@ module filtration_component
           cycle
         endif
 
-        call ESMF_FieldGet(field, farrayPtr=concentration,  rc=localrc)
+        call ESMF_FieldGet(field, farrayPtr=productionRate,  rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         !> This assumes that the educt and product share the same unit
         where(mask(RANGE3D))
-          concentration(RANGE3D) = -lossRate(RANGE3D)
+          productionRate(RANGE3D) = productionRate(RANGE3D) - lossRate(RANGE3D)
         endwhere
+
+        write(message,'(A,ES10.3)') trim(name)//' produces up to ', &
+          maxval(-lossRate(RANGE3D), mask=mask(RANGE3D))
+        call ESMF_AttributeGet(field, 'units', value=string, &
+          defaultValue='', rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        call MOSSCO_MessageAdd(message,' '//trim(string))
+        call MOSSCO_FieldString(fieldList(1),message)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       enddo
     enddo
