@@ -475,9 +475,9 @@ module fabm_sediment_component
       if (trim(varname) == 'detritus_semilabile_nitrogen') fluxes(:,:,n)=pflux_sDetN/86400.0_rk
       if (trim(varname) == 'detritus_labile_phosphorus')   fluxes(:,:,n)=pflux_lDetP/86400.0_rk
       !> For legacy reasons, these are the old names in omexdia
-      if (trim(varname) == 'fast_detritus_C')              fluxes(:,:,i)=pflux_lDetC/86400.0_rk
-      if (trim(varname) == 'slow_detritus_C')              fluxes(:,:,i)=pflux_sDetC/86400.0_rk
-      if (trim(varname) == 'detritus-P')                   fluxes(:,:,i)=pflux_lDetP/86400.0_rk
+      if (trim(varname) == 'fast_detritus_C')              fluxes(:,:,n)=pflux_lDetC/86400.0_rk
+      if (trim(varname) == 'slow_detritus_C')              fluxes(:,:,n)=pflux_sDetC/86400.0_rk
+      if (trim(varname) == 'detritus-P')                   fluxes(:,:,n)=pflux_lDetP/86400.0_rk
       if (trim(varname) == 'detritus_phosphorus')          fluxes(:,:,n)=pflux_lDetP/86400.0_rk
     enddo
 

@@ -755,6 +755,9 @@ module filtration_component
     call ESMF_FieldGet(fieldList(1), grid=grid, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+    !> save this field for later use while fieldList is reused 
+    field = fieldList(1)
+
     ! Get layer height  to export
     call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
       itemSearch='layer_height_in_water', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
@@ -904,7 +907,7 @@ module filtration_component
       !> @todo read unit from field, add this unit in respective export flux
       write(message,'(A,ES10.3)') trim(name)//' max food concentration is ', &
         maxval(concentration(RANGE3D), mask=mask)
-      call ESMF_AttributeGet(fieldList(1), 'units', value=string, &
+      call ESMF_AttributeGet(field, 'units', value=string, &
         defaultValue='', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
