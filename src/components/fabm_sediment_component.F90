@@ -4,10 +4,10 @@
 !! MOSSCO sediment component.
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013,2014,2015,2016,2017
-!>                          Helmholtz-Zentrum Geesthacht
-!> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
-!> @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018
+!>  Helmholtz-Zentrum Geesthacht
+!> @author Carsten Lemmen <carsten.lemmen@hzg.de>
+!> @author Richard Hofmeister <richard.hofmeister@hzg.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -42,6 +42,7 @@ module fabm_sediment_component
   use mossco_field
   use mossco_component
   use mossco_grid
+  use mossco_config
 
   implicit none
 
@@ -1643,10 +1644,309 @@ module fabm_sediment_component
 
   end subroutine get_boundary_conditions
 
-  !> set ESMF attributes "required_flag", "required" and "optional" for
-  !! all boundary conditions in the importState
 #undef  ESMF_METHOD
+#define ESMF_METHOD "read_config"
+!> Read the associated .cfg resource file and save its parameters in
+!> the component's attributes
+  subroutine read_config(gridComp, kwe, rc)
+
+    implicit none
+
+    type(ESMF_GridComp), intent(inout)               :: gridComp
+    type(ESMF_KeyWordEnforcer), intent(in), optional :: kwe
+    integer(ESMF_KIND_I4), intent(out), optional     :: rc
+
+    integer(ESMF_KIND_I4)             :: rc_, localRc
+    character(len=ESMF_MAXSTR)        :: configFileName, message
+    character(len=ESMF_MAXSTR)        :: gridCompName
+    logical                           :: labelIsPresent, fileIsPresent
+    logical                           :: configIsPresent, configFileIsPresent
+    type(ESMF_Config)                 :: config
+
+    rc_ = ESMF_SUCCESS
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
+
+    call ESMF_GridCompGet(gridComp, configIsPresent=configIsPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (configIsPresent) then
+      call ESMF_GridCompGet(gridComp, configIsPresent=configIsPresent, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    else
+      config = ESMF_ConfigCreate(rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_GridCompSet(gridComp, config=config, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    endif
+
+    call ESMF_GridCompGet(gridComp, configFileIsPresent=configFileIsPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_GridCompGet(gridComp, name=gridCompName, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (configFileIsPresent) then
+      call ESMF_GridCompGet(gridComp, configFile=configFileName, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    else
+      configFileName=trim(gridCompName)//'.cfg'
+    endif
+
+    inquire(file=trim(configfilename), exist=fileIsPresent)
+    if (.not. fileIsPresent) then
+      configFileName = 'fabm_sediment.cfg'
+      inquire(file=trim(configfilename), exist=fileIsPresent)
+    endif
+    if (.not. fileIsPresent) then
+      configFileName = 'fabm_sediment.cfg'
+      inquire(file=trim(configfilename), exist=fileIsPresent)
+    endif
+    if (.not. fileIsPresent) return
+
+    write(message,'(A)')  trim(gridCompName)//' reads configuration from '//trim(configFileName)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    call ESMF_ConfigLoadFile(config, trim(configfilename), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call MOSSCO_ConfigGet(config, label='dt', value=dt, &
+      defaultValue=720.0d0, isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (labelIsPresent) then
+      write(message,'(A,ES9.2)') trim(gridCompName)// ' found config item dt = ',dt
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      call ESMF_AttributeSet(gridComp, 'timestep', dt, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
+    call MOSSCO_ConfigGet(config, label='dt_min', value=dt_min, &
+      defaultValue=1.0d0, isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (labelIsPresent) then
+      write(message,'(A,ES9.2)') trim(gridCompName)// ' found config item dt_min = ',dt_min
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      call ESMF_AttributeSet(gridComp, 'minimum_timestep', dt_min, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
+    call MOSSCO_ConfigGet(config, label='numlayers', value=numlayers, &
+      defaultValue=15, isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call MOSSCO_ConfigGet(config, label='dzmin', value=dzmin, &
+      defaultValue=0.004d0, isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (labelIsPresent) then
+      write(message,'(A,ES9.2)') trim(gridCompName)// ' found config item dzmin = ',dzmin
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      call ESMF_AttributeSet(gridComp, 'minimum_layer_height', dzmin, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
+    call MOSSCO_ConfigGet(config, label='ode_method', value=ode_method, &
+      defaultValue=_ADAPTIVE_EULER_, isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call MOSSCO_ConfigGet(config, label='relative_change_min', value=relative_change_min, &
+      defaultValue=-0.9d0, isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (labelIsPresent) then
+      write(message,'(A,ES9.2)') trim(gridCompName)// ' found config item relative_change_min = ',relative_change_min
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      call ESMF_AttributeSet(gridComp, 'relative_change_min', relative_change_min, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
+    call MOSSCO_ConfigGet(config, label='ugrid_name', value=ugrid_name, &
+      defaultValue='', isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    !> Find out whether the label was specified.  If yes, then require
+    !> the file to be present, and return if not found
+    inquire(file=trim(ugrid_name), exist=fileIsPresent)
+
+    if (labelIsPresent .and..not. fileIsPresent) then
+      write(message, '(A)') trim(gridCompName)//' cannot find '//trim(ugrid_name)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      if (present(rc)) then
+        rc = ESMF_RC_FILE_OPEN
+        return
+      else
+        localrc = ESMF_RC_FILE_OPEN
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      endif
+    endif
+
+    call MOSSCO_ConfigGet(config, label='presimulation_years', &
+      value=presimulation_years, &
+      defaultValue=2, isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call MOSSCO_ConfigGet(config, label='bcup_dissolved_variables', &
+      value=bcup_dissolved_variables, &
+      defaultValue=2, isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call MOSSCO_ConfigGet(config, label='pel_Temp', value=pel_Temp, &
+      defaultValue=5.0d0, isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (labelIsPresent) then
+      write(message,'(A,ES9.2)') trim(gridCompName)// ' found config item pel_Temp = ',pel_Temp
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      call ESMF_AttributeSet(gridComp, 'boundary_temperature', pel_Temp, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
+    call MOSSCO_ConfigGet(config, label='pel_NO3', value=pel_NO3, &
+      defaultValue=5.0d0, isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (labelIsPresent) then
+      write(message,'(A,ES9.2)') trim(gridCompName)// ' found config item pel_NO3 = ',pel_NO3
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      call ESMF_AttributeSet(gridComp, 'boundary_nitrate', pel_NO3, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
+    call MOSSCO_ConfigGet(config, label='pel_NH4', value=pel_NH4, &
+      defaultValue=5.0d0, isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (labelIsPresent) then
+      write(message,'(A,ES9.2)') trim(gridCompName)// ' found config item pel_NH4 = ',pel_NH4
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      call ESMF_AttributeSet(gridComp, 'boundary_ammonium', pel_NH4, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
+    call MOSSCO_ConfigGet(config, label='pel_PO4', value=pel_PO4, &
+      defaultValue=0.5d0, isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (labelIsPresent) then
+      write(message,'(A,ES9.2)') trim(gridCompName)// ' found config item pel_PO4 = ',pel_PO4
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      call ESMF_AttributeSet(gridComp, 'boundary_phosphate', pel_PO4, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
+    call MOSSCO_ConfigGet(config, label='pel_O2', value=pel_NO3, &
+      defaultValue=250.0d0, isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (labelIsPresent) then
+      write(message,'(A,ES9.2)') trim(gridCompName)// ' found config item pel_PO4 = ',pel_PO4
+    else
+      write(message,'(A,ES9.2)') trim(gridCompName)// ' uses default pel_PO4 = ',pel_PO4
+    endif
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    call ESMF_AttributeSet(gridComp, 'boundary_phosphate', pel_PO4, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call MOSSCO_ConfigGet(config, label='pflux_lDetC', value=pflux_lDetC, &
+      defaultValue=10.0d0, isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    !> For legacy reasons allow "l"abile carbon to be specified as "f"ast
+    if (.not.labelIsPresent) then
+      call MOSSCO_ConfigGet(config, label='pflux_fDetC', value=pflux_lDetC, &
+        defaultValue=10.0d0, isPresent=labelIsPresent, rc = localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+    if (.not.labelIsPresent) then
+      call MOSSCO_ConfigGet(config, label='pflux_fDet', value=pflux_lDetC, &
+        defaultValue=10.0d0, isPresent=labelIsPresent, rc = localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
+    if (labelIsPresent) then
+      write(message,'(A,ES9.2)') trim(gridCompName)// ' found config item pflux_lDetC = ',pflux_lDetC
+    else
+      write(message,'(A,ES9.2)') trim(gridCompName)// ' uses default pflux_lDetC = ',pflux_lDetC
+    endif
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    call ESMF_AttributeSet(gridComp, 'boundary_labile_carbon_flux', pflux_lDetC, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call MOSSCO_ConfigGet(config, label='pflux_sDetC', value=pflux_sDetC, &
+      defaultValue=10.0d0, isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    !> For legacy reasons allow sDet instead of sDetC
+    if (.not.labelIsPresent) then
+      call MOSSCO_ConfigGet(config, label='pflux_sDet', value=pflux_sDetC, &
+        defaultValue=10.0d0, isPresent=labelIsPresent, rc = localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
+    if (labelIsPresent) then
+      write(message,'(A,ES9.2)') trim(gridCompName)// ' found config item pflux_sDetC = ',pflux_sDetC
+    else
+      write(message,'(A,ES9.2)') trim(gridCompName)// ' uses default pflux_sDetC = ',pflux_sDetC
+    endif
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    call ESMF_AttributeSet(gridComp, 'boundary_semilabile_carbon_flux', pflux_sDetC, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call MOSSCO_ConfigGet(config, label='pflux_lDetN', value=pflux_lDetN, &
+      defaultValue=1.5d0, isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (labelIsPresent) then
+      write(message,'(A,ES9.2)') trim(gridCompName)// ' found config item pflux_lDetN = ',pflux_lDetN
+    else
+      write(message,'(A,ES9.2)') trim(gridCompName)// ' uses default pflux_lDetN = ',pflux_lDetN
+    endif
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    call ESMF_AttributeSet(gridComp, 'boundary_labile_nitrogen_flux', pflux_lDetN, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call MOSSCO_ConfigGet(config, label='pflux_sDetN', value=pflux_sDetN, &
+      defaultValue=1.5d0, isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (labelIsPresent) then
+      write(message,'(A,ES9.2)') trim(gridCompName)// ' found config item pflux_sDetN = ',pflux_sDetN
+    else
+      write(message,'(A,ES9.2)') trim(gridCompName)// ' uses default pflux_sDetN = ',pflux_sDetN
+    endif
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    call ESMF_AttributeSet(gridComp, 'boundary_semilabile_nitrogen_flux', pflux_sDetN, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call MOSSCO_ConfigGet(config, label='pflux_lDetP', value=pflux_lDetP, &
+      defaultValue=0.2d0, isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    !> For legacy reasons read detP into lDetP
+    if (.not.labelIsPresent) then
+      call MOSSCO_ConfigGet(config, label='pflux_detP', value=pflux_lDetP, &
+        defaultValue=0.2d0, isPresent=labelIsPresent, rc = localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
+    if (labelIsPresent) then
+      write(message,'(A,ES9.2)') trim(gridCompName)// ' found config item pflux_lDetP = ',pflux_lDetP
+    else
+      write(message,'(A,ES9.2)') trim(gridCompName)// ' uses default pflux_lDetP = ',pflux_lDetP
+    endif
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    call ESMF_AttributeSet(gridComp, 'boundary_phosphate_flux', pflux_lDetP, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  end subroutine read_config
+
+#undef ESMF_METHOD
 #define ESMF_METHOD "set_boundary_flags"
+!> set ESMF attributes "required_flag", "required" and "optional" for
+!! all boundary conditions in the importState
   subroutine set_boundary_flags(sed,state)
     type(type_sed)             :: sed
     type(ESMF_State)           :: state
