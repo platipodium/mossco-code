@@ -57,6 +57,9 @@ module fabm_sediment_component
   real(rk)  :: pel_NO3=5.0_rk, pel_NH4=5.0_rk, pel_PO4=0.5_rk, pel_O2=250_rk
   real(rk)  :: pflux_lDetC=10.0_rk, pflux_sDetC=10.0_rk, pflux_lDetN=1.5_rk
   real(rk)  :: pflux_sDetN=1.5_rk, pflux_lDetP=0.2_rk, pel_Temp=5.0_rk
+  !> deprecated variables (to enable outdated namelists)
+  real(rk)  :: pflux_sDet=10.0_rk, pflux_fDet=10.0_rk, pflux_detP=0.2_rk
+
   real(rk),dimension(:,:,:,:),allocatable,target :: conc
   real(rk),dimension(:,:,:),pointer              :: diag
   real(rk),dimension(:,:,:),allocatable,target   :: bdys,fluxes
@@ -73,7 +76,8 @@ module fabm_sediment_component
                      ode_method, dt_min, relative_change_min,                         &
                      ugrid_name, bcup_dissolved_variables, presimulation_years,       &
                      pel_Temp, pel_NO3, pel_NH4, pel_PO4, pel_O2,                     &
-                     pflux_lDetC, pflux_sDetC, pflux_lDetN, pflux_sDetN, pflux_lDetP
+                     pflux_lDetC, pflux_sDetC, pflux_lDetN, pflux_sDetN, pflux_lDetP, &
+                     pflux_sDet, pflux_fDet, pflux_detP
 
   public SetServices
 
@@ -215,6 +219,11 @@ module fabm_sediment_component
     !! read namelist input for control of timestepping
     open(33,file='run_sed.nml',action='read',status='old')
     read(33,nml=run_nml)
+
+    !> Convert from deprecated namelist items detP, fDet, sDet
+    if (pflux_sDet /= pflux_sDetC) pflux_sDetC = pflux_sDet
+    if (pflux_fDet /= pflux_lDetC) pflux_lDetC = pflux_fDet
+    if (pflux_detP /= pflux_lDetP) pflux_lDetP = pflux_detP
 
     !! Set the time step end stop time
     call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
@@ -464,9 +473,12 @@ module fabm_sediment_component
       if (trim(varname) == 'detritus_semilabile_carbon')   fluxes(:,:,n)=pflux_sDetC/86400.0_rk
       if (trim(varname) == 'detritus_labile_nitrogen')     fluxes(:,:,n)=pflux_lDetN/86400.0_rk
       if (trim(varname) == 'detritus_semilabile_nitrogen') fluxes(:,:,n)=pflux_sDetN/86400.0_rk
-      if (trim(varname) == 'detritus_phosphorus')          fluxes(:,:,n)=pflux_lDetP/86400.0_rk
       if (trim(varname) == 'detritus_labile_phosphorus')   fluxes(:,:,n)=pflux_lDetP/86400.0_rk
-      !write(0,*) i,trim(only_var_name(sed%model%state_variables(i)%long_name)),bdys(:,:,n+1),fluxes(:,:,i)
+      !> For legacy reasons, these are the old names in omexdia
+      if (trim(varname) == 'fast_detritus_C')              fluxes(:,:,i)=pflux_lDetC/86400.0_rk
+      if (trim(varname) == 'slow_detritus_C')              fluxes(:,:,i)=pflux_sDetC/86400.0_rk
+      if (trim(varname) == 'detritus-P')                   fluxes(:,:,i)=pflux_lDetP/86400.0_rk
+      if (trim(varname) == 'detritus_phosphorus')          fluxes(:,:,n)=pflux_lDetP/86400.0_rk
     enddo
 
     ! use Dirichlet boundary condition for pre-simulation
@@ -1856,14 +1868,14 @@ module fabm_sediment_component
 
     !> For legacy reasons allow "l"abile carbon to be specified as "f"ast
     if (.not.labelIsPresent) then
-      call MOSSCO_ConfigGet(config, label='pflux_fDetC', value=pflux_lDetC, &
-        defaultValue=10.0d0, isPresent=labelIsPresent, rc = localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-    endif
-    if (.not.labelIsPresent) then
       call MOSSCO_ConfigGet(config, label='pflux_fDet', value=pflux_lDetC, &
         defaultValue=10.0d0, isPresent=labelIsPresent, rc = localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      if (labelIsPresent) then
+        write(message,'(A)') trim(gridCompName)// ' found deprecated config item pflux_fDet, please use pflux_lDetC.'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      endif
     endif
 
     if (labelIsPresent) then
@@ -1884,6 +1896,11 @@ module fabm_sediment_component
       call MOSSCO_ConfigGet(config, label='pflux_sDet', value=pflux_sDetC, &
         defaultValue=10.0d0, isPresent=labelIsPresent, rc = localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      if (labelIsPresent) then
+        write(message,'(A)') trim(gridCompName)// ' found deprecated config item pflux_sDet, please use pflux_sDetC.'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      endif
     endif
 
     if (labelIsPresent) then
@@ -1930,6 +1947,11 @@ module fabm_sediment_component
       call MOSSCO_ConfigGet(config, label='pflux_detP', value=pflux_lDetP, &
         defaultValue=0.2d0, isPresent=labelIsPresent, rc = localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      if (labelIsPresent) then
+        write(message,'(A)') trim(gridCompName)// ' found deprecated config item pflux_detP, please use pflux_lDetP.'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      endif
     endif
 
     if (labelIsPresent) then
