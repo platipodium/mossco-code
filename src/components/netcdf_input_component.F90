@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF netcdf output component
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
 !

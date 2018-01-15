@@ -1028,6 +1028,9 @@ end subroutine MOSSCO_FieldCopyContent
     endif
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
+    call ESMF_FieldGet(importField, name=fieldName, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
     call ESMF_AttributeGet(importField, count=importCount, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
@@ -1072,7 +1075,9 @@ end subroutine MOSSCO_FieldCopyContent
       differCount = differCount + 1
 
       if (verbose_ .or. present(differList)) then
-        write(message, '(A)') trim(owner_)//' '//trim(fieldName)//':'//trim(attributeName)
+        write(message, '(A)') trim(owner_)
+        call MOSSCO_MessageAdd(message, ' '//fieldName)
+        call MOSSCO_MessageAdd(message,':'//trim(attributeName))
         call MOSSCO_AttributeGet(importField, label=trim(attributeName), value=importString, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
