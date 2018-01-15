@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-TAGS=ESMF_7_1_0_beta_snapshot_39
+TAGS=ESMF_7_1_0_beta_snapshot_45
 export TAGS
 
 COMPS="gfortranclang" #"gfortranclang" # gfortranclang" # gfortran intel pgi gfortranclang pgigcc intelgcc
