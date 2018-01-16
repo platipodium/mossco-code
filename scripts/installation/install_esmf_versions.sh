@@ -4,8 +4,8 @@
 TAGS=ESMF_7_1_0_beta_snapshot_45
 export TAGS
 
-COMPS="gfortranclang" #"gfortranclang" # gfortranclang" # gfortran intel pgi gfortranclang pgigcc intelgcc
-COMMS="openmpi" #"openmpi" # openmpi" #"openmpi" #  mpiuni mpich2 intelmpi
+COMPS="intel" #"gfortranclang" # gfortranclang" # gfortran intel pgi gfortranclang pgigcc intelgcc
+COMMS="intelmpi" #"openmpi" # openmpi" #"openmpi" #  mpiuni mpich2 intelmpi
 
 test -n ${ESMF_DIR} || export ESMF_DIR = ${HOME}/devel/ESMF/esmf-code
 cd $ESMF_DIR && git pull origin master
@@ -43,14 +43,14 @@ for C in $COMMS ; do
       ESMF_NETCDF_INCLUDE=/opt/netcdf/3.6.2/${G}/include
       ESMF_NETCDF=standard
 
-    elif [ $G = intel ]; then
-      source /opt/intel/bin/ifortvars.sh intel64
-      source /opt/intel/bin/iccvars.sh intel64
-
-      export MPI_PATH=/opt/intel/mpich3
-      export PATH=$MPI_PATH/bin:$PATH
-      NETCDF_PATH=/opt/intel/netcdf4
-      ESMF_NETCDF_INCLUDE=${NETCDF_PATH}/include
+#     elif [ $G = intel ]; then
+#       source /opt/intel/bin/ifortvars.sh intel64
+#       source /opt/intel/bin/iccvars.sh intel64
+#
+#       export MPI_PATH=/opt/intel/mpich3
+#       export PATH=$MPI_PATH/bin:$PATH
+#       NETCDF_PATH=/opt/intel/netcdf4
+#       ESMF_NETCDF_INCLUDE=${NETCDF_PATH}/include
     else
       ESMF_NETCDF_INCLUDE=$(nc-config --includedir)
     fi
@@ -80,7 +80,7 @@ for C in $COMMS ; do
        fi
 
        if [[ ${ESMF_COMPILER} == intel ]]; then
-         sed 's#-openmp#-qopenmp#g' ${ESMF_DIR}/build_config/Darwin.gfortran.default/build_rules.mk  > ${ESMF_DIR}/build_config/${ESMF_OS}.${ESMF_COMPILER}.${ESMF_SITE}/build_rules.mk
+         sed 's#-openmp#-qopenmp#g' ${ESMF_DIR}/build_config/${ESMF_OS}.intel.default/build_rules.mk  > ${ESMF_DIR}/build_config/${ESMF_OS}.${ESMF_COMPILER}.${ESMF_SITE}/build_rules.mk
        fi
 
        echo ESMFMKFILE=$ESMF_INSTALL_PREFIX/lib/libg/$ESMF_STRING/esmf.mk
