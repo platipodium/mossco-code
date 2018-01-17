@@ -388,7 +388,8 @@ module regrid_coupler
         currHandle%dstState=exportState
         currHandle%routeHandle=routeHandle
 
-        call ESMF_RouteHandlePrint(routehandle, rc=localrc)
+        !@todo RouteHandlePrint creates a SIGILL Illegal instruction error
+        !call ESMF_RouteHandlePrint(routehandle, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       ! this field pair has already been "handled", continue!
