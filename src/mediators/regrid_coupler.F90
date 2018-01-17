@@ -37,6 +37,7 @@ module regrid_coupler
     type(ESMF_RouteHandle) :: routehandle
     type(ESMF_Field) :: srcField, dstField ! should these be pointers?
     type(ESMF_State) :: srcState, dstState ! should these be pointers?
+    type(ESMF_Grid)  :: srcGrid, dstGrid   ! should these be pointers?
     type(type_mossco_fields_handle), pointer :: next=>null()
     contains
     procedure :: MOSSCO_FieldInFieldsHandle
@@ -101,6 +102,7 @@ module regrid_coupler
 
     type(ESMF_Field), allocatable :: importFieldList(:)
     type(ESMF_Field), allocatable :: exportFieldList(:)
+    character(len=ESMF_MAXSTR)    :: gridFileFormatString = 'SCRIP'
 
     rc = ESMF_SUCCESS
 
@@ -139,18 +141,19 @@ module regrid_coupler
       call ESMF_AttributeGet(cplComp, 'grid_filename',  gridFileName, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      !> @todo how to deal with decomposition?
-      !> First try SCRIP format
-      externalGrid = ESMF_GridCreate(filename=trim(gridFileName), &
-        fileFormat=ESMF_FILEFORMAT_SCRIP, isSphere=.false., rc=localrc)
+      call ESMF_AttributeGet(cplComp, 'grid_file_format',  gridFileFormatString, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (localrc /= ESMF_SUCCESS) then
+      if (trim(gridFileFormatString) == 'SCRIP') then
+        externalGrid = ESMF_GridCreate(filename=trim(gridFileName), &
+          fileFormat=ESMF_FILEFORMAT_SCRIP, isSphere=.false., rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      elseif (trim(gridFileFormatString) == 'GRIDSPEC') then
         externalGrid = ESMF_GridCreate(filename=trim(gridFileName), fileFormat=ESMF_FILEFORMAT_GRIDSPEC, &
           isSphere=.false., rc=localrc)
-      endif
-
-      if (localrc /= ESMF_SUCCESS) then
-        write(message, '(A)') trim(name)//' could not read file '//trim(gridFileName)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      else
+        write(message, '(A)') trim(name)//' unknown file format '//trim(gridFileFormatString)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         localrc = ESMF_RC_NOT_IMPL
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -576,6 +579,8 @@ module regrid_coupler
     character(len=ESMF_MAXSTR), pointer :: filterExcludeList(:) => null()
     character(len=ESMF_MAXSTR), pointer :: filterIncludeList(:) => null()
 
+    character(len=ESMF_MAXSTR)        :: gridFileFormatString = 'SCRIP'
+
     rc_ = ESMF_SUCCESS
     if (present(kwe)) rc_ = ESMF_SUCCESS
     if (present(rc)) rc = rc_
@@ -617,6 +622,17 @@ module regrid_coupler
     call ESMF_ConfigLoadFile(config, trim(configfilename), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
+    call MOSSCO_ConfigGet(config, label='format', value=gridFileFormatString, &
+      defaultValue='SCRIP', isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (labelIsPresent) then
+      write(message,'(A)') trim(cplCompName)// ' found config item format = '//trim(gridFileFormatString)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      call ESMF_AttributeSet(cplComp, 'grid_file_format', trim(gridFileFormatString), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
     call MOSSCO_ConfigGet(config, label='grid', value=dstGridFileName, &
       defaultValue=trim(cplCompName)//'_grid.nc', isPresent=labelIsPresent, rc = localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -625,6 +641,8 @@ module regrid_coupler
       write(message,'(A)') trim(cplCompName)// ' found config item grid = '//trim(dstGridFileName)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       call ESMF_AttributeSet(cplComp, 'grid_filename', trim(dstGridFileName), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      call ESMF_AttributeSet(cplComp, 'grid_file_format', trim(gridFileFormatString), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
 
