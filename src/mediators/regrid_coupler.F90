@@ -43,6 +43,7 @@ module regrid_coupler
     type(type_mossco_fields_handle), pointer :: next=>null()
     contains
     procedure :: MOSSCO_FieldInFieldsHandle
+    procedure :: MOSSCO_GeomPairInFieldsHandle
   end type
 
   ! This is a module-globale variable that is accessible
@@ -390,6 +391,17 @@ module regrid_coupler
           routeHandle=routehandle, regridmethod=ESMF_REGRIDMETHOD_BILINEAR,  &
           unmappedaction=ESMF_UNMAPPEDACTION_IGNORE, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        !> @todo what about edges? these should be handled by NEAREST_DTOS method,
+        !> i.e. those grid points that are valid in dst but invalid in src,
+        !> we may even need an xgrid here ...
+        !> 1. add a srcMask to the ESMF_FieldRegridStore call
+        !> 2. get unmapped locations that are outside the dstMask
+        !> 3. use NEAREST regridding to fill those points
+        !> call ESMF_FieldRegridStore(srcField=importField, dstField=exportField,&
+        !>  routeHandle=routehandle, regridmethod=ESMF_REGRIDMETHOD_NEAREST_STOD,  &
+        !>  unmappedaction=ESMF_UNMAPPEDACTION_IGNORE, rc=localrc)
+
 
         write(message,'(A)') trim(name)//' field '//trim(importFieldName) &
           //' created routeHandle'

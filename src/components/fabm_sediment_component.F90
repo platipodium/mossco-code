@@ -828,11 +828,14 @@ module fabm_sediment_component
         endif
       enddo
 
-      !! create boundary fields in import State
+      !> @todo create boundary fields in import State, these used to be empty fields
+      !> but regridding needs at least a grid ...
 
-      field = ESMF_FieldCreate(flux_grid, &
-               name='porosity_at_soil_surface', &
-               typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
+      field = ESMF_FieldEmptyCreate(name='porosity_at_soil_surface', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_FieldEmptySet(field, grid=flux_grid, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
