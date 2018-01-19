@@ -988,8 +988,8 @@ module fabm_sediment_component
     !!         b) presimulate after setting constant values
     !!         c) copy 3d data for restarting previous simulation
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
-      exportState=exportState, rc=localrc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
+      importState=importState, exportState=exportState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !> check for porosity
@@ -1054,7 +1054,7 @@ module fabm_sediment_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    character(len=ESMF_MAXSTR)  :: name,message,varname
+    character(len=ESMF_MAXSTR)  :: name, message, varname, component_name, creator_name
     type(ESMF_Time)             :: currTime
     integer                     :: localrc,n, rank
 
@@ -1071,6 +1071,11 @@ module fabm_sediment_component
       importState=importState, exportState=exportState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+    call ESMF_StateGet(importState, name=component_name, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    write(message,'(A)') trim(name)//' scan for variables in component '//trim(component_name)
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
     !> browse through list of state variables and
     !! copy data from importState fields with same name
     do n = 1, size(sed%export_states)
@@ -1079,7 +1084,11 @@ module fabm_sediment_component
       call ESMF_StateGet(importState, trim(varname), itemType=itemType, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (itemType == ESMF_STATEITEM_NOTFOUND) cycle
+      if (itemType == ESMF_STATEITEM_NOTFOUND) then
+        write(message,'(2x,''('',i2.2,'') '',A)') n, trim(varname)//' has itemType ESMF_STATEITEM_NOTFOUND'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+        cycle
+      endif
 
       if (itemType /= ESMF_STATEITEM_FIELD) then
         write(message,'(A)') trim(name)//' skipped hotstart for non-field '//trim(varname)
@@ -1171,6 +1180,15 @@ module fabm_sediment_component
 
       sed%export_states(n)%data(exportLbnd(1):exportUBnd(1),exportLbnd(2):exportUbnd(2), &
         exportLBnd(3):exportUBnd(3)) = ptr_f3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))
+
+      !> update FABM_sediment export states pointers
+      call ESMF_StateGet(exportState, trim(varname), field=field, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f3, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      ptr_f3 = sed%export_states(n)%data
+      !> @todo: add bounds checking?
+
       write(message,'(A)') trim(name)//' hotstarted '
       call MOSSCO_FieldString(field, message, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
