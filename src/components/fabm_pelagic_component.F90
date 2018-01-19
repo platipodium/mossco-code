@@ -1412,8 +1412,8 @@ module fabm_pelagic_component
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
-      exportState=exportState, rc=localrc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime,  &
+      importState=importState, exportState=exportState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_StateGet(importState, name=component_name, rc=localrc)
@@ -1569,7 +1569,8 @@ module fabm_pelagic_component
 
     pel%export_states(n)%conc(1:(ubnd(1)-lbnd(1)+1),1:(ubnd(2)-lbnd(2)+1),1:(ubnd(3)-lbnd(3)+1)) &
         = ptr_f3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))
-    write(message,'(A)') trim(name)//' hotstarted field'
+
+    write(message,'(A)') trim(name)//' hotstarted '
     call mossco_fieldString(field, message)
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
