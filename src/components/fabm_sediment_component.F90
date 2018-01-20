@@ -976,13 +976,15 @@ module fabm_sediment_component
     type(ESMF_Clock)            :: clock
     type(ESMF_Time)             :: currTime
     integer(ESMF_KIND_I4)       :: localrc
-    character(len=ESMF_MAXSTR) :: name, message, itemname
+    character(len=ESMF_MAXSTR)  :: name, message, itemname
 
     integer(ESMF_KIND_I4)          :: ubnd(2),lbnd(2)
     real(ESMF_KIND_R8), pointer    :: ptr_f2(:,:)
     type(ESMF_FieldStatus_Flag)    :: fieldstatus
     type(ESMF_StateItem_Flag)      :: itemtype
     type(ESMF_Field)               :: field
+    real(ESMF_KIND_R8)             :: defaultValue
+    logical                        :: isPresent
 
     !> here: * @todo: evtl. complete fields here
     !!       * check for porosity in importState and copy data
@@ -1008,6 +1010,7 @@ module fabm_sediment_component
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (fieldstatus==ESMF_FIELDSTATUS_COMPLETE) then
+        isPresent = .true.
         call ESMF_FieldGet(field, farrayPtr=ptr_f2, &
                exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -1021,19 +1024,36 @@ module fabm_sediment_component
         endif
 
         sed%porosity(1:_INUM_,1:_JNUM_,1)=ptr_f2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))
+
+      else
+
+        call ESMF_AttributeGet(field, 'default_value', isPresent=isPresent, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        if (.not.isPresent) then
+          write(message,'(A)') trim(name)//' received incomplete field, remove field'
+          call mossco_fieldString(field, message)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+          call ESMF_StateRemove(importState,(/ trim(itemname) /), rc=localrc)
+          call ESMF_FieldDestroy(field)
+        else
+
+          call ESMF_AttributeGet(field, 'default_value', defaultValue, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          sed%porosity(1:_INUM_,1:_JNUM_,1)=defaultValue
+        endif
+      endif
+
+      if (isPresent) then
         call sed%update_porosity(from_surface=.true.)
         write(message,'(A)') trim(name)//' updated porosity from'
         call MOSSCO_FieldString(field, message, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-      else
-        write(message,'(A)') trim(name)//' received incomplete field, remove field'
-        call mossco_fieldString(field, message)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
-        call ESMF_StateRemove(importState,(/ trim(itemname) /), rc=localrc)
-        call ESMF_FieldDestroy(field)
       endif
+
     else
       write(message,'(A)') trim(name)//' has no external porosity information'
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
