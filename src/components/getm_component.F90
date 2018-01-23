@@ -26,6 +26,7 @@ module getm_component
   use esmf
   use getm_driver
   use mossco_component
+  use mossco_state
 
   implicit none
   private
@@ -446,13 +447,13 @@ module getm_component
       integer,intent(out) :: rc
 
       type(ESMF_Clock)                                    :: myClock
-      type(ESMF_FieldBundle)                              :: fieldBundle,concFieldBundle,wsFieldBundle
+      type(ESMF_FieldBundle)                              :: concFieldBundle,wsFieldBundle
       type(ESMF_Field)          ,dimension(:),allocatable :: concFieldList,fieldList
       type(ESMF_Field)                                    :: field,wsField
       type(ESMF_FieldStatus_Flag)                         :: status
       type(ESMF_TimeInterval)                             :: timeInterval
       character(len=ESMF_MAXSTR),dimension(:),allocatable :: itemNameList
-      character(len=ESMF_MAXSTR)                          :: itemName
+      character(len=ESMF_MAXSTR)                          :: itemName,units
       integer                   ,dimension(:),allocatable :: namelenList,concFlags
       integer                                             :: concFieldCount,transportFieldCount,FieldCount
       integer(ESMF_KIND_I8)                               :: conc_id,ws_id
@@ -509,31 +510,12 @@ module getm_component
             call ESMF_ClockSet(myClock,timeStep=timeInterval)
 #endif
 
+            allocate(transport_conc(transportFieldCount))
+            allocate(transport_ws  (transportFieldCount))
 #ifdef _TEST_TRACERFLUXES_
-            fieldBundle = ESMF_FieldBundleCreate(name='concentrations_x_flux_in_water',multiflag=.true.,rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-            call ESMF_FieldBundleSet(fieldBundle,getmGrid3D,rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-            call ESMF_AttributeSet(fieldBundle,'creator','getm', rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-            call ESMF_StateAdd(exportState,(/fieldBundle/),rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-            fieldBundle = ESMF_FieldBundleCreate(name='concentrations_y_flux_in_water',multiflag=.true.,rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-            call ESMF_FieldBundleSet(fieldBundle,getmGrid3D,rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-            call ESMF_AttributeSet(fieldBundle,'creator','getm', rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-            call ESMF_StateAdd(exportState,(/fieldBundle/),rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
             allocate(transport_xflux(transportFieldCount))
             allocate(transport_yflux(transportFieldCount))
 #endif
-
-            allocate(transport_conc(transportFieldCount))
-            allocate(transport_ws  (transportFieldCount))
 
             call ESMF_StateGet(importState, "concentrations_z_velocity_in_water", wsFieldBundle, rc=localrc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -586,7 +568,13 @@ module getm_component
                call ESMF_AttributeGet(concFieldList(i), 'hackmaxmin', value=transport_conc(n)%hackmaxmin, defaultValue=-1.d0, rc=localrc)
                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+               call ESMF_AttributeGet(concFieldList(i), 'external_index', value=conc_id, defaultValue=int(-1,ESMF_KIND_I8), rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
 #ifdef _TEST_TRACERFLUXES_
+               call ESMF_AttributeGet(concFieldList(i), 'units', value=units, defaultValue='', rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
                itemName = itemNameList(i)(:namelenList(i)-len_trim(conc_suffix))//'_x_flux_in_water'
                allocate(transport_xflux(n)%ptr(I3DFIELD))
                field = ESMF_FieldCreate(getmGrid3D,transport_xflux(n)%ptr, &
@@ -595,12 +583,13 @@ module getm_component
                                         name=trim(itemName),           &
                                         rc=localrc)
                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-               call ESMF_AttributeSet(field,'units','m2/s')
                call ESMF_AttributeSet(field,'creator','getm', rc=localrc)
                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-               call ESMF_StateGet(exportState,"concentrations_x_flux_in_water",fieldBundle, rc=localrc)
+               call ESMF_AttributeSet(field,'external_index',conc_id, rc=localrc)
                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-               call ESMF_FieldBundleAdd(fieldBundle,(/field/),rc=localrc)
+               call ESMF_AttributeSet(field,'units',trim(units)//' m2 s-1', rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+               call MOSSCO_StateAdd(exportState,field,verbose=.true.,rc=localrc)
                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
                itemName = itemNameList(i)(:namelenList(i)-len_trim(conc_suffix))//'_y_flux_in_water'
@@ -611,12 +600,13 @@ module getm_component
                                         name=trim(itemName),           &
                                         rc=localrc)
                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-               call ESMF_AttributeSet(field,'units','m2/s')
                call ESMF_AttributeSet(field,'creator','getm', rc=localrc)
                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-               call ESMF_StateGet(exportState,"concentrations_y_flux_in_water",fieldBundle, rc=localrc)
+               call ESMF_AttributeSet(field,'external_index',conc_id, rc=localrc)
                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-               call ESMF_FieldBundleAdd(fieldBundle,(/field/),rc=localrc)
+               call ESMF_AttributeSet(field,'units',trim(units)//' m2 s-1', rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+               call MOSSCO_StateAdd(exportState,field,verbose=.true.,rc=localrc)
                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 #endif
 
@@ -635,9 +625,6 @@ module getm_component
                   call ESMF_FieldBundleGet(wsFieldBundle, itemName, field=wsField, rc=localrc)
                   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
                else
-                  call ESMF_AttributeGet(concFieldList(i), 'external_index', &
-                    value=conc_id, defaultValue=int(-1,ESMF_KIND_I8), rc=localrc)
-                  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
                   allocate(fieldList(fieldCount))
                   call ESMF_FieldBundleGet(wsFieldBundle, itemName, fieldList=fieldList, rc=localrc)
                   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)

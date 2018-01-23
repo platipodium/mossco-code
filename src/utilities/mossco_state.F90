@@ -57,6 +57,88 @@ end interface
 contains
 
 #undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_StateAdd"
+  subroutine MOSSCO_StateAdd(state, field, kwe, verbose, rc)
+
+    type(ESMF_State), intent(inout)              :: state
+    type(ESMF_Field), intent(in)                 :: field
+    type(ESMF_KeywordEnforcer), optional         :: kwe !keyword-enforcer
+    logical, intent(in), optional                :: verbose
+    integer, intent(out), optional               :: rc
+
+    type(ESMF_Field)              :: field0
+    type(ESMF_FieldBundle)        :: fieldbundle
+    type(ESMF_StateItem_Flag)     :: itemType
+    integer(ESMF_KIND_I4)         :: localrc,rc_
+    logical                       :: verbose_
+    character(len=ESMF_MAXPATHLEN)    :: message, name, fieldname
+
+    verbose_=.false.
+    rc_=ESMF_SUCCESS
+    if (present(verbose)) verbose_=verbose
+
+    call ESMF_StateGet(state, name=name, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_FieldGet(field, name=fieldname, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    !> add to state depending on existing export items
+    call ESMF_StateGet(state, trim(fieldname), itemType, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (itemType == ESMF_STATEITEM_NOTFOUND) then
+
+      call ESMF_StateAddReplace(state,(/field/),rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    else if (itemType ==ESMF_STATEITEM_FIELD) then
+      !> if field present, remove from state, create bundle, add fields
+      call ESMF_StateGet(state,trim(fieldname),field0,rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      call ESMF_StateRemove(state,(/ trim(fieldname) /),rc=localrc)
+      fieldBundle = ESMF_FieldBundleCreate(fieldlist=(/field0,field/), &
+                                           name=trim(fieldname),       &
+                                           multiflag=.true.,           &
+                                           rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      call ESMF_AttributeSet(fieldBundle, 'creator', trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      if (verbose_) then
+         write(message,'(A)') trim(name)//' created fieldBundle '//trim(fieldname)
+         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+         write(message,'(A)') '  moved '
+         call MOSSCO_FieldString(field, message)
+         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+         write(message,'(A)') '  to '
+         call MOSSCO_FieldString(field0, message)
+         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+      end if
+
+      call ESMF_StateAddReplace(state,(/fieldBundle/),rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    else if(itemType == ESMF_STATEITEM_FIELDBUNDLE) then
+      !> if fieldBundle, get the bundle and add field
+      call ESMF_StateGet(state,trim(fieldname),fieldBundle,rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      call ESMF_FieldBundleAdd(fieldBundle,(/field/),multiflag=.true.,rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      if (verbose_) then
+        write(message,'(A)') '  added '//trim(fieldname)//' to fieldBundle '
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+      end if
+
+    end if
+
+    if (present(rc)) rc = rc_
+
+  end subroutine MOSSCO_StateAdd
+
+
+#undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_StateGetF1"
   subroutine MOSSCO_StateGetF1(state, fieldNameList, farrayPtr, kwe, lbnd, ubnd, verbose, rc)
 
