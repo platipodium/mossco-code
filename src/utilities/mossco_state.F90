@@ -1,9 +1,10 @@
 !> @brief Implementation of ESMF State utilities
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !> @author Richard Hofmeister <richard.hofmeister@hzg.de>
+!> @author Knut Klingbeil <knut.klingbeil@uni-hamburg.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -2636,8 +2637,10 @@ contains
 
     integer(ESMF_KIND_I4)              :: rc_, rank, localrc, i
     integer(ESMF_KIND_I4), allocatable :: ubnd(:), lbnd(:)
-    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: xVelocity, yVelocity, layer_height
-    real(ESMF_KIND_R8),pointer,dimension(:,:)  :: area
+    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: xVelocity  => null()
+    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: yVelocity  => null()
+    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: layer_height  => null()
+    real(ESMF_KIND_R8),pointer,dimension(:,:)  :: area  => null()
     type(ESMF_Field)                   :: field
     type(ESMF_Grid)                    :: grid
     logical                            :: isPresent
