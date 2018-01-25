@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF netcdf output component
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
 !
@@ -474,6 +474,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     endif
 
+    !> Get all fields irrespective of bundle and that satisfy include/exclude
     call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
         fieldStatus=ESMF_FIELDSTATUS_COMPLETE, include=filterIncludeList, &
         exclude=filterExcludeList, verbose=verbose, rc=localrc)
@@ -492,6 +493,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
+      !> As we don't know whether the field comes from a fieldbundle
+      !> of the same name, check this here
       call ESMF_StateGet(importState, fieldName, itemType, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -500,26 +503,24 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           checkNaN=checkNaN, checkInf=checkInf, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      elseif (itemType == ESMF_STATEITEM_FIELDBUNDLE) then
+      elseif (itemType == ESMF_STATEITEM_FIELDBUNDLE &
+        .or.  itemType == ESMF_STATEITEM_NOTFOUND) then
+        !> this is the case when a field has the same name as its containing
+        !> fieldBundle or when a field is in a fieldBundle that has a different name
 
         if (.not.allocated(fieldNameList)) then
           call MOSSCO_Reallocate(fieldNameList, 1, keep=.false., rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-          fieldNameList(1)=''
-          isMatch = .false.
         else
+          !> Avoid duplicate writing of fields from fieldBundle
           call MOSSCO_StringMatch(fieldName, fieldNameList, isMatch, localrc)
+          if (isMatch) cycle
+
+          call MOSSCO_Reallocate(fieldNameList, ubound(fieldNameList,1)+1, keep=.true., rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         endif
 
-        !> Avoid duplicate writing of fields in fieldBundle
-        if (isMatch) cycle
-
-        call MOSSCO_Reallocate(fieldNameList, ubound(fieldNameList,1)+1, keep=.true., rc=localrc)
         fieldNameList(ubound(fieldNameList,1)) = trim(fieldName)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-        fieldNameList(1)=''
 
         call nc_state_fieldbundle_write(importState, trim(fieldName), &
           checkNaN=checkNaN, checkInf=checkInf, rc=localrc)
@@ -688,7 +689,8 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
 
     type(ESMF_FieldBundle)              :: fieldBundle
     type(ESMF_Field), allocatable       :: fieldList(:)
-    integer(ESMF_KIND_I4)               :: i, fieldCount, localrc, rc_
+    character(ESMF_MAXSTR), allocatable :: fieldNameList(:)
+    integer(ESMF_KIND_I4)               :: i, fieldCount, localrc, rc_, myFieldCount
     character(ESMF_MAXSTR)              :: numberString
     type(ESMF_StateItem_Flag)           :: itemType
     logical                             :: checkNaN_ = .true., checkInf_ = .true.
@@ -700,43 +702,51 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     if (present(checkInf)) checkInf_ = checkInf
 
     call ESMF_StateGet(state, trim(bundleName), itemType=itemType, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (itemType /= ESMF_STATEITEM_FIELDBUNDLE) then
-      call ESMF_LogWrite('  fieldBundle '//trim(bundleName)//' was not found', ESMF_LOGMSG_WARNING)
+      call ESMF_LogWrite('-- requested fieldBundle '//trim(bundleName)//' was not found', ESMF_LOGMSG_WARNING)
       return
     endif
 
     call ESMF_StateGet(state, trim(bundleName), fieldBundle, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_FieldBundleGet(fieldBundle, fieldCount=fieldCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (fieldCount<1) return
 
-    allocate(fieldList(fieldCount))
-    call ESMF_FieldBundleGet(fieldBundle,fieldList=fieldList,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    allocate(fieldList(fieldCount), stat=localrc)
+    allocate(fieldNameList(fieldCount), stat=localrc)
 
-    !! go through list of fields and put fields into netcdf using field name and number
+    call ESMF_FieldBundleGet(fieldBundle, itemorderflag=ESMF_ITEMORDER_ADDORDER, &
+      fieldList=fieldList, fieldNameList=fieldNameList, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
     do i=1, fieldCount
 
-      write(numberstring,'(I0.3)') i
+      call ESMF_FieldBundleGet(fieldBundle, fieldName=fieldNameList(i), &
+        fieldCount=myFieldCount, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      call nc_field_write(fieldList(i), postFix=trim(numberString), &
-        checkNaN=checkNaN_, checkInf=checkInf_, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !> If there are multiple fields with the same name then postFix
+      !> field name in netcdf with a numeric index
+      if (myFieldCount > 0) then
+        write(numberstring,'(I0.3)') i
+
+        call nc_field_write(fieldList(i), postFix=trim(numberString), &
+          checkNaN=checkNaN_, checkInf=checkInf_, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      else
+        call nc_field_write(fieldList(i), &
+          checkNaN=checkNaN_, checkInf=checkInf_, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      endif
 
     end do
-    if (allocated(fieldList)) deallocate(fieldList)
-
-    if (present(rc)) rc=localrc
+    if (allocated(fieldList))     deallocate(fieldList)
+    if (allocated(fieldNameList)) deallocate(fieldNameList)
 
   end subroutine nc_state_fieldbundle_write
 
