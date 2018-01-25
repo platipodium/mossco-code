@@ -35,7 +35,8 @@ LIBMOSSCO_UTIL_OBJS+= 							\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_config.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_time.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_variable_types.o) \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_grid.o)
+	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_grid.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(ESMF_GridCreate3D.o)
 
 ifeq ($(MOSSCO_NETCDF),true)
 LIBMOSSCO_UTIL_OBJS+= 							\
@@ -77,6 +78,7 @@ mossco_parameter.o : mossco_parameter.F90
 mossco_config.o : mossco_config.F90
 mossco_db.o : mossco_db.F90 \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_db.a(fsqlite.o)
+ESMF_GridCreate3D.o : ESMF_GridCreate3D.F90
 
 $(MOSSCO_LIBRARY_PATH)/libmossco_db.a(fsqlite.o): $(SQLITE_DIR)/fsqlite.f90
 	make -C $(SQLITE_DIR)
@@ -113,4 +115,5 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_dictionary.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_component.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_db.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/ESMF_GridCreate3D.mod
 	$(RM) *.o nc_extract_variable_lasttime nc_extract_variable
