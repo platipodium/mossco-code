@@ -387,10 +387,15 @@ module regrid_coupler
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
         !> @todo this call is problematic and throws an error
-        call ESMF_FieldRegridStore(srcField=importField, dstField=exportField,&
-          routeHandle=routehandle, regridmethod=ESMF_REGRIDMETHOD_BILINEAR,  &
+        call ESMF_FieldRegridStore(srcField=importField, dstField=exportField, &
+          !filename="weights.nc", &!routeHandle=routehandle, &
+          routeHandle=routehandle, &
+          regridmethod=ESMF_REGRIDMETHOD_BILINEAR, &
           unmappedaction=ESMF_UNMAPPEDACTION_IGNORE, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        !call ESMF_FieldSMMStore(srcField=importField, dstField=exportField, &
+        !  filename="weights.nc", routehandle=routehandle, rc=localrc)
 
         !> @todo what about edges? these should be handled by NEAREST_DTOS method,
         !> i.e. those grid points that are valid in dst but invalid in src,
@@ -627,7 +632,7 @@ module regrid_coupler
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (configIsPresent) then
-      call ESMF_CplCompGet(cplComp, configIsPresent=configIsPresent, rc=localrc)
+      call ESMF_CplCompGet(cplComp, config=config, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     else
       config = ESMF_ConfigCreate(rc=localrc)
