@@ -33,7 +33,7 @@ module regrid_coupler
 
   public SetServices
 
-  type type_mossco_fields_handle
+  type type_mossco_routes
     type(ESMF_RouteHandle)        :: routehandle
     type(ESMF_RegridMethod_Flag)  :: regridMethod
     type(ESMF_Field)              :: srcField, dstField ! remove?
@@ -41,14 +41,14 @@ module regrid_coupler
     type(ESMF_Grid)               :: srcGrid, dstGrid
     type(ESMF_Locstream)          :: srcLocstream, dstLocstream
     type(ESMF_Mesh)               :: srcMesh, dstMesh
-    type(type_mossco_fields_handle), pointer :: next=>null()
+    type(type_mossco_routes), pointer :: next=>null()
 
   end type
 
   ! This is a module-globale variable that is accessible
   ! across all instances of this coupler.  This way, existing
   ! routehandles can be shared across instances
-  type(type_mossco_fields_handle), allocatable, target :: fieldsHandle
+  type(type_mossco_routes), allocatable, target :: Routes
 
   contains
 
@@ -89,7 +89,7 @@ module regrid_coupler
     character(len=ESMF_MAXSTR)  :: message, name, timeString, exportName, importName
     character(len=ESMF_MAXSTR)  :: exportFieldName, importFieldName
     type(ESMF_RouteHandle)      :: routeHandle
-    type(type_mossco_fields_handle), pointer :: currHandle=>null()
+    type(type_mossco_routes), pointer :: currentRoute=>null()
     type(ESMF_Field)            :: importField, exportField
     integer                     :: localrc
 
@@ -171,8 +171,8 @@ module regrid_coupler
 
       do i=1, importFieldCount
 
-        if (allocated(fieldsHandle)) then
-          call MOSSCO_FieldInFieldsHandle(fieldsHandle,importFieldList(i), &
+        if (allocated(Routes)) then
+          call MOSSCO_FieldInRoutes(Routes,importFieldList(i), &
             isPresent=isPresent, dstField=exportField, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -352,34 +352,34 @@ module regrid_coupler
 
       ! look to see if this field pair already has a routehandle
       !! search for the correct routeHandle
-      if (.not.associated(currHandle)) then
-        allocate(fieldsHandle)
+      if (.not.associated(currentRoute)) then
+        allocate(Routes)
       endif
 
-      currHandle=>fieldsHandle
+      currentRoute=>Routes
 
-      do while (associated(currHandle%next))
-        currHandle=>currHandle%next
-        if (currHandle%srcField == importField .and. currHandle%dstField == exportField) exit
+      do while (associated(currentRoute%next))
+        currentRoute=>currentRoute%next
+        if (currentRoute%srcField == importField .and. currentRoute%dstField == exportField) exit
       enddo
 
       !> @todo This is the new code replacing field matching above, this will only
       !> work after the Search FieldsInFieldHandles is corrected for geoms instead of fields
-      ! do while (associated(currHandle%next))
-      !   currHandle=>currHandle%next
+      ! do while (associated(currentRoute%next))
+      !   currentRoute=>currentRoute%next
       !   if (( &
-      !     (importGeomType == ESMF_GEOMTYPE_GRID .and. currHandle%srcGrid==importGrid) &
-      !     (importGeomType == ESMF_GEOMTYPE_MESH .and. currHandle%srcMesh==importMesh) &
-      !     (importGeomType == ESMF_GEOMTYPE_LOCSTREAM .and. currHandle%srcLocstream==importLocstream) &
+      !     (importGeomType == ESMF_GEOMTYPE_GRID .and. currentRoute%srcGrid==importGrid) &
+      !     (importGeomType == ESMF_GEOMTYPE_MESH .and. currentRoute%srcMesh==importMesh) &
+      !     (importGeomType == ESMF_GEOMTYPE_LOCSTREAM .and. currentRoute%srcLocstream==importLocstream) &
       !   ) .and. ( &
-      !     (exportGeomType == ESMF_GEOMTYPE_GRID .and. currHandle%srcGrid==exportGrid) &
-      !     (exportGeomType == ESMF_GEOMTYPE_MESH .and. currHandle%srcMesh==exportMesh) &
-      !     (exportGeomType == ESMF_GEOMTYPE_LOCSTREAM .and. currHandle%srcLocstream==exportLocstream) &
+      !     (exportGeomType == ESMF_GEOMTYPE_GRID .and. currentRoute%srcGrid==exportGrid) &
+      !     (exportGeomType == ESMF_GEOMTYPE_MESH .and. currentRoute%srcMesh==exportMesh) &
+      !     (exportGeomType == ESMF_GEOMTYPE_LOCSTREAM .and. currentRoute%srcLocstream==exportLocstream) &
       !   )) exit
       ! enddo
 
       ! this field pair has not already been "handled"
-      if (.not. associated(currHandle%next)) then
+      if (.not. associated(currentRoute%next)) then
 
         write(message,'(A)') trim(name)//' field '//trim(importFieldName) &
           //' creating routeHandle'
@@ -414,20 +414,20 @@ module regrid_coupler
           !! ESMF_FieldRegrid.F90:2018 ESMF_FieldRegridGetIwts Invalid argument
           !! - - can't currently regrid a grid       that contains a DE of width less than 2
 
-        allocate (currHandle%next)
-        currHandle=>currHandle%next
+        allocate (currentRoute%next)
+        currentRoute=>currentRoute%next
 
-        if (importGeomType == ESMF_GEOMTYPE_GRID) currHandle%srcGrid=importGrid
-        if (exportGeomType == ESMF_GEOMTYPE_GRID) currHandle%dstGrid=exportGrid
-        if (importGeomType == ESMF_GEOMTYPE_MESH) currHandle%srcMesh=importMesh
-        if (exportGeomType == ESMF_GEOMTYPE_MESH) currHandle%dstMesh=exportMesh
-        if (importGeomType == ESMF_GEOMTYPE_LOCSTREAM) currHandle%srcLocStream=importLocStream
-        if (exportGeomType == ESMF_GEOMTYPE_LOCSTREAM) currHandle%dstLocStream=exportLocStream
-        currHandle%srcField=importField
-        currHandle%dstField=exportField
-        currHandle%srcState=importState
-        currHandle%dstState=exportState
-        currHandle%routeHandle=routeHandle
+        if (importGeomType == ESMF_GEOMTYPE_GRID) currentRoute%srcGrid=importGrid
+        if (exportGeomType == ESMF_GEOMTYPE_GRID) currentRoute%dstGrid=exportGrid
+        if (importGeomType == ESMF_GEOMTYPE_MESH) currentRoute%srcMesh=importMesh
+        if (exportGeomType == ESMF_GEOMTYPE_MESH) currentRoute%dstMesh=exportMesh
+        if (importGeomType == ESMF_GEOMTYPE_LOCSTREAM) currentRoute%srcLocStream=importLocStream
+        if (exportGeomType == ESMF_GEOMTYPE_LOCSTREAM) currentRoute%dstLocStream=exportLocStream
+        currentRoute%srcField=importField
+        currentRoute%dstField=exportField
+        currentRoute%srcState=importState
+        currentRoute%dstState=exportState
+        currentRoute%routeHandle=routeHandle
 
         !@todo RouteHandlePrint creates a SIGILL Illegal instruction error
         !call ESMF_RouteHandlePrint(routehandle, rc=localrc)
@@ -442,8 +442,8 @@ module regrid_coupler
       endif
 
         ! generic list cycling code..
-        ! do while(associated(currHandle%next))
-        !   currHandle=>currHandle%next
+        ! do while(associated(currentRoute%next))
+        !   currentRoute=>currentRoute%next
         ! enddo
 
     enddo
@@ -466,7 +466,7 @@ module regrid_coupler
     type(ESMF_Time)             :: currTime
     integer(ESMF_KIND_I4)       :: petCount, localPet, i, importFieldCount
     character(len=ESMF_MAXSTR)  :: message, name
-    type(type_mossco_fields_handle), pointer :: currHandle=>null()
+    type(type_mossco_routes), pointer :: currentRoute=>null()
     integer                       :: localrc
     logical                       :: isPresent
     type(ESMF_Field), allocatable :: importFieldList(:)
@@ -487,7 +487,7 @@ module regrid_coupler
 
     do i=1, importFieldCount
 
-      call MOSSCO_FieldInFieldsHandle(fieldsHandle,importFieldList(i), &
+      call MOSSCO_FieldInRoutes(Routes,importFieldList(i), &
         isPresent=isPresent, dstField=exportField, routeHandle=routeHandle, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -523,8 +523,8 @@ module regrid_coupler
     integer, intent(out)  :: rc
     integer :: localrc
 
-    type(type_mossco_fields_handle), pointer :: currHandle=>null()
-    type(type_mossco_fields_handle), pointer :: oldHandle=>null()
+    type(type_mossco_routes), pointer :: currentRoute=>null()
+    type(type_mossco_routes), pointer :: oldHandle=>null()
 
     integer(ESMF_KIND_I4)   :: petCount, localPet
     character(ESMF_MAXSTR)  :: name, message, timeString
@@ -537,14 +537,14 @@ module regrid_coupler
     call MOSSCO_CompEntry(CplComp, parentClock, name, currTime, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    if (allocated(fieldsHandle)) then
-      currHandle => fieldsHandle
-      do while (associated(currHandle%next))
-        oldHandle => currHandle
-        currHandle=>currHandle%next
+    if (allocated(Routes)) then
+      currentRoute => Routes
+      do while (associated(currentRoute%next))
+        oldHandle => currentRoute
+        currentRoute=>currentRoute%next
         !if (associated(oldHandle)) deallocate(oldHandle)
       enddo
-      !if (associated(currHandle)) deallocate(currHandle)
+      !if (associated(currentRoute)) deallocate(currentRoute)
     endif
 
     !call ESMF_CplCompGet(cplComp, clockIsPresent=clockIsPresent, rc=localrc)
@@ -749,11 +749,11 @@ module regrid_coupler
   end subroutine read_config
 
 #undef ESMF_METHOD
-#define ESMF_METHOD "MOSSCO_FieldInFieldsHandle"
-  subroutine MOSSCO_FieldInFieldsHandle(fieldsHandle, field, kwe, isPresent, &
+#define ESMF_METHOD "MOSSCO_FieldInRoutes"
+  subroutine MOSSCO_FieldInRoutes(Routes, field, kwe, isPresent, &
     routeHandle, srcField, dstField, rc)
 
-    type(type_mossco_fields_handle), target           :: fieldsHandle
+    type(type_mossco_routes), target           :: Routes
     type(ESMF_Field), intent(in)                      :: field
     type(ESMF_Field), intent(out), optional           :: srcField, dstField
     type(ESMF_RouteHandle), intent(out), optional     :: routeHandle
@@ -763,7 +763,7 @@ module regrid_coupler
 
     integer(ESMF_KIND_I4)             :: rc_, localrc
     logical                           :: isPresent_
-    type(type_mossco_fields_handle), pointer :: currHandle=>null()
+    type(type_mossco_routes), pointer :: currentRoute=>null()
     character(len=ESMF_MAXSTR)               :: message
 
     message = ''
@@ -771,19 +771,19 @@ module regrid_coupler
     if (present(kwe)) rc_ = ESMF_SUCCESS
     if (present(rc)) rc = rc_
 
-    currHandle => fieldsHandle
+    currentRoute => Routes
 
-    do while (associated(currHandle%next))
+    do while (associated(currentRoute%next))
 
-      currHandle => currHandle%next
-      call MOSSCO_FieldString(currHandle%srcField, message)
+      currentRoute => currentRoute%next
+      call MOSSCO_FieldString(currentRoute%srcField, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
 
-      if (currHandle%srcField == field) then
+      if (currentRoute%srcField == field) then
         if (present(isPresent)) isPresent = .true.
-        if (present(routeHandle)) routeHandle=currHandle%routeHandle
-        if (present(dstField)) dstField=currHandle%dstField
-        if (present(srcField)) srcField=currHandle%srcField
+        if (present(routeHandle)) routeHandle=currentRoute%routeHandle
+        if (present(dstField)) dstField=currentRoute%dstField
+        if (present(srcField)) srcField=currentRoute%srcField
         return
       endif
     enddo
@@ -797,15 +797,16 @@ module regrid_coupler
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
 
-  end subroutine  MOSSCO_FieldInFieldsHandle
+  end subroutine  MOSSCO_FieldInRoutes
 
 #undef ESMF_METHOD
-#define ESMF_METHOD "MOSSCO_GeomPairInFieldsHandle"
-  subroutine MOSSCO_GeomPairInFieldsHandle(fieldsHandle, kwe, isPresent, &
+#define ESMF_METHOD "MOSSCO_GeomPairInRoutes"
+  subroutine MOSSCO_GeomPairInRoutes(routes, regridMethod, kwe, isPresent, &
     srcGrid, dstGrid, srcMesh, dstMesh, srcLocstream, dstLocstream, &
     routeHandle, srcField, dstField, rc)
 
-    type(type_mossco_fields_handle), target           :: fieldsHandle
+    type(type_mossco_routes), target                  :: routes
+    type(ESMF_RegridMethod_Flag), intent(in)          :: regridMethod
 
     type(ESMF_Grid), intent(in), optional             :: srcGrid, dstGrid
     type(ESMF_Mesh), intent(in), optional             :: srcMesh, dstMesh
@@ -816,9 +817,9 @@ module regrid_coupler
     logical, intent(out), optional                    :: isPresent
     integer(ESMF_KIND_I4), intent(out), optional      :: rc
 
-    integer(ESMF_KIND_I4)             :: rc_, localrc, i
-    logical                           :: isPresent_
-    type(type_mossco_fields_handle), pointer :: currHandle=>null()
+    integer(ESMF_KIND_I4)                    :: rc_, localrc, i
+    logical                                  :: isPresent_
+    type(type_mossco_routes), pointer :: currentRoute=>null()
     character(len=ESMF_MAXSTR)               :: message
 
     message = ''
@@ -826,7 +827,7 @@ module regrid_coupler
     if (present(kwe)) rc_ = ESMF_SUCCESS
     if (present(rc)) rc = rc_
 
-    currHandle => fieldsHandle
+    currentRoute => Routes
 
     i=0
     if (present(srcGrid)) i=i+1
@@ -850,24 +851,24 @@ module regrid_coupler
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
 
-    do while (associated(currHandle%next))
+    do while (associated(currentRoute%next))
 
-      currHandle => currHandle%next
-      call MOSSCO_FieldString(currHandle%srcField, message)
+      currentRoute => currentRoute%next
+      call MOSSCO_FieldString(currentRoute%srcField, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
 
-      if (present(srcGrid) .and. currHandle%srcGrid /= srcGrid) cycle
-      if (present(srcMesh) .and. currHandle%srcMesh /= srcMesh) cycle
-      if (present(srcLocStream) .and. currHandle%srcLocStream /= srcLocStream) cycle
+      if (present(srcGrid) .and. currentRoute%srcGrid /= srcGrid) cycle
+      if (present(srcMesh) .and. currentRoute%srcMesh /= srcMesh) cycle
+      if (present(srcLocStream) .and. currentRoute%srcLocStream /= srcLocStream) cycle
 
-      if (present(dstGrid) .and. currHandle%dstGrid /= dstGrid) cycle
-      if (present(dstMesh) .and. currHandle%dstMesh /= dstMesh) cycle
-      if (present(dstLocStream) .and. currHandle%dstLocStream /= dstLocStream) cycle
+      if (present(dstGrid) .and. currentRoute%dstGrid /= dstGrid) cycle
+      if (present(dstMesh) .and. currentRoute%dstMesh /= dstMesh) cycle
+      if (present(dstLocStream) .and. currentRoute%dstLocStream /= dstLocStream) cycle
 
       if (present(isPresent)) isPresent = .true.
-      if (present(routeHandle)) routeHandle=currHandle%routeHandle
-      if (present(dstField)) dstField=currHandle%dstField
-      if (present(srcField)) srcField=currHandle%srcField
+      if (present(routeHandle)) routeHandle=currentRoute%routeHandle
+      if (present(dstField)) dstField=currentRoute%dstField
+      if (present(srcField)) srcField=currentRoute%srcField
       return
 
     enddo
@@ -881,7 +882,7 @@ module regrid_coupler
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
 
-  end subroutine MOSSCO_GeomPairInFieldsHandle
+  end subroutine MOSSCO_GeomPairInRoutes
 
 end module regrid_coupler
 
