@@ -355,7 +355,7 @@ module regrid_coupler
       do m = 1,2
 
         if ( m==1 ) currentMethod = ESMF_REGRIDMETHOD_BILINEAR
-        if ( m==2 ) currentMethod = ESMF_REGRIDMETHOD_NEAREST_DTOS
+        if ( m==2 ) currentMethod = ESMF_REGRIDMETHOD_NEAREST_DTOS !better STOD?
 
       !> Field pair / Method matching
       do while (associated(fieldRoute%next))
@@ -399,8 +399,10 @@ module regrid_coupler
             //' creating routeHandle'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
+          !> @todo this needs to consider masks!
           call ESMF_FieldRegridStore(srcField=importField, dstField=exportField, &
             !filename="weights.nc", &!routeHandle=routehandle, &
+            srcMaskValues=(/1/), dstMaskValues=(/1/), &
             routeHandle=routehandle, &
             regridmethod=currentMethod, &
             unmappedaction=ESMF_UNMAPPEDACTION_IGNORE, rc=localrc)
@@ -408,17 +410,6 @@ module regrid_coupler
 
           !call ESMF_FieldSMMStore(srcField=importField, dstField=exportField, &
           !  filename="weights.nc", routehandle=routehandle, rc=localrc)
-
-        !> @todo what about edges? these should be handled by NEAREST_DTOS method,
-        !> i.e. those grid points that are valid in dst but invalid in src,
-        !> we may even need an xgrid here ...
-        !> 1. add a srcMask to the ESMF_FieldRegridStore call
-        !> 2. get unmapped locations that are outside the dstMask
-        !> 3. use NEAREST regridding to fill those points
-        !> call ESMF_FieldRegridStore(srcField=importField, dstField=exportField,&
-        !>  routeHandle=routehandle, regridmethod=ESMF_REGRIDMETHOD_NEAREST_STOD,  &
-        !>  unmappedaction=ESMF_UNMAPPEDACTION_IGNORE, rc=localrc)
-
 
           write(message,'(A)') trim(name)//' field '//trim(importFieldName) &
             //' created routeHandle'
@@ -482,14 +473,20 @@ module regrid_coupler
     integer, intent(out) :: rc
 
     type(ESMF_Time)             :: currTime
-    integer(ESMF_KIND_I4)       :: petCount, localPet, i, importFieldCount
-    character(len=ESMF_MAXSTR)  :: message, name
+    integer(ESMF_KIND_I4)       :: petCount, localPet, i, m, importFieldCount
+    character(len=ESMF_MAXSTR)  :: message, name, regridMethodString
     type(type_mossco_routes), pointer :: currentRoute=>null()
-    integer                       :: localrc
+    integer                       :: localrc, rank
     logical                       :: isPresent
     type(ESMF_Field), allocatable :: importFieldList(:)
     type(ESMF_Field)              :: exportField
     type(ESMF_RouteHandle)        :: routeHandle
+    type(ESMF_RegridMethod_Flag)  :: regridMethod
+    real(ESMF_KIND_R8), pointer   :: farrayPtr2near(:,:) => null()
+    real(ESMF_KIND_R8), pointer   :: farrayPtr3near(:,:,:) => null()
+    real(ESMF_KIND_R8), pointer   :: farrayPtr2(:,:) => null()
+    real(ESMF_KIND_R8), pointer   :: farrayPtr3(:,:,:) => null()
+    integer(ESMF_KIND_I4), allocatable :: ubnd(:), lbnd(:)
 
     rc = ESMF_SUCCESS
 
@@ -505,17 +502,24 @@ module regrid_coupler
 
     do i=1, importFieldCount
 
-      call MOSSCO_FieldInRoutes(Routes,importFieldList(i), &
+      ! Do the regridding twice, once for a nearest methods (need to choose one, for edges)
+      ! and later one for the actual desired one.  Then, console both regridded fields
+      ! to have a complete data set on destination grid
+      regridMethod = ESMF_REGRIDMETHOD_NEAREST_DTOS
+      regridMethodString = 'nearest_dtos'
+
+      call MOSSCO_FieldInRoutes(Routes, importFieldList(i), regridMethod, &
         isPresent=isPresent, dstField=exportField, routeHandle=routeHandle, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (.not.isPresent) cycle
+      if (.not.isPresent) then
+        write(message,'(A)') trim(name)//' found no route '//trim(regridMethodString)//' regrid '
+        call MOSSCO_FieldString(importFieldList(i), message)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        cycle
+      endif
 
-
-
-
-
-      write(message,'(A)') trim(name)//' regridding '
+      write(message,'(A)') trim(name)//' '//trim(regridMethodString)//' regrid '
       call MOSSCO_FieldString(importFieldList(i), message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       write(message,'(A)') trim(name)//' onto '
@@ -525,10 +529,61 @@ module regrid_coupler
       call ESMF_FieldRegrid(srcField=importFieldList(i), dstField=exportField,&
         routeHandle=routehandle, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      !! ESMF_FieldRegrid.F90:2018 ESMF_FieldRegridGetIwts Invalid argument
-      !! - - can't currently regrid a grid       that contains a DE of width less than 2
 
-    enddo
+      call ESMF_FieldGet(exportField, rank=rank, rc=localrc)
+      allocate(ubnd(rank))
+      allocate(lbnd(rank))
+
+      if (rank == 2) then
+        call ESMF_FieldGet(exportField, farrayPtr=farrayPtr2near, &
+          exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
+      elseif (rank == 3) then
+        call ESMF_FieldGet(exportField, farrayPtr=farrayPtr3near, &
+          exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
+      endif
+
+      regridMethod = ESMF_REGRIDMETHOD_BILINEAR ! Choose method from config later
+      regridMethodString = 'bilinear'
+
+      call MOSSCO_FieldInRoutes(Routes, importFieldList(i), regridMethod, &
+        isPresent=isPresent, dstField=exportField, routeHandle=routeHandle, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (.not.isPresent) then
+        write(message,'(A)') trim(name)//' found no route '//trim(regridMethodString)//' regrid '
+        call MOSSCO_FieldString(importFieldList(i), message)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        cycle
+      endif
+
+      write(message,'(A)') trim(name)//' '//trim(regridMethodString)//' regrid '
+      call MOSSCO_FieldString(importFieldList(i), message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      write(message,'(A)') trim(name)//' onto '
+      call MOSSCO_FieldString(exportField, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      call ESMF_FieldRegrid(srcField=importFieldList(i), dstField=exportField,&
+        routeHandle=routehandle, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (rank == 2) then
+        call ESMF_FieldGet(exportField, farrayPtr=farrayPtr2, &
+          exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
+      elseif (rank == 3) then
+        call ESMF_FieldGet(exportField, farrayPtr=farrayPtr3, &
+          exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
+      endif
+
+      !> @todo update values in farrayPtr with values from farrayPtrNear,
+      !> where this is necessary.  Need to consider mask.
+
+    enddo ! Loop over fields
+
+    nullify(farrayPtr2)
+    nullify(farrayPtr3)
+    nullify(farrayPtr2near)
+    nullify(farrayPtr3near)
 
     call MOSSCO_CompExit(cplComp, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -772,12 +827,13 @@ module regrid_coupler
 
 #undef ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_FieldInRoutes"
-  subroutine MOSSCO_FieldInRoutes(Routes, field, kwe, isPresent, &
-    routeHandle, srcField, dstField, rc)
+  subroutine MOSSCO_FieldInRoutes(Routes, srcField, regridMethod, kwe, isPresent, &
+    routeHandle, dstField, rc)
 
-    type(type_mossco_routes), target           :: Routes
-    type(ESMF_Field), intent(in)                      :: field
-    type(ESMF_Field), intent(out), optional           :: srcField, dstField
+    type(type_mossco_routes), target                  :: Routes
+    type(ESMF_RegridMethod_Flag), intent(in)          :: regridMethod
+    type(ESMF_Field), intent(in)                      :: srcField
+    type(ESMF_Field), intent(out), optional           :: dstField
     type(ESMF_RouteHandle), intent(out), optional     :: routeHandle
     type(ESMF_KeyWordEnforcer), intent(in), optional  :: kwe
     logical, intent(out), optional                    :: isPresent
@@ -788,7 +844,6 @@ module regrid_coupler
     type(type_mossco_routes), pointer :: currentRoute=>null()
     character(len=ESMF_MAXSTR)               :: message
 
-    message = ''
     rc_ = ESMF_SUCCESS
     if (present(kwe)) rc_ = ESMF_SUCCESS
     if (present(rc)) rc = rc_
@@ -798,14 +853,14 @@ module regrid_coupler
     do while (associated(currentRoute%next))
 
       currentRoute => currentRoute%next
+      message=''
       call MOSSCO_FieldString(currentRoute%srcField, message)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+      !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
 
-      if (currentRoute%srcField == field) then
+      if (currentRoute%srcField == srcField .and. regridMethod==currentRoute%regridMethod) then
         if (present(isPresent)) isPresent = .true.
         if (present(routeHandle)) routeHandle=currentRoute%routeHandle
         if (present(dstField)) dstField=currentRoute%dstField
-        if (present(srcField)) srcField=currentRoute%srcField
         return
       endif
     enddo
