@@ -1,7 +1,7 @@
 !> @brief Implementation ESMF/NetCDF utility functions
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister <richard.hofmeister@hzg.de>
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
@@ -4188,6 +4188,14 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
+      if (attributeLength>1) then
+        cycle
+        !> @todo how do we handle attributes that are of lenght>1?
+        localrc = ESMF_RC_NOT_IMPL
+        if (present(rc)) rc = localrc
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) return
+      endif
+
       ! Defined values for attributeType are:
       ! NF90_BYTE, NF90_CHAR, NF90_SHORT, NF90_INT, NF90_FLOAT, and NF90_DOUBLE.
 
@@ -4197,15 +4205,8 @@ module mossco_netcdf
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
         call ESMF_AttributeSet(field, trim(attributeName), trim(string), rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
         cycle
-      endif
-
-      if (attributeLength>1) then
-        localrc = ESMF_RC_NOT_IMPL
-        if (present(rc)) rc = localrc
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) return
       endif
 
       if (attributeType == NF90_DOUBLE) then
