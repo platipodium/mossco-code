@@ -34,22 +34,21 @@ module regrid_coupler
   public SetServices
 
   type type_mossco_fields_handle
-    type(ESMF_RouteHandle) :: routehandle
-    type(ESMF_Field) :: srcField, dstField ! should these be pointers?
-    type(ESMF_State) :: srcState, dstState ! should these be pointers?
-    type(ESMF_Grid)  :: srcGrid, dstGrid   ! should these be pointers?
-    type(ESMF_Locstream)  :: srcLocstream, dstLocstream  ! should these be pointers?
-    type(ESMF_Mesh)  :: srcMesh, dstMesh   ! should these be pointers?
+    type(ESMF_RouteHandle)        :: routehandle
+    type(ESMF_RegridMethod_Flag)  :: regridMethod
+    type(ESMF_Field)              :: srcField, dstField ! remove?
+    type(ESMF_State)              :: srcState, dstState ! remove?
+    type(ESMF_Grid)               :: srcGrid, dstGrid
+    type(ESMF_Locstream)          :: srcLocstream, dstLocstream
+    type(ESMF_Mesh)               :: srcMesh, dstMesh
     type(type_mossco_fields_handle), pointer :: next=>null()
-    contains
-    procedure :: MOSSCO_FieldInFieldsHandle
-    procedure :: MOSSCO_GeomPairInFieldsHandle
+
   end type
 
   ! This is a module-globale variable that is accessible
   ! across all instances of this coupler.  This way, existing
   ! routehandles can be shared across instances
-  class(type_mossco_fields_handle), allocatable, target :: fieldsHandle
+  type(type_mossco_fields_handle), allocatable, target :: fieldsHandle
 
   contains
 
@@ -173,7 +172,7 @@ module regrid_coupler
       do i=1, importFieldCount
 
         if (allocated(fieldsHandle)) then
-          call fieldsHandle%MOSSCO_FieldInFieldsHandle(importFieldList(i), &
+          call MOSSCO_FieldInFieldsHandle(fieldsHandle,importFieldList(i), &
             isPresent=isPresent, dstField=exportField, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -488,7 +487,7 @@ module regrid_coupler
 
     do i=1, importFieldCount
 
-      call fieldsHandle%MOSSCO_FieldInFieldsHandle(importFieldList(i), &
+      call MOSSCO_FieldInFieldsHandle(fieldsHandle,importFieldList(i), &
         isPresent=isPresent, dstField=exportField, routeHandle=routeHandle, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -751,10 +750,10 @@ module regrid_coupler
 
 #undef ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_FieldInFieldsHandle"
-  subroutine MOSSCO_FieldInFieldsHandle(self, field, kwe, isPresent, &
+  subroutine MOSSCO_FieldInFieldsHandle(fieldsHandle, field, kwe, isPresent, &
     routeHandle, srcField, dstField, rc)
 
-    class(type_mossco_fields_handle), target          :: self
+    type(type_mossco_fields_handle), target           :: fieldsHandle
     type(ESMF_Field), intent(in)                      :: field
     type(ESMF_Field), intent(out), optional           :: srcField, dstField
     type(ESMF_RouteHandle), intent(out), optional     :: routeHandle
@@ -772,7 +771,7 @@ module regrid_coupler
     if (present(kwe)) rc_ = ESMF_SUCCESS
     if (present(rc)) rc = rc_
 
-    currHandle => self
+    currHandle => fieldsHandle
 
     do while (associated(currHandle%next))
 
@@ -802,11 +801,11 @@ module regrid_coupler
 
 #undef ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_GeomPairInFieldsHandle"
-  subroutine MOSSCO_GeomPairInFieldsHandle(self, kwe, isPresent, &
+  subroutine MOSSCO_GeomPairInFieldsHandle(fieldsHandle, kwe, isPresent, &
     srcGrid, dstGrid, srcMesh, dstMesh, srcLocstream, dstLocstream, &
     routeHandle, srcField, dstField, rc)
 
-    class(type_mossco_fields_handle), target          :: self
+    type(type_mossco_fields_handle), target           :: fieldsHandle
 
     type(ESMF_Grid), intent(in), optional             :: srcGrid, dstGrid
     type(ESMF_Mesh), intent(in), optional             :: srcMesh, dstMesh
@@ -827,7 +826,7 @@ module regrid_coupler
     if (present(kwe)) rc_ = ESMF_SUCCESS
     if (present(rc)) rc = rc_
 
-    currHandle => self
+    currHandle => fieldsHandle
 
     i=0
     if (present(srcGrid)) i=i+1
