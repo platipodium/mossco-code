@@ -18,6 +18,8 @@
 
 #define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+#define RANGE3D lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)
+#define RANGE2D lbnd(1):ubnd(1),lbnd(2):ubnd(2)
 module grid_component
 
   use esmf
@@ -149,6 +151,9 @@ module grid_component
     type(ESMF_CoordSys_Flag)           :: coordSys
     type(type_mossco_netcdf)           :: nc
     type(type_mossco_netcdf_variable),pointer  :: var => null()
+    integer(ESMF_KIND_I4), allocatable:: mask(:,:)
+    type(ESMF_DistGrid)               :: distGrid
+    real(ESMF_KIND_R8)                :: real8
 
     rc = ESMF_SUCCESS
     hasGrid = .false.
@@ -347,6 +352,55 @@ module grid_component
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         rc = ESMF_RC_NOT_IMPL
         return
+      endif
+
+      !> Try to add a mask from a variable, hardcoded for now
+      if (.false. .and. trim(fileFormat) == 'GRIDSPEC' .and. rank==2) then
+        nc = MOSSCO_NetcdfOpen(trim(gridFileName), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        var=>nc%getvarvar('chlor_a', rc=localrc)
+        if (localrc == ESMF_SUCCESS) then
+
+          field = ESMF_FieldEmptyCreate(name='mask', rc=localrc)
+          call ESMF_FieldEmptySet(field, grid=grid2, rc=localrc)
+          call ESMF_FieldEmptyComplete(field, typeKind=ESMF_TYPEKIND_R8, rc=localrc)
+          call nc%getvar(field, var, rc=localrc)
+
+          call ESMF_FieldGet(field, farrayPtr=farrayPtr2, exclusiveUBound=ubnd, &
+            exclusiveLbound=lbnd, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          allocate(mask(RANGE2D))
+          mask(RANGE2D) = 0
+          where(farrayPtr2(RANGE2D) /= farrayPtr2(RANGE2D))
+            mask(RANGE2D) = 1
+          endwhere
+
+          call ESMF_AttributeGet(field, 'missing_value', real8, rc=localrc)
+          where(farrayPtr2(RANGE2D) == real8)
+            mask(RANGE2D) = 1
+          endwhere
+
+          call ESMF_AttributeGet(field, '_FillValue', real8, rc=localrc)
+          where(farrayPtr2(RANGE2D) == real8)
+            mask(RANGE2D) = 1
+          endwhere
+
+          call ESMF_GridGet(grid2, distGrid=distGrid, rc=localrc)
+          array = ESMF_ArrayCreate(distGrid, mask , indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
+
+          call ESMF_GridAddItem(grid2, staggerLoc=ESMF_STAGGERLOC_CENTER, &
+                   itemflag=ESMF_GRIDITEM_MASK, rc=rc)
+
+          call ESMF_GridSetItem(grid2,             &
+            staggerLoc=ESMF_STAGGERLOC_CORNER, &
+                   itemflag=ESMF_GRIDITEM_MASK, array=array, rc=rc)
+
+          call ESMF_FieldDestroy(field, rc=localrc)
+        endif
+
+        call nc%close()
       endif
 
       !if (trim(fileFormat) == 'GRIDSPEC' .and. rank==2) then
