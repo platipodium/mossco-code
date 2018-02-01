@@ -680,7 +680,8 @@ module mossco_netcdf
     !> return if variable is already defined in netcdf file
     if (self%variable_present(varname)) return
 
-    call ESMF_FieldGet(field,geomType=geomType,dimCount=dimCount,staggerloc=staggerloc,rc=localrc)
+    call ESMF_FieldGet(field, geomType=geomType, dimCount=dimCount, &
+      staggerloc=staggerloc, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (geomType==ESMF_GEOMTYPE_GRID) then
@@ -690,7 +691,7 @@ module mossco_netcdf
       call ESMF_GridGet(grid,name=geomName,rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      dimids => self%grid_dimensions(grid,staggerloc)
+      dimids => self%grid_dimensions(grid, staggerloc)
 
       call ESMF_GridGet(grid, coordSys=coordSys,rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -702,10 +703,6 @@ module mossco_netcdf
       else
         coordnames=(/'x','y','z'/)
       endif
-
-      !call MOSSCO_GridWriteGridSpec(grid, trim(fieldname), localrc)
-      !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     elseif (geomType==ESMF_GEOMTYPE_MESH) then
       !call ESMF_FieldGet(field,mesh=mesh,rc=esmfrc)
@@ -764,14 +761,27 @@ module mossco_netcdf
 
     call replace_character(geomName, ' ', '_')
 
-    !> @todo The CF-standard demands that only the 2D (lat lon) coordinates are written
-    !> to this attribute.
-    if (ubound(dimids,1)>2) then
-      write(coordinates,'(A)') trim(geomName)//'_'//trim(coordnames(ubound(dimids,1)-2))
-      do i=ubound(dimids,1)-3,1,-1
-        write(coordinates,'(A)') trim(coordinates)//' '//trim(geomName)//'_'//trim(coordnames(i))
-      enddo
-      !write(0,*) 'COORD', trim(coordinates)
+    !> CF standard: The cell center coordinate variables are determined by the
+    !> value of its attribute units. The longitude variable has the attribute
+    !> value set to either degrees_east, degree_east, degrees_E, degree_E,
+    !> degreesE or degreeE. The latitude variable has the attribute value set
+    !> to degrees_north, degree_north, degrees_N, degree_N, degreesN or degreeN.
+    !> The latitude and the longitude variables are one-dimensional arrays if
+    !> the grid is a regular lat/lon grid, two- dimensional arrays if the grid
+    !> is curvilinear.
+    !> The bound coordinate variables define the bound or the
+    !> corner coordinates of a cell. The bound variable name is specified in
+    !> the bounds attribute of the latitude and longitude variables.  The bound
+    !> variables are 2D arrays for a regular lat/lon grid and a 3D array for a
+    !> curvilinear grid. The first dimension of the bound array is 2 for a
+    !> regular lat/lon grid and 4 for a curvilinear grid. The bound coordinates
+    !> for a curvilinear grid is defined in counterclockwise order.
+
+    !> The CF-standard demands that only the 2D (lat lon) coordinates are written
+    !> to this attribute.  We assume that these are the first two coordinates.
+    if (geomType == ESMF_GEOMTYPE_GRID .and. dimRank >= 2) then
+      write(coordinates,'(A)') trim(geomName)//'_'//trim(coordnames(2))
+      write(coordinates,'(A)') trim(coordinates)//' '//trim(geomName)//'_'//trim(coordnames(1))
     endif
 
     !! define variable
