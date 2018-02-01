@@ -87,6 +87,7 @@ module mossco_netcdf
     procedure :: putattint => MOSSCO_NcPutAttInt
     procedure :: putattdouble => MOSSCO_NcPutAttDouble
     procedure :: putattfloat => MOSSCO_NcPutAttFloat
+    procedure :: create_bounds_variable
 
   end type type_mossco_netcdf
 
@@ -2384,6 +2385,44 @@ module mossco_netcdf
   end subroutine mossco_netcdf_mesh_coordinate_create
 
 #undef  ESMF_METHOD
+#define ESMF_METHOD "create_bounds_variable"
+  recursive subroutine create_bounds_variable(self, varname, kwe, rc)
+
+    !> The bound coordinate variables define the bound or the
+    !> corner coordinates of a cell. The bound variable name is specified in
+    !> the bounds attribute of the latitude and longitude variables.  The bound
+    !> variables are 2D arrays for a regular lat/lon grid and a 3D array for a
+    !> curvilinear grid. The first dimension of the bound array is 2 for a
+    !> regular lat/lon grid and 4 for a curvilinear grid. The bound coordinates
+    !> for a curvilinear grid is defined in counterclockwise order.
+
+    implicit none
+    class(type_mossco_netcdf)                         :: self
+    character(len=*), intent(in) :: varname
+    type(ESMF_KeyWordEnforcer), intent(in), optional  :: kwe
+    integer(ESMF_KIND_I4), intent(out), optional      :: rc
+
+    integer                     :: ncStatus, rc_, localrc
+    character(len=ESMF_MAXSTR)  :: message, boundsName
+
+    rc_ = ESMF_SUCCESS
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
+
+    boundsName = trim(varname)//'_bounds'
+
+    if (self%variable_present(boundsName)) then
+      write(message,'(A)') 'A variable with the name "'//trim(boundsName)//'" already exists'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      return
+    endif
+
+    !> @todo implement creating bounds dim based on 2*coorddimids
+    !> def bounds variable, and fill with data
+
+  end subroutine create_bounds_variable
+
+#undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_coordinate_create"
   recursive subroutine mossco_netcdf_coordinate_create(self, grid, kwe, rc)
 
@@ -2395,13 +2434,6 @@ module mossco_netcdf
     !> The latitude and the longitude variables are one-dimensional arrays if
     !> the grid is a regular lat/lon grid, two- dimensional arrays if the grid
     !> is curvilinear.
-    !> The bound coordinate variables define the bound or the
-    !> corner coordinates of a cell. The bound variable name is specified in
-    !> the bounds attribute of the latitude and longitude variables.  The bound
-    !> variables are 2D arrays for a regular lat/lon grid and a 3D array for a
-    !> curvilinear grid. The first dimension of the bound array is 2 for a
-    !> regular lat/lon grid and 4 for a curvilinear grid. The bound coordinates
-    !> for a curvilinear grid is defined in counterclockwise order.
 
     use mossco_grid
 
@@ -2427,6 +2459,7 @@ module mossco_netcdf
     integer(ESMF_KIND_I4), dimension(:), allocatable :: coordDimCount, exclusiveCount
     integer(ESMF_KIND_I4)                            :: dimCount, attributeCount, i, j ,k
     integer(ESMF_KIND_I4)                            :: staggerLocCount
+    type(ESMF_StaggerLoc)                            :: staggerLoc
     type(ESMF_Array)                                 :: array
     logical                                          :: isPresent
 
@@ -2466,6 +2499,8 @@ module mossco_netcdf
     call ESMF_GridGet(grid, coordDimCount=coordDimCount, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
+    !> from here, it is really assumed that the staggerloc is ESMF_STAGGERLOC_CENTER
+    staggerLoc = ESMF_STAGGERLOC_CENTER
     dimids => self%grid_dimensions(grid)
 
     ! Write the auxiliary coordinate variables x, y, z
@@ -2512,12 +2547,6 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      ncStatus = nf90_put_att(self%ncid,varid,'missing_value',-1)
-      if (ncStatus /= NF90_NOERR) then
-        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot put attribute missing_value=-1',ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
-
       ncStatus = nf90_put_att(self%ncid,varid,'axis',axisNameList(i))
       if (ncStatus /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot put attribute axis='//axisNameList(i),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -2536,7 +2565,6 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      !write(0,*) 'Write axis '//axisNameList(i), intptr1(:)
     enddo
 
     do i=1,dimCount
@@ -2581,7 +2609,6 @@ module mossco_netcdf
       if (coordDimCount(i)==1) then
         ncStatus = nf90_put_att(self%ncid,varid,'axis',axisNameList(i))
       end if
-
 
 
       !! Inquire array for attributes and create / overwrite attributes
@@ -2631,6 +2658,19 @@ module mossco_netcdf
       enddo
 
       if (allocated(coordDimids)) deallocate(coordDimids)
+
+      if (coordDimCount(i)==1) then
+        ncStatus = nf90_put_att(self%ncid,varid,'axis',axisNameList(i))
+      end if
+
+      if (staggerLoc == ESMF_STAGGERLOC_CENTER &
+        .or. staggerLoc == ESMF_STAGGERLOC_CENTER_VFACE &
+        .or. staggerLoc == ESMF_STAGGERLOC_CENTER_VCENTER ) then
+
+        ncStatus = nf90_put_att(self%ncid,varid,'bounds',trim(varname)//'_bound')
+        call self%create_bounds_variable(trim(varname), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      end if
 
     enddo
     !! End definition phase of netcdf
