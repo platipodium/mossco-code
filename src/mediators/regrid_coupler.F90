@@ -137,6 +137,9 @@ module regrid_coupler
       importFieldCount = ubound(importFieldList,1)
     endif
 
+    call ESMF_StateGet(importState, name=importName, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
     if (importFieldCount < 1) then
       write(message,'(A)') trim(name)//' no couplable items in '//trim(importName)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
