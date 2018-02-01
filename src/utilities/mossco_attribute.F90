@@ -31,6 +31,8 @@ public MOSSCO_AttributeGet, MOSSCO_AttributeSet
 !> types
 interface MOSSCO_AttributeSet
   module procedure MOSSCO_StateAttributeSetLogical
+  module procedure MOSSCO_GridCompAttributeSetLogical
+  module procedure MOSSCO_CplCompAttributeSetLogical
   !module procedure MOSSCO_StateAttributeSetList1
   module procedure MOSSCO_StateAttributeSetList2
   module procedure MOSSCO_StateAttributeSetInt4List1
@@ -49,6 +51,8 @@ interface MOSSCO_AttributeGet
   module procedure MOSSCO_CplCompAttributeGetStringListPtr
   module procedure MOSSCO_FieldAttributeGetReal8
   module procedure MOSSCO_StateAttributeGetLogical
+  module procedure MOSSCO_GridCompAttributeGetLogical
+  module procedure MOSSCO_CplCompAttributeGetLogical
   module procedure MOSSCO_StateAttributeGetList1
   module procedure MOSSCO_StateAttributeGetList2
   module procedure MOSSCO_CplCompAttributeGetList1
@@ -88,6 +92,54 @@ contains
     if (present(rc)) rc=localrc
 
   end subroutine MOSSCO_StateAttributeSetLogical
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_GridCompAttributeSetLogical"
+!> @brief set a logical value attribute in an ESMF_GridComp
+!> @param[state] ESMF_GridComp
+!> @return rc ESMF return code
+!>
+!> This private subroutine is called through the MOSSCO_StateGet Interface
+  subroutine MOSSCO_GridCompAttributeSetLogical(GridComp, label, value, rc)
+
+    type(ESMF_GridComp), intent(inout)  :: GridComp
+    character(len=*), intent(in)     :: label
+    logical, intent(in)              :: value
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)                :: localrc, rc_
+
+    call ESMF_AttributeSet(GridComp, trim(label), value=value, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (present(rc)) rc=localrc
+
+  end subroutine MOSSCO_GridCompAttributeSetLogical
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_CplCompAttributeSetLogical"
+!> @brief set a logical value attribute in an ESMF_CplComp
+!> @param[state] ESMF_CplComp
+!> @return rc ESMF return code
+!>
+!> This private subroutine is called through the MOSSCO_AttributeGet Interface
+  subroutine MOSSCO_CplCompAttributeSetLogical(CplComp, label, value, rc)
+
+    type(ESMF_CplComp), intent(inout)  :: CplComp
+    character(len=*), intent(in)     :: label
+    logical, intent(in)              :: value
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)                :: localrc, rc_
+
+    call ESMF_AttributeSet(CplComp, trim(label), value=value, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (present(rc)) rc=localrc
+
+  end subroutine MOSSCO_CplCompAttributeSetLogical
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_StateAttributeSetStringListPtr"
@@ -902,6 +954,58 @@ contains
     if (present(rc)) rc=localrc
 
   end subroutine MOSSCO_StateAttributeGetLogical
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_GridCompAttributeGetLogical"
+  subroutine MOSSCO_GridCompAttributeGetLogical(GridComp, label, value, kwe, defaultValue, rc)
+
+    type(ESMF_GridComp), intent(in)  :: GridComp
+    character(len=*), intent(in)     :: label
+    logical, intent(inout)           :: value
+    type(ESMF_KeywordEnforcer), optional   :: kwe
+    logical, intent(in), optional    :: defaultValue
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)                :: localrc
+
+    localrc = ESMF_SUCCESS
+    if (present(kwe)) localrc = ESMF_SUCCESS
+
+    if (present(defaultValue)) then
+      call ESMF_AttributeGet(GridComp, trim(label), value=value, &
+        defaultValue=defaultValue, rc=localrc)
+    else
+      call ESMF_AttributeGet(GridComp, trim(label), value=value, rc=localrc)
+    endif
+    if (present(rc)) rc=localrc
+
+  end subroutine MOSSCO_GridCompAttributeGetLogical
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_CplCompAttributeGetLogical"
+  subroutine MOSSCO_CplCompAttributeGetLogical(CplComp, label, value, kwe, defaultValue, rc)
+
+    type(ESMF_CplComp), intent(in)   :: CplComp
+    character(len=*), intent(in)     :: label
+    logical, intent(inout)           :: value
+    type(ESMF_KeywordEnforcer), optional   :: kwe
+    logical, intent(in), optional    :: defaultValue
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)                :: localrc
+
+    localrc = ESMF_SUCCESS
+    if (present(kwe)) localrc = ESMF_SUCCESS
+
+    if (present(defaultValue)) then
+      call ESMF_AttributeGet(CplComp, trim(label), value=value, &
+        defaultValue=defaultValue, rc=localrc)
+    else
+      call ESMF_AttributeGet(CplComp, trim(label), value=value, rc=localrc)
+    endif
+    if (present(rc)) rc=localrc
+
+  end subroutine MOSSCO_CplCompAttributeGetLogical
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_FieldAttributeGetReal8"
