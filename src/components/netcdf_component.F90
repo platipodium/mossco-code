@@ -190,7 +190,7 @@ module netcdf_component
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       !> Value of checkInf defaults to .true.
-      call MOSSCO_ConfigGet(config, label='checkInf', value=checkNaN, defaultValue=.true., rc=localrc)
+      call MOSSCO_ConfigGet(config, label='checkInf', value=checkInf, defaultValue=.true., rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       !> Default value for filter ExcludeList is a non-allocated field
@@ -237,6 +237,12 @@ module netcdf_component
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_AttributeSet(importState, 'check_nan', checkNaN, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call MOSSCO_AttributeSet(gridComp, 'check_inf', checkInf, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call MOSSCO_AttributeSet(gridComp, 'check_nan', checkNaN, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_AttributeSet(importState, 'filename', trim(fileName), rc=localrc)
@@ -386,10 +392,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     call MOSSCO_AttributeGet(importState, 'filter_pattern_exclude', filterExcludeList, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_AttributeGet(importState, 'check_nan', checkNaN, defaultValue=.true., rc=localrc)
+    call MOSSCO_AttributeGet(gridComp, 'check_nan', checkNaN, defaultValue=.true., rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_AttributeGet(importState, 'check_inf', checkInf, defaultValue=.true., rc=localrc)
+    call MOSSCO_AttributeGet(gridComp, 'check_inf', checkInf, defaultValue=.true., rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !> Deal with time first, independent of items to be written
