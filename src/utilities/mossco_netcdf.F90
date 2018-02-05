@@ -1471,9 +1471,9 @@ module mossco_netcdf
           nc = MOSSCO_NetcdfCreate(trim(filename), rc = rc_)
         endif
       endif
-      localrc = nf90_inq_dimid(nc%ncid,'time',nc%timeDimId)
+      localrc = nf90_inq_dimid(nc%ncid,  'time', nc%timeDimId)
       if (localrc /= NF90_NOERR) then
-        call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', no time dimension', ESMF_LOGMSG_WARNING)
+        call ESMF_LogWrite('-- '//trim(fileName)//' has no time dimension', ESMF_LOGMSG_WARNING)
         nc%timeDimID=-1
       endif
     else
@@ -1497,10 +1497,10 @@ module mossco_netcdf
       close(fileUnit)
       if (string(1:3) == 'CDF') then
         write(message,'(A)')  '  file '//trim(fileName)//' is in netCDF3 format'
-        if (checkVersion) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        if (checkVersion_) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       elseif (string(2:4) == 'HDF') then
         write(message,'(A)')  '  file '//trim(fileName)//' is in netCDF4 format'
-        if (checkVersion) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        if (checkVersion_) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       else
         write(message,'(A)')  '  file '//trim(fileName)//' has unknown format'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
@@ -1537,6 +1537,8 @@ module mossco_netcdf
     endif
 
     nc%name=trim(filename)
+    call nc%update()
+    call nc%update_variables()
 
     if (present(rc)) rc=rc_
 
@@ -2070,8 +2072,6 @@ module mossco_netcdf
 
     end do
 
-    return
-
   end subroutine mossco_netcdf_update_variables
 
 #undef  ESMF_METHOD
@@ -2116,8 +2116,6 @@ module mossco_netcdf
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       endif
     enddo
-
-    return
 
   end subroutine mossco_netcdf_update
 
