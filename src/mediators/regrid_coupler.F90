@@ -40,6 +40,7 @@ module regrid_coupler
     type(ESMF_Grid)               :: srcGrid, dstGrid
     type(ESMF_Locstream)          :: srcLocstream, dstLocstream
     type(ESMF_Mesh)               :: srcMesh, dstMesh
+    type(ESMF_GeomType_Flag)      :: srcGeomType, dstGeomType
     type(type_mossco_routes), pointer :: next=>null()
 
   end type
@@ -417,6 +418,14 @@ module regrid_coupler
           write(message,'(A)') trim(name)//' field '//trim(importFieldName) &
             //' created routeHandle'
 
+          if (importGeomType == ESMF_GEOMTYPE_GRID) then
+            call MOSSCO_GridString(importGrid, message)
+          endif
+          if (exportGeomType == ESMF_GEOMTYPE_GRID) then
+            call MOSSCO_MessageAdd(message,' --> ')
+            call MOSSCO_GridString(exportGrid, message)
+          endif
+
         else
           routeHandle = geomRoute%routehandle
           write(message,'(A)') trim(name)//' field '//trim(importFieldName) &
@@ -440,6 +449,8 @@ module regrid_coupler
         fieldRoute%dstField=exportField
         fieldRoute%routeHandle=routeHandle
         fieldRoute%regridMethod=currentMethod
+        fieldRoute%srcGeomType = importGeomType
+        fieldRoute%dstGeomType = exportGeomType
 
         !@todo RouteHandlePrint creates a SIGILL Illegal instruction error
         !call ESMF_RouteHandlePrint(routehandle, rc=localrc)
@@ -475,7 +486,7 @@ module regrid_coupler
     type(ESMF_Clock)     :: parentclock
     integer, intent(out) :: rc
 
-    type(ESMF_Time)             :: currTime
+    type(ESMF_Time)             :: currTime, startTime
     integer(ESMF_KIND_I4)       :: petCount, localPet, i, m, importFieldCount
     character(len=ESMF_MAXSTR)  :: message, name, regridMethodString
     type(type_mossco_routes), pointer :: currentRoute=>null()
@@ -490,11 +501,30 @@ module regrid_coupler
     real(ESMF_KIND_R8), pointer   :: farrayPtr2(:,:) => null()
     real(ESMF_KIND_R8), pointer   :: farrayPtr3(:,:,:) => null()
     integer(ESMF_KIND_I4), allocatable :: ubnd(:), lbnd(:)
+    type(ESMF_Clock)                   :: clock
 
     rc = ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(CplComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_CplCompGet(cplComp, clock=clock, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_ClockGet(clock, startTime=startTime, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    i = 0
+    if (startTime == currTime ) then
+      currentRoute => Routes
+      do while(associated(currentRoute%next))
+        currentRoute => currentRoute%next
+        write(message,'(A,I2.2)') trim(name)//' route ',i
+        call MOSSCO_RouteString(currentRoute, message)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        i = i + 1
+      enddo
+    endif
 
     call get_FieldList(cplComp, importState, importFieldList, verbose=.false., &
       rc=localrc)
@@ -963,6 +993,40 @@ module regrid_coupler
     endif
 
   end subroutine MOSSCO_GeomPairInRoutes
+
+#undef ESMF_METHOD
+#define ESMF_METHOD MOSSCO_RoutePrint
+
+subroutine MOSSCO_RouteString(route, string)
+
+  type(type_mossco_routes), pointer, intent(in) :: route
+  character(len=*), intent(inout) :: string
+
+  call MOSSCO_MessageAdd(string,' route ')
+  if (route%srcGeomType == ESMF_GEOMTYPE_GRID) then
+    call MOSSCO_GridString(route%srcGrid, string)
+  else
+    call MOSSCO_MessageAdd(string,' (non-grid) ')
+  endif
+  call MOSSCO_MessageAdd(string,' --')
+  if (route%regridMethod == ESMF_REGRIDMETHOD_BILINEAR) then
+    call MOSSCO_MessageAdd(string,'BILIN--> ')
+  elseif (route%regridMethod == ESMF_REGRIDMETHOD_NEAREST_DTOS) then
+    call MOSSCO_MessageAdd(string,'NDTOS--> ')
+  elseif (route%regridMethod == ESMF_REGRIDMETHOD_NEAREST_STOD) then
+    call MOSSCO_MessageAdd(string,'NSTOD--> ')
+  elseif (route%regridMethod == ESMF_REGRIDMETHOD_PATCH) then
+    call MOSSCO_MessageAdd(string,'PATCH--> ')
+  elseif (route%regridMethod == ESMF_REGRIDMETHOD_CONSERVE) then
+    call MOSSCO_MessageAdd(string,'CONSV--> ')
+  endif
+  if (route%dstGeomType == ESMF_GEOMTYPE_GRID) then
+    call MOSSCO_GridString(route%dstGrid, string)
+  else
+    call MOSSCO_MessageAdd(string,' (non-grid) ')
+  endif
+
+end subroutine MOSSCO_RouteString
 
 end module regrid_coupler
 
