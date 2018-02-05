@@ -131,7 +131,7 @@ module grid_component
     type(ESMF_Grid)            :: grid, grid2, grid3
     type(ESMF_Field)           :: field
     character(len=ESMF_MAXSTR) :: configFileName, gridFileName, creator, fileFormat
-    character(len=ESMF_MAXSTR) :: geomName
+    character(len=ESMF_MAXSTR) :: geomName, mask_variable
     type(ESMF_Config)          :: config
 
     integer(ESMF_KIND_I4)      :: itemCount, i, j, nlayer, halo
@@ -149,11 +149,7 @@ module grid_component
     integer(ESMF_KIND_I4), allocatable :: exclusiveCount(:), coordDimIds(:)
     integer(ESMF_KIND_I4)              :: rank, dimCount
     type(ESMF_CoordSys_Flag)           :: coordSys
-    type(type_mossco_netcdf)           :: nc
-    type(type_mossco_netcdf_variable),pointer  :: var => null()
-    integer(ESMF_KIND_I4), allocatable:: mask(:,:)
-    type(ESMF_DistGrid)               :: distGrid
-    real(ESMF_KIND_R8)                :: real8
+    logical                            :: hasMaskVariable
 
     rc = ESMF_SUCCESS
     hasGrid = .false.
@@ -161,6 +157,7 @@ module grid_component
     nlayer = 0
     halo = 0
     gridFileName = 'grid.nc'
+    hasMaskVariable = .false.
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
       importState=importState, exportState=exportState, rc=localrc)
@@ -202,7 +199,7 @@ module grid_component
 
       if (labelIsPresent .and..not. fileIsPresent) then
         write(message, '(A)') trim(name)//' cannot find '//trim(gridFileName)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         rc = ESMF_RC_NOT_FOUND
         return
       endif
@@ -260,6 +257,16 @@ module grid_component
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
+      call MOSSCO_ConfigGet(config, label='mask', value=mask_variable, &
+        defaultValue='mask', isPresent=labelIsPresent, rc = localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (labelIsPresent) then
+        write(message,'(A)') trim(name)//' found mask = '//trim(mask_variable)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        hasMaskVariable = .true.
+      endif
+
       call MOSSCO_ConfigGet(config, label='halo', value=halo, &
         defaultValue=halo, isPresent=labelisPresent, rc = localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -282,7 +289,7 @@ module grid_component
     if (.not.fileIsPresent .and. allocated(cornerList)) then
       if (ubound(cornerList,1) /= 4 ) then
         write(message,'(A)') trim(name)//' needs four corners ll-lon ll-lat ur-lon ur-lat'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         rc = ESMF_RC_ARG_BAD
         return
       endif
@@ -302,6 +309,11 @@ module grid_component
 
     call ESMF_AttributeSet(gridComp, 'number_of_vertical_layers', nlayer, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (hasMaskVariable) then
+      call ESMF_AttributeSet(gridComp, 'mask_variable', trim(mask_variable), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    endif
 
     call ESMF_AttributeSet(gridComp, 'width_of_halo', halo, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -328,7 +340,7 @@ module grid_component
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       else
         write(message, '(A)') trim(name)//' wrong file format '//trim(fileformat)//', valid options are SCRIP or GRIDSPEC'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         rc = ESMF_RC_NOT_IMPL
         return
       endif
@@ -349,80 +361,19 @@ module grid_component
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       else
         write(message, '(A,I1,A)') trim(name)//' wrong rank ',rank,' valid ranks are 2 or 3'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         rc = ESMF_RC_NOT_IMPL
         return
       endif
 
       !> Try to add a mask from a variable, hardcoded for now
-      if (.false. .and. trim(fileFormat) == 'GRIDSPEC' .and. rank==2) then
-        nc = MOSSCO_NetcdfOpen(trim(gridFileName), rc=localrc)
+      if (hasMaskVariable .and. trim(fileFormat) == 'GRIDSPEC' .and. rank==2) then
+        call MOSSCO_GridAddMaskFromVariable(grid2, gridFileName, trim(mask_variable), &
+          owner=trim(name), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-        var=>nc%getvarvar('chlor_a', rc=localrc)
-        if (localrc == ESMF_SUCCESS) then
-
-          field = ESMF_FieldEmptyCreate(name='mask', rc=localrc)
-          call ESMF_FieldEmptySet(field, grid=grid2, rc=localrc)
-          call ESMF_FieldEmptyComplete(field, typeKind=ESMF_TYPEKIND_R8, rc=localrc)
-          call nc%getvar(field, var, rc=localrc)
-
-          call ESMF_FieldGet(field, farrayPtr=farrayPtr2, exclusiveUBound=ubnd, &
-            exclusiveLbound=lbnd, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-          allocate(mask(RANGE2D))
-          mask(RANGE2D) = 0
-          where(farrayPtr2(RANGE2D) /= farrayPtr2(RANGE2D))
-            mask(RANGE2D) = 1
-          endwhere
-
-          call ESMF_AttributeGet(field, 'missing_value', real8, rc=localrc)
-          where(farrayPtr2(RANGE2D) == real8)
-            mask(RANGE2D) = 1
-          endwhere
-
-          call ESMF_AttributeGet(field, '_FillValue', real8, rc=localrc)
-          where(farrayPtr2(RANGE2D) == real8)
-            mask(RANGE2D) = 1
-          endwhere
-
-          call ESMF_GridGet(grid2, distGrid=distGrid, rc=localrc)
-          array = ESMF_ArrayCreate(distGrid, mask , indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
-
-          call ESMF_GridAddItem(grid2, staggerLoc=ESMF_STAGGERLOC_CENTER, &
-                   itemflag=ESMF_GRIDITEM_MASK, rc=rc)
-
-          call ESMF_GridSetItem(grid2,             &
-            staggerLoc=ESMF_STAGGERLOC_CORNER, &
-                   itemflag=ESMF_GRIDITEM_MASK, array=array, rc=rc)
-
-          call ESMF_FieldDestroy(field, rc=localrc)
-        endif
-
-        call nc%close()
+        write(message, '(A)') trim(name)//' added grid mask from '//trim(mask_variable)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
-
-      !if (trim(fileFormat) == 'GRIDSPEC' .and. rank==2) then
-    !    nc = MOSSCO_NetcdfOpen(trim(gridFileName), rc=localrc)
-    !    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-        !var=>nc%getvarvar('getmGrid3D_z', rc=localrc)
-        !if (localrc == ESMF_SUCCESS) then
-        !  call nc%getvar(field, var, rc=localrc)
-        !  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-        !  call ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=localrc)
-        !  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-          !grid3 = MOSSCO_GridCreateWithVertical3()
-
-      !  elseif (localrc /= ESMF_RC_NOT_FOUND ) then
-      !    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      !  endif
-
-      !  call nc%close()
-      !endif
 
       call ESMF_GridGet(grid3, name=geomName)
 
@@ -442,7 +393,7 @@ module grid_component
       endif
       if (ubound(dimList,1) /= 2) then
         write(message, '(A)') trim(name)//' wrong number of dimensions provided '
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         rc = ESMF_RC_NOT_IMPL
         return
       endif
@@ -456,7 +407,7 @@ module grid_component
 
       if (ubound(cornerList,1) /= 4) then
         write(message, '(A)') trim(name)//' wrong number of corners provided'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         rc = ESMF_RC_NOT_IMPL
         return
       endif
@@ -542,7 +493,7 @@ module grid_component
     if (coordSys /= ESMF_COORDSYS_SPH_DEG) then
       write(message,'(A)') trim(name)//' has not implementation for non-spherical grid'
       rc = ESMF_RC_NOT_SET
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       return
     endif
 
@@ -604,7 +555,7 @@ module grid_component
               exclusiveLBound=lbnd, exclusiveUBound=ubnd, rc=localrc)
         case default
           write(message,'(A)')  '  cannot deal with less than 1 or more than 3 coordinate dimensions'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       end select
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -779,5 +730,135 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Finalize
+
+#undef ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_GridAddMaskFromVariable"
+!> Add from a variable and its missingValue/_FillValue/out of valid_range
+!> attributes a mask to a grid
+subroutine MOSSCO_GridAddMaskFromVariable(grid, filename, varname, kwe, owner, rc)
+
+  type(ESMF_Grid), intent(inout)                     :: grid
+  character(len=*), intent(in)                       :: filename, varname
+  type(ESMF_KeyWordEnforcer), intent(in), optional   :: kwe
+  character(len=*), intent(in), optional             :: owner
+  integer(ESMF_KIND_I4), intent(out), optional       :: rc
+
+  integer(ESMF_KIND_I4)         :: rc_, localrc, rank
+  logical                       :: isPresent
+  character(len=ESMF_MAXSTR)    :: owner_, message
+  type(type_mossco_netcdf)      :: nc
+  type(ESMF_Array)              :: array
+  real(ESMF_KIND_R8)            :: real8
+  real(ESMF_KIND_R8), pointer   :: farrayPtr2(:,:) => null()
+  integer(ESMF_KIND_I4), allocatable :: mask(:,:)
+  type(type_mossco_netcdf_variable), pointer  :: var => null()
+  type(ESMF_Field)              :: field
+  type(ESMF_DistGrid)           :: distGrid
+  integer(ESMF_KIND_I4), allocatable :: ubnd(:), lbnd(:)
+
+  rc_ = ESMF_SUCCESS
+  owner_ = '--'
+  if (present(kwe)) rc_ = ESMF_SUCCESS
+  if (present(rc)) rc = rc_
+  if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+
+  inquire(file=trim(filename), exist=isPresent)
+  if (.not.isPresent) then
+    if (present(rc)) rc = ESMF_RC_FILE_OPEN
+    write(message,'(A)') trim(owner_)//' cannot find file '//trim(fileName)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+    return
+  endif
+
+  nc = MOSSCO_NetcdfOpen(trim(fileName), mode='r', rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  call nc%update_variables()
+
+  var => nc%getvarvar(trim(varname), rc=localrc)
+  if (localrc /= ESMF_SUCCESS) then
+    if (present(rc)) rc = ESMF_RC_CANNOT_GET
+    write(message,'(A)') trim(owner_)//' cannot find in file '//trim(fileName)//' variable '//trim(varname)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+    call nc%close()
+    return
+  endif
+
+  field = ESMF_FieldEmptyCreate(name='mask', rc=localrc)
+  call ESMF_FieldEmptySet(field, grid=grid, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  call ESMF_FieldEmptyComplete(field, typeKind=ESMF_TYPEKIND_R8, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  call nc%getvar(field, var, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  call ESMF_FieldGet(field, rank=rank, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  allocate(ubnd(rank))
+  allocate(lbnd(rank))
+
+  call ESMF_FieldGet(field, farrayPtr=farrayPtr2, exclusiveUBound=ubnd, &
+    exclusiveLbound=lbnd, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  allocate(mask(RANGE2D))
+  mask(RANGE2D) = 0
+  where(farrayPtr2(RANGE2D) /= farrayPtr2(RANGE2D))
+    mask(RANGE2D) = 1
+  endwhere
+
+  call ESMF_AttributeGet(field, 'missing_value', real8, isPresent=isPresent, &
+    defaultValue=-1.0D30, rc=localrc)
+  if (isPresent) then
+    where(farrayPtr2(RANGE2D) == real8)
+      mask(RANGE2D) = 1
+    endwhere
+  endif
+
+  call ESMF_AttributeGet(field, '_FillValue', real8, isPresent=isPresent, &
+  defaultValue=-1.0D30, rc=localrc)
+  if (isPresent) then
+    where(farrayPtr2(RANGE2D) == real8)
+      mask(RANGE2D) = 1
+    endwhere
+  endif
+
+  call ESMF_AttributeGet(field, 'valid_min', real8, isPresent=isPresent, &
+  defaultValue=-1.0D30, rc=localrc)
+  if (isPresent) then
+    where(farrayPtr2(RANGE2D) < real8)
+      mask(RANGE2D) = 1
+    endwhere
+  endif
+
+  call ESMF_AttributeGet(field, 'valid_max', real8, isPresent=isPresent, &
+  defaultValue=-1.0D30, rc=localrc)
+  if (isPresent) then
+    where(farrayPtr2(RANGE2D) > real8)
+      mask(RANGE2D) = 1
+    endwhere
+  endif
+
+  call ESMF_GridGet(grid, distGrid=distGrid, rc=localrc)
+  array = ESMF_ArrayCreate(distGrid, mask , indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
+
+  call ESMF_GridAddItem(grid, staggerLoc=ESMF_STAGGERLOC_CENTER, &
+    itemflag=ESMF_GRIDITEM_MASK, rc=rc)
+
+  call ESMF_GridSetItem(grid, staggerLoc=ESMF_STAGGERLOC_CENTER, &
+    itemflag=ESMF_GRIDITEM_MASK, array=array, rc=rc)
+
+  call ESMF_FieldDestroy(field, rc=localrc)
+
+  call nc%close()
+  nullify(var)
+  nullify(farrayPtr2)
+  if (allocated(lbnd)) deallocate(lbnd)
+  if (allocated(ubnd)) deallocate(ubnd)
+
+end subroutine MOSSCO_GridAddMaskFromVariable
 
 end module grid_component
