@@ -1,7 +1,7 @@
 !> @brief Implementation of string utilities
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
 !
@@ -27,7 +27,7 @@ module mossco_strings
   implicit none
 
   private
-  
+
   public intformat, order, MOSSCO_MessageAdd, MOSSCO_MessageAddListPtr, only_var_name, replace_character
   public split_string, MOSSCO_StringMatch, MOSSCO_StringClean
   public MOSSCO_CheckUnits, MOSSCO_CleanUnit, MOSSCO_StringCopy
