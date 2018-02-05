@@ -405,7 +405,7 @@ module regrid_coupler
           !> @todo this needs to consider masks!
           call ESMF_FieldRegridStore(srcField=importField, dstField=exportField, &
             !filename="weights.nc", &!routeHandle=routehandle, &
-            srcMaskValues=(/1/), dstMaskValues=(/1/), &
+            srcMaskValues=(/1,2/), dstMaskValues=(/1,2/), &
             routeHandle=routehandle, &
             regridmethod=currentMethod, &
             unmappedaction=ESMF_UNMAPPEDACTION_IGNORE, rc=localrc)
@@ -567,7 +567,7 @@ module regrid_coupler
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       call ESMF_FieldRegrid(srcField=importFieldList(i), dstField=exportField,&
-        routeHandle=routehandle, rc=localrc)
+        routeHandle=routehandle, zeroregion=ESMF_REGION_SELECT, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (rank == 2) then
@@ -587,6 +587,9 @@ module regrid_coupler
     nullify(farrayPtr3)
     nullify(farrayPtr2near)
     nullify(farrayPtr3near)
+
+    deallocate(ubnd)
+    deallocate(lbnd)
 
     call MOSSCO_CompExit(cplComp, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
