@@ -1,7 +1,7 @@
 !> @brief Implementation of grid utilities
 !!
 !! This computer program is part of MOSSCO.
-!! @copyright Copyright 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
+!! @copyright Copyright 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 !! @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !! @author Hartmut Kapitza <hartmut.kapitza@hzg.de>
 !
@@ -30,6 +30,12 @@ module mossco_grid
 
   public MOSSCO_GridCopyCoords
   public MOSSCO_GridCreateFromOtherGrid
+  !public MOSSCO_GridAddCorners
+  public MOSSCO_GridGetDepth
+  public MOSSCO_GridIsConformable
+  public MOSSCO_GridString
+
+  private
 
 contains
 
@@ -1061,6 +1067,121 @@ subroutine MOSSCO_GridIsConformable(gridA, gridB, isConformable, rc)
   if (all(ubndA - lbndA == ubndB - lbndB)) isConformable = .true.
 
 end subroutine MOSSCO_GridIsConformable
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_GridAddCorners"
+subroutine MOSSCO_GridAddCorners(grid, kwe, rc)
+
+  type(ESMF_Grid), intent(inout)                    :: grid
+  type(ESMF_KeywordEnforcer), intent(in), optional  :: kwe
+  integer(ESMF_KIND_I4),  intent(out), optional     :: rc
+
+  integer(ESMF_KIND_I4), allocatable, dimension(:)  :: ubnd, lbnd
+
+  integer(ESMF_KIND_I4)              :: rc_, localrc, i, rank, dimCount
+  integer(ESMF_KIND_I4), allocatable :: coordDimCount(:)
+  character(len=ESMF_MAXSTR)         :: message
+
+  type(ESMF_CoordSys_Flag)       :: coordSys
+  type(ESMF_TypeKind_Flag)       :: coordTypeKind
+  type(ESMF_Index_Flag)          :: indexFlag
+  type(ESMF_StaggerLoc)          :: staggerLoc
+  type(ESMF_GridStatus_Flag)     :: status
+  integer(ESMF_KIND_I4)          :: localDe = 0
+  logical                        :: isPresent
+
+  rc_ = ESMF_SUCCESS
+  if (present(rc))  rc = rc_
+  if (present(kwe)) rc_ = ESMF_SUCCESS
+
+  call ESMF_GridGet(grid, coordTypeKind=coordTypeKind, dimCount=dimCount, &
+    coordSys=coordSys, rank=rank, indexFlag=indexFlag, status=status, rc=localrc)
+
+  !> Return if corner staggers are present or if center staggers are not present.
+  if (rank==2) then
+    call ESMF_GridGetCoord(grid, staggerLoc=ESMF_STAGGERLOC_CORNER, &
+      isPresent=isPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (isPresent) return
+
+    staggerLoc = ESMF_STAGGERLOC_CENTER
+    call ESMF_GridGetCoord(grid, staggerLoc=staggerLoc, &
+      isPresent=isPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (.not.isPresent) return
+  endif
+
+  if (rank == 3) then
+    call ESMF_GridGetCoord(grid, staggerLoc=ESMF_STAGGERLOC_CORNER_VFACE, &
+      isPresent=isPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (isPresent) return
+
+    call ESMF_GridGetCoord(grid, staggerLoc=ESMF_STAGGERLOC_CENTER_VFACE, &
+      isPresent=isPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (isPresent) return
+
+    staggerloc=ESMF_STAGGERLOC_CENTER_VFACE
+    call ESMF_GridGetCoord(grid, staggerLoc=staggerLoc, &
+      isPresent=isPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (.not.isPresent) then
+
+      staggerloc=ESMF_STAGGERLOC_CENTER_VCENTER
+      call ESMF_GridGetCoord(grid, staggerLoc=staggerLoc, &
+        isPresent=isPresent, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      if (.not.isPresent) return
+    endif
+  endif
+
+  if (staggerLoc == ESMF_STAGGERLOC_CENTER) then
+    call ESMF_GridAddCoord(grid, staggerLoc=ESMF_STAGGERLOC_CORNER)
+  elseif (staggerLoc == ESMF_STAGGERLOC_CENTER_VFACE) then
+    call ESMF_GridAddCoord(grid, staggerLoc=ESMF_STAGGERLOC_CORNER_VFACE)
+  elseif (staggerLoc == ESMF_STAGGERLOC_CENTER_VCENTER) then
+    call ESMF_GridAddCoord(grid, staggerLoc=ESMF_STAGGERLOC_CORNER_VCENTER)
+  endif
+
+  allocate(coordDimCount(dimCount))
+  call ESMF_GridGet(grid, coordDimCount=coordDimCount, rc=localrc)
+
+  do i = 1, dimCount
+
+    allocate(ubnd(coordDimCount(i)))
+    allocate(lbnd(coordDimCount(i)))
+
+    ! if (coordDimCount(i) == 1) then
+    !   call ESMF_GridGetCoord(grid, coordDim=i, localDe=localDe, &
+    !     staggerLoc=staggerLoc, farrayPtr=farrayPtr1, rc=localrc)
+    ! elseif (coordDimCount(i) == 2) then
+    !   call ESMF_GridGetCoord(grid, coordDim=i, localDe=localDe, &
+    !     staggerLoc=staggerLoc, farrayPtr=farrayPtr2, rc=localrc)
+    ! elseif (coordDimCount(i) == 3) then
+    !   call ESMF_GridGetCoord(grid, coordDim=i, localDe=localDe, &
+    !     staggerLoc=staggerLoc, farrayPtr=farrayPtr3, rc=localrc)
+    ! endif
+
+    deallocate(ubnd)
+    deallocate(lbnd)
+
+  end do
+
+  ! if (rank == 3) then
+  !   write(message, '(A)') '-- rank 3 GriddAddCorners not yet implemented'
+  !   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+  !   return
+  ! endif
+
+
+end subroutine MOSSCO_GridAddCorners
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_GridGetWidth"
