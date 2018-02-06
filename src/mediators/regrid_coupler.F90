@@ -31,6 +31,7 @@ module regrid_coupler
   use mossco_field
   use mossco_component
   use mossco_config
+  use mossco_netcdf
 
   implicit none
 
@@ -109,11 +110,11 @@ module regrid_coupler
     integer                     :: numOwnedNodes, dimCount
     integer(ESMF_KIND_I4)       :: keycount, matchIndex, importFieldCount
     integer(ESMF_KIND_I4)       :: exportFieldCount
-    logical                     :: gridIsPresent, isPresent
+    logical                     :: gridIsPresent, isPresent, hasMaskVariable
 
     type(ESMF_Field), allocatable :: importFieldList(:)
     type(ESMF_Field), allocatable :: exportFieldList(:)
-    character(len=ESMF_MAXSTR)    :: gridFileFormatString = 'SCRIP'
+    character(len=ESMF_MAXSTR)    :: gridFileFormatString = 'SCRIP', mask_variable
     type(ESMF_RegridMethod_Flag)  :: regridMethod, currentMethod
 
     rc = ESMF_SUCCESS
@@ -128,6 +129,10 @@ module regrid_coupler
 
     call ESMF_AttributeGet(cplComp, 'grid_filename',  &
       isPresent=gridIsPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_AttributeGet(cplComp, 'mask_variable',  &
+      isPresent=hasMaskVariable, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !> The get_FieldList call returns a list of ESMF_COMPLETE fields in a
@@ -167,6 +172,24 @@ module regrid_coupler
         externalGrid = ESMF_GridCreate(filename=trim(gridFileName), fileFormat=ESMF_FILEFORMAT_GRIDSPEC, &
           isSphere=.false., rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        if (hasMaskVariable) then
+          call ESMF_AttributeGet(cplComp, 'mask_variable',  &
+            mask_variable, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          call ESMF_GridGet(externalGrid, rank=rank, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        endif
+
+        if (hasMaskVariable .and. rank==2) then
+          call MOSSCO_GridAddMaskFromVariable(externalGrid, trim(gridFileName), &
+            trim(mask_variable), owner=trim(name), rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          write(message, '(A)') trim(name)//' added grid mask from '//trim(mask_variable)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        endif
+
       else
         write(message, '(A)') trim(name)//' unknown file format '//trim(gridFileFormatString)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
@@ -826,7 +849,7 @@ module regrid_coupler
     character(len=ESMF_MAXSTR), pointer :: filterExcludeList(:) => null()
     character(len=ESMF_MAXSTR), pointer :: filterIncludeList(:) => null()
 
-    character(len=ESMF_MAXSTR)        :: gridFileFormatString = 'SCRIP'
+    character(len=ESMF_MAXSTR)        :: gridFileFormatString = 'SCRIP', mask_variable
 
     rc_ = ESMF_SUCCESS
     if (present(kwe)) rc_ = ESMF_SUCCESS
@@ -890,6 +913,18 @@ module regrid_coupler
       call ESMF_AttributeSet(cplComp, 'grid_filename', trim(dstGridFileName), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       call ESMF_AttributeSet(cplComp, 'grid_file_format', trim(gridFileFormatString), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
+
+    call MOSSCO_ConfigGet(config, label='mask', value=mask_variable, &
+      defaultValue='mask', isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (labelIsPresent) then
+      write(message,'(A)') trim(cplCompName)//' found mask = '//trim(mask_variable)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      call ESMF_AttributeSet(cplComp, 'mask_variable', trim(mask_variable), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
 
