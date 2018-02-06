@@ -109,7 +109,7 @@ module regrid_coupler
     character(ESMF_MAXSTR)      :: importGeomName, exportGeomName, gridFileName
     integer                     :: numOwnedNodes, dimCount
     integer(ESMF_KIND_I4)       :: keycount, matchIndex, importFieldCount
-    integer(ESMF_KIND_I4)       :: exportFieldCount
+    integer(ESMF_KIND_I4)       :: exportFieldCount, unmappedCount
     logical                     :: gridIsPresent, isPresent, hasMaskVariable
 
     type(ESMF_Field), allocatable :: importFieldList(:)
@@ -117,6 +117,7 @@ module regrid_coupler
     character(len=ESMF_MAXSTR)    :: gridFileFormatString = 'SCRIP', mask_variable
     character(len=ESMF_MAXSTR)    :: regridMethodString, edgeMethodString
     type(ESMF_RegridMethod_Flag)  :: regridMethod, currentMethod, edgeMethod
+    integer(ESMF_KIND_I4),pointer :: unmappedDstList(:) => null()
 
     rc = ESMF_SUCCESS
 
@@ -459,9 +460,17 @@ module regrid_coupler
             srcMaskValues=(/1,2/), dstMaskValues=(/1,2/), &
             routeHandle=routehandle, &
             regridmethod=currentMethod, &
-            unmappedaction=ESMF_UNMAPPEDACTION_IGNORE, rc=localrc)
+            unmappedaction=ESMF_UNMAPPEDACTION_IGNORE, &
+            ! unmappedDstList=unmappedDstList, & ! ESMF internal error
+            rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+          if (associated(unmappedDstList) .and. ubound(unmappedDstList,1) > 0) then
+            write(message, '(A)') trim(name)//' has unmapped destination points '
+            write(message,*) trim(message), unmappedDstList(:)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+            nullify(unmappedDstList)
+          endif
           !call ESMF_FieldSMMStore(srcField=importField, dstField=exportField, &
           !  filename="weights.nc", routehandle=routehandle, rc=localrc)
 
