@@ -40,6 +40,7 @@ module mossco_netcdf
   private
 
   public MOSSCO_NetcdfCreate, MOSSCO_NetcdfOpen
+  public MOSSCO_GridAddMaskFromVariable
 
   type, extends(MOSSCO_VariableInfo), public :: type_mossco_netcdf_variable
     integer               :: varid
@@ -4549,5 +4550,135 @@ module mossco_netcdf
 
     if (present(rc)) rc = rc_
   end subroutine MOSSCO_NcPutAttFloat
+
+#undef ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_GridAddMaskFromVariable"
+!> Add from a variable and its missingValue/_FillValue/out of valid_range
+!> attributes a mask to a grid
+  subroutine MOSSCO_GridAddMaskFromVariable(grid, filename, varname, kwe, owner, rc)
+
+    type(ESMF_Grid), intent(inout)                     :: grid
+    character(len=*), intent(in)                       :: filename, varname
+    type(ESMF_KeyWordEnforcer), intent(in), optional   :: kwe
+    character(len=*), intent(in), optional             :: owner
+    integer(ESMF_KIND_I4), intent(out), optional       :: rc
+
+    integer(ESMF_KIND_I4)         :: rc_, localrc, rank
+    logical                       :: isPresent
+    character(len=ESMF_MAXSTR)    :: owner_, message
+    type(type_mossco_netcdf)      :: nc
+    type(ESMF_Array)              :: array
+    real(ESMF_KIND_R8)            :: real8
+    real(ESMF_KIND_R8), pointer   :: farrayPtr2(:,:) => null()
+    integer(ESMF_KIND_I4), allocatable :: mask(:,:)
+    type(type_mossco_netcdf_variable), pointer  :: var => null()
+    type(ESMF_Field)              :: field
+    type(ESMF_DistGrid)           :: distGrid
+    integer(ESMF_KIND_I4), allocatable :: ubnd(:), lbnd(:)
+
+    rc_ = ESMF_SUCCESS
+    owner_ = '--'
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+
+    inquire(file=trim(filename), exist=isPresent)
+    if (.not.isPresent) then
+      if (present(rc)) rc = ESMF_RC_FILE_OPEN
+      write(message,'(A)') trim(owner_)//' cannot find file '//trim(fileName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      return
+    endif
+
+    nc = MOSSCO_NetcdfOpen(trim(fileName), mode='r', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call nc%update_variables()
+
+    var => nc%getvarvar(trim(varname), rc=localrc)
+    if (localrc /= ESMF_SUCCESS) then
+      if (present(rc)) rc = ESMF_RC_CANNOT_GET
+      write(message,'(A)') trim(owner_)//' cannot find in file '//trim(fileName)//' variable '//trim(varname)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      call nc%close()
+      return
+    endif
+
+    field = ESMF_FieldEmptyCreate(name='mask', rc=localrc)
+    call ESMF_FieldEmptySet(field, grid=grid, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_FieldEmptyComplete(field, typeKind=ESMF_TYPEKIND_R8, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call nc%getvar(field, var, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_FieldGet(field, rank=rank, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    allocate(ubnd(rank))
+    allocate(lbnd(rank))
+
+    call ESMF_FieldGet(field, farrayPtr=farrayPtr2, exclusiveUBound=ubnd, &
+      exclusiveLbound=lbnd, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    allocate(mask(RANGE2D))
+    mask(RANGE2D) = 0
+    where(farrayPtr2(RANGE2D) /= farrayPtr2(RANGE2D))
+      mask(RANGE2D) = 1
+    endwhere
+
+    call ESMF_AttributeGet(field, 'missing_value', real8, isPresent=isPresent, &
+      defaultValue=-1.0D30, rc=localrc)
+    if (isPresent) then
+      where(farrayPtr2(RANGE2D) == real8)
+        mask(RANGE2D) = 1
+      endwhere
+    endif
+
+    call ESMF_AttributeGet(field, '_FillValue', real8, isPresent=isPresent, &
+    defaultValue=-1.0D30, rc=localrc)
+    if (isPresent) then
+      where(farrayPtr2(RANGE2D) == real8)
+        mask(RANGE2D) = 1
+      endwhere
+    endif
+
+    call ESMF_AttributeGet(field, 'valid_min', real8, isPresent=isPresent, &
+    defaultValue=-1.0D30, rc=localrc)
+    if (isPresent) then
+      where(farrayPtr2(RANGE2D) < real8)
+        mask(RANGE2D) = 1
+      endwhere
+    endif
+
+    call ESMF_AttributeGet(field, 'valid_max', real8, isPresent=isPresent, &
+    defaultValue=-1.0D30, rc=localrc)
+    if (isPresent) then
+      where(farrayPtr2(RANGE2D) > real8)
+        mask(RANGE2D) = 1
+      endwhere
+    endif
+
+    call ESMF_GridGet(grid, distGrid=distGrid, rc=localrc)
+    array = ESMF_ArrayCreate(distGrid, mask , indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
+
+    call ESMF_GridAddItem(grid, staggerLoc=ESMF_STAGGERLOC_CENTER, &
+      itemflag=ESMF_GRIDITEM_MASK, rc=rc)
+
+    call ESMF_GridSetItem(grid, staggerLoc=ESMF_STAGGERLOC_CENTER, &
+      itemflag=ESMF_GRIDITEM_MASK, array=array, rc=rc)
+
+    call ESMF_FieldDestroy(field, rc=localrc)
+
+    call nc%close()
+    nullify(var)
+    nullify(farrayPtr2)
+    if (allocated(lbnd)) deallocate(lbnd)
+    if (allocated(ubnd)) deallocate(ubnd)
+
+  end subroutine MOSSCO_GridAddMaskFromVariable
 
 end module
