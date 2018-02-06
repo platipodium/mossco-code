@@ -116,7 +116,7 @@ module regrid_coupler
     type(ESMF_Field), allocatable :: exportFieldList(:)
     character(len=ESMF_MAXSTR)    :: gridFileFormatString = 'SCRIP', mask_variable
     character(len=ESMF_MAXSTR)    :: regridMethodString, edgeMethodString
-    type(ESMF_RegridMethod_Flag)  :: regridMethod, currentMethod
+    type(ESMF_RegridMethod_Flag)  :: regridMethod, currentMethod, edgeMethod
 
     rc = ESMF_SUCCESS
 
@@ -139,6 +139,20 @@ module regrid_coupler
     else
       hasMaskVariable = .false.
     endif
+
+    call ESMF_AttributeGet(cplComp, 'regrid_method',  &
+      regridMethodString, defaultValue='bilinear', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call MOSSCO_RegridMethod(regridMethod, regridMethodString, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_AttributeGet(cplComp, 'edge_method',  &
+      edgeMethodString, defaultValue='stod', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call MOSSCO_RegridMethod(edgeMethod, edgeMethodString, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !> The get_FieldList call returns a list of ESMF_COMPLETE fields in a
     !>  state, including lists that previously were located within
@@ -389,11 +403,13 @@ module regrid_coupler
 
       fieldRoute=>Routes
 
-      !> @todo loop over multiple methods, at least the nearest
       do m = 1,2
 
-        if ( m==1 ) currentMethod = ESMF_REGRIDMETHOD_NEAREST_STOD
-        if ( m==2 ) currentMethod = ESMF_REGRIDMETHOD_BILINEAR
+        if ( m==1 ) currentMethod = edgeMethod
+        if ( m==2 ) then
+          currentMethod = regridMethod
+          if (regridMethod == edgeMethod) exit ! no need to do this twice
+        endif
 
       !> Field pair / Method matching
       do while (associated(fieldRoute%next))
@@ -412,7 +428,7 @@ module regrid_coupler
 
         do while (associated(geomRoute%next))
           geomRoute=>geomRoute%next
-          if ( (regridMethod == geomRoute%regridMethod) .and. ( &
+          if ( (currentMethod == geomRoute%regridMethod) .and. ( &
             (importGeomType == ESMF_GEOMTYPE_GRID .and. geomRoute%srcGrid==importGrid) &
             .or. (importGeomType == ESMF_GEOMTYPE_MESH .and. geomRoute%srcMesh==importMesh) &
             .or. (importGeomType == ESMF_GEOMTYPE_LOCSTREAM .and. geomRoute%srcLocstream==importLocstream) &
@@ -523,14 +539,15 @@ module regrid_coupler
     type(ESMF_Time)             :: currTime, startTime
     integer(ESMF_KIND_I4)       :: petCount, localPet, i, m, j, k
     integer(ESMF_KIND_I4)       :: fieldCount, importFieldCount, exportFieldCount
-    character(len=ESMF_MAXSTR)  :: message, name, regridMethodString, fieldName
+    character(len=ESMF_MAXSTR)  :: message, name, fieldName
+    character(len=ESMF_MAXSTR)  :: regridMethodString, edgeMethodString
     type(type_mossco_routes), pointer :: currentRoute=>null()
     integer                       :: localrc, rank
     logical                       :: isPresent
     type(ESMF_Field), allocatable, target :: importFieldList(:), fieldList(:), exportFieldList(:)
     type(ESMF_Field)              :: exportField
     type(ESMF_RouteHandle)        :: routeHandle
-    type(ESMF_RegridMethod_Flag)  :: regridMethod
+    type(ESMF_RegridMethod_Flag)  :: regridMethod, edgeMethod, currentMethod
     real(ESMF_KIND_R8), allocatable  :: farrayPtr2near(:,:)
     real(ESMF_KIND_R8), allocatable  :: farrayPtr3near(:,:,:)
     real(ESMF_KIND_R8), pointer      :: farrayPtr2(:,:) => null()
@@ -567,6 +584,20 @@ module regrid_coupler
       enddo
     endif
 
+    call ESMF_AttributeGet(cplComp, 'regrid_method',  &
+      regridMethodString, defaultValue='bilinear', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call MOSSCO_RegridMethod(regridMethod, regridMethodString, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_AttributeGet(cplComp, 'edge_method',  &
+      edgeMethodString, defaultValue='stod', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call MOSSCO_RegridMethod(edgeMethod, edgeMethodString, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
     call get_FieldList(cplComp, importState, importFieldList, verbose=.false., &
       fieldCount=importFieldCount, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -596,15 +627,12 @@ module regrid_coupler
         k=-1
         do while(associated(currentRoute%next))
 
-
           currentRoute => currentRoute%next
 
           k = k+1
-          if (currentRoute%regridMethod /= ESMF_REGRIDMETHOD_NEAREST_STOD) cycle
+          if (currentRoute%regridMethod /= edgeMethod) cycle
           if (currentRoute%srcGeomType /= importGeomType) cycle
           if (currentRoute%dstGeomType /= exportGeomType) cycle
-
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
 
           if (importGeomType == ESMF_GEOMTYPE_GRID) then
             call ESMF_FieldGet(importFieldList(i), grid=grid, rc=localrc)
@@ -649,9 +677,7 @@ module regrid_coupler
 
         enddo
 
-        cycle
-        regridMethod = ESMF_REGRIDMETHOD_BILINEAR !> @todo get dynamically
-        if (regridMethod == ESMF_REGRIDMETHOD_NEAREST_STOD) cycle
+        if (regridMethod == edgeMethod) cycle ! don't do this twice
         currentRoute => Routes
         k=-1
         do while(associated(currentRoute%next))
@@ -853,10 +879,10 @@ module regrid_coupler
     type(ESMF_Config)                 :: config
     character(len=ESMF_MAXSTR), pointer :: filterExcludeList(:) => null()
     character(len=ESMF_MAXSTR), pointer :: filterIncludeList(:) => null()
-    character(len=ESMF_MAXSTR)        :: regridMethodString
+    character(len=ESMF_MAXSTR)        :: edgeMethodString, regridMethodString
 
     character(len=ESMF_MAXSTR)        :: gridFileFormatString = 'SCRIP'
-    character(len=ESMF_MAXSTR)        :: edgeMethodString, mask_variable
+    character(len=ESMF_MAXSTR)        :: mask_variable
 
     rc_ = ESMF_SUCCESS
     if (present(kwe)) rc_ = ESMF_SUCCESS
@@ -1181,6 +1207,41 @@ subroutine MOSSCO_RouteString(route, string)
   endif
 
 end subroutine MOSSCO_RouteString
+
+#undef ESMF_METHOD
+#define ESMF_METHOD MOSSCO_RegridMethod
+
+recursive subroutine MOSSCO_RegridMethod(regridMethod, string, kwe, rc)
+
+  type(ESMF_RegridMethod_Flag), intent(out)   :: regridMethod
+  character(len=*), intent(in)                :: string
+  type(ESMF_KeyWordEnforcer), intent(in), optional :: kwe
+  integer(ESMF_KIND_I4), optional, intent(out)     :: rc
+
+  integer(ESMF_KIND_I4)        :: rc_
+  character(ESMF_MAXSTR)       :: message
+
+  if (present(kwe)) rc_ = ESMF_SUCCESS
+  if (present(rc))  rc = ESMF_SUCCESS
+
+  select case (trim(string))
+  case ('bilinear', 'BILINEAR', 'ESMF_REGRIDMETHOD_BILINEAR')
+    regridMethod = ESMF_REGRIDMETHOD_BILINEAR
+  case ('dtos', 'DTOS', 'ESMF_REGRIDMETHOD_NEAREST_DTOS', 'nearest_dtos')
+    regridMethod = ESMF_REGRIDMETHOD_NEAREST_DTOS
+  case ('stod', 'STOD', 'ESMF_REGRIDMETHOD_NEAREST_STOD', 'nearest_stod')
+    regridMethod = ESMF_REGRIDMETHOD_NEAREST_STOD
+  case ('patch', 'PATCH', 'ESMF_REGRIDMETHOD_PATCH')
+    regridMethod = ESMF_REGRIDMETHOD_PATCH
+  case ('conserve', 'CONSERVE', 'ESMF_REGRIDMETHOD_CONSERVE')
+    regridMethod = ESMF_REGRIDMETHOD_CONSERVE
+  case default
+    write(message,'(A)') '-- cannot interpret string '//trim(string)//' as regrid method.'
+    !> @todo what's wrong here: call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+    if (present(rc))  rc = ESMF_RC_NOT_FOUND
+  end select
+
+end subroutine MOSSCO_RegridMethod
 
 end module regrid_coupler
 
