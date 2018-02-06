@@ -115,6 +115,7 @@ module regrid_coupler
     type(ESMF_Field), allocatable :: importFieldList(:)
     type(ESMF_Field), allocatable :: exportFieldList(:)
     character(len=ESMF_MAXSTR)    :: gridFileFormatString = 'SCRIP', mask_variable
+    character(len=ESMF_MAXSTR)    :: regridMethodString, edgeMethodString
     type(ESMF_RegridMethod_Flag)  :: regridMethod, currentMethod
 
     rc = ESMF_SUCCESS
@@ -131,9 +132,13 @@ module regrid_coupler
       isPresent=gridIsPresent, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeGet(cplComp, 'mask_variable',  &
-      isPresent=hasMaskVariable, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (isPresent) then
+      call ESMF_AttributeGet(cplComp, 'mask_variable',  &
+        isPresent=hasMaskVariable, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    else
+      hasMaskVariable = .false.
+    endif
 
     !> The get_FieldList call returns a list of ESMF_COMPLETE fields in a
     !>  state, including lists that previously were located within
@@ -848,8 +853,10 @@ module regrid_coupler
     type(ESMF_Config)                 :: config
     character(len=ESMF_MAXSTR), pointer :: filterExcludeList(:) => null()
     character(len=ESMF_MAXSTR), pointer :: filterIncludeList(:) => null()
+    character(len=ESMF_MAXSTR)        :: regridMethodString
 
-    character(len=ESMF_MAXSTR)        :: gridFileFormatString = 'SCRIP', mask_variable
+    character(len=ESMF_MAXSTR)        :: gridFileFormatString = 'SCRIP'
+    character(len=ESMF_MAXSTR)        :: edgeMethodString, mask_variable
 
     rc_ = ESMF_SUCCESS
     if (present(kwe)) rc_ = ESMF_SUCCESS
@@ -916,7 +923,6 @@ module regrid_coupler
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
 
-
     call MOSSCO_ConfigGet(config, label='mask', value=mask_variable, &
       defaultValue='mask', isPresent=labelIsPresent, rc = localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -925,6 +931,28 @@ module regrid_coupler
       write(message,'(A)') trim(cplCompName)//' found mask = '//trim(mask_variable)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       call ESMF_AttributeSet(cplComp, 'mask_variable', trim(mask_variable), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
+    call MOSSCO_ConfigGet(config, label='method', value=regridMethodString, &
+      defaultValue='bilinear', isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (labelIsPresent) then
+      write(message,'(A)') trim(cplCompName)//' found method = '//trim(mask_variable)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      call ESMF_AttributeSet(cplComp, 'regrid_method', trim(regridMethodString), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
+    call MOSSCO_ConfigGet(config, label='edge_method', value=edgeMethodString, &
+    defaultValue='stod', isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (labelIsPresent) then
+      write(message,'(A)') trim(cplCompName)//' found edge_method = '//trim(mask_variable)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      call ESMF_AttributeSet(cplComp, 'edge_method', trim(edgeMethodString), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
 
