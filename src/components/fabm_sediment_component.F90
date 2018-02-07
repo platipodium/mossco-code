@@ -394,11 +394,12 @@ module fabm_sediment_component
 #else
         call ESMF_LogWrite('  ignore error above', ESMF_LOGMSG_ERROR)
 #endif
+        call ESMF_GridGetItemBounds(flux_grid, ESMF_GRIDITEM_MASK, exclusiveUBound=ubnd2, exclusiveLBound=lbnd2, rc=localrc)
 
         do i=1,sed%grid%inum
           do j=1,sed%grid%jnum
             do k=1,sed%grid%knum
-              sed%mask(i,j,k) = (gridmask(i,j).le.0)
+              sed%mask(i,j,k) = (gridmask(lbnd2(1)-1+i,lbnd2(2)-1+j).le.0)
             enddo
           enddo
         enddo
@@ -468,7 +469,7 @@ module fabm_sediment_component
       if (trim(varname) == 'dissolved_ammonium')           bdys(:,:,n+1)=pel_NH4
       if (trim(varname) == 'dissolved_phosphate')          bdys(:,:,n+1)=pel_PO4
       if (trim(varname) == 'dissolved_oxygen')             bdys(:,:,n+1)=pel_O2
-      if (trim(varname) == 'dissolved_reduced_substances') bdys(:,:,n+1)=0.0_rk
+      if (trim(varname) == 'dissolved_reduced_substances') bdys(:,:,n+1)=pel_O2 !0.0_rk
       if (trim(varname) == 'detritus_labile_carbon')       fluxes(:,:,n)=pflux_lDetC/86400.0_rk
       if (trim(varname) == 'detritus_semilabile_carbon')   fluxes(:,:,n)=pflux_sDetC/86400.0_rk
       if (trim(varname) == 'detritus_labile_nitrogen')     fluxes(:,:,n)=pflux_lDetN/86400.0_rk
@@ -614,7 +615,6 @@ module fabm_sediment_component
       !! create boundary fields in import State
       field = ESMF_FieldEmptyCreate(name='porosity_at_soil_surface', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
 
       write(message, '(A)') trim(name)//' created for export '
       call MOSSCO_FieldString(field, message, rc=localrc)
@@ -862,6 +862,9 @@ module fabm_sediment_component
       call ESMF_AttributeSet(field,'units','W m-2', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+      call MOSSCO_FieldInitialize(field, value=0.0_rk, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
       write(message, '(A)') trim(name)//' created for import '
       call MOSSCO_FieldString(field, message, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -900,6 +903,9 @@ module fabm_sediment_component
       call ESMF_AttributeSet(field,'units','degreeC', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+      call MOSSCO_FieldInitialize(field, value=pel_Temp, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
       write(message, '(A)') trim(name)//' created for import '
       call MOSSCO_FieldString(field, message, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -921,6 +927,9 @@ module fabm_sediment_component
           call ESMF_AttributeSet(field,'units',trim(sed%export_states(n)%units), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+          call MOSSCO_FieldInitialize(field, value=0.0_rk, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
           write(message, '(A)') trim(name)//' created for export horizontal '
           call MOSSCO_FieldString(field, message, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -940,6 +949,9 @@ module fabm_sediment_component
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
             call ESMF_AttributeSet(field,'units','m/s', rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+            call MOSSCO_FieldInitialize(field, value=0.0_rk, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
             write(message, '(A)') trim(name)//' created for export horizontal '
@@ -1656,7 +1668,7 @@ module fabm_sediment_component
 
             ptr_f2(:,1) = fluxmesh_ptr(:)
           else
-            call ESMF_FieldGet(field,farrayPtr=ptr_f2,rc=localrc)
+            call ESMF_FieldGet(field, farrayPtr=ptr_f2, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
             bdys(:,:,n+1) = ptr_f2(:,:)
@@ -1681,7 +1693,7 @@ module fabm_sediment_component
 #endif
         endif !if "particulate"
       endif !if (itemcount==0)
-    enddo
+    enddo !do n=1,sed%nvar
     endif !if (sed%bcup_dissolved_variables .gt. 0)
 
   end subroutine get_boundary_conditions
