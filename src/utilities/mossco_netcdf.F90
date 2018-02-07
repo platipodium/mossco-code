@@ -16,6 +16,7 @@
 #define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "mossco_netcdf.F90"
+#define DEBUG
 
 #define RANGE1D lbnd(1):ubnd(1)
 #define RANGE2D RANGE1D,lbnd(2):ubnd(2)
@@ -386,9 +387,37 @@ module mossco_netcdf
       ! it is recommended to check for inf with abs(x) > huge(x)
       if (checkNaN_ .and. any(ncarray4(RANGE4D) /= ncarray4(RANGE4D))) then
         call self%close()
+#ifdef DEBUG
+        if (associated(gridmask3)) then
+          do i=lbnd(1),ubnd(1)
+            do j=lbnd(2),ubnd(2)
+              do k=lbnd(3),ubnd(3)
+                if (gridmask3(grid3lbnd(1)-lbnd(1)+i,grid3lbnd(2)-lbnd(2)+j,grid3lbnd(3)-lbnd(3)+k) .le. 0) cycle
+                if (any (ncarray4(i,j,k,lbnd(4):ubnd(4)) /= ncarray4(i,j,k,lbnd(4):ubnd(4)) )) then
+                  write(message,'(A,3i4)')  '  NaN detected in field ',i,j,k
+                  call MOSSCO_FieldString(field, message, rc=localrc)
+                  call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+                endif
+              enddo
+            enddo
+          enddo
+        elseif (associated(gridmask2)) then
+          do i=lbnd(1),ubnd(1)
+            do j=lbnd(2),ubnd(2)
+              if (gridmask2(grid2lbnd(1)-lbnd(1)+i,grid2lbnd(2)-lbnd(2)+j) .le. 0) cycle
+              if (any (ncarray4(i,j,lbnd(3):ubnd(3),lbnd(4):ubnd(4)) /= ncarray4(i,j,lbnd(3):ubnd(3),lbnd(4):ubnd(4)) )) then
+                write(message,'(A,3i4)')  '  NaN detected in field ',i,j
+                call MOSSCO_FieldString(field, message, rc=localrc)
+                call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+              endif
+            enddo
+          enddo
+        end if
+#else
         write(message,'(A)')  '  NaN detected in field '
         call MOSSCO_FieldString(field, message, rc=localrc)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+#endif
         if (present(rc)) rc = ESMF_RC_VAL_OUTOFRANGE
       endif
 
@@ -456,11 +485,40 @@ module mossco_netcdf
       end if
 
       if (checkNaN_ .and. any(ncarray3(RANGE3D) /= ncarray3(RANGE3D))) then
+
         call self%close()
+
+#ifdef DEBUG
+        if (associated(gridmask3)) then
+          do i=lbnd(1),ubnd(1)
+            do j=lbnd(2),ubnd(2)
+              do k=lbnd(3),ubnd(3)
+                if (gridmask3(grid3lbnd(1)-lbnd(1)+i,grid3lbnd(2)-lbnd(2)+j,grid3lbnd(3)-lbnd(3)+k) .le. 0) cycle
+                if ( ncarray3(i,j,k) /= ncarray3(i,j,k) ) then
+                  write(message,'(A,3i4)')  '  NaN detected in field ',i,j,k
+                  call MOSSCO_FieldString(field, message, rc=localrc)
+                  call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+                endif
+              enddo
+            enddo
+          enddo
+        elseif (associated(gridmask2)) then
+          do i=lbnd(1),ubnd(1)
+            do j=lbnd(2),ubnd(2)
+              if (gridmask2(grid2lbnd(1)-lbnd(1)+i,grid2lbnd(2)-lbnd(2)+j) .le. 0) cycle
+              if (any (ncarray3(i,j,lbnd(3):ubnd(3)) /= ncarray3(i,j,lbnd(3):ubnd(3)) )) then
+                write(message,'(A,3i4)')  '  NaN detected in field ',i,j
+                call MOSSCO_FieldString(field, message, rc=localrc)
+                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+              endif
+            enddo
+          enddo
+        end if
+#else
         write(message,'(A)')  '  NaN detected in field '
         call MOSSCO_FieldString(field, message, rc=localrc)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-
+#endif
         if (present(rc)) rc = ESMF_RC_VAL_OUTOFRANGE
         return
       endif
@@ -522,9 +580,25 @@ module mossco_netcdf
 
       if (checkNaN_ .and. any(ncarray2(RANGE2D) /= ncarray2(RANGE2D))) then
         call self%close()
+
+#ifdef DEBUG
+        if (associated(gridmask2)) then
+          do i=lbnd(1),ubnd(1)
+            do j=lbnd(2),ubnd(2)
+              if (gridmask2(grid2lbnd(1)-lbnd(1)+i,grid2lbnd(2)-lbnd(2)+j) .le. 0) cycle
+              if ( ncarray2(i,j) /= ncarray2(i,j) ) then
+                write(message,'(A,3i4)')  '  NaN detected in field ',i,j
+                call MOSSCO_FieldString(field, message, rc=localrc)
+                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+              endif
+            enddo
+          enddo
+        end if
+#else
         write(message,'(A)')  '  NaN detected in field '
         call MOSSCO_FieldString(field, message, rc=localrc)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+#endif
         if (present(rc)) rc = ESMF_RC_VAL_OUTOFRANGE
         return
       endif
