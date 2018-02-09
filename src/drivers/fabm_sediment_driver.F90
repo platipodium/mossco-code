@@ -68,7 +68,8 @@ type,extends(type_rhs_driver), public :: type_sed !< sediment driver class (exte
    real(rk)                     :: beta,k_l,b,L1,L2
    type(fabm_sed_bulk_var),pointer :: poc_classes(:)=>null()
    real(rk)                     :: k_par
-   real(rk),dimension(:,:,:),pointer :: fluxes,bdys
+   real(rk),dimension(:,:,:),pointer :: fluxes => null()
+   real(rk),dimension(:,:,:),pointer :: bdys => null()
    integer                      :: bcup_dissolved_variables=2
    integer                      :: bcup_particulate_variables=1
    integer                      :: ndiag=0
@@ -78,14 +79,17 @@ type,extends(type_rhs_driver), public :: type_sed !< sediment driver class (exte
    real(rk)                     :: missing_value=1.e20_rk
    type(export_state_type),dimension(:),allocatable :: export_states
 
-   real(rk),dimension(:,:,:),pointer     :: porosity,temp,intf_porosity,bioturbation_factor
-   real(rk),dimension(:,:,:),pointer     :: par
-   real(rk),dimension(:,:),pointer       :: par_surface
+   real(rk),dimension(:,:,:),pointer     :: porosity => null()
+   real(rk),dimension(:,:,:),pointer     :: temp => null()
+   real(rk),dimension(:,:,:),pointer     :: intf_porosity => null()
+   real(rk),dimension(:,:,:),pointer     :: bioturbation_factor => null()
+   real(rk),dimension(:,:,:),pointer     :: par => null()
+   real(rk),dimension(:,:),pointer       :: par_surface => null()
    real(rk),dimension(:,:,:),allocatable :: zeros2dv,zeros3d,ones3d,diff
-   real(rk),dimension(:,:,:),pointer     :: temp3d
+   real(rk),dimension(:,:,:),pointer     :: temp3d => null()
    real(rk),dimension(:,:,:,:),allocatable :: transport,zeros3dv
    real(rk),dimension(:,:),allocatable     :: zeros2d
-   real(rk),dimension(:,:,:),pointer     :: flux_cap
+   real(rk),dimension(:,:,:),pointer     :: flux_cap => null()
    real(rk),dimension(:,:,:),pointer     :: biomass=>null()
    real(rk),dimension(:,:,:),pointer     :: weighted_toc=>null()
 

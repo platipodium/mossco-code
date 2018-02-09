@@ -2,7 +2,7 @@
 !> @brief 3D generic driver for the Framework for Aquatic Biogeochemical Models (FABM)
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2013,2014,2015,2016,2017 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2013,2014,2015,2016,2017,2018 Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister <richard.hofmeister@hzg.de>
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de
 !
@@ -43,7 +43,11 @@
     type(type_model),pointer           :: model
     !type(type_model), target           :: model_state
     type(export_state_type),dimension(:),pointer :: export_states => null()
-    real(rk),dimension(:,:,:),pointer  :: temp,salt,par,dens,current_depth
+    real(rk),dimension(:,:,:),pointer  :: temp => null()
+    real(rk),dimension(:,:,:),pointer  :: salt  => null()
+    real(rk),dimension(:,:,:),pointer  :: par  => null()
+    real(rk),dimension(:,:,:),pointer  :: dens  => null()
+    real(rk),dimension(:,:,:),pointer  :: current_depth  => null()
     real(rk),dimension(:,:,:),pointer  :: layer_height=>null()
     real(rk),dimension(:,:),pointer    :: volume_flux=>null()
     real(rk),dimension(:,:,:),pointer  :: volume_change=>null()
@@ -69,10 +73,10 @@
     real(rk), dimension(:,:,:), pointer  :: horizontal_data => null()
     real(rk), dimension(:,:,:,:), pointer:: time_integrated_bulk_variables => null()
     real(rk), dimension(:,:,:), pointer  :: time_integrated_horizontal_variables => null()
-    integer, dimension(:), pointer       :: int_idx_from_diag_idx
-    integer, dimension(:), pointer       :: int_idx_from_hor_diag_idx
+    integer, dimension(:), pointer       :: int_idx_from_diag_idx  => null()
+    integer, dimension(:), pointer       :: int_idx_from_hor_diag_idx  => null()
     character(len=255), allocatable      :: fabm_modules(:)
-    character(len=255)                   :: fabm_git_sha, fabm_git_branch
+    character(len=255)                   :: fabm_git_sha='', fabm_git_branch=''
     contains
     procedure :: get_rhs
     procedure :: get_dependencies
