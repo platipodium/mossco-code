@@ -3733,6 +3733,10 @@ module mossco_netcdf
 
       if (jtime_ > ntime) then
         jtime_ = ntime
+      elseif (jtime_ == itime) then
+        call ESMF_LogWrite('-- unclear condition, check your file', ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+      elseif (farray(jtime_) <= farray(itime)) then
+        call ESMF_LogWrite('-- unclear condition, check your file', ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
       else
         weight_ = (ticks*1.0D0 - farray(itime)) / (farray(jtime_) - farray(itime))
       endif
