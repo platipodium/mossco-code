@@ -21,8 +21,14 @@
 #define _IRANGE_ 1:_INUM_
 #define _JRANGE_ 1:_JNUM_
 #define _KRANGE_ 1:_KNUM_
+
 #define _RK4_ 1
 #define _ADAPTIVE_EULER_ 2
+
+! #define DEBUG_NAN
+
+#define RANGE2D 1:sed%inum,1:sed%jnum
+#define RANGE3D RANGE2D,1:sed%knum
 
 #define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
 #define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
@@ -1242,11 +1248,11 @@ module fabm_sediment_component
     type(ESMF_Field)  :: field
     real(ESMF_KIND_R8),pointer,dimension(:,:) :: ptr_f2
     real(ESMF_KIND_R8),pointer,dimension(:,:,:) :: ptr_f3
-    integer           :: fieldcount, i
+    integer           :: fieldcount, i, j, k
     character(len=ESMF_MAXSTR)  :: string
     type(ESMF_Alarm)           :: outputAlarm
 
-    character(len=ESMF_MAXSTR) :: timestring, name, message
+    character(len=ESMF_MAXSTR) :: timestring, name, message, varname
     integer(ESMF_KIND_I4)      :: localPet, petCount, itemCount
     type(ESMF_Clock)           :: clock
     type(ESMF_Time)            :: currTime, startTime, stopTime
@@ -1421,21 +1427,28 @@ module fabm_sediment_component
       !write(0,*) 1171,trim(name)
       !> @todo the solver is not stable in example xf with sns topo
 
+      ! integrate rates
       call ode_solver(sed, dt, ode_method)
 
-      !write(0,*) 1173,trim(name)
+      !check for NaN
+      call check_NaN(sed,rc=localrc)
+      if (rc == ESMF_RC_VAL_OUTOFRANGE ) then
+        write(message,'(A)')  '  NaN detected applying ode_solver'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
       ! reset concentrations to mininum_value
       if (_INUM_ > 0 .and. _JNUM_ > 0)  then
-      do n=1,sed%nvar
-        do k=1,sed%grid%knum
+        do n=1,sed%nvar
+          do k=1,sed%grid%knum
 !!@todo This has to be adjusted for inum, jnum longer than 1
-          if (sed%conc(1,1,k,n) .lt. sed%model%state_variables(n)%minimum) then
-            sed%conc(_IRANGE_,_JRANGE_,k,n) = sed%model%state_variables(n)%minimum
-          endif
+            if (sed%conc(1,1,k,n) .lt. sed%model%state_variables(n)%minimum) then
+              sed%conc(_IRANGE_,_JRANGE_,k,n) = sed%model%state_variables(n)%minimum
+            endif
+          enddo
         enddo
-      enddo
-    endif
+      endif
 
       if (sed%do_output) then
         !! Check if the output alarm is ringing, if so, quiet it and
@@ -2041,4 +2054,53 @@ module fabm_sediment_component
     enddo
   end subroutine set_boundary_flags
 
+#undef ESMF_METHOD
+#define ESMF_METHOD "check_NaN"
+  subroutine check_NaN(sed,rc)
+    type(type_sed)             :: sed
+    integer, intent(out)       :: rc
+    character(len=ESMF_MAXSTR) :: message, varname
+    integer                    :: i, j, k, n
+    logical                    :: found_NaN, list_indices, list_varnames
+
+    found_NaN = .false.
+    list_indices = .false.
+    list_varnames = .false.
+
+    !spacial loop (How about halo zones?)
+    do i=1,sed%inum
+      do j=1,sed%jnum
+        do k=1,sed%knum
+          if ( sed%mask(i,j,k) ) cycle
+          if ( any(sed%conc(i,j,k,:) /= sed%conc(i,j,k,:)) ) then
+#ifdef DEBUG_NAN
+            write(message,'(A,3i4)')  '  NaN detected at indices (i,j,k) ',i,j,k
+            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+#endif
+            do n=1,sed%nvar
+              if ( sed%conc(i,j,k,n) /= sed%conc(i,j,k,n) ) then
+                found_NaN = .true.
+#ifdef DEBUG_NAN
+                varname = trim(sed%export_states(n)%standard_name)
+                write(message,'(A)')  '  NaN detected for '//trim(varname)
+                call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+                if (.not. list_varnames)  exit ! n-loop
+#else
+                rc = ESMF_RC_VAL_OUTOFRANGE
+                return
+#endif
+              endif
+            enddo
+            exit ! k-loop
+          endif
+        enddo
+      enddo
+    enddo
+    if (found_NaN) then
+      rc = ESMF_RC_VAL_OUTOFRANGE
+    endif
+
+  end subroutine check_NaN
+
+#undef ESMF_METHOD
 end module fabm_sediment_component

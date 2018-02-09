@@ -834,4 +834,5 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
 
   end subroutine nc_field_write
 
+#undef  ESMF_METHOD
 end module netcdf_component

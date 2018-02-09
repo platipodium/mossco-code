@@ -17,6 +17,8 @@
 #define _RK4_ 1
 #define _ADAPTIVE_EULER_ 2
 
+! #define DEBUG_NAN
+
 #define RANGE2D 1:pel%inum,1:pel%jnum
 #define RANGE3D RANGE2D,1:pel%knum
 
@@ -380,7 +382,7 @@ module fabm_pelagic_component
       open(33,file='fabm_pelagic.nml', action='read', status='old')
       call ESMF_AttributeSet(exportState, trim(name)//'::namelist', 'fabm_pelagic.nml', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-  endif
+    endif
     read(33,nml=fabm_pelagic)
     close(33)
 
@@ -703,6 +705,10 @@ module fabm_pelagic_component
 
       call ESMF_AttributeSet(concfield, 'integration_timestep', dt, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      ! initialize with 0.0
+      !call MOSSCO_FieldInitialize(concfield, value=0.0_rk, rc=localrc)
+      !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       !> create empty fields for restarts
       restartField = ESMF_FieldEmptyCreate(name=trim(varname),rc=localrc)
@@ -1616,6 +1622,7 @@ module fabm_pelagic_component
     integer(ESMF_KIND_I4)                  :: i, j, k, l, nmatch, itemCount, rank, fieldCount
     integer(ESMF_KIND_I4)                  :: ubnd(2), lbnd(2), ubnd3(3), lbnd3(3)
     integer(ESMF_KIND_I8)                  :: advanceCount
+    logical                                :: found_NaN
 
     real(ESMF_KIND_R8), pointer            :: farrayPtr3(:,:,:), ratePtr3(:,:,:)
     real(ESMF_KIND_R8), pointer            :: farrayPtr2(:,:), ratePtr2(:,:)
@@ -1652,6 +1659,31 @@ module fabm_pelagic_component
 
     ! calculate PAR
     call pel%light()
+    ! check for NaN
+    if ( any(pel%par /= pel%par) ) then
+      rc = ESMF_RC_VAL_OUTOFRANGE
+#ifdef DEBUG_NAN
+      found_NaN = .false.
+      do i=1,pel%inum
+        do j=1,pel%jnum
+          do k=1,pel%knum
+            if ( pel%mask(i,j,k) ) cycle
+            if ( pel%par(i,j,k) /= pel%par(i,j,k) ) then
+              write(message,'(A,3i4)')  '  NaN detected at indices (i,j,k) ',i,j,k
+              call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+              found_NaN = .true.
+              exit
+            endif
+          enddo
+        enddo
+      enddo
+#endif
+    endif
+    if (rc == ESMF_RC_VAL_OUTOFRANGE ) then
+      write(message,'(A)')  '  NaN detected in light forcing'
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
 
     ! Create a list of fields  in the export state that have matching fluxes
     ! in the import state
@@ -1787,6 +1819,45 @@ module fabm_pelagic_component
       ! integrate rates
       call ode_solver(pel,dt,ode_method)
 
+      !check for NaN
+      call check_NaN(pel,rc)
+      if (rc == ESMF_RC_VAL_OUTOFRANGE ) then
+        write(message,'(A)')  '  NaN detected applying ode_solver'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+!       !check for NaN (How about halo zones?)
+!       found_NaN = .false.
+!       do i=1,pel%inum
+!         do j=1,pel%jnum
+!           do k=1,pel%knum
+!             if ( pel%mask(i,j,k) ) cycle
+!             if ( any(pel%conc(i,j,k,:) /= pel%conc(i,j,k,:)) ) then
+!               write(message,'(A,3i4)')  '  NaN detected at indices (i,j,k) ',i,j,k
+!               call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+!
+!               do n=1,pel%nvar
+!                 if ( pel%conc(i,j,k,n) /= pel%conc(i,j,k,n) ) then
+!                   found_NaN = .true.
+!                   varname = trim(pel%export_states(n)%standard_name)
+!                   write(message,'(A)')  '  NaN detected applying ode_solver for '//trim(varname)
+!                   call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+! #ifndef DEBUG_NAN
+!                   exit ! n-loop
+! #endif
+!                 endif
+!               enddo
+!               exit ! k-loop
+!             endif
+!           enddo
+!         enddo
+!       enddo
+!       if (found_NaN) then
+!         rc = ESMF_RC_VAL_OUTOFRANGE
+!         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+!       endif
+
       ! integrate bottom upward fluxes
       ! todo: this does not work with the link coupler, yet. the bfl(:)%p pointers
       !       have to be updated from importState here in Run
@@ -1797,10 +1868,43 @@ module fabm_pelagic_component
       endif
 
       !where (pel%layer_height(RANGE2D,1) > 0)
-        do n=1,pel%nvar
-          pel%conc(RANGE2D,1,n) = pel%conc(RANGE2D,1,n) + bfl(n)%p(RANGE2D)*dt/pel%layer_height(RANGE2D,1)
-        end do
+      do n=1,pel%nvar
+        pel%conc(RANGE2D,1,n) = pel%conc(RANGE2D,1,n) + bfl(n)%p(RANGE2D)*dt/pel%layer_height(RANGE2D,1)
+      end do
       !endwhere
+
+      !check for NaN
+      call check_NaN(pel,rc)
+      if (rc == ESMF_RC_VAL_OUTOFRANGE ) then
+        write(message,'(A)')  '  NaN detected applying _bottom_flux'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+!       !check for NaN
+!       if (any (pel%conc(RANGE2D,1,n) /= pel%conc(RANGE2D,1,n)) ) then
+!         varname = trim(pel%export_states(n)%standard_name)
+!         write(message,'(A)')  '  NaN detected applying '//trim(varname)//'_bottom_flux'
+!         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+! #ifdef DEBUG_NAN
+!         do i=1,pel%inum
+!           do j=1,pel%jnum
+!             k=1
+!             if ( pel%mask(i,j,k) ) cycle
+!             if ( pel%conc(i,j,k,n) /= pel%conc(i,j,k,n) ) then
+!               write(message,'(A,3i4)')  '  NaN detected at indices (i,j,k) ',i,j,k
+!               !write(message,'(A,3i4)')  '  NaN detected applying '//trim(varname)//'_bottom_flux',i,j
+!               call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+!               exit
+!             endif
+!           enddo
+!         enddo
+! #endif
+!         rc = ESMF_RC_VAL_OUTOFRANGE
+!         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+!         !return
+!       endif
+
 
       !> vertically homogeneous boundary conditions
       !>@todo vertically resolved boundary conditions need regridding
@@ -1833,10 +1937,50 @@ module fabm_pelagic_component
           !end where
           !end do
         end if
+
+        !check for NaN
+        call check_NaN(pel,rc)
+        if (rc == ESMF_RC_VAL_OUTOFRANGE ) then
+          write(message,'(A)')  '  NaN detected applying _boundary_value_hz'
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
+
+!         if (any (pel%conc(RANGE3D,n) /= pel%conc(RANGE3D,n)) ) then
+!           write(message,'(A)')  '  NaN detected applying '//trim(varname)//'_boundary_value_hz'
+!           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+! #ifdef DEBUG_NAN
+!           do i=1,pel%inum
+!             do j=1,pel%jnum
+!               do k=1,pel%knum
+!                 if ( pel%mask(i,j,k) ) cycle
+!                 if ( pel%conc(i,j,k,n) /= pel%conc(i,j,k,n) ) then
+!                   write(message,'(A,3i4)')  '  NaN detected at indices (i,j,k) ',i,j,k
+!                   !write(message,'(A,3i4)')  '  NaN detected applying '//trim(varname)//'_boundary_value_hz',i,j
+!                   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+!                   exit
+!                 endif
+!               enddo
+!             enddo
+!           enddo
+! #endif
+!           rc = ESMF_RC_VAL_OUTOFRANGE
+!           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+!           !return
+!         endif
+
       end do
       end if
 
       call integrate_flux_in_water(gridComp, pel, importState)
+
+      !check for NaN
+      call check_NaN(pel,rc)
+      if (rc == ESMF_RC_VAL_OUTOFRANGE ) then
+        write(message,'(A)')  '  NaN detected applying _flux_in_water'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
       do i=1, nmatch
         write(message,'(A)') trim(name)//' add flux field '
@@ -1966,6 +2110,8 @@ module fabm_pelagic_component
   !> Integrate for all prognostic variables a local source term (specified
   !> by postfix "flux_in_water" and do dilution with volume flux if requested.
   !> Both grid-cell and column fluxes are considered.)
+#undef  ESMF_METHOD
+#define ESMF_METHOD "integrate_flux_in_water"
   subroutine integrate_flux_in_water(gridComp, pel, importState, rc)
 
     type(ESMF_GridComp), intent(in)               :: gridComp
@@ -2253,10 +2399,13 @@ module fabm_pelagic_component
           !end do
         end if
       end do
+
     enddo
 
   end subroutine integrate_flux_in_water
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "set_hackrange"
   subroutine set_hackrange(field, valid_max, valid_min, rc)
 
     type(ESMF_Field), intent(inout)              :: field
@@ -2281,4 +2430,53 @@ module fabm_pelagic_component
 
   end subroutine set_hackrange
 
+#undef ESMF_METHOD
+#define ESMF_METHOD "check_NaN"
+  subroutine check_NaN(pel,rc)
+    class(type_mossco_fabm_pelagic) :: pel
+    integer, intent(out)            :: rc
+    character(len=ESMF_MAXSTR)      :: message, varname
+    integer                         :: i, j, k, n
+    logical                         :: found_NaN, list_indices, list_varnames
+
+    found_NaN = .false.
+    list_indices = .false.
+    list_varnames = .true.
+
+    !spacial loop (How about halo zones?)
+    do i=1,pel%inum
+      do j=1,pel%jnum
+        do k=1,pel%knum
+          if ( pel%mask(i,j,k) ) cycle
+          if ( any(pel%conc(i,j,k,:) /= pel%conc(i,j,k,:)) ) then
+#ifdef DEBUG_NAN
+            write(message,'(A,3i4)')  '  NaN detected at indices (i,j,k) ',i,j,k
+            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+#endif
+            do n=1,pel%nvar
+              if ( pel%conc(i,j,k,n) /= pel%conc(i,j,k,n) ) then
+                found_NaN = .true.
+#ifdef DEBUG_NAN
+                varname = trim(pel%export_states(n)%standard_name)
+                write(message,'(A)')  '  NaN detected for '//trim(varname)
+                call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+                if (.not. list_varnames)  exit ! n-loop
+#else
+                rc = ESMF_RC_VAL_OUTOFRANGE
+                return
+#endif
+              endif
+            enddo
+            exit ! k-loop
+          endif
+        enddo
+      enddo
+    enddo
+    if (found_NaN) then
+      rc = ESMF_RC_VAL_OUTOFRANGE
+    endif
+
+  end subroutine check_NaN
+
+#undef  ESMF_METHOD
 end module fabm_pelagic_component
