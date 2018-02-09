@@ -400,15 +400,17 @@ module netcdf_input_component
     ! For multiprocessor applications, try to read cpu-specific input first, default
     ! back to overall file
     if (petCount>0) then
-      isPresent = .false.
-      do i=1,4
-        if (isPresent) cycle
-        !write(form,'(''(A,i'',i1,''.'',i1,'',A)'')') i,i
-        write(form,'(A)')  '(A,'//trim(intformat(int(10**i,kind=8)))//',A)'
-        write(petFileName,trim(form)) filename(1:len_trim(filename)-2),localPet,'.nc'
-        inquire(file=trim(petFileName), exist=isPresent)
-        if (isPresent) fileName=trim(petFileName)
-      enddo
+      if (petCount < 10) then
+        write(petFileName,'(A,I1,A)') filename(1:len_trim(filename)-2),localPet,'.nc'
+      elseif (petCount < 100) then
+        write(petFileName,'(A,I2.2,A)') filename(1:len_trim(filename)-2),localPet,'.nc'
+      elseif (petCount < 1000) then
+        write(petFileName,'(A,I3.3,A)') filename(1:len_trim(filename)-2),localPet,'.nc'
+      elseif (petCount < 10000) then
+        write(petFileName,'(A,I4.4,A)') filename(1:len_trim(filename)-2),localPet,'.nc'
+      endif
+      inquire(file=trim(petFileName), exist=isPresent)
+      if (isPresent) fileName=trim(petFileName)
     endif
 
     call ESMF_AttributeSet(gridComp, 'filename', trim(fileName), rc=localrc)
