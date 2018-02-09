@@ -24,6 +24,7 @@
 
 #define RANGE3D 1:pf%inum,1:pf%jnum,1:pf%knum
 #define RANGE2D 1:pf%inum,1:pf%jnum
+
   use solver_library
   use mossco_strings
   use fabm
@@ -762,32 +763,44 @@
 
      class(type_mossco_fabm_pelagic)     :: pf
      integer  :: i,j,k
-     real(rk) :: bioext(1:pf%inum,1:pf%jnum,1:pf%knum),localext
+     real(rk) :: bioext(1:pf%knum)
+     real(rk) :: localpar,localext
 
-     bioext = 0.0_rk
 
      do i=1,pf%inum
        do j=1,pf%jnum
-         do k=pf%knum,2,-1
-           if (.not.pf%mask(i,j,k)) then
-             call fabm_get_light_extinction(pf%model,i,j,k,localext)
-
-             ! Add the extinction of the first half of the grid box.
-             bioext(i,j,k) = bioext(i,j,k) + &
-               (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,k)
-
-             ! Add the extinction of the second half of the grid box.
-             bioext(i,j,k-1) = bioext(i,j,k) + &
-               (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,k)
-           end if
-         end do
-         ! Add the extinction of the upper half of the last layer
+         localpar = pf%I_0(i,j) * (1.0d0-pf%albedo(i,j))
+         bioext = 0.0_rk
          if (.not.pf%mask(i,j,1)) then
+           pf%par(i,j,:) = localpar
+         else
+           do k=pf%knum,2,-1
+             if (.not.pf%mask(i,j,k)) then
+               call fabm_get_light_extinction(pf%model,i,j,k,localext)
+
+               ! Add the extinction of the first half of the grid box.
+               bioext(k) = bioext(k) + (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,k)
+
+               ! Add the extinction of the second half of the grid box.
+               bioext(k-1) = bioext(k) + (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,k)
+             end if
+           end do
+           ! Add the extinction of the upper half of the last layer
            call fabm_get_light_extinction(pf%model,i,j,1,localext)
-           bioext(i,j,1) = bioext(i,j,1) + &
-             (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,1)
-         end if
-         pf%par(i,j,:) = pf%I_0(i,j) * (1.0d0-pf%albedo(i,j)) * exp(-bioext(i,j,:))
+           bioext(1) = bioext(1) + (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,1)
+           pf%par(i,j,:) = localpar * exp(-bioext(:))
+if ( any(bioext(:) /= bioext(:)) ) write(0,*) 'ERROR: fabm_pelagic_driver#800 bioext = ',i,j,bioext(:)
+         endif
+       end do
+     end do
+
+     do i=1,pf%inum
+       do j=1,pf%jnum
+!         if (.not.pf%mask(i,j,1)) then
+if ( pf%I_0(i,j) /= pf%I_0(i,j) ) write(0,*) 'ERROR: fabm_pelagic_driver#800 pf%I_0 = ',i,j,pf%I_0(i,j)
+if ( pf%albedo(i,j) /= pf%albedo(i,j) ) write(0,*) 'ERROR: fabm_pelagic_driver#809 pf%albedo = ',i,j,pf%albedo(i,j)
+if ( any(pf%par(i,j,:) /= pf%par(i,j,:)) ) write(0,*) 'ERROR: fabm_pelagic_driver#810 pf%par = ',i,j,pf%par(i,j,:)
+!         end if
        end do
      end do
 
