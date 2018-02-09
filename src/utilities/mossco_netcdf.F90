@@ -17,6 +17,7 @@
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "mossco_netcdf.F90"
 #define DEBUG_NAN
+#define DEBUG_INF
 
 #define RANGE1D lbnd(1):ubnd(1)
 #define RANGE2D RANGE1D,lbnd(2):ubnd(2)
@@ -432,6 +433,33 @@ module mossco_netcdf
         if (checkInf_) then
           call self%close()
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+#ifdef DEBUG_INF
+          if (associated(gridmask3)) then
+            do i=lbnd(1),ubnd(1)
+              do j=lbnd(2),ubnd(2)
+                do k=lbnd(3),ubnd(3)
+                  if (gridmask3(grid3lbnd(1)-lbnd(1)+i,grid3lbnd(2)-lbnd(2)+j,grid3lbnd(3)-lbnd(3)+k) .le. 0) cycle
+                  if (any( abs(ncarray4(i,j,k,lbnd(4):ubnd(4))) > representableValue )) then
+                    write(message,'(A,3i4)')  '  INF detected in field ',i,j,k
+                    call MOSSCO_FieldString(field, message, rc=localrc)
+                    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+                  endif
+                enddo
+              enddo
+            enddo
+          elseif (associated(gridmask2)) then
+            do i=lbnd(1),ubnd(1)
+              do j=lbnd(2),ubnd(2)
+                if (gridmask2(grid2lbnd(1)-lbnd(1)+i,grid2lbnd(2)-lbnd(2)+j) .le. 0) cycle
+                if (any( abs(ncarray4(i,j,lbnd(3):ubnd(3),lbnd(4):ubnd(4))) > representableValue )) then
+                  write(message,'(A,3i4)')  '  INF detected in field ',i,j
+                  call MOSSCO_FieldString(field, message, rc=localrc)
+                  call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+                endif
+              enddo
+            enddo
+          end if
+#endif
           if (present(rc)) rc = ESMF_RC_VAL_OUTOFRANGE
           return
         endif
@@ -536,6 +564,35 @@ module mossco_netcdf
         if (checkInf_) then
           call self%close()
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+#ifdef DEBUG_INF
+          if (associated(gridmask3)) then
+            do i=lbnd(1),ubnd(1)
+              do j=lbnd(2),ubnd(2)
+                do k=lbnd(3),ubnd(3)
+                  if (gridmask3(grid3lbnd(1)-lbnd(1)+i,grid3lbnd(2)-lbnd(2)+j,grid3lbnd(3)-lbnd(3)+k) .le. 0) cycle
+                  if ( ncarray3(i,j,k) > representableValue ) then
+                    write(message,'(A,3i4)')  '  INF detected in field ',i,j,k
+                    call MOSSCO_FieldString(field, message, rc=localrc)
+                    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+                    exit
+                  endif
+                enddo
+              enddo
+            enddo
+          elseif (associated(gridmask2)) then
+            do i=lbnd(1),ubnd(1)
+              do j=lbnd(2),ubnd(2)
+                if (gridmask2(grid2lbnd(1)-lbnd(1)+i,grid2lbnd(2)-lbnd(2)+j) .le. 0) cycle
+                if (any( abs(ncarray3(i,j,lbnd(3):ubnd(3))) > representableValue )) then
+                  write(message,'(A,3i4)')  '  INF detected in field ',i,j
+                  call MOSSCO_FieldString(field, message, rc=localrc)
+                  call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+                  exit
+                endif
+              enddo
+            enddo
+          end if
+#endif
           if (present(rc)) rc = ESMF_RC_VAL_OUTOFRANGE
           return
         endif
@@ -616,6 +673,20 @@ module mossco_netcdf
         if (checkInf_) then
           call self%close()
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+#ifdef DEBUG_INF
+        if (associated(gridmask2)) then
+          do i=lbnd(1),ubnd(1)
+            do j=lbnd(2),ubnd(2)
+              if (gridmask2(grid2lbnd(1)-lbnd(1)+i,grid2lbnd(2)-lbnd(2)+j) .le. 0) cycle
+              if ( abs(ncarray2(i,j)) > representableValue ) then
+                write(message,'(A,3i4)')  '  INF detected in field ',i,j
+                call MOSSCO_FieldString(field, message, rc=localrc)
+                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+              endif
+            enddo
+          enddo
+        end if
+#endif
           if (present(rc)) rc = ESMF_RC_VAL_OUTOFRANGE
           return
         endif
@@ -653,9 +724,12 @@ module mossco_netcdf
 
       if (checkNaN_ .and. any(ncarray1(RANGE1D) /= ncarray1(RANGE1D))) then
         call self%close()
+#ifdef DEBUG_NAN
+#else
         write(message,'(A)')  '  NaN detected in field '
         call MOSSCO_FieldString(field, message, rc=localrc)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+#endif
         if (present(rc)) rc = ESMF_RC_VAL_OUTOFRANGE
         return
       endif
@@ -671,6 +745,8 @@ module mossco_netcdf
         if (checkInf_) then
           call self%close()
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+#ifdef DEBUG_INF
+#endif
           if (present(rc)) rc = ESMF_RC_VAL_OUTOFRANGE
           return
         endif
