@@ -809,7 +809,7 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     integer(ESMF_KIND_I4), intent(out), optional       :: rc
 
     integer(ESMF_KIND_I4)               :: localDeCount, localrc, rc_
-    character(ESMF_MAXSTR)              :: fieldName
+    character(ESMF_MAXSTR)              :: fieldName, message
     logical                             :: checkNaN_ = .true. , checkInf_ = .true.
 
     rc_ = ESMF_SUCCESS
@@ -830,6 +830,11 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
 
     call nc%put_variable(field, name=trim(fieldName), &
       checkNaN=checkNaN_, checkInf=checkInf_, rc=localrc)
+    if (localrc /= ESMF_SUCCESS) then
+      write(message,'(A)') '-- could not write'
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+    endif
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   end subroutine nc_field_write
