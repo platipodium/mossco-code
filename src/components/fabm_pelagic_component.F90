@@ -2185,13 +2185,11 @@ module fabm_pelagic_component
           * pel%cell_column_fraction(RANGE2D,k)
 
         if (any(abs(pel%volume_change(RANGE2D,k)) &
-          / (pel%layer_height(RANGE2D,k) * pel%column_area(RANGE2D)) > 0.5d0)) then
+          / (pel%layer_height(RANGE2D,k) * pel%column_area(RANGE2D)) > 1.0d0)) then
 
-          write(message,'(A)') trim(name)//' CFL for volume flux exceeded'
+          write(message,'(A)') trim(name)//' detected volume flux greater volume'
           write(0,*) k,' pel%volume_flux=',pel%volume_flux(RANGE2D)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-          if (present(rc)) rc = ESMF_RC_ARG_BAD
-          return
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
         endif
       enddo
     endif
