@@ -3589,7 +3589,11 @@ module mossco_netcdf
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_find_time_index"
-  subroutine mossco_netcdf_find_time_index(self, currTime, itime, kwe, jtime, weight, rc)
+!> given an ESMF_Time, the routine finds the two indices in the
+!> time coordinate variable that bound the input time.  It can
+!> also return the weight of the two bounding time points
+  subroutine mossco_netcdf_find_time_index(self, currTime, itime, kwe, jtime, &
+    weight, verbose, rc)
 
     implicit none
     class(type_mossco_netcdf)                    :: self
@@ -3599,6 +3603,7 @@ module mossco_netcdf
     integer(ESMF_KIND_I4), intent(out), optional :: jtime
     real(ESMF_KIND_R8), intent(out), optional    :: weight
     integer(ESMF_KIND_I4), intent(out), optional :: rc
+    logical, intent(in), optional                :: verbose
 
     type(ESMF_Time)                              :: refTime
     type(ESMF_TimeInterval)                      :: timeInterval
@@ -3608,35 +3613,42 @@ module mossco_netcdf
     real(ESMF_KIND_R8)                           :: weight_
     integer(ESMF_KIND_I8)                        :: ticks
     character(ESMF_MAXSTR)                       :: timeUnit, message, refTimeISOString
-    logical                                      :: isShort = .false.
+    logical                                      :: isShort = .false., verbose_
 
     rc_ = ESMF_SUCCESS
+    verbose_ = .true.
     if (present(kwe)) rc_ = rc_
     if (present(rc)) rc = rc_
+    if (present(verbose)) verbose_ = verbose
 
     itime = 1
     jtime_ = 1
     weight_ = 0.0
+    if (present(weight)) weight = weight_
+    if (present(jtime))  jtime = jtime_
 
     localrc = nf90_inq_varid(self%ncid, 'time', varid)
-    if (localrc /= NF90_NOERR) then
-      call ESMF_LogWrite('  no time variable found, choosing default time index 1', ESMF_LOGMSG_INFO)
+    if (localrc /= NF90_NOERR .and. verbose_) then
+      write(message,'(A)') '-- no time variable in '//trim(self%name)//', choosing default time index 1'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     else
       call self%reftimeString(refTimeISOString, localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       if (len_trim(refTimeISOString) > 0) then
         call MOSSCO_TimeSet(refTime, refTimeISOString, localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       else
+        !> Create a copy of currTime
         reftime=currTime
+        write(message,'(A)') '-- no reference time in '//trim(self%name)//'::time'
+        if (verbose_) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
       endif
 
       localrc = nf90_get_att(self%ncid, varid, 'units', timeUnit)
       if (localrc /= NF90_NOERR) then
-        call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', no time unit', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        write(message,'(A)') '-- '//trim(nf90_strerror(localrc))//', no time unit in '//trim(self%name)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         if (present(rc)) rc = ESMF_RC_NOT_FOUND
         return
       endif
@@ -3652,27 +3664,28 @@ module mossco_netcdf
 
       timeInterval = currTime - refTime
 
-      !call ESMF_TimePrint(refTime, rc=localrc)
-      !call ESMF_TimePrint(currTime, rc=localrc)
-      !call ESMF_TimeIntervalPrint(timeInterval, rc=localrc)
-
       isShort = .false.
 
       if (timeUnit(1:6) == 'second') then
         call ESMF_TimeIntervalGet(timeInterval, startTime=refTime, s_i8=ticks, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       elseif (timeUnit(1:6) == 'minute') then
         isShort = .true.
         call ESMF_TimeIntervalGet(timeInterval, startTime=refTime, m=ticks4, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       elseif (timeUnit(1:4) == 'hour') then
         isShort = .true.
         call ESMF_TimeIntervalGet(timeInterval, startTime=refTime, h=ticks4, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       elseif (timeUnit(1:3) == 'day') then
         call ESMF_TimeIntervalGet(timeInterval, startTime=refTime, d_i8=ticks, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       elseif (timeUnit(1:5) == 'month') then
         !> @todo this is a workaround as long as ESMF does not implement a
         !> time difference in TimeIntervalSetDur().  Count the days and
         !> get the month of a Gregorian-calendar average year
         call ESMF_TimeIntervalGet(currTime - refTime, d_i8=ticks, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
         ticks = int(floor(real(ticks) * 12.0 / 365.2425), ESMF_KIND_I8)
 
         !call ESMF_TimeIntervalPrint(timeInterval)
@@ -3680,20 +3693,21 @@ module mossco_netcdf
 
       elseif (timeUnit(1:4) == 'year') then
         call ESMF_TimeIntervalGet(currTime - refTime, startTime=refTime, yy_i8=ticks, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       else
-        call ESMF_LogWrite('  time unit '//trim(timeUnit)//' not implemented', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        write(message, '(A)') '-- time unit '//trim(timeUnit)//' not implemented from '//trim(self%name)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         if (present(rc)) rc = ESMF_RC_NOT_IMPL
         return
       endif
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (isShort) ticks = ticks4
 
       ntime = self%dimlens(self%timeDimId)
       if (ntime < 1) then
         !> @todo: this can actually be possible (if time is unlimited and no time-dependent data)
-        call ESMF_LogWrite('  time dimension cannot have length zero', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        write(message, '(A)') '-- time dimension cannot have length zero in '//trim(self%name)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         if (present(rc)) rc = ESMF_RC_NOT_IMPL
         return
       endif
@@ -3701,7 +3715,7 @@ module mossco_netcdf
       if (.not.allocated(farray)) then
         allocate(farray(ntime), stat=localrc)
         if (localrc /= 0) then
-          write(message,'(A)') '    could not allocate memory for farray'
+          write(message,'(A)') '-- could not allocate memory for farray time from '//trim(self%name)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           if (present(rc)) rc = ESMF_RC_MEM
           return
@@ -3710,7 +3724,8 @@ module mossco_netcdf
 
       localrc = nf90_get_var(self%ncid, varid, farray)
       if (localrc /= NF90_NOERR) then
-        call ESMF_LogWrite('  '//trim(nf90_strerror(localrc)), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        write(message,'(A)') '-- could not read variable time from '//trim(self%name)
+        call ESMF_LogWrite(trim(message)//trim(nf90_strerror(localrc)), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         if (present(rc)) rc = ESMF_RC_NOT_FOUND
         return
       endif
@@ -3731,13 +3746,9 @@ module mossco_netcdf
         jtime_ = itime + 1
       endif
 
-      if (jtime_ > ntime) then
-        jtime_ = ntime
-      elseif (jtime_ == itime) then
-        call ESMF_LogWrite('-- unclear condition, check your file', ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
-      elseif (farray(jtime_) <= farray(itime)) then
-        call ESMF_LogWrite('-- unclear condition, check your file', ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
-      else
+      if (jtime_ > ntime) jtime_ = ntime
+
+      if (farray(jtime_) > farray(itime)) then
         weight_ = (ticks*1.0D0 - farray(itime)) / (farray(jtime_) - farray(itime))
       endif
 
