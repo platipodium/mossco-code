@@ -22,6 +22,8 @@ if __name__ == '__main__':
 
   #basename = os.path.join(os.environ['MOSSCO_SETUPDIR'],'sns','Topo','topo.nc') 
   basename = os.path.join(os.environ['MOSSCO_SETUPDIR'],'NSBS6nm','Topo','NSBS6nm.v01.nc')
+  #basename = os.path.join(os.environ['MOSSCO_SETUPDIR'],'regrid','temp.nc')
+
 
   nc = netCDF4.Dataset(basename,'r')
   ncv = nc.variables
