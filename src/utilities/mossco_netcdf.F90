@@ -1361,12 +1361,10 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_TimeIntervalSet(timeInterval, startTime=refTime, s_r8=seconds, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       call ESMF_TimeGet(refTime + timeInterval, dayOfYear=doy, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       ncStatus = nf90_put_var(self%ncid, varid, doy, start=(/dimlen+1/))
       if (ncStatus /= NF90_NOERR) then
@@ -1393,8 +1391,7 @@ module mossco_netcdf
       endif
 
       call ESMF_TimeGet(refTime + timeInterval, yy=yy, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
        ncStatus = nf90_put_var(self%ncid, varid, yy, start=(/dimlen+1/))
       if (ncStatus /= NF90_NOERR) then
@@ -1423,8 +1420,7 @@ module mossco_netcdf
       endif
 
       call ESMF_TimeGet(refTime + timeInterval, timeStringISOFrac=timeString, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       ncStatus = nf90_put_var(self%ncid, varid, timeString(1:19), start=(/1,dimlen+1/))
       if (ncStatus /= NF90_NOERR) then
@@ -1451,16 +1447,13 @@ module mossco_netcdf
       endif
 
       call ESMF_TimeSet(wallTime, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       call ESMF_TimeSyncToRealTime(wallTime, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       call ESMF_TimeGet(wallTime, timeStringISOFrac=timeString, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       ncStatus = nf90_put_var(self%ncid, varid, timeString(1:19), start=(/1,dimlen+1/))
       if (ncStatus /= NF90_NOERR) then
@@ -2491,8 +2484,8 @@ module mossco_netcdf
 
       write(varName,'(A)') trim(geomName)//'_'//trim(coordNames(i))
       if (self%variable_present(varName)) then
-        write(message,'(A)') 'A variable with this name already exists'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        !write(message,'(A)') 'A variable with this name already exists'
+        !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         cycle
       endif
 
@@ -2660,8 +2653,8 @@ module mossco_netcdf
 
       write(varName,'(A)') trim(geomName)//'_'//trim(axisNameList(i))
       if (self%variable_present(varName)) then
-        write(message,'(A)') 'A variable with the name "'//trim(varName)//'" already exists'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        !write(message,'(A)') 'A variable with the name "'//trim(varName)//'" already exists'
+        !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         cycle
       endif
 
@@ -2722,8 +2715,8 @@ module mossco_netcdf
 
       write(varName,'(A)') trim(geomName)//'_'//trim(coordNames(i))
       if (self%variable_present(varName)) then
-        write(message,'(A)') 'A variable with the name "'//trim(varName)//'" already exists'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        !write(message,'(A)') 'A variable with the name "'//trim(varName)//'" already exists'
+        !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         cycle
       endif
 
@@ -3982,7 +3975,7 @@ module mossco_netcdf
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     type(ESMF_CalKind_Flag)              :: calKind
-    integer(ESMF_KIND_I4)                :: localrc
+    integer(ESMF_KIND_I4)                :: localrc, rc_
 
     !> @todo make this an optional argument
     calKind = ESMF_CALKIND_GREGORIAN
@@ -3990,16 +3983,22 @@ module mossco_netcdf
     select case(trim(unit))
     case ('seconds')
       call ESMF_TimeIntervalSet(timeInterval, calKindFlag=calKind, s_r8=value, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     case ('minutes')
       call ESMF_TimeIntervalSet(timeInterval, calKindFlag=calKind, m=int(value, kind=ESMF_KIND_I4), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     case ('hours')
       call ESMF_TimeIntervalSet(timeInterval, calKindFlag=calKind, h_r8=value, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     case ('days')
       call ESMF_TimeIntervalSet(timeInterval, calKindFlag=calKind, d_r8=value, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     case ('months')
       call ESMF_TimeIntervalSet(timeInterval, calKindFlag=calKind, mm=int(value, kind=ESMF_KIND_I4), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     case ('years')
       call ESMF_TimeIntervalSet(timeInterval, calKindFlag=calKind, yy=int(value), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     case default
       call ESMF_LogWrite('  time unit "'//trim(unit)//'" not implemented', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
