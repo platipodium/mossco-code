@@ -51,7 +51,7 @@ end type fabm_sed_grid
 
 type :: fabm_sed_bulk_var
    real(rk),dimension(:,:,:),pointer :: data=>null()
-   character(len=256)                :: name
+   character(len=256)                :: name=''
    real(rk)                          :: factor=1.0d0
 end type
 
