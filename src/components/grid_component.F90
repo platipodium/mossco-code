@@ -170,6 +170,7 @@ module grid_component
       name=name, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+    gridFileName = trim(name)//'.nc'
     configfilename=trim(name)//'.cfg'
     inquire(file=trim(configfilename), exist=fileIsPresent)
 
@@ -197,7 +198,7 @@ module grid_component
       !> the file to be present, and return if not found
       inquire(file=trim(gridFileName), exist=fileIsPresent)
 
-      if (labelIsPresent .and..not. fileIsPresent) then
+      if (labelIsPresent .and. .not. fileIsPresent) then
         write(message, '(A)') trim(name)//' cannot find '//trim(gridFileName)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         rc = ESMF_RC_NOT_FOUND
@@ -330,6 +331,7 @@ module grid_component
       call ESMF_AttributeSet(gridComp, 'file_format', trim(fileFormat), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+      !> @todo add halo in grid creation
       if (trim(fileFormat) == 'SCRIP') then
         grid = ESMF_GridCreate(filename=trim(gridFileName), fileFormat=ESMF_FILEFORMAT_SCRIP, &
           regDecomp=decompositionList, isSphere=.false., rc=localrc)
