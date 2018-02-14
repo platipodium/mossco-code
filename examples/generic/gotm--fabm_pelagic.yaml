@@ -1,0 +1,26 @@
+dependencies:
+  - fabm_pelagic:
+    - component: gotm
+      grid: temperature_in_water
+
+instances:
+  - mossco_jf : netcdf
+  
+coupling:
+  - components:
+     - gotm
+     - fabm_pelagic
+    interval: 1 h
+  - components:
+     - fabm_pelagic
+     - transport_connector
+     - gotm
+    interval: none
+  - components:
+     - gotm
+     - mossco_jf
+    interval: 1 d
+  - components:
+     - fabm_pelagic
+     - mossco_jf
+    interval: 1 d
