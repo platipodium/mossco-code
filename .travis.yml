@@ -18,14 +18,15 @@ addons:
     - netCDF4
 
   apt:
-    - gfortran
-    - clang
-    - libopenmpi-dev
-    - libnetcdff5
-    - libnetcdf-dev
-    - libnetcdfc7
-    - python-netcdf
-    - doxygen
+    packages:
+      - gfortran
+      - clang
+      - libopenmpi-dev
+      - libnetcdff5
+      - libnetcdf-dev
+      - libnetcdfc7
+      - python-netcdf
+      - doxygen
 
 os:
   - linux
