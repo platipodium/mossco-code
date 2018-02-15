@@ -28,4 +28,4 @@
   - the General Estuarine Transport Model (<http://www.getm.eu>),
   - the SandMudBedModule from the OpenEarthTools (<http://www.openearth.nl>).
 
-MOSSCO is mainly developed on Ubuntu Linux workstations.
+MOSSCO is mainly developed on Ubuntu Linux workstations and macOS laptops using the MacPorts distribution.
