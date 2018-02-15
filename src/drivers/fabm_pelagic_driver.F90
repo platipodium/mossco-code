@@ -775,7 +775,7 @@
        do j=1,pf%jnum
          localpar = pf%I_0(i,j) * (1.0d0-pf%albedo(i,j))
          bioext = 0.0_rk
-         if (.not.pf%mask(i,j,1)) then
+         if (pf%mask(i,j,1)) then
            pf%par(i,j,:) = localpar
          else
            do k=pf%knum,2,-1
