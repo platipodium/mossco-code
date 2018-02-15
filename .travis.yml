@@ -27,6 +27,7 @@ addons:
       - libnetcdfc7
       - python-netcdf
       - doxygen
+      - libxerces-c-dev
 
 os:
   - linux
@@ -51,7 +52,7 @@ env:
     - ESMF_DIR=${HOME/opt/src/esmf}
 
 install:
-  - $MOSSCO_DIR/scripts/install/install_esmf_versions.sh
+  - bash ${MOSSCO_DIR}/scripts/installation/install_esmf_versions.sh
   - make external
   - make libfabm_external
   - make libgotm_external
