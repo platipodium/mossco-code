@@ -40,7 +40,6 @@ before_install:
   # - brew install json-fortran
   # - brew install doxygen
 
-
 notifications:
   email: true
 
@@ -56,7 +55,9 @@ install:
   - make external
   - make libfabm_external
   - make libgotm_external
+  - make libgetm_external
+  - make all
 
-deploy:
-  - mkdir -p ${HOME}/opt/bin
-  - ln -sf ${MOSSCO_DIR}/scripts/mossco.sh ${HOME}/opt/bin/mossco
+#deploy:
+#  - mkdir -p ${HOME}/opt/bin
+#  - ln -sf ${MOSSCO_DIR}/scripts/mossco.sh ${HOME}/opt/bin/mossco
