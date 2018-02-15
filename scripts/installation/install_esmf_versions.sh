@@ -45,13 +45,19 @@ for C in $COMMS ; do
     echo "Iterating for Compiler $G ============================================="
     ESMF_COMPILER=$G
 
-    ESMF_NETCDF=split
     ESMF_NETCDF_INCLUDE=$(bash nc-config --includedir)
     ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_INCLUDE%%include}lib
+
+    NCCONFIG=$(which nc-config)
+    if [[ "x$NCCONFIG" == "x" ]] ; then
+      ESMF_NETCDF_INCLUDE=/usr/include
+      ESMF_NETCDF_LIBPATH=/usr/lib
+    fi
 
     if [ $(hostname) = ocean-fe.fzg.local ]; then
       ESMF_NETCDF_INCLUDE=/opt/netcdf/3.6.2/${G}/include
       ESMF_NETCDF=standard
+      ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_INCLUDE%%include}lib
 
 #     elif [ $G = intel ]; then
 #       source /opt/intel/bin/ifortvars.sh intel64
@@ -61,11 +67,7 @@ for C in $COMMS ; do
 #       export PATH=$MPI_PATH/bin:$PATH
 #       NETCDF_PATH=/opt/intel/netcdf4
 #       ESMF_NETCDF_INCLUDE=${NETCDF_PATH}/include
-    else
-      ESMF_NETCDF_INCLUDE=$(bash nc-config --includedir)
     fi
-
-    ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_INCLUDE%%include}lib
 
 #    echo y  | module clear
 #    module load ${ESMF_COMPILER} || continue
