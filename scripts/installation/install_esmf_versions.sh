@@ -8,11 +8,11 @@ test -n ${COMMS} || COMMS="openmpi" #"openmpi" # openmpi" #"openmpi" #  mpiuni m
 
 test -n ${ESMF_DIR} || export ESMF_DIR = ${HOME}/devel/ESMF/esmf-code
 
-if [[ test -d ${ESMF_DIR} ]] ; then
+if test -d ${ESMF_DIR} ; then
   cd $ESMF_DIR && git pull origin master
 else
-  cd $ESMF_DIR/..
   git clone git://esmf.git.sourceforge.net/gitroot/esmf/esmf $ESMF_DIR
+  cd $ESMF_DIR
 fi
 
 test -n ${ESMF_INSTALL_PREFIX} || export ESMF_INSTALL_PREFIX=/opt/esmf
