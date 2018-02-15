@@ -1,33 +1,54 @@
-language: c # Fortran is not recognized, so use C here
+# This travis configuration file is part of MOSSCO
+#
+# @copyright (C) 2017, 2018 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
+#
+# MOSSCO is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 
+language: c # There is no Fortran support yet in travis, so we emulate it
 python:
   - 2.7
 
 dist: trusty
 sudo: false
+git:
+  depth: 3
+
+branches:
+  only: master
+  # @todo, add other branches once they are merged with master containing travis
 
 cache:
   - brew: true
   - pip: true
   - apt: true
+  - directories:
+    - ${MOSSCO_DIR}/../esmf-code
+    - ${MOSSCO_DIR}/../esmf
 
 addons:
   pip:
     - numpy
     - basemap
     - netCDF4
+    - pyyaml
 
+  # A list of trusty packages is provided at https://packages.ubuntu.com/trusty/allpackages?format=txt.gz
   apt:
     packages:
-      - gfortran
-      - clang
+      #- gfortran
+      #- clang # is provided by default
       - libopenmpi-dev
       - libnetcdff5
       - libnetcdf-dev
       - libnetcdfc7
-      - python-netcdf
-      - doxygen
-      - libxerces-c-dev
+      #- doxygen
+      #- libxerces-c-dev
+      #- libmpich-dev
+      #- mpich
 
 os:
   - linux
@@ -50,12 +71,18 @@ env:
     - MOSSCO_DIR=${TRAVIS_BUILD_DIR}
     - ESMF_DIR=${MOSSCO_DIR}/../esmf-code
     - ESMF_INSTALL_PREFIX=${MOSSCO_DIR}/../esmf
+    - NETCDF_VERSION=NETCDF4
+    - COMMS="openmpi"       # @todo make this a matrix with mpich
+    - COMPS="gfortranclang" # @todo make this a matrix with gfortran
+    - TAGS="ESMF_7_1_0_beta_snapshot_52"
+
 #  matrix:
 #    - make doc
 #    - make all
 
 install:
   - bash ${MOSSCO_DIR}/scripts/installation/install_esmf_versions.sh
+  - source ${HOME}/.esmf_Linux.gfortranclang.64.openmpi.ESMF_7_1_0_beta_snapshot_52
   - make external
   - make libfabm_external
   - make libgotm_external
