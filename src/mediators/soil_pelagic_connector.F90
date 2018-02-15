@@ -330,7 +330,7 @@ module soil_pelagic_connector
     call mossco_state_get(exportState,(/ &
       'detP_upward_flux_at_soil_surface                    ', &
       'Detritus_Phosphorus_detP_upward_flux_at_soil_surface'/), DETPflux, &
-      verbose=verbose, rc=rc)
+      verbose=verbose, rc=localrc)
 
     hasPhosphorous = .false.
     if (localrc == ESMF_SUCCESS) then
