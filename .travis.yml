@@ -48,8 +48,11 @@ env:
   global:
     - MOSSCO_FFLAGS="-g -Wall -fprofile-arcs -ftest-coverage -O0"
     - MOSSCO_DIR=${TRAVIS_BUILD_DIR}
-    - ESMF_INSTALL_PREFIX=${HOME/opt/esmf}
-    - ESMF_DIR=${HOME/opt/src/esmf}
+    - ESMF_DIR=${MOSSCO_DIR}/../esmf-code
+    - ESMF_INSTALL_PREFIX=${MOSSCO_DIR}/../esmf
+#  matrix:
+#    - make doc
+#    - make all
 
 install:
   - bash ${MOSSCO_DIR}/scripts/installation/install_esmf_versions.sh
