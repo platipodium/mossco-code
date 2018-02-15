@@ -3,8 +3,8 @@
 TAGS=ESMF_7_1_0_beta_snapshot_51
 export TAGS
 
-test -n ${COMPS} || COMPS="gfortranclang" #"gfortranclang" # gfortranclang" # gfortran intel pgi gfortranclang pgigcc intelgcc
-test -n ${COMMS} || COMMS="openmpi" #"openmpi" # openmpi" #"openmpi" #  mpiuni mpich2 intelmpi
+export COMPS="gfortranclang" #"gfortranclang" # gfortranclang" # gfortran intel pgi gfortranclang pgigcc intelgcc
+export COMMS="openmpi" #"openmpi" # openmpi" #"openmpi" #  mpiuni mpich2 intelmpi
 
 test -n ${ESMF_DIR} || export ESMF_DIR = ${HOME}/devel/ESMF/esmf-code
 
@@ -27,6 +27,8 @@ echo Using SED=${SED}
 echo Using ESMF_OS=${ESMF_OS}
 echo Using ESMF_INSTALL_PREFIX=${ESMF_INSTALL_PREFIX}
 echo Using ESMF_DIR=${ESMF_DIR}
+echo Installing for compilers ${COMMS}
+echo Installing for communicators ${COMPS}
 
 #echo y        | module clear
 
