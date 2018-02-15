@@ -9,16 +9,16 @@ test -n ${COMMS} || COMMS="openmpi" #"openmpi" # openmpi" #"openmpi" #  mpiuni m
 test -n ${ESMF_DIR} || export ESMF_DIR = ${HOME}/devel/ESMF/esmf-code
 
 if test -d ${ESMF_DIR} ; then
-  cd $ESMF_DIR && git pull origin master
+  echo "Using existing ESMF installation in $ESMF_DIR"
 else
+  echo "Using new ESMF installation in $ESMF_DIR"
   git clone git://esmf.git.sourceforge.net/gitroot/esmf/esmf $ESMF_DIR
-  cd $ESMF_DIR
 fi
 
 test -n ${ESMF_INSTALL_PREFIX} || export ESMF_INSTALL_PREFIX=/opt/esmf
 mkdir -p ${ESMF_INSTALL_PREFIX}/etc
 
-export ESMF_OS=$(${ESMF_DIR}/scripts/esmf_os)
+export ESMF_OS=$(bash ${ESMF_DIR}/scripts/esmf_os)
 export ESMF_ABI=64
 
 SED=sed
@@ -26,8 +26,11 @@ SED=sed
 echo Using SED=${SED}
 echo Using ESMF_OS=${ESMF_OS}
 echo Using ESMF_INSTALL_PREFIX=${ESMF_INSTALL_PREFIX}
+echo Using ESMF_DIR=${ESMF_DIR}
 
 #echo y        | module clear
+
+cd ${ESMF_DIR}
 
 git stash && git stash drop
 git pull origin master
