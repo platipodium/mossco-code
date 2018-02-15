@@ -3,11 +3,13 @@ language: c # Fortran is not recognized, so use C here
 python:
   - 2.7
 
-sudo: true
+dist: trusty
+sudo: false
 
 cache:
-  brew: true
-  pip: true
+  - brew: true
+  - pip: true
+  - apt: true
 
 addons:
   pip:
@@ -15,17 +17,27 @@ addons:
     - basemap
     - netCDF4
 
-os:
-#  - linux
-  - osx
+  apt:
+    - gfortran
+    - clang
+    - libopenmpi-dev
+    - libnetcdff5
+    - libnetcdf-dev
+    - libnetcdfc7
+    - python-netcdf
+    - doxygen
 
-osx_image: xcode9.3beta
+os:
+  - linux
+#  - osx
+
+#osx_image: xcode9.3beta
 
 before_install:
-  - brew update
-  - brew install netcdf
-  - brew install json-fortran
-  - brew install doxygen
+  # - brew update
+  # - brew install netcdf
+  # - brew install json-fortran
+  # - brew install doxygen
 
 
 notifications:
@@ -35,16 +47,15 @@ env:
   global:
     - MOSSCO_FFLAGS="-g -Wall -fprofile-arcs -ftest-coverage -O0"
     - MOSSCO_DIR=${TRAVIS_BUILD_DIR}
-  matrix:
-      # CMake build with unit tests, no documentation, with coverage analysis
-      # No unicode so that coverage combined with the build script will cover unicode
-      # and non-unicode code paths
-    - make external
-    - make libfabm_external
-    - make libgotm_external
-    - >
-      make -j 4 all
+    - ESMF_INSTALL_PREFIX=${HOME/opt/esmf}
+    - ESMF_DIR=${HOME/opt/src/esmf}
 
 install:
+  - $MOSSCO_DIR/scripts/install/install_esmf_versions.sh
+  - make external
+  - make libfabm_external
+  - make libgotm_external
+
+deploy:
   - mkdir -p ${HOME}/opt/bin
   - ln -sf ${MOSSCO_DIR}/scripts/mossco.sh ${HOME}/opt/bin/mossco
