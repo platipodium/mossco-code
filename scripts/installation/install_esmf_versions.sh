@@ -46,7 +46,7 @@ for C in $COMMS ; do
     ESMF_COMPILER=$G
 
     ESMF_NETCDF=split
-    ESMF_NETCDF_INCLUDE=$(nc-config --includedir)
+    ESMF_NETCDF_INCLUDE=$(bash nc-config --includedir)
     ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_INCLUDE%%include}lib
 
     if [ $(hostname) = ocean-fe.fzg.local ]; then
@@ -62,7 +62,7 @@ for C in $COMMS ; do
 #       NETCDF_PATH=/opt/intel/netcdf4
 #       ESMF_NETCDF_INCLUDE=${NETCDF_PATH}/include
     else
-      ESMF_NETCDF_INCLUDE=$(nc-config --includedir)
+      ESMF_NETCDF_INCLUDE=$(bash nc-config --includedir)
     fi
 
     ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_INCLUDE%%include}lib
@@ -72,6 +72,18 @@ for C in $COMMS ; do
 #    module load openmpi_ib || continue
 #    module load netcdf/3.6.2 || continue
 #    module list
+
+    if test -d ${ESMF_NETCDF_INCLUDE} ; then
+      echo using netcdf include ${ESMF_NETCDF_INCLUDE}
+    else
+      continue
+    fi
+
+    if test -d ${ESMF_NETCDF_LIBPATH} ; then
+      echo using netcdf libdir ${ESMF_NETCDF_LIBPATH}
+    else
+      continue
+    fi
 
     for T in $TAGS; do
        echo "Iterating for Tag $T ============================================="
