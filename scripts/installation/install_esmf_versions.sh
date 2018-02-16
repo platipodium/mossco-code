@@ -31,7 +31,7 @@ fi
 test -n ${ESMF_INSTALL_PREFIX} || export ESMF_INSTALL_PREFIX=/opt/esmf
 mkdir -p ${ESMF_INSTALL_PREFIX}/etc
 
-export ESMF_OS=$(bash ${ESMF_DIR}/scripts/esmf_os)
+export ESMF_OS=$(uname -s)
 export ESMF_ABI=64
 
 SED=sed
