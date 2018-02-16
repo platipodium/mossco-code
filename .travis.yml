@@ -83,9 +83,10 @@ env:
 #    - make all
 
 install:
-  - rm -rf ${ESMF_DIR}
-  - bash ${MOSSCO_DIR}/scripts/installation/install_esmf_versions.sh
-  - source ${HOME}/.esmf_Linux.gfortranclang.64.openmpi.ESMF_7_1_0_beta_snapshot_52
+#  - rm -rf ${ESMF_DIR}
+  - test -d ${ESMF_DIR} || bash ${MOSSCO_DIR}/scripts/installation/install_esmf_versions.sh
+#  - source ${HOME}/.esmf_Linux.gfortranclang.64.openmpi.ESMF_7_1_0_beta_snapshot_52
+  - export ESMFMKFILE=${ESMF_INSTALL_PREFIX}/lib/libg/Linux.gfortranclang.64.openmpi.ESMF_7_1_0_beta_snapshot_52/esmf.mk
   - make external
   - make libfabm_external
   - make libgotm_external
