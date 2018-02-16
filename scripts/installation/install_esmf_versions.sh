@@ -25,7 +25,11 @@ if test -d ${ESMF_DIR} ; then
   echo "Using existing ESMF installation in $ESMF_DIR"
 else
   echo "Using new ESMF installation in $ESMF_DIR"
+<<<<<<< HEAD
   git clone --depth=1 git://esmf.git.sourceforge.net/gitroot/esmf/esmf ${ESMF_DIR}
+=======
+  git clone git://esmf.git.sourceforge.net/gitroot/esmf/esmf $ESMF_DIR
+>>>>>>> eb7a73091d2ed7c55d26d2e6a91c3a60d0e50bcf
 fi
 
 test -n ${ESMF_INSTALL_PREFIX} || export ESMF_INSTALL_PREFIX=/opt/esmf
