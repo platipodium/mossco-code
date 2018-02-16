@@ -25,11 +25,7 @@ if test -d ${ESMF_DIR} ; then
   echo "Using existing ESMF installation in $ESMF_DIR"
 else
   echo "Using new ESMF installation in $ESMF_DIR"
-<<<<<<< HEAD
   git clone --depth=1 git://esmf.git.sourceforge.net/gitroot/esmf/esmf ${ESMF_DIR}
-=======
-  git clone git://esmf.git.sourceforge.net/gitroot/esmf/esmf $ESMF_DIR
->>>>>>> eb7a73091d2ed7c55d26d2e6a91c3a60d0e50bcf
 fi
 
 test -n ${ESMF_INSTALL_PREFIX} || export ESMF_INSTALL_PREFIX=/opt/esmf
@@ -55,11 +51,11 @@ git stash && git stash drop
 git pull origin master
 
 for C in $COMMS ; do
-  echo "Iterating for Communicator $C ============================================="
+  echo "Iterating for Communicator $C "
   ESMF_COMM=$C
 
   for G in $COMPS; do
-    echo "Iterating for Compiler $G ============================================="
+    echo "Iterating for Compiler $G "
     ESMF_COMPILER=$G
 
     ESMF_NETCDF_INCLUDE=$(bash nc-config --includedir)
@@ -105,7 +101,7 @@ for C in $COMMS ; do
     fi
 
     for T in $TAGS; do
-       echo "Iterating for Tag $T ============================================="
+       echo "Iterating for Tag $T "
        ESMF_SITE=$T
        ESMF_STRING=${ESMF_OS}.${ESMF_COMPILER}.${ESMF_ABI}.${ESMF_COMM}.${ESMF_SITE}
        git stash && git stash drop
