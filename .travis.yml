@@ -68,6 +68,8 @@ notifications:
 env:
   global:
     - MOSSCO_FFLAGS="-g -Wall -fprofile-arcs -ftest-coverage -O0"
+    - EXTRA_FFLAGS="-D_TEST_TRACERFLUXES_"
+    - FFLAGS="-D_ESMF_UNRELEASED_"
     - MOSSCO_DIR=${TRAVIS_BUILD_DIR}
     - ESMF_DIR=${MOSSCO_DIR}/../esmf-code
     - ESMF_INSTALL_PREFIX=${MOSSCO_DIR}/../esmf

@@ -16,7 +16,7 @@ test -d ${CONFIG_DIR} || mkdir -p ${CONFIG_DIR}
 # Environment variables COMPS, COMMS, ESMF_DIR and ESMF_INSTALL_PREFIX are honored
 # or filled with default values here
 
-test -n ${COMPS} || export COMPS="gfortranclang" #"gfortranclang" # gfortranclang" # gfortran intel pgi gfortranclang pgigcc intelgcc
+test -n ${COMPS} || export COMPS="gfortranclang" #"gfortran intel pgi gfortranclang pgigcc intelgcc
 test -n ${COMMS} || export COMMS="openmpi" #"openmpi" # openmpi" #"openmpi" #  mpiuni mpich2 intelmpi
 
 test -n ${ESMF_DIR} || export ESMF_DIR = ${CONFIG_DIR}/devel/esmf-code
@@ -25,7 +25,7 @@ if test -d ${ESMF_DIR} ; then
   echo "Using existing ESMF installation in $ESMF_DIR"
 else
   echo "Using new ESMF installation in $ESMF_DIR"
-  git clone git://esmf.git.sourceforge.net/gitroot/esmf/esmf $ESMF_DIR
+  git clone --depth=1 git://esmf.git.sourceforge.net/gitroot/esmf/esmf ${ESMF_DIR}
 fi
 
 test -n ${ESMF_INSTALL_PREFIX} || export ESMF_INSTALL_PREFIX=/opt/esmf
@@ -40,8 +40,8 @@ echo Using SED=${SED}
 echo Using ESMF_OS=${ESMF_OS}
 echo Using ESMF_INSTALL_PREFIX=${ESMF_INSTALL_PREFIX}
 echo Using ESMF_DIR=${ESMF_DIR}
-echo Installing for compilers ${COMMS}
-echo Installing for communicators ${COMPS}
+echo Using compilers ${COMMS}
+echo Using communicators ${COMPS}
 
 #echo y        | module clear
 
