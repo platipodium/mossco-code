@@ -83,6 +83,7 @@ env:
 #    - make all
 
 install:
+  - rm -rf ${ESMF_DIR}
   - bash ${MOSSCO_DIR}/scripts/installation/install_esmf_versions.sh
   - source ${HOME}/.esmf_Linux.gfortranclang.64.openmpi.ESMF_7_1_0_beta_snapshot_52
   - make external
