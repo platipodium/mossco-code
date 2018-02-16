@@ -26,6 +26,7 @@ module getm_component
   use esmf
   use getm_driver
   use mossco_component
+  use mossco_state
 
   implicit none
   private
@@ -57,6 +58,7 @@ module getm_component
   real(ESMF_KIND_R8),pointer :: T3D  (:,:,:)=>NULL(),Tbot  (:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: S3D  (:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: swr(:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: bioshade(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: SS3D (:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: NN3D (:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: num3D(:,:,:)=>NULL(),numbot(:,:)=>NULL()
@@ -75,6 +77,7 @@ module getm_component
      character(len=ESMF_MAXSTR)                  :: fieldname
   end type ptrarray3D
   type(ptrarray3D),dimension(:),allocatable :: transport_ws,transport_conc
+  type(ptrarray3D),dimension(:),allocatable :: transport_xflux,transport_yflux
 
   contains
 
@@ -399,6 +402,10 @@ module getm_component
       call getmCmp_StateAddPtr("maximum_bottom_stress",taubmax,exportState,"Pa",name)
     end if
 
+    if (associated(bioshade)) then
+      call getmCmp_StateAddPtr("bioshading",bioshade,importState,"",name)
+    end if
+
     fieldBundle = ESMF_FieldBundleCreate(name='concentrations_in_water',multiflag=.true.,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_FieldBundleSet(fieldBundle,getmGrid3D,rc=localrc)
@@ -442,11 +449,11 @@ module getm_component
       type(ESMF_Clock)                                    :: myClock
       type(ESMF_FieldBundle)                              :: concFieldBundle,wsFieldBundle
       type(ESMF_Field)          ,dimension(:),allocatable :: concFieldList,fieldList
-      type(ESMF_Field)                                    :: wsField
+      type(ESMF_Field)                                    :: field,wsField
       type(ESMF_FieldStatus_Flag)                         :: status
       type(ESMF_TimeInterval)                             :: timeInterval
       character(len=ESMF_MAXSTR),dimension(:),allocatable :: itemNameList
-      character(len=ESMF_MAXSTR)                          :: itemName
+      character(len=ESMF_MAXSTR)                          :: itemName,units
       integer                   ,dimension(:),allocatable :: namelenList,concFlags
       integer                                             :: concFieldCount,transportFieldCount,FieldCount
       integer(ESMF_KIND_I8)                               :: conc_id,ws_id
@@ -505,6 +512,10 @@ module getm_component
 
             allocate(transport_conc(transportFieldCount))
             allocate(transport_ws  (transportFieldCount))
+#ifdef _TEST_TRACERFLUXES_
+            allocate(transport_xflux(transportFieldCount))
+            allocate(transport_yflux(transportFieldCount))
+#endif
 
             call ESMF_StateGet(importState, "concentrations_z_velocity_in_water", wsFieldBundle, rc=localrc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -557,6 +568,48 @@ module getm_component
                call ESMF_AttributeGet(concFieldList(i), 'hackmaxmin', value=transport_conc(n)%hackmaxmin, defaultValue=-1.d0, rc=localrc)
                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+               call ESMF_AttributeGet(concFieldList(i), 'external_index', value=conc_id, defaultValue=int(-1,ESMF_KIND_I8), rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+#ifdef _TEST_TRACERFLUXES_
+               call ESMF_AttributeGet(concFieldList(i), 'units', value=units, defaultValue='', rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+               itemName = itemNameList(i)(:namelenList(i)-len_trim(conc_suffix))//'_x_flux_in_water'
+               allocate(transport_xflux(n)%ptr(I3DFIELD))
+               field = ESMF_FieldCreate(getmGrid3D,transport_xflux(n)%ptr, &
+                                        totalLWidth=(/HALO,HALO,1/),   &
+                                        totalUWidth=(/HALO,HALO,0/),   &
+                                        name=trim(itemName),           &
+                                        rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+               call ESMF_AttributeSet(field,'creator','getm', rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+               call ESMF_AttributeSet(field,'external_index',conc_id, rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+               call ESMF_AttributeSet(field,'units','m3/s*'//trim(units), rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+               call MOSSCO_StateAdd(exportState,field,verbose=.true.,rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+               itemName = itemNameList(i)(:namelenList(i)-len_trim(conc_suffix))//'_y_flux_in_water'
+               allocate(transport_yflux(n)%ptr(I3DFIELD))
+               field = ESMF_FieldCreate(getmGrid3D,transport_yflux(n)%ptr, &
+                                        totalLWidth=(/HALO,HALO,1/),   &
+                                        totalUWidth=(/HALO,HALO,0/),   &
+                                        name=trim(itemName),           &
+                                        rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+               call ESMF_AttributeSet(field,'creator','getm', rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+               call ESMF_AttributeSet(field,'external_index',conc_id, rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+               call ESMF_AttributeSet(field,'units','m3/s*'//trim(units), rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+               call MOSSCO_StateAdd(exportState,field,verbose=.true.,rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+#endif
+
 !              search for corresponding z_velocity
                itemName = itemNameList(i)(:namelenList(i)-len_trim(conc_suffix))//ws_suffix
 
@@ -572,9 +625,6 @@ module getm_component
                   call ESMF_FieldBundleGet(wsFieldBundle, itemName, field=wsField, rc=localrc)
                   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
                else
-                  call ESMF_AttributeGet(concFieldList(i), 'external_index', &
-                    value=conc_id, defaultValue=int(-1,ESMF_KIND_I8), rc=localrc)
-                  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
                   allocate(fieldList(fieldCount))
                   call ESMF_FieldBundleGet(wsFieldBundle, itemName, fieldList=fieldList, rc=localrc)
                   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -866,6 +916,7 @@ module getm_component
 #ifndef NO_BAROCLINIC
    use m3d            ,only: calc_temp,calc_salt
    use variables_3d   ,only: T,S,NN
+   use variables_3d   ,only: bioshade_=>bioshade
 #endif
 #endif
    use meteo          ,only: metforcing,met_method,calc_met
@@ -924,6 +975,8 @@ module getm_component
 #else
             allocate(T3D(imin:imax,jmin:jmax,1:kmax))
 #endif
+            allocate(bioshade(I3DFIELD))
+            bioshade = 1.0d0
          end if
          if (calc_salt) then
 #ifdef FOREIGN_GRID
@@ -984,6 +1037,7 @@ module getm_component
 #else
             T3D => T(imin:imax,jmin:jmax,1:kmax)
 #endif
+            bioshade => bioshade_
          end if
          if (calc_salt) then
 #ifdef FOREIGN_GRID
@@ -1309,6 +1363,14 @@ module getm_component
 ! !DESCRIPTION:
 !
 ! !USES:
+   use initialise  ,only: runtype
+#ifndef NO_3D
+#ifndef NO_BAROCLINIC
+   use m3d         ,only: calc_temp
+   use variables_3d,only: bioshade_=>bioshade
+#endif
+#endif
+
    IMPLICIT NONE
 !
 ! !INPUT/OUTPUT PARAMETERS:
@@ -1328,6 +1390,17 @@ module getm_component
    write(debug,*) 'getmCmp_update_importState() # ',Ncall
 #endif
 
+   if (noKindMatch) then
+#ifndef NO_3D
+      if (runtype .gt. 1) then
+#ifndef NO_BAROCLINIC
+         if (calc_temp) then
+            bioshade_ = bioshade
+         end if
+#endif
+      end if
+#endif
+   end if
 
 #ifdef DEBUG
    write(debug,*) 'getmCmp_update_importState()'
@@ -1366,6 +1439,10 @@ module getm_component
 ! !LOCAL VARIABLES
    REALTYPE,dimension(I3DFIELD),target  :: t_conc,t_ws
    REALTYPE,dimension(:,:,:)   ,pointer :: p_conc,p_ws
+#ifdef _TEST_TRACERFLUXES_
+   REALTYPE,dimension(I3DFIELD),target  :: t_xflux,t_yflux
+   REALTYPE,dimension(:,:,:)   ,pointer :: p_xflux,p_yflux
+#endif
    integer                              :: n
 
   integer(ESMF_KIND_I4)      :: doy, localrc, rc
@@ -1393,6 +1470,20 @@ module getm_component
             t_ws = _ZERO_
          end if
          p_ws => t_ws
+#ifdef _TEST_TRACERFLUXES_
+         if (associated(transport_xflux(n)%ptr)) then
+            t_xflux = transport_xflux(n)%ptr
+            p_xflux => t_xflux
+         else
+            p_xflux => NULL()
+         end if
+         if (associated(transport_yflux(n)%ptr)) then
+            t_yflux = transport_yflux(n)%ptr
+            p_yflux => t_yflux
+         else
+            p_yflux => NULL()
+         end if
+#endif
       else
          p_conc => transport_conc(n)%ptr
          if (associated(transport_ws(n)%ptr)) then
@@ -1401,6 +1492,10 @@ module getm_component
             t_ws = _ZERO_
             p_ws => t_ws
          end if
+#ifdef _TEST_TRACERFLUXES_
+         p_xflux => transport_xflux(n)%ptr
+         p_yflux => transport_yflux(n)%ptr
+#endif
       end if
 
       if (.not.(transport_conc(n)%has_boundary_data)) then
@@ -1422,11 +1517,23 @@ module getm_component
         endif
       end if
 
+#ifdef _TEST_TRACERFLUXES_
+      call do_transport_3d(p_conc,p_ws,ffluxu=p_xflux,ffluxv=p_yflux)
+#else
       call do_transport_3d(p_conc,p_ws)
+#endif
 
       if (noKindMatch) then
          transport_conc(n)%ptr = t_conc
          transport_ws  (n)%ptr = t_ws
+#ifdef _TEST_TRACERFLUXES_
+         if (associated(transport_xflux(n)%ptr)) then
+            transport_xflux(n)%ptr = t_xflux
+         end if
+         if (associated(transport_yflux(n)%ptr)) then
+            transport_yflux(n)%ptr = t_yflux
+         end if
+#endif
       end if
 
    end do

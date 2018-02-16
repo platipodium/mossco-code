@@ -4,8 +4,8 @@
 !> The atmosphere component exports a "air_temperature"
 !> The atmosphere imports nothing
 !
-!  This computer program is part of MOSSCO. 
-!> @copyright Copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht 
+!  This computer program is part of MOSSCO.
+!> @copyright Copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
 !> @author Hartmut Kapitza, Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 !
@@ -23,16 +23,16 @@ module remtc_atmosphere_component
   implicit none
 
   private
-  
+
   type(MOSSCO_VariableFArray3d), dimension(1) :: export_variables
   real(ESMF_KIND_R8), allocatable, target :: variables(:,:,:,:)
 
   public SetServices
- 
+
   contains
 
   subroutine SetServices(gridcomp, rc)
-  
+
     type(ESMF_GridComp)  :: gridcomp
     integer, intent(out) :: rc
 
@@ -45,7 +45,7 @@ module remtc_atmosphere_component
   !> Initialize the component
   !!
   subroutine Initialize(gridComp, importState, exportState, parentClock, rc)
-    
+
     implicit none
 
     type(ESMF_GridComp)  :: gridComp
@@ -61,26 +61,26 @@ module remtc_atmosphere_component
     real(ESMF_KIND_R8),dimension(:),pointer :: coordX, coordY
     real(ESMF_KIND_R8),pointer :: farrayPtr(:,:,:)
     type(ESMF_Field),dimension(1) :: exportField
-    
+
     integer               :: petCount, localPet
     character(ESMF_MAXSTR):: name, message, timeString
     logical               :: clockIsPresent
     type(ESMF_Time)       :: currTime
     type(ESMF_Clock)      :: clock
-     
+
     call ESMF_GridCompGet(gridComp, name=name, clockIsPresent=clockIsPresent, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     if (clockIsPresent) then
-      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)     
+      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
     else
       clock = ESMF_ClockCreate(parentClock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)    
+      call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)
     endif
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_ClockSet(clock, name=trim(name)//' clock', rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
+
     !! Log the call to this function
     call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -88,7 +88,7 @@ module remtc_atmosphere_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
- 
+
     !> Create the grid and coordinates
     !> This example grid is a 40 x 40 grid at 0.1 degree resolution from 0..4 deg East
     !> to 50 .. 55 deg North
@@ -97,7 +97,7 @@ module remtc_atmosphere_component
       name="atmosphere grid",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
       coorddep2=(/2/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-   
+
     call ESMF_GridAddCoord(grid,staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -105,13 +105,13 @@ module remtc_atmosphere_component
       computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=coordX, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    do i=lbnd(1),ubnd(1) 
+    do i=lbnd(1),ubnd(1)
       coordX(i) = 0 + 0.1 * i + 0.05
     enddo
     call ESMF_GridGetCoord(grid,coordDim=2,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
       computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=coordY, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    do i=lbnd(1),ubnd(1) 
+    do i=lbnd(1),ubnd(1)
       coordY(i) = 50 + 0.1 * i + 0.05
     enddo
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -127,7 +127,7 @@ module remtc_atmosphere_component
     allocate(variables(farray_shape(1),farray_shape(2),farray_shape(3),1))
     call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-  
+
     do k=1,size(export_variables)
       exportField(k) = ESMF_FieldCreate(grid, arrayspec, name=export_variables(k)%standard_name, &
         staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
@@ -136,15 +136,15 @@ module remtc_atmosphere_component
       call ESMF_StateAddReplace(exportState,(/exportField(k)/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     enddo
-  
-    !> Specify air temperature information     
+
+    !> Specify air temperature information
     call ESMF_FieldGet(field=exportField(1), localDe=0, farrayPtr=farrayPtr, &
-                       totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
+                       totalLBound=lbnd,totalUBound=ubnd, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        
+
     do k=lbnd(3),ubnd(3)
       do j=lbnd(2),ubnd(2)
-        do i=lbnd(1),ubnd(1) 
+        do i=lbnd(1),ubnd(1)
           variables(i,j,k,1) =  25.0 + 0.1*(i-j)
         enddo
       enddo
@@ -157,12 +157,12 @@ module remtc_atmosphere_component
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
   end subroutine Initialize
-    
- 
+
+
   !> Run the component
   !!
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
-    
+
     implicit none
 
     type(ESMF_GridComp)  :: gridComp
@@ -175,7 +175,7 @@ module remtc_atmosphere_component
     logical               :: clockIsPresent
     type(ESMF_Time)       :: currTime
     type(ESMF_Clock)      :: clock
-     
+
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
       clockIsPresent=clockIsPresent, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -184,7 +184,7 @@ module remtc_atmosphere_component
       call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
-    
+
     call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -197,12 +197,12 @@ module remtc_atmosphere_component
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     do while (.not. ESMF_ClockIsStopTime(clock, rc=rc))
-       
+
       call ESMF_ClockAdvance(clock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      
-    enddo       
-      
+
+    enddo
+
     call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
@@ -216,7 +216,7 @@ module remtc_atmosphere_component
   !> Finalize the component
   !!
   subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
-    
+
     implicit none
 
     type(ESMF_GridComp)  :: gridComp
@@ -241,7 +241,7 @@ module remtc_atmosphere_component
       call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
-    
+
     call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -267,7 +267,7 @@ module remtc_atmosphere_component
 
     call ESMF_ClockDestroy(clock, rc=rc)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
-  
+
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)

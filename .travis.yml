@@ -1,6 +1,6 @@
 # This travis configuration file is part of MOSSCO
 #
-# @copyright (C) 2017 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2017, 2018 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -9,50 +9,86 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 
 language: c # There is no Fortran support yet in travis, so we emulate it
+python:
+  - 2.7
 
-cache:
-  apt: true
-  pip: true
-  directories:
-    - $HOME/.cache/pip
-    - $HOME/.local
-
+dist: trusty
+sudo: false
 git:
   depth: 3
 
-# @todo, add other branches, foremost master once travis is merged into master
 branches:
-  only: travis
+  only: master
+  # @todo, add other branches once they are merged with master containing travis
 
-# A list of trusty packages is provided at https://packages.ubuntu.com/trusty/allpackages?format=txt.gz
+cache:
+  - brew: true
+  - pip: true
+  - apt: true
+  - directories:
+    - ${MOSSCO_DIR}/../esmf-code
+    - ${MOSSCO_DIR}/../esmf
+
 addons:
+  pip:
+    - numpy
+    - basemap
+    - netCDF4
+    - pyyaml
+
+  # A list of trusty packages is provided at https://packages.ubuntu.com/trusty/allpackages?format=txt.gz
   apt:
     packages:
-    - gfortran
-    - libnetcdf-dev
-    - libnetcdfc7
-    - libnetcdff5
-    - binutils
-    - cmake
-    - doxygen
-    - openmpi-bin
-    - openmpi-common
-    - libmpich-dev
-    - mpich
-    - python2.7
-    - python-yaml
+      #- gfortran
+      #- clang # is provided by default
+      - libopenmpi-dev
+      - libnetcdff5
+      - libnetcdf-dev
+      - libnetcdfc7
+      #- doxygen
+      #- libxerces-c-dev
+      #- libmpich-dev
+      #- mpich
 
-before_script:
-- export DEPS=${TRAVIS_BUILD_DIR}/../dependencies
-- export NETCDF_VERSION=NETCDF4
-- export ESMFMKFILE
-- export ESMF_DIR=${TRAVIS_BUILD_DIR}/esmf
-- export COMMS="openmpi"
-- export COMPS="gfortran"
-- mkdir -p ${DEPS}
-- ./scripts/installation/install_esmf_versions.sh ${DEPS}
+os:
+  - linux
+#  - osx
 
-script:
-- export MOSSCO_DIR=${TRAVIS_BUILD_DIR}
-- make external
-- make all
+#osx_image: xcode9.3beta
+
+before_install:
+  # - brew update
+  # - brew install netcdf
+  # - brew install json-fortran
+  # - brew install doxygen
+
+notifications:
+  email: true
+
+env:
+  global:
+    - MOSSCO_FFLAGS="-g -Wall -fprofile-arcs -ftest-coverage -O0"
+    - MOSSCO_DIR=${TRAVIS_BUILD_DIR}
+    - ESMF_DIR=${MOSSCO_DIR}/../esmf-code
+    - ESMF_INSTALL_PREFIX=${MOSSCO_DIR}/../esmf
+    - NETCDF_VERSION=NETCDF4
+    - COMMS="openmpi"       # @todo make this a matrix with mpich
+    - COMPS="gfortranclang" # @todo make this a matrix with gfortran
+    - TAGS="ESMF_7_1_0_beta_snapshot_52"
+
+#  matrix:
+#    - make doc
+#    - make all
+
+install:
+  - bash ${MOSSCO_DIR}/scripts/installation/install_esmf_versions.sh
+  - source ${HOME}/.esmf_Linux.gfortranclang.64.openmpi.ESMF_7_1_0_beta_snapshot_52
+  - make external
+  - make libfabm_external
+  - make libgotm_external
+  - make libgetm_external
+  - make all
+
+#deploy:
+#  - mkdir -p ${HOME}/opt/bin
+#  - ln -sf ${MOSSCO_DIR}/scripts/mossco.sh ${HOME}/opt/bin/mossco

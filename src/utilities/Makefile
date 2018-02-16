@@ -35,7 +35,8 @@ LIBMOSSCO_UTIL_OBJS+= 							\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_config.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_time.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_variable_types.o) \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_grid.o)
+	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_grid.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(ESMF_GridCreate3D.o)
 
 ifeq ($(MOSSCO_NETCDF),true)
 LIBMOSSCO_UTIL_OBJS+= 							\
@@ -65,7 +66,7 @@ libmossco_util:  prefix sha $(LIBMOSSCO_UTIL_OBJS)
 libmossco_db: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_db.a(mossco_db.o)
 mossco_state.o : mossco_field.o mossco_state.F90
 mossco_logging.o : mossco_strings.o mossco_field.o mossco_state.o mossco_logging.F90
-mossco_field.o : mossco_strings.o mossco_field.F90 mossco_memory.o mossco_attribute.o
+mossco_field.o : mossco_strings.o mossco_field.F90 mossco_memory.o mossco_attribute.o mossco_grid.o
 mossco_gridspec.o : mossco_strings.o mossco_gridspec.F90
 mossco_grid.o : mossco_strings.o mossco_grid.F90
 mossco_component.o : mossco_strings.o mossco_state.o mossco_field.o mossco_component.F90
@@ -77,6 +78,7 @@ mossco_parameter.o : mossco_parameter.F90
 mossco_config.o : mossco_config.F90
 mossco_db.o : mossco_db.F90 \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_db.a(fsqlite.o)
+ESMF_GridCreate3D.o : ESMF_GridCreate3D.F90
 
 $(MOSSCO_LIBRARY_PATH)/libmossco_db.a(fsqlite.o): $(SQLITE_DIR)/fsqlite.f90
 	make -C $(SQLITE_DIR)
@@ -113,4 +115,5 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_dictionary.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_component.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_db.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/ESMF_GridCreate3D.mod
 	$(RM) *.o nc_extract_variable_lasttime nc_extract_variable

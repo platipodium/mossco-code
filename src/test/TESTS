@@ -1,3 +1,4 @@
+test_MOSSCO_Field
 test_ArrayGet
 test_Clock
 test_ClockDestroy
@@ -31,4 +32,7 @@ test_pointer
 test_precision
 test_units
 test_mossco_config
+test_mossco_time
 test_MOSSCO_StateGet
+test_interface
+

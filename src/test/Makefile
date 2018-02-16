@@ -28,7 +28,7 @@ all: tests
 
 tests: $(TESTS)
 
-test_StateGet test_ArrayGet test_Clock test_DerivedTypes test_ESMF_Initialize test_FieldBounds test_FieldGet test_Grid test_GridCreate test_MPI_Initialize  test_Regrid2d test_Ugrid test_Regrid3d test_RegridLocStream test_Regrid2d_GridToMesh test_Regrid2d_GridToMesh2 test_GetArea test_precision:
+test_StateGet test_ArrayGet test_Clock test_DerivedTypes test_ESMF_Initialize test_FieldBounds test_FieldGet test_Grid test_GridCreate test_MPI_Initialize  test_Regrid2d test_Ugrid test_Regrid3d test_RegridLocStream test_Regrid2d_GridToMesh test_Regrid2d_GridToMesh2 test_GetArea test_precision test_interface:
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@  $(LDFLAGS)  $(LIBS)
 
 test_mossco_db: test_mossco_db.F90 libmossco_db
@@ -40,10 +40,16 @@ test_Redist: test_Redist.F90 libmossco_technical
 test_Coupler: test_Coupler.F90 libmossco_mediator
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_mediator $(SQLITE_LIBS) -lmossco_util $(LIBS)
 
+test_MOSSCO_Field: test_MOSSCO_Field.F90 libmossco_technical
+		$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_technical  -lmossco_util $(LIBS)
+		
 libmossco_mediator:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
 test_MOSSCO_StateGet: test_MOSSCO_StateGet.F90
+	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_util $(LIBS)
+
+test_mossco_time: test_mossco_time.F90 libmossco_util
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_util $(LIBS)
 
 test_mossco_strings: test_mossco_strings.F90 libmossco_util

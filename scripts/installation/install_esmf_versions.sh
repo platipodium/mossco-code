@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export TAGS=ESMF_7_1_0_beta_snapshot_27
+export TAGS=ESMF_7_1_0_beta_snapshot_52
 # The first optional argument is the base configuration dir, where the
 # environment variable file .esmf_.... is stored, and where the ESMF_DIR
 # is configured if not set
@@ -16,16 +16,22 @@ test -d ${CONFIG_DIR} || mkdir -p ${CONFIG_DIR}
 # Environment variables COMPS, COMMS, ESMF_DIR and ESMF_INSTALL_PREFIX are honored
 # or filled with default values here
 
-test -n ${COMPS} || export COMPS="gfortran" #"gfortranclang" # gfortranclang" # gfortran intel pgi gfortranclang pgigcc intelgcc
+test -n ${COMPS} || export COMPS="gfortranclang" #"gfortranclang" # gfortranclang" # gfortran intel pgi gfortranclang pgigcc intelgcc
 test -n ${COMMS} || export COMMS="openmpi" #"openmpi" # openmpi" #"openmpi" #  mpiuni mpich2 intelmpi
 
-test -n ${ESMF_DIR} || export ESMF_DIR = ${CONFIG_DIR}/devel/ESMF/esmf-code
-cd $ESMF_DIR && git pull origin master
+test -n ${ESMF_DIR} || export ESMF_DIR = ${CONFIG_DIR}/devel/esmf-code
+
+if test -d ${ESMF_DIR} ; then
+  echo "Using existing ESMF installation in $ESMF_DIR"
+else
+  echo "Using new ESMF installation in $ESMF_DIR"
+  git clone git://esmf.git.sourceforge.net/gitroot/esmf/esmf $ESMF_DIR
+fi
 
 test -n ${ESMF_INSTALL_PREFIX} || export ESMF_INSTALL_PREFIX=/opt/esmf
 mkdir -p ${ESMF_INSTALL_PREFIX}/etc
 
-export ESMF_OS=$(${ESMF_DIR}/scripts/esmf_os)
+export ESMF_OS=$(bash ${ESMF_DIR}/scripts/esmf_os)
 export ESMF_ABI=64
 
 SED=sed
@@ -33,8 +39,13 @@ SED=sed
 echo Using SED=${SED}
 echo Using ESMF_OS=${ESMF_OS}
 echo Using ESMF_INSTALL_PREFIX=${ESMF_INSTALL_PREFIX}
+echo Using ESMF_DIR=${ESMF_DIR}
+echo Installing for compilers ${COMMS}
+echo Installing for communicators ${COMPS}
 
 #echo y        | module clear
+
+cd ${ESMF_DIR}
 
 git stash && git stash drop
 git pull origin master
@@ -47,33 +58,47 @@ for C in $COMMS ; do
     echo "Iterating for Compiler $G ============================================="
     ESMF_COMPILER=$G
 
-    ESMF_NETCDF=split
-    ESMF_NETCDF_INCLUDE=$(nc-config --includedir)
+    ESMF_NETCDF_INCLUDE=$(bash nc-config --includedir)
     ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_INCLUDE%%include}lib
+
+    NCCONFIG=$(which nc-config)
+    if [[ "x$NCCONFIG" == "x" ]] ; then
+      ESMF_NETCDF_INCLUDE=/usr/include
+      ESMF_NETCDF_LIBPATH=/usr/lib
+    fi
 
     if [ $(hostname) = ocean-fe.fzg.local ]; then
       ESMF_NETCDF_INCLUDE=/opt/netcdf/3.6.2/${G}/include
       ESMF_NETCDF=standard
+      ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_INCLUDE%%include}lib
 
-    elif [ $G = intel ]; then
-      source /opt/intel/bin/ifortvars.sh intel64
-      source /opt/intel/bin/iccvars.sh intel64
-
-      export MPI_PATH=/opt/intel/mpich3
-      export PATH=$MPI_PATH/bin:$PATH
-      NETCDF_PATH=/opt/intel/netcdf4
-      ESMF_NETCDF_INCLUDE=${NETCDF_PATH}/include
-    else
-      ESMF_NETCDF_INCLUDE=$(nc-config --includedir)
+#     elif [ $G = intel ]; then
+#       source /opt/intel/bin/ifortvars.sh intel64
+#       source /opt/intel/bin/iccvars.sh intel64
+#
+#       export MPI_PATH=/opt/intel/mpich3
+#       export PATH=$MPI_PATH/bin:$PATH
+#       NETCDF_PATH=/opt/intel/netcdf4
+#       ESMF_NETCDF_INCLUDE=${NETCDF_PATH}/include
     fi
-
-    ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_INCLUDE%%include}lib
 
 #    echo y  | module clear
 #    module load ${ESMF_COMPILER} || continue
 #    module load openmpi_ib || continue
 #    module load netcdf/3.6.2 || continue
 #    module list
+
+    if test -d ${ESMF_NETCDF_INCLUDE} ; then
+      echo using netcdf include ${ESMF_NETCDF_INCLUDE}
+    else
+      continue
+    fi
+
+    if test -d ${ESMF_NETCDF_LIBPATH} ; then
+      echo using netcdf libdir ${ESMF_NETCDF_LIBPATH}
+    else
+      continue
+    fi
 
     for T in $TAGS; do
        echo "Iterating for Tag $T ============================================="
@@ -92,7 +117,7 @@ for C in $COMMS ; do
        fi
 
        if [[ ${ESMF_COMPILER} == intel ]]; then
-         sed 's#-openmp#-qopenmp#g' ${ESMF_DIR}/build_config/Darwin.gfortran.default/build_rules.mk  > ${ESMF_DIR}/build_config/${ESMF_OS}.${ESMF_COMPILER}.${ESMF_SITE}/build_rules.mk
+         sed 's#-openmp#-qopenmp#g' ${ESMF_DIR}/build_config/${ESMF_OS}.intel.default/build_rules.mk  > ${ESMF_DIR}/build_config/${ESMF_OS}.${ESMF_COMPILER}.${ESMF_SITE}/build_rules.mk
        fi
 
        echo ESMFMKFILE=$ESMF_INSTALL_PREFIX/lib/libg/$ESMF_STRING/esmf.mk

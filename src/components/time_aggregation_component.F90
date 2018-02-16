@@ -125,8 +125,8 @@ module time_aggregation_component
     integer(ESMF_KIND_I4)      :: localrc
     logical                    :: configIsPresent, labelIsPresent, fileIsPresent
     type(ESMF_Config)          :: config
-    character(len=ESMF_MAXSTR), allocatable :: filterExcludeList(:)
-    character(len=ESMF_MAXSTR), allocatable :: filterIncludeList(:)
+    character(len=ESMF_MAXSTR), pointer :: filterExcludeList(:) => null()
+    character(len=ESMF_MAXSTR), pointer :: filterIncludeList(:) => null()
 
     rc  = ESMF_SUCCESS
 
@@ -180,7 +180,7 @@ module time_aggregation_component
 
     endif
 
-    if (allocated(filterIncludeList)) then
+    if (associated(filterIncludeList)) then
       call MOSSCO_AttributeSet(importState, 'filter_pattern_include', filterIncludeList, localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
@@ -189,12 +189,11 @@ module time_aggregation_component
 
       write(message,'(A)') trim(name)//' include patterns: '//trim(message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-      call MOSSCO_Reallocate(filterIncludeList, 0, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+      
+      deallocate(filterIncludeList)
     endif
 
-    if (allocated(filterExcludeList)) then
+    if (associated(filterExcludeList)) then
       call MOSSCO_AttributeSet(importState, 'filter_pattern_exclude', &
         filterExcludeList, localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
@@ -205,8 +204,7 @@ module time_aggregation_component
       write(message,'(A)') trim(name)//' exclude patterns: '//trim(message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      call MOSSCO_Reallocate(filterExcludeList, 0, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+      deallocate(filterExcludeList)
     endif
 
     call MOSSCO_CompExit(gridComp, localrc)

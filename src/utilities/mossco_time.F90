@@ -257,4 +257,97 @@ subroutine timeString2ESMF_Time(timestring,time)
 
 end subroutine timeString2ESMF_Time
 
+subroutine timeString2ISOTimeString(timeString, isoString, rc)
+
+  character(len=*), intent(in)                 :: timeString
+  character(len=ESMF_MAXSTR), intent(out)      :: isoString
+  integer(ESMF_KIND_I4), optional, intent(out) :: rc
+
+  integer(ESMF_KIND_I4)          :: rc_, i, y, m, d, hh, mm
+  character(len=ESMF_MAXSTR)     :: string
+  real(ESMF_KIND_R8)             :: ss
+
+  rc_ = ESMF_SUCCESS
+
+  ! Make sure that this is in ISO format, i.e. YYYY-MM-DDThh:mm:ss
+  ! Some implementations do not write 4 (or 2) digits single digit components.
+
+  y=1
+  m=1
+  d=1
+  hh=0
+  mm=0
+  ss=0.0D0
+
+  string=trim(adjustl(timeString))
+
+  do while (.true.)
+    i = index(string,'-')
+    if (i>1) then
+      read(string(1:i-1),*) y
+    else
+      read(string(1:4),'(I4)') y
+      i=4
+    endif
+
+    if (i>=len_trim(string)) exit
+    string=string(i+1:len_trim(string))
+
+    i = index(string,'-')
+    if (i>1) then
+      read(string(1:i-1),*) m
+    else
+      read(string(1:2),*) m
+      i=2
+    endif
+
+    if (i>=len_trim(string)) exit
+    string=string(i+1:len_trim(string))
+
+    i = index(string,'T')
+    if (i<1) i = index(string,' ')
+    if (i>1) then
+      read(string(1:i-1),*) d
+    else
+      read(string(1:2),*) d
+      i=2
+    endif
+
+    if (i>=len_trim(string)) exit
+    string=string(i+1:len_trim(string))
+
+    i = index(string,':')
+    if (i>1) then
+      read(string(1:i-1),*) hh
+    else
+      read(string(1:2),*) hh
+      i=2
+    endif
+
+    if (i>=len_trim(string)) exit
+    string=string(i+1:len_trim(string))
+
+    i = index(string,':')
+    if (i>1) then
+      read(string(1:i-1),*) mm
+    else
+      read(string(1:2),*) mm
+      i=2
+    endif
+
+    if (i>=len_trim(string)) exit
+
+    read(string(i+1:len_trim(string)),*) ss
+    exit
+
+  enddo
+  write(isoString,'(I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2)') y,'-',m,'-',d,'T', &
+    hh,':',mm,':',int(ss)
+
+  if (present(rc)) rc = rc_
+  return
+
+end subroutine timeString2ISOTimeString
+
+
 end module mossco_time

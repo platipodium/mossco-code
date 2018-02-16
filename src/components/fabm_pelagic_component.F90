@@ -4,7 +4,7 @@
 !! MOSSCO pelagic component.
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013, 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !> @author Richard Hofmeister <richard.hofmeister@hzg.de>
 !
@@ -16,6 +16,8 @@
 
 #define _RK4_ 1
 #define _ADAPTIVE_EULER_ 2
+
+! #define DEBUG_NAN
 
 #define RANGE2D 1:pel%inum,1:pel%jnum
 #define RANGE3D RANGE2D,1:pel%knum
@@ -224,6 +226,15 @@ module fabm_pelagic_component
 
     !! Initialize FABM
     pel = mossco_create_fabm_pelagic()
+    write(message,'(A)') trim(name)// ' from commit '//trim(pel%fabm_git_sha)// &
+      ' on branch '//trim(pel%fabm_git_branch)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    call ESMF_AttributeSet(exportState, 'fabm_git_sha', trim(pel%fabm_git_sha), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_AttributeSet(exportState, 'fabm_git_branch', trim(pel%fabm_git_branch), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_GridCompGet(gridComp, name=name, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -365,13 +376,13 @@ module fabm_pelagic_component
       inquire(file='fabm_pelagic.nml', exist = isPresent)
       if (.not.isPresent) then
         write(message,'(A)') trim(name)//' could not find required namelist file fabm_pelagic.nml'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
       open(33,file='fabm_pelagic.nml', action='read', status='old')
       call ESMF_AttributeSet(exportState, trim(name)//'::namelist', 'fabm_pelagic.nml', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-  endif
+    endif
     read(33,nml=fabm_pelagic)
     close(33)
 
@@ -461,7 +472,7 @@ module fabm_pelagic_component
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
       else
         write(message,'(A)') 'foreign grid must be of rank 2 or 3'
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         rc = ESMF_RC_ARG_BAD
         return
       end if
@@ -552,12 +563,34 @@ module fabm_pelagic_component
     inquire(file=trim(fabm_nml), exist=isPresent)
     if (.not.isPresent) then
       write(message,'(A)') trim(name)//' could not find required namelist file '//trim(fabm_nml)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       rc = ESMF_RC_NOT_FOUND
       return
     endif
 
     pel = mossco_create_fabm_pelagic(fabm_nml)
+
+    write(message,'(A)') trim(name)// ' uses FABM commit '//trim(pel%fabm_git_sha)// &
+      ' on branch '//trim(pel%fabm_git_branch)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    call ESMF_AttributeSet(exportState, 'fabm_git_sha', trim(pel%fabm_git_sha), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_AttributeSet(exportState, 'fabm_git_branch', trim(pel%fabm_git_branch), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (allocated(pel%fabm_modules)) then
+      do i=1, ubound(pel%fabm_modules,1)
+        write(message,'(A)') trim(name)//' uses module '//trim(pel%fabm_modules(i))
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+        write(message,'(A,I2.2)') 'fabm_module_',i
+        call ESMF_AttributeSet(exportState, trim(message), trim(pel%fabm_modules(i)), &
+          rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      enddo
+    endif
 
     ! set background extinction
     pel%background_extinction=background_extinction
@@ -672,6 +705,10 @@ module fabm_pelagic_component
 
       call ESMF_AttributeSet(concfield, 'integration_timestep', dt, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      ! initialize with 0.0
+      !call MOSSCO_FieldInitialize(concfield, value=0.0_rk, rc=localrc)
+      !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       !> create empty fields for restarts
       restartField = ESMF_FieldEmptyCreate(name=trim(varname),rc=localrc)
@@ -1253,6 +1290,7 @@ module fabm_pelagic_component
     integer, intent(out)  :: rc
 
     type(ESMF_Field), allocatable  :: fieldList(:)
+    character(len=ESMF_MAXSTR), pointer :: nameList(:) => null()
     type(ESMF_Time)            :: currTime
     character(len=ESMF_MAXSTR) :: message, name
     integer(ESMF_KIND_I4)      :: localrc, fieldCount
@@ -1269,11 +1307,13 @@ module fabm_pelagic_component
     !call ReadRestart(gridComp, importState, exportState, parentClock, rc=localrc)
 
     !> get volume_flux pointer
-    call MOSSCO_StateGetFieldList(importState, fieldList, itemSearch='volume_flux_in_water', &
+    allocate(nameList(1))
+    nameList(1) = 'volume_flux_in_water'
+    call MOSSCO_StateGetFieldList(importState, fieldList, include=nameList, &
       fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    if (fieldCount == 1) then
+    if (fieldCount > 0) then
       call ESMF_FieldGet(fieldList(1), farrayPtr=pel%volume_flux, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -1378,8 +1418,8 @@ module fabm_pelagic_component
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
-      exportState=exportState, rc=localrc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime,  &
+      importState=importState, exportState=exportState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_StateGet(importState, name=component_name, rc=localrc)
@@ -1535,7 +1575,8 @@ module fabm_pelagic_component
 
     pel%export_states(n)%conc(1:(ubnd(1)-lbnd(1)+1),1:(ubnd(2)-lbnd(2)+1),1:(ubnd(3)-lbnd(3)+1)) &
         = ptr_f3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))
-    write(message,'(A)') trim(name)//' hotstarted field'
+
+    write(message,'(A)') trim(name)//' hotstarted '
     call mossco_fieldString(field, message)
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
@@ -1581,6 +1622,7 @@ module fabm_pelagic_component
     integer(ESMF_KIND_I4)                  :: i, j, k, l, nmatch, itemCount, rank, fieldCount
     integer(ESMF_KIND_I4)                  :: ubnd(2), lbnd(2), ubnd3(3), lbnd3(3)
     integer(ESMF_KIND_I8)                  :: advanceCount
+    logical                                :: found_NaN
 
     real(ESMF_KIND_R8), pointer            :: farrayPtr3(:,:,:), ratePtr3(:,:,:)
     real(ESMF_KIND_R8), pointer            :: farrayPtr2(:,:), ratePtr2(:,:)
@@ -1617,6 +1659,31 @@ module fabm_pelagic_component
 
     ! calculate PAR
     call pel%light()
+    ! check for NaN
+    if ( any(pel%par /= pel%par) ) then
+      rc = ESMF_RC_VAL_OUTOFRANGE
+#ifdef DEBUG_NAN
+      found_NaN = .false.
+      do i=1,pel%inum
+        do j=1,pel%jnum
+          do k=1,pel%knum
+            if ( pel%mask(i,j,k) ) cycle
+            if ( pel%par(i,j,k) /= pel%par(i,j,k) ) then
+              write(message,'(A,3i4)')  '  NaN detected at indices (i,j,k) ',i,j,k
+              call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+              found_NaN = .true.
+              exit
+            endif
+          enddo
+        enddo
+      enddo
+#endif
+    endif
+    if (rc == ESMF_RC_VAL_OUTOFRANGE ) then
+      write(message,'(A)')  '  NaN detected in light forcing'
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
 
     ! Create a list of fields  in the export state that have matching fluxes
     ! in the import state
@@ -1752,20 +1819,92 @@ module fabm_pelagic_component
       ! integrate rates
       call ode_solver(pel,dt,ode_method)
 
+      !check for NaN
+      call check_NaN(pel,rc)
+      if (rc == ESMF_RC_VAL_OUTOFRANGE ) then
+        write(message,'(A)')  '  NaN detected applying ode_solver'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+!       !check for NaN (How about halo zones?)
+!       found_NaN = .false.
+!       do i=1,pel%inum
+!         do j=1,pel%jnum
+!           do k=1,pel%knum
+!             if ( pel%mask(i,j,k) ) cycle
+!             if ( any(pel%conc(i,j,k,:) /= pel%conc(i,j,k,:)) ) then
+!               write(message,'(A,3i4)')  '  NaN detected at indices (i,j,k) ',i,j,k
+!               call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+!
+!               do n=1,pel%nvar
+!                 if ( pel%conc(i,j,k,n) /= pel%conc(i,j,k,n) ) then
+!                   found_NaN = .true.
+!                   varname = trim(pel%export_states(n)%standard_name)
+!                   write(message,'(A)')  '  NaN detected applying ode_solver for '//trim(varname)
+!                   call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+! #ifndef DEBUG_NAN
+!                   exit ! n-loop
+! #endif
+!                 endif
+!               enddo
+!               exit ! k-loop
+!             endif
+!           enddo
+!         enddo
+!       enddo
+!       if (found_NaN) then
+!         rc = ESMF_RC_VAL_OUTOFRANGE
+!         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+!       endif
+
       ! integrate bottom upward fluxes
       ! todo: this does not work with the link coupler, yet. the bfl(:)%p pointers
       !       have to be updated from importState here in Run
       if (any((pel%layer_height(RANGE2D,1) <= 0).and.(.not.pel%mask(RANGE2D,1)))) then
         write(message,'(A)') '  non-positive layer height detected'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
       !where (pel%layer_height(RANGE2D,1) > 0)
-        do n=1,pel%nvar
-          pel%conc(RANGE2D,1,n) = pel%conc(RANGE2D,1,n) + bfl(n)%p(RANGE2D)*dt/pel%layer_height(RANGE2D,1)
-        end do
+      do n=1,pel%nvar
+        pel%conc(RANGE2D,1,n) = pel%conc(RANGE2D,1,n) + bfl(n)%p(RANGE2D)*dt/pel%layer_height(RANGE2D,1)
+      end do
       !endwhere
+
+      !check for NaN
+      call check_NaN(pel,rc)
+      if (rc == ESMF_RC_VAL_OUTOFRANGE ) then
+        write(message,'(A)')  '  NaN detected applying _bottom_flux'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+!       !check for NaN
+!       if (any (pel%conc(RANGE2D,1,n) /= pel%conc(RANGE2D,1,n)) ) then
+!         varname = trim(pel%export_states(n)%standard_name)
+!         write(message,'(A)')  '  NaN detected applying '//trim(varname)//'_bottom_flux'
+!         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+! #ifdef DEBUG_NAN
+!         do i=1,pel%inum
+!           do j=1,pel%jnum
+!             k=1
+!             if ( pel%mask(i,j,k) ) cycle
+!             if ( pel%conc(i,j,k,n) /= pel%conc(i,j,k,n) ) then
+!               write(message,'(A,3i4)')  '  NaN detected at indices (i,j,k) ',i,j,k
+!               !write(message,'(A,3i4)')  '  NaN detected applying '//trim(varname)//'_bottom_flux',i,j
+!               call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+!               exit
+!             endif
+!           enddo
+!         enddo
+! #endif
+!         rc = ESMF_RC_VAL_OUTOFRANGE
+!         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+!         !return
+!       endif
+
 
       !> vertically homogeneous boundary conditions
       !>@todo vertically resolved boundary conditions need regridding
@@ -1798,10 +1937,50 @@ module fabm_pelagic_component
           !end where
           !end do
         end if
+
+        !check for NaN
+        call check_NaN(pel,rc)
+        if (rc == ESMF_RC_VAL_OUTOFRANGE ) then
+          write(message,'(A)')  '  NaN detected applying _boundary_value_hz'
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
+
+!         if (any (pel%conc(RANGE3D,n) /= pel%conc(RANGE3D,n)) ) then
+!           write(message,'(A)')  '  NaN detected applying '//trim(varname)//'_boundary_value_hz'
+!           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+! #ifdef DEBUG_NAN
+!           do i=1,pel%inum
+!             do j=1,pel%jnum
+!               do k=1,pel%knum
+!                 if ( pel%mask(i,j,k) ) cycle
+!                 if ( pel%conc(i,j,k,n) /= pel%conc(i,j,k,n) ) then
+!                   write(message,'(A,3i4)')  '  NaN detected at indices (i,j,k) ',i,j,k
+!                   !write(message,'(A,3i4)')  '  NaN detected applying '//trim(varname)//'_boundary_value_hz',i,j
+!                   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+!                   exit
+!                 endif
+!               enddo
+!             enddo
+!           enddo
+! #endif
+!           rc = ESMF_RC_VAL_OUTOFRANGE
+!           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+!           !return
+!         endif
+
       end do
       end if
 
       call integrate_flux_in_water(gridComp, pel, importState)
+
+      !check for NaN
+      call check_NaN(pel,rc)
+      if (rc == ESMF_RC_VAL_OUTOFRANGE ) then
+        write(message,'(A)')  '  NaN detected applying _flux_in_water'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
       do i=1, nmatch
         write(message,'(A)') trim(name)//' add flux field '
@@ -1845,7 +2024,7 @@ module fabm_pelagic_component
           else
             write (message,'(A)') trim(name)//' could not locate/add flux field'
             call MOSSCO_FieldString(importFieldList(i),message)
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           endif
         elseif (rank==3) then
@@ -1928,6 +2107,11 @@ module fabm_pelagic_component
 
   end subroutine Finalize
 
+  !> Integrate for all prognostic variables a local source term (specified
+  !> by postfix "flux_in_water" and do dilution with volume flux if requested.
+  !> Both grid-cell and column fluxes are considered.)
+#undef  ESMF_METHOD
+#define ESMF_METHOD "integrate_flux_in_water"
   subroutine integrate_flux_in_water(gridComp, pel, importState, rc)
 
     type(ESMF_GridComp), intent(in)               :: gridComp
@@ -1946,7 +2130,7 @@ module fabm_pelagic_component
     real(ESMF_KIND_R8), pointer    :: ratePtr2(:,:) => null(), ratePtr3(:,:,:) =>null()
     integer(ESMF_KIND_I8)          :: advanceCount
     type(ESMF_Clock)               :: clock
-    logical                        :: isEqual
+    logical                        :: isPowder, isConcentration
 
     if (present(rc)) rc = ESMF_SUCCESS
 
@@ -1978,7 +2162,7 @@ module fabm_pelagic_component
     do k=1,pel%knum
       if (any((pel%layer_height(RANGE2D,k) <= 0).and.(.not.pel%mask(RANGE2D,k)))) then
         write(message,'(A)') trim(name)//' received non-positive layer height'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         if (present(rc)) rc = ESMF_RC_ARG_BAD
         return
       endif
@@ -1993,51 +2177,35 @@ module fabm_pelagic_component
       endwhere
     enddo
 
-    do n=1,pel%nvar
+    !> Calculate volume change only once
+    !> Apply it to all variables with no_river_dilution == .false. later
+    if (associated(pel%volume_flux)) then
+      do k=1, pel%knum
+        pel%volume_change(RANGE2D,k) = dt * pel%volume_flux(RANGE2D) &
+          * pel%cell_column_fraction(RANGE2D,k)
 
-      units = '(default)'
+        if (any(abs(pel%volume_change(RANGE2D,k)) &
+          / (pel%layer_height(RANGE2D,k) * pel%column_area(RANGE2D)) > 1.0d0)) then
+
+          write(message,'(A)') trim(name)//' detected volume flux greater volume'
+          write(0,*) k,' pel%volume_flux=',pel%volume_flux(RANGE2D)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+        endif
+      enddo
+    endif
+
+    do n=1,pel%nvar
 
       varname = trim(pel%export_states(n)%standard_name)
       units = trim(pel%model%state_variables(n)%units)
 
-      call MOSSCO_StateGetFieldList(importState, fieldList, &
+      call MOSSCO_StateGet(importState, fieldList, &
         itemSearch=trim(varname)//'_flux_in_water', fieldCount=fieldCount, &
         fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       !> If the item is not found, return
       if (fieldCount == 0) cycle
-
-      if (associated(pel%volume_flux)) then
-        if (.not.(pel%model%state_variables(n)%no_river_dilution)) then
-          do k=1, pel%knum
-            !> river dilution
-            !> New formulation with Hassan 7 June 2016
-            pel%volume_change(RANGE2D,k) = dt * pel%volume_flux(RANGE2D) &
-              * pel%cell_column_fraction(RANGE2D,k)
-
-              if (any(pel%volume_change(RANGE2D,k) &
-                / (pel%layer_height(RANGE2D,k) * pel%column_area(RANGE2D)) > 0.5d0)) then
-
-                write(message,'(A)') trim(name)//' CFL for volume flux exceeded'
-                write(0,*) k,' pel%volume_flux=',pel%volume_flux(RANGE2D)
-                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-                if (present(rc)) rc = ESMF_RC_ARG_BAD
-                return
-              endif
-
-
-            where (.not.pel%mask(RANGE2D,k))
-
-              pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
-                * pel%layer_height(RANGE2D,k)*pel%column_area(RANGE2D) &
-                / (pel%layer_height(RANGE2D,k)*pel%column_area(RANGE2D) &
-                + pel%volume_change(RANGE2D,k))
-            endwhere
-          enddo
-        endif
-      endif
-
 
       call MOSSCO_Reallocate(tempList, fieldCount, keep=.false., rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -2046,15 +2214,15 @@ module fabm_pelagic_component
 
       ! filter out all fields with non-matching external_index
       do k=1, fieldCount
-          call ESMF_AttributeGet(fieldList(k), name='external_index', &
-                 value=external_index, defaultValue=int(-1, ESMF_KIND_I8),rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+        call ESMF_AttributeGet(fieldList(k), name='external_index', &
+          value=external_index, defaultValue=int(-1, ESMF_KIND_I8),rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-          ! only use field, if external_index matches own index
-          if (external_index /= int(pel%export_states(n)%fabm_id,ESMF_KIND_I8) &
-            .and. external_index > -1) cycle
-          m = m + 1
-          tempList(m) = fieldlist(k)
+        ! only use field, if external_index matches own index
+        if (external_index /= int(pel%export_states(n)%fabm_id,ESMF_KIND_I8) &
+          .and. external_index > -1) cycle
+        m = m + 1
+        tempList(m) = fieldlist(k)
       end do
 
       fieldCount = m
@@ -2071,27 +2239,46 @@ module fabm_pelagic_component
       ! filter out all fields with no external_index if one exists
       m = 0
       do k=1, fieldCount
-          call ESMF_AttributeGet(fieldList(k), name='external_index', &
-                 value=external_index, defaultValue=int(-1, ESMF_KIND_I8),rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        call ESMF_AttributeGet(fieldList(k), name='external_index', &
+          value=external_index, defaultValue=int(-1, ESMF_KIND_I8),rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          ! only use field, if external_index matches own index
-          if (external_index /= int(pel%export_states(n)%fabm_id,ESMF_KIND_I8)) cycle
-          m = m + 1
-          tempList(m) = fieldlist(k)
+        ! only use field, if external_index matches own index
+        if (external_index /= int(pel%export_states(n)%fabm_id,ESMF_KIND_I8)) cycle
+        m = m + 1
+        tempList(m) = fieldlist(k)
       end do
 
       if (m > 0) then ! found exactly matching external index
-          fieldCount = m
+        fieldCount = m
 
-          call MOSSCO_Reallocate(fieldList, fieldCount, keep=.false., rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+        call MOSSCO_Reallocate(fieldList, fieldCount, keep=.false., rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-          fieldList(:) = tempList(1:m)
+        fieldList(:) = tempList(1:m)
       endif
 
       call MOSSCO_Reallocate(tempList, 0, keep=.false., rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      !> Dilute concentration with volume flux if requested by river_dilution flag
+      if (associated(pel%volume_flux) .and. .not.(pel%model%state_variables(n)%no_river_dilution)) then
+        do k=1, pel%knum
+          where (.not.pel%mask(RANGE2D,k))
+
+            pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
+              * pel%layer_height(RANGE2D,k)*pel%column_area(RANGE2D) &
+              / (pel%layer_height(RANGE2D,k)*pel%column_area(RANGE2D) &
+              + pel%volume_change(RANGE2D,k))
+          endwhere
+        enddo
+
+        if (advanceCount < 2) then
+          write(message,'(A)') trim(name)//' diluted '//trim(varname)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        endif
+
+      endif
 
       do i=1, fieldCount
         field = fieldList(i)
@@ -2103,9 +2290,21 @@ module fabm_pelagic_component
 
         !> Check units and consider that volume always comes in m-3 and time
         !> in seconds
-        if (advanceCount < 1) then
-          call MOSSCO_CheckUnits(trim(units)//' s-1', trim(fluxunits)//' m-3', isEqual=isEqual, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+        !call MOSSCO_CheckUnits(trim(units)//' s-1', trim(fluxunits)//' m-3', isEqual=isPowder, rc=localrc)
+        isPowder = .true.
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        !call MOSSCO_CheckUnits(trim(units)//' s-1', trim(fluxunits), &
+        !  isEqual=isConcentration, rc=localrc)
+        isConcentration = .false.
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        if (isConcentration .and. .not. associated(pel%volume_flux)) then
+          write(message,'(A)') trim(name)//' cannot integrate concentration flux without volume flux from '
+          call MOSSCO_FieldString(field, message, rc=localrc)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+          if (present(rc)) rc=ESMF_RC_ARG_BAD
+          return
         endif
 
         !> vertically homogeneous flux in water (e.g. rivers)
@@ -2120,23 +2319,28 @@ module fabm_pelagic_component
           !>total riverinput mass  * fractional volume of the element/ volume of the element
           !> which is equal to dt*mass_river[g/s]* (diluted_volume(k)/total_diluted_volume)/diluted_volume(k)
           !> which is equal to dt*mass_river[g/s]/total_diluted_volume [g/m**3]
-          if (associated(pel%volume_flux)) then
+          if (associated(pel%volume_flux) .and. isPowder) then
             do k=1, pel%knum
               where (.not.pel%mask(RANGE2D,k))
               pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
                 + dt * ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) &
-!! correction by kw: add column-fractional mass divided by column-FRACTIONAL (=box) volume
                 / (pel%column_height(RANGE2D) * pel%column_area(RANGE2D) &
                 + dt * pel%volume_flux(RANGE2D))
               end where
             end do
-          else
+          elseif (isPowder) then
             do k=1, pel%knum
               where (.not.pel%mask(RANGE2D,k))
               pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
                 + dt * ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) &
-!! correction by kw: add column-fractional mass divided by column-FRACTIONAL (=box) volume
                 / (pel%column_height(RANGE2D) * pel%column_area(RANGE2D))
+              end where
+            end do
+          elseif (isConcentration) then
+            do k=1, pel%knum
+              where (.not.pel%mask(RANGE2D,k))
+              pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
+                + dt * ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))
               end where
             end do
           endif
@@ -2148,6 +2352,10 @@ module fabm_pelagic_component
           endif
 
         elseif (rank == 3) then
+
+          isPowder = .false.
+          isConcentration = .true.
+          !> @todo consider powder flux and dilution
           !> point source fluxes
           call ESMF_FieldGet(field, farrayPtr=ratePtr3, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -2157,13 +2365,22 @@ module fabm_pelagic_component
 
           !> If the flux is in concentration units, then the following is correct
           !> Carefully exclude masked items and (for negative fluxes) a CFL-like maximum halving
-          where (.not.pel%mask(RANGE3D) .and. pel%conc(RANGE3D,n) + 2 * dt * ratePtr3(RANGE3D) > 0.0 )
-            pel%conc(RANGE3D,n) = pel%conc(RANGE3D,n) + dt * ratePtr3(RANGE3D)
-          endwhere
+          if (isConcentration) then
+            where (.not.pel%mask(RANGE3D) .and. pel%conc(RANGE3D,n) + &
+              2 * dt * ratePtr3(RANGE3D) > 0.0 )
+              pel%conc(RANGE3D,n) = pel%conc(RANGE3D,n) + dt * ratePtr3(RANGE3D)
+            endwhere
+          elseif (isPowder .and. associated(pel%volume_flux)) then
+            if (present(rc)) rc=ESMF_RC_NOT_IMPL
+            return
+          elseif (isPowder) then
+            if (present(rc)) rc=ESMF_RC_NOT_IMPL
+            return
+          endif
 
           !> @todo reduce output
           if (advanceCount < 2000) then
-            write(message,'(A)') trim(name)//' integrated 3D point source '
+            write(message,'(A)') trim(name)//' integrated 3D point source concentration '
             call MOSSCO_FieldString(field, message, rc=localrc)
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
           endif
@@ -2180,10 +2397,13 @@ module fabm_pelagic_component
           !end do
         end if
       end do
+
     enddo
 
   end subroutine integrate_flux_in_water
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "set_hackrange"
   subroutine set_hackrange(field, valid_max, valid_min, rc)
 
     type(ESMF_Field), intent(inout)              :: field
@@ -2208,4 +2428,53 @@ module fabm_pelagic_component
 
   end subroutine set_hackrange
 
+#undef ESMF_METHOD
+#define ESMF_METHOD "check_NaN"
+  subroutine check_NaN(pel,rc)
+    class(type_mossco_fabm_pelagic) :: pel
+    integer, intent(out)            :: rc
+    character(len=ESMF_MAXSTR)      :: message, varname
+    integer                         :: i, j, k, n
+    logical                         :: found_NaN, list_indices, list_varnames
+
+    found_NaN = .false.
+    list_indices = .false.
+    list_varnames = .true.
+
+    !spacial loop (How about halo zones?)
+    do i=1,pel%inum
+      do j=1,pel%jnum
+        do k=1,pel%knum
+          if ( pel%mask(i,j,k) ) cycle
+          if ( any(pel%conc(i,j,k,:) /= pel%conc(i,j,k,:)) ) then
+#ifdef DEBUG_NAN
+            write(message,'(A,3i4)')  '  NaN detected at indices (i,j,k) ',i,j,k
+            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+#endif
+            do n=1,pel%nvar
+              if ( pel%conc(i,j,k,n) /= pel%conc(i,j,k,n) ) then
+                found_NaN = .true.
+#ifdef DEBUG_NAN
+                varname = trim(pel%export_states(n)%standard_name)
+                write(message,'(A)')  '  NaN detected for '//trim(varname)
+                call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+                if (.not. list_varnames)  exit ! n-loop
+#else
+                rc = ESMF_RC_VAL_OUTOFRANGE
+                return
+#endif
+              endif
+            enddo
+            exit ! k-loop
+          endif
+        enddo
+      enddo
+    enddo
+    if (found_NaN) then
+      rc = ESMF_RC_VAL_OUTOFRANGE
+    endif
+
+  end subroutine check_NaN
+
+#undef  ESMF_METHOD
 end module fabm_pelagic_component
