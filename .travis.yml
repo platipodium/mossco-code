@@ -39,7 +39,7 @@ addons:
   # A list of trusty packages is provided at https://packages.ubuntu.com/trusty/allpackages?format=txt.gz
   apt:
     packages:
-      #- gfortran
+      - gfortran
       #- clang # is provided by default
       - libopenmpi-dev
       - libnetcdff5
