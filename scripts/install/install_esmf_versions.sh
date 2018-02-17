@@ -16,7 +16,7 @@
 # - ESMF_TAGS
 # - ESMF_COMPILERS
 # - ESMF_COMMUNICATORS
-# - ESMF_INSTALL_PREFIX
+# - ESMF_INSTALL_PREFIX and ESMF_DIR
 
 # Determine where to save the ESMF configuration.  Default is $HOME
 if [ -z ${ESMF_CONFIG_DIR} ]; then
@@ -136,13 +136,22 @@ for C in $COMMS ; do
     fi
 
     for T in $TAGS; do
-       echo "Iterating for Tag $T "
+       echo "  $0 iterates for Tag $T "
        ESMF_SITE=$T
        ESMF_STRING=${ESMF_OS}.${ESMF_COMPILER}.${ESMF_ABI}.${ESMF_COMM}.${ESMF_SITE}
+
+       ESMFMKFILE=${ESMF_INSTALL_PREFIX}/lib/libg/$ESMF_STRING/esmf.mk
+       echo "  $0 uses esmf.mk ${ESMFMKFILE}"
+
+       if test -r ${ESMFMKFILE}; then
+         echo "  $0 found esmf.mk at location ${ESMFMKFILE}"
+         continue
+       fi
+
        git stash && git stash drop
        git checkout  -f $T
 
-       rm -f ${ESMF_DIR}/build_config/${ESMF_OS}.${ESMF_COMPILER}.${ESMF_SITE}
+       rm -rf ${ESMF_DIR}/build_config/${ESMF_OS}.${ESMF_COMPILER}.${ESMF_SITE}
        cp -r ${ESMF_DIR}/build_config/${ESMF_OS}.${ESMF_COMPILER}.default ${ESMF_DIR}/build_config/${ESMF_OS}.${ESMF_COMPILER}.${ESMF_SITE}
 
        # Fix -lmpi_f77 on recent Darwin/MacPorts
@@ -153,9 +162,6 @@ for C in $COMMS ; do
        if [[ ${ESMF_COMPILER} == intel ]]; then
          sed 's#-openmp#-qopenmp#g' ${ESMF_DIR}/build_config/${ESMF_OS}.intel.default/build_rules.mk  > ${ESMF_DIR}/build_config/${ESMF_OS}.${ESMF_COMPILER}.${ESMF_SITE}/build_rules.mk
        fi
-
-       echo ESMFMKFILE=${ESMF_INSTALL_PREFIX}/lib/libg/$ESMF_STRING/esmf.mk
-       #test -f $ESMFMKFILE && continue
 
 cat << EOT > $CONFIG_DIR/.esmf_${ESMF_STRING}
 export ESMF_DIR=${ESMF_DIR}
@@ -176,31 +182,28 @@ export ESMF_COMM=$C
 export ESMFMKFILE=$ESMF_INSTALL_PREFIX/lib/libg/${ESMF_STRING}/esmf.mk
 EOT
 
-       echo "export ESMF_XERCES=standard" >> $CONFIG_DIR/.esmf_${ESMF_STRING}
-       echo "# Comment the following line if you have libxerces"
-       echo "unset ESMF_XERCES" >> $CONFIG_DIR/.esmf_${ESMF_STRING}
+      echo "export ESMF_XERCES=standard" >> $CONFIG_DIR/.esmf_${ESMF_STRING}
+      echo "# Comment the following line if you have libxerces"
+      echo "unset ESMF_XERCES" >> $CONFIG_DIR/.esmf_${ESMF_STRING}
 
-       source $CONFIG_DIR/.esmf_${ESMF_STRING}
-       cat $CONFIG_DIR/.esmf_${ESMF_STRING}
-       echo $PATH
+      source $CONFIG_DIR/.esmf_${ESMF_STRING}
+      cat $CONFIG_DIR/.esmf_${ESMF_STRING}
 
-       #test -f $ESMFMKFILE || (make distclean && make -j12 lib && make install)
-       (make distclean && make -j12 lib && make install)
+      #test -f $ESMFMKFILE || (make distclean && make -j12 lib && make install)
+      (make distclean && make -j12 lib && make install)
 
-       test -f $ESMFMKFILE || continue
-       test -f ${ESMF_INSTALL_PREFIX}/lib/libg/${ESMF_STRING}/libesmf.a || continue
-       mkdir -p $ESMF_INSTALL_PREFIX/etc
-       mv $CONFIG_DIR/.esmf_${ESMF_STRING} $ESMF_INSTALL_PREFIX/etc/${ESMF_STRING}
-       make info > $ESMF_INSTALL_PREFIX/etc/${ESMF_STRING}.info
+      echo   cp $CONFIG_DIR/.esmf_${ESMF_STRING} $ESMF_INSTALL_PREFIX/etc/${ESMF_STRING}
+      cp $CONFIG_DIR/.esmf_${ESMF_STRING} $ESMF_INSTALL_PREFIX/etc/${ESMF_STRING}
+      make info > $ESMF_INSTALL_PREFIX/etc/${ESMF_STRING}.info
 
-       # Fix dylib relocation on Darwin
-       which install_name_tool || continue
+      # Fix dylib relocation on Darwin
+      which install_name_tool || continue
 
-       #install_name_tool -id $ESMF_INSTALL_PREFIX/lib/libg/${ESMF_STRING}/libesmf.dylib  $ESMF_DIR/lib/libg/${ESMF_STRING}/libesmf.dylib
-       install_name_tool -id $ESMF_INSTALL_PREFIX/lib/libg/${ESMF_STRING}/libesmf.dylib $ESMF_INSTALL_PREFIX/lib/libg/${ESMF_STRING}/libesmf.dylib
-        for F in $ESMF_INSTALL_PREFIX/bin/bing/${ESMF_STRING}/* ; do
+      #install_name_tool -id $ESMF_INSTALL_PREFIX/lib/libg/${ESMF_STRING}/libesmf.dylib  $ESMF_DIR/lib/libg/${ESMF_STRING}/libesmf.dylib
+      install_name_tool -id $ESMF_INSTALL_PREFIX/lib/libg/${ESMF_STRING}/libesmf.dylib $ESMF_INSTALL_PREFIX/lib/libg/${ESMF_STRING}/libesmf.dylib
+      for F in $ESMF_INSTALL_PREFIX/bin/bing/${ESMF_STRING}/* ; do
           install_name_tool -change $ESMF_DIR/lib/libg/${ESMF_STRING}/libesmf.dylib $ESMF_INSTALL_PREFIX/lib/libg/${ESMF_STRING}/libesmf.dylib  $F
-        done
+      done
     done
   done
 done
