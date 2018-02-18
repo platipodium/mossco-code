@@ -77,6 +77,7 @@ env:
     - COMMS="openmpi"       # @todo make this a matrix with mpich
     - COMPS="gfortranclang" # @todo make this a matrix with gfortran
     - TAGS="ESMF_7_1_0_beta_snapshot_52"
+    - ESMFMKFILE=${ESMF_INSTALL_PREFIX}/lib/libg/Linux.gfortranclang.64.openmpi.ESMF_7_1_0_beta_snapshot_52/esmf.mk
 
 #  matrix:
 #    - make doc
@@ -84,9 +85,9 @@ env:
 
 install:
 #  - rm -rf ${ESMF_DIR}
-  - test -d ${ESMF_DIR} || bash ${MOSSCO_DIR}/scripts/installation/install_esmf_versions.sh
+#  - test -d ${ESMF_DIR} || bash ${MOSSCO_DIR}/scripts/installation/install_esmf_versions.sh
 #  - source ${HOME}/.esmf_Linux.gfortranclang.64.openmpi.ESMF_7_1_0_beta_snapshot_52
-  - export ESMFMKFILE=${ESMF_INSTALL_PREFIX}/lib/libg/Linux.gfortranclang.64.openmpi.ESMF_7_1_0_beta_snapshot_52/esmf.mk
+  - bash ${MOSSCO_DIR}/scripts/installation/install_esmf_versions.sh
   - make external
   - make libfabm_external
   - make libgotm_external
