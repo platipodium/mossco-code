@@ -28,6 +28,9 @@ cache:
   - directories:
     - ${MOSSCO_DIR}/../esmf-code
     - ${MOSSCO_DIR}/../esmf
+    - ${MOSSCO_DIR}/external/getm
+    - ${MOSSCO_DIR}/external/gotm
+    - ${MOSSCO_DIR}/external/fabm
 
 addons:
   pip:
@@ -78,20 +81,27 @@ env:
     - COMPS="gfortranclang" # @todo make this a matrix with gfortran
     - TAGS="ESMF_7_1_0_beta_snapshot_52"
     - ESMFMKFILE=${ESMF_INSTALL_PREFIX}/lib/libg/Linux.gfortranclang.64.openmpi.ESMF_7_1_0_beta_snapshot_51/esmf.mk
-  
+
 #  matrix:
 #    - make doc
 #    - make all
 
 install:
-  - rm -rf ${ESMF_DIR}
+#  - rm -rf ${ESMF_DIR}
 #  - test -d ${ESMF_DIR} || bash ${MOSSCO_DIR}/scripts/installation/install_esmf_versions.sh
 #  - source ${HOME}/.esmf_Linux.gfortranclang.64.openmpi.ESMF_7_1_0_beta_snapshot_52
   - bash ${MOSSCO_DIR}/scripts/install/install_esmf_versions.sh
+  - mkdir -p ${MOSSCO_DIR}/external/fabm/code
+  - git clone -b master --depth 1 https://github.com/platipodium/mossco-fabm.git ${MOSSCO_DIR}/external/fabm/code
   - make external
   - make libfabm_external
   - make libgotm_external
   - make libgetm_external
+  - make -C ${MOSSCO_DIR}/src/utilities
+  - make -C ${MOSSCO_DIR}/src/drivers
+  - make -C ${MOSSCO_DIR}/src/connectors
+  - make -C ${MOSSCO_DIR}/src/mediators
+  - make -C ${MOSSCO_DIR}/src/components
   - make all
 
 #deploy:
