@@ -93,7 +93,7 @@ for C in $COMMS ; do
   for G in $COMPS; do
     echo "  $0 iterates for Compiler $G "
     ESMF_COMPILER=$G
-
+    ESMF_NETCDF=split
     ESMF_NETCDF_INCLUDE=/usr/include
 
     if ! [ -z $(which nc-config) ]; then

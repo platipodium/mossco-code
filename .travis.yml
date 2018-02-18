@@ -48,8 +48,12 @@ addons:
       - libnetcdff5
       - libnetcdf-dev
       - libnetcdfc7
+      - cvsutils
       #- doxygen
-      #- libxerces-c-dev
+      - libxerces-c-dev
+      - gnutls-bin
+      - libgnutls-dev
+      - libgnutls-openssl27
       #- libmpich-dev
       #- mpich
 
