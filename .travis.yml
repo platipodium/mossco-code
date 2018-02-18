@@ -77,8 +77,8 @@ env:
     - COMMS="openmpi"       # @todo make this a matrix with mpich
     - COMPS="gfortranclang" # @todo make this a matrix with gfortran
     - TAGS="ESMF_7_1_0_beta_snapshot_52"
-    - ESMFMKFILE=${ESMF_INSTALL_PREFIX}/lib/libg/Linux.gfortranclang.64.openmpi.ESMF_7_1_0_beta_snapshot_52/esmf.mk
-
+    - ESMFMKFILE=${ESMF_INSTALL_PREFIX}/lib/libg/Linux.gfortranclang.64.openmpi.ESMF_7_1_0_beta_snapshot_51/esmf.mk
+  
 #  matrix:
 #    - make doc
 #    - make all
