@@ -80,14 +80,14 @@ env:
     - COMMS="openmpi"       # @todo make this a matrix with mpich
     - COMPS="gfortranclang" # @todo make this a matrix with gfortran
     - TAGS="ESMF_7_1_0_beta_snapshot_52"
-    - ESMFMKFILE=${ESMF_INSTALL_PREFIX}/lib/libg/Linux.gfortranclang.64.openmpi.ESMF_7_1_0_beta_snapshot_51/esmf.mk
+    - ESMFMKFILE=${ESMF_INSTALL_PREFIX}/lib/libg/Linux.gfortranclang.64.openmpi.ESMF_7_1_0_beta_snapshot_52/esmf.mk
 
 #  matrix:
 #    - make doc
 #    - make all
 
 install:
-#  - rm -rf ${ESMF_DIR}
+  - rm -rf ${ESMF_DIR}
 #  - test -d ${ESMF_DIR} || bash ${MOSSCO_DIR}/scripts/installation/install_esmf_versions.sh
 #  - source ${HOME}/.esmf_Linux.gfortranclang.64.openmpi.ESMF_7_1_0_beta_snapshot_52
   - bash ${MOSSCO_DIR}/scripts/install/install_esmf_versions.sh
