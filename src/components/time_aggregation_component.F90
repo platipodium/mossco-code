@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF time aggregation component
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2017 Helmholtz-Zentrum Geesthacht, Bundesanstalt für
+!> @copyright Copyright 2017, 2018 Helmholtz-Zentrum Geesthacht, Bundesanstalt für
 !> Wasserbau
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !> @author Markus Kreus <markus.kreus@baw.de>
@@ -189,7 +189,7 @@ module time_aggregation_component
 
       write(message,'(A)') trim(name)//' include patterns: '//trim(message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      
+
       deallocate(filterIncludeList)
     endif
 
@@ -381,9 +381,12 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       endif
 
       if (advanceCount < 1) then
-        write(message,'(A)') trim(name)//' will time aggregate '
-        call MOSSCO_MessageAdd(message,' '//itemNameList(i))
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        do j=1,fieldCount
+          write(message,'(A)') trim(name)//' will time aggregate '
+          if (fieldCount > 1) write(message,'(A)') trim(message)//' bundled '
+          call MOSSCO_MessageAdd(message,' '//itemNameList(i))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        enddo
       endif
 
       call MOSSCO_StateGetFieldList(exportState, exportFieldList, fieldCount=exportFieldCount, &
@@ -395,6 +398,12 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         if (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
           fieldBundle = ESMF_FieldBundleCreate(name='avg_'//trim(itemNameList(i)), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+          call ESMF_FieldBundleAdd(fieldBundle, (/exportField/), multiflag=.true., rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+          write(message,'(A)') trim(name)//' created fieldBundle '//trim(itemNameList(i))
+          if (advanceCount < 1) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         endif
 
         do j=1,fieldCount
@@ -409,10 +418,14 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           call MOSSCO_FieldInitialize(exportField, value=0.0d0, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
+          write(message,'(A)') trim(name)//' created '
+
           if (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
-            call ESMF_FieldBundleAdd(fieldBundle, (/exportField/), rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+            write(message,'(A)') trim(message)//' '//trim(itemNameList(i))//'/'
           endif
+
+          call MOSSCO_FieldString(exportField, message)
+          if (advanceCount < 1) call  ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         enddo
 
         if (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
