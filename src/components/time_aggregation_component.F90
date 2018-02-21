@@ -426,12 +426,15 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
           call MOSSCO_FieldString(exportField, message)
           if (advanceCount < 1) call  ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+          if (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
+            call ESMF_FieldBundleAdd(fieldBundle, (/exportField/), multiflag=.true., rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+          endif
+
         enddo
 
-        if (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
-          call ESMF_FieldBundleAdd(fieldBundle, (/exportField/), multiflag=.true., rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
-        else
+        if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
           call ESMF_StateAdd(exportState, (/exportField/), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
         endif
