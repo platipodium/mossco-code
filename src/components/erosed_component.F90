@@ -18,6 +18,11 @@
 
 #define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+#define RANGE1D lbnd(1):ubnd(1)
+#define RANGE2D RANGE1D,lbnd(2):ubnd(2)
+#define RANGE3D RANGE2D,lbnd(3):ubnd(3)
+#define RANGE4D RANGE3D,lbnd(4):ubnd(4)
+
 module erosed_component
 
   use esmf
@@ -213,8 +218,8 @@ module erosed_component
     integer                :: localrc, knum
     type(ESMF_Grid)        :: grid, foreign_grid, grid3
     type(ESMF_Field)       :: field
-    type(ESMF_FieldBundle)                      :: fieldBundle
-    character(len=ESMF_MAXSTR)                  :: foreignGridFieldName
+    type(ESMF_FieldBundle)        :: fieldBundle
+    character(len=ESMF_MAXSTR)    :: foreignGridFieldName
 
     integer                   :: rank
     integer                   :: UnitNr, istat,j
@@ -430,7 +435,7 @@ module erosed_component
              & depefftmp(nfrac), depfactmp(nfrac),parfluff0tmp(nfrac), &
              & parfluff1tmp(nfrac), tcrflufftmp(nfrac),wstmp(nfrac),spm_const(nfrac), stat =istat)
     if (istat /= 0) then
-      call ESMF_LogWrite('Allocation of temporal variables in InitializeP1 failed', ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite('Allocation of temporal variables in InitializeP1 failed', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
@@ -497,11 +502,11 @@ module erosed_component
       if (istat ==0.and. bedmodel ) read (UnitNr,*, iostat = istat) init_thick
       if (istat ==0.and. bedmodel ) read (UnitNr,*, iostat = istat) porosity
       if (istat /= 0) then
-        call ESMF_LogWrite('Error in reading sedparams !!!!', ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        write(message,'(A)') trim(name)//' cannot read file sedparams.txt'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        localrc = ESMF_RC_NOT_FOUND
+        return
       endif
-
-      if (istat /=0) stop ' Error in reading sedparams !!!!'
 
       close (UnitNr)
 
@@ -528,17 +533,16 @@ module erosed_component
 !      end do
 
     else
-      Write (0,*) 'Error: sedparams.txt for use in erosed does not exist.!!'
-      stop
+      write(message, '(A)') trim(name)//' cannot find required file sedparams.txt'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      localrc = ESMF_RC_NOT_FOUND
+      return
     end if
 
     !   Initial bed composition
     !
-    if (iunderlyr==2) then
-        if (flufflyr>0) then
-            mfluff  = 0.0_fp        ! composition of fluff layer: mass of mud fractions [kg/m2]
-        endif
-    endif
+    ! composition of fluff layer: mass of mud fractions [kg/m2]
+    if (iunderlyr==2 .and. flufflyr>0) mfluff  = 0.0_fp
     !
     !   Initial flow conditions
     !
@@ -906,13 +910,13 @@ module erosed_component
 
           write(message, '(A)') trim(name)//' invalid field bounds in '
           call MOSSCO_FieldString(field, message)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           call ESMF_Finalize(endflag=ESMF_END_ABORT)
         end if
       else
         write(message, '(A)') trim(name)//' erroneously obtained empty '
         call MOSSCO_FieldString(field, message)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       end if
     end do
@@ -930,17 +934,17 @@ module erosed_component
       external_idx_by_nfrac(:)=1
     elseif (nfrac==1 .and. fieldCount>1) then
       write(message,'(A)') trim(name)//' cannot map 1 fraction to multiple SPM fractions, yet.'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     elseif (nfrac/= 0 .and. fieldCount ==0) then
       write(message,'(A)') trim(name)//'initial values from sedparams.txt will be used for sediment parameters.'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       do i = 1, nfrac
         external_idx_by_nfrac(i)=i
       end do
     elseif (nfrac /= fieldCount) then
       write(message,'(A)') trim(name)//' cannot map unequal size and SPM fractions'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     else
 
@@ -1196,7 +1200,7 @@ module erosed_component
     type(ESMF_Field), dimension(:), allocatable :: exportFieldList, importFieldList
     integer(ESMF_KIND_I4)                       :: importFieldCount, exportFieldCount
     integer(ESMF_KIND_I4), dimension(3)         :: ubnd, lbnd
-    real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr3
+    real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr3 => null()
     real(ESMF_KIND_R8), dimension(nfrac)        :: total_sediment_mass, total_mass, diff_mass
 
     rc=ESMF_SUCCESS
@@ -1226,7 +1230,7 @@ module erosed_component
 
     if (importFieldCount > 1) then
       write(message, '(A)') trim(name)//' cannot handle more than one field with sediment mass'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       if (allocated(importFieldList)) deallocate(importFieldList)
       rc = ESMF_RC_NOT_IMPL
       return
@@ -1283,7 +1287,7 @@ module erosed_component
     if (sum(diff_mass)>1e-6) then
       write(message, '(A,9e20.10)') ' restart mass budget violation: diff= ', sum(diff_mass)
       call MOSSCO_FieldString(importFieldList(1), message)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
@@ -1311,7 +1315,7 @@ module erosed_component
 
     if (exportFieldCount > 1) then
       write(message, '(A)') trim(name)//' cannot handle more than one field with sediment mass'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       if (allocated(exportFieldList)) deallocate(exportFieldList)
       rc = ESMF_RC_NOT_IMPL
       return
@@ -1477,7 +1481,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 !          if (.not. ( all(lbound(ptr_f3)== lbnd).and. all(ubound(ptr_f3)==ubnd ) ) ) then
 !            write(message, '(A)') trim(name)//' invalid field bounds in field'
 !            call MOSSCO_FieldString(field, message, rc=localrc)
-!            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+!            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
 !            call ESMF_Finalize(endflag=ESMF_END_ABORT)
 !          end if
 !
@@ -1588,19 +1592,28 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
          first_entry = .false.
       end if
 
-       if (.not. associated (thickness_of_layers)) then
-        allocate (thickness_of_layers(lbnd(1):ubnd(1),lbnd(2):ubnd(2) ,lbnd(3):ubnd(3) ), stat=istat)
-        if (istat/=0) write (*,*) 'Warning/Error in allocation of thickness_of_layers in erosed_component'
+      if (.not. associated (thickness_of_layers)) then
+        allocate (thickness_of_layers(RANGE3D), stat=istat)
+        write(message,'(A)') trim(name)//' cannot allocate memory for thickness_of_layers'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        localrc = ESMF_RC_MEM_ALLOCATE
+        return
       end if
 
       if (.not. associated (relative_thickness_of_layers)) then
-        allocate (relative_thickness_of_layers(lbnd(1):ubnd(1),lbnd(2):ubnd(2) ,lbnd(3):ubnd(3) ), stat=istat)
-        if (istat/=0) write (*,*) 'Warning/Error in allocation of relative_thickness_of_layers in erosed_component'
+        allocate (relative_thickness_of_layers(RANGE3D), stat=istat)
+        write(message,'(A)') trim(name)//' cannot allocate memory for relative_thickness_of_layers'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        localrc = ESMF_RC_MEM_ALLOCATE
+        return
       end if
 
       if (.not. associated (sigma_midlayer)) then
-        allocate (sigma_midlayer  (lbnd(1):ubnd(1),lbnd(2):ubnd(2) ,lbnd(3):ubnd(3) ), stat = istat)
-        if (istat /= 0) Write (*,*) 'Error allocation of pointer sigma_midlayer in erosed'
+        allocate (sigma_midlayer  (RANGE3D), stat = istat)
+        write(message,'(A)') trim(name)//' cannot allocate memory for mid_layer'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        localrc = ESMF_RC_MEM_ALLOCATE
+        return
       end if
 
       if (localrc == 0) then
@@ -1750,7 +1763,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     if (itemType /= ESMF_STATEITEM_FIELD) then
       write(message, '(A)') trim(name)//' did not find field rms_orbital_velocity_at_soil_surface'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
@@ -1764,7 +1777,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (status /= ESMF_FIELDSTATUS_COMPLETE) then
       write(message, '(A)') trim(name)//' received incomplete field'
       call MOSSCO_FieldString(field, message, rc=localrc)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
@@ -1779,7 +1792,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
                      .and. all(ubound(rms_orbital_velocity%ptr) .eq. (/inum,jnum/) ) ) ) then
       write(message, '(A)') trim(name)//' invalid field bounds in field'
       call MOSSCO_FieldString(field, message, rc=localrc)
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
     end if
 
@@ -1795,7 +1808,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     if (itemType /= ESMF_STATEITEM_FIELD) then
       write(message, '(A)') trim(name)//' did not find field shear_stress_at_soil_surface'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
@@ -1809,7 +1822,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (status /= ESMF_FIELDSTATUS_COMPLETE) then
       write(message, '(A)') trim(name)//' received incomplete field'
       call MOSSCO_FieldString(field, message, rc=localrc)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
@@ -1833,7 +1846,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     if (itemType /= ESMF_STATEITEM_FIELD) then
       write(message, '(A)') trim(name)//' did not find field shear_stress_at_soil_surface_noncohesive'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
@@ -1847,7 +1860,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (status /= ESMF_FIELDSTATUS_COMPLETE) then
       write(message, '(A)') trim(name)//' received incomplete field'
       call MOSSCO_FieldString(field, message, rc=localrc)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
@@ -1870,7 +1883,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     if (itemType /= ESMF_STATEITEM_FIELD) then
       write(message, '(A)') trim(name)//' did not find field Equilibrium_SPM_concentration_at_soil_surface_noncohesive'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
@@ -1884,7 +1897,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (status /= ESMF_FIELDSTATUS_COMPLETE) then
       write(message, '(A)') trim(name)//' received incomplete field'
       call MOSSCO_FieldString(field, message, rc=localrc)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
@@ -1908,7 +1921,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
       if (itemType /= ESMF_STATEITEM_FIELD) then
         write(message, '(A)') trim(name)//' did not find field sediment_mass_in_bed'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
@@ -1921,7 +1934,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       if (status /= ESMF_FIELDSTATUS_COMPLETE) then
         write(message, '(A)') trim(name)//' received incomplete field'
         call MOSSCO_FieldString(field, message, rc=localrc)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
@@ -1946,7 +1959,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     if (itemType /= ESMF_STATEITEM_FIELD) then
       write(message, '(A)') trim(name)//' did not find field depth_average_concentration_of_SPM_in_water'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
@@ -1960,7 +1973,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (status /= ESMF_FIELDSTATUS_COMPLETE) then
       write(message, '(A)') trim(name)//' received incomplete field'
       call MOSSCO_FieldString(field, message, rc=localrc)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
@@ -1996,7 +2009,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     if (itemType /= ESMF_STATEITEM_FIELD) then
       write(message, '(A)') trim(name)//' did not find field Sum_depth_average_concentration_of_SPM_in_water'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
@@ -2010,7 +2023,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (status /= ESMF_FIELDSTATUS_COMPLETE) then
       write(message, '(A)') trim(name)//' received incomplete field'
       call MOSSCO_FieldString(field, message, rc=localrc)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
