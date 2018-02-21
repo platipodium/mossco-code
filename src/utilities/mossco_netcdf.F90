@@ -155,6 +155,8 @@ module mossco_netcdf
     type(ESMF_Grid)                   :: grid
     type(ESMF_StaggerLoc)             :: staggerloc
     integer(ESMF_KIND_I4)             :: gridRank
+    type(ESMF_Mesh)                   :: mesh
+    type(ESMF_MeshLoc)                :: meshLoc
     type(ESMF_GeomType_Flag)          :: geomType
     logical                           :: isPresent, gridIsPresent
 
@@ -174,6 +176,7 @@ module mossco_netcdf
     allocate(lbnd(rank), stat=localrc)
     allocate(ubnd(rank), stat=localrc)
     allocate(exclusiveCount(rank), stat=localrc)
+
     call ESMF_FieldGetBounds(field, localDe=0, exclusiveLBound=lbnd, &
       exclusiveUBound=ubnd, exclusiveCount=exclusiveCount, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -860,6 +863,8 @@ module mossco_netcdf
 
     type(ESMF_Grid)                :: grid
     type(ESMF_Mesh)                :: mesh
+    type(ESMF_LocStream)           :: locstream
+    type(ESMF_XGrid)               :: xgrid
     character(len=ESMF_MAXSTR)     :: varname, geomName, fieldname, coordinates=''
     character(len=ESMF_MAXSTR)     :: units='', attributeName, string, message
     integer                        :: ncStatus,esmfrc,rc_,varid,dimcheck=0
@@ -875,6 +880,7 @@ module mossco_netcdf
     type(ESMF_TypeKind_Flag)       :: typekind
     type(ESMF_GeomType_Flag)       :: geomType
     type(ESMF_StaggerLoc)          :: staggerloc
+    type(ESMF_MeshLoc)             :: meshLoc
     integer                        :: ungriddedID, ungriddedLength,dimrank
     integer(ESMF_KIND_I4), allocatable, dimension(:) :: uubnd,ulbnd
     logical                        :: isPresent
@@ -905,14 +911,14 @@ module mossco_netcdf
     if (self%variable_present(varname)) return
 
     call ESMF_FieldGet(field, geomType=geomType, dimCount=dimCount, &
-      staggerloc=staggerloc, rc=localrc)
+      rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (geomType==ESMF_GEOMTYPE_GRID) then
-      call ESMF_FieldGet(field,grid=grid,rc=localrc)
+      call ESMF_FieldGet(field, staggerloc=staggerloc, grid=grid, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      call ESMF_GridGet(grid,name=geomName,rc=localrc)
+      call ESMF_GridGet(grid, name=geomName, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       dimids => self%grid_dimensions(grid, staggerloc)
@@ -929,13 +935,23 @@ module mossco_netcdf
       endif
 
     elseif (geomType==ESMF_GEOMTYPE_MESH) then
-      !call ESMF_FieldGet(field,mesh=mesh,rc=esmfrc)
-      !if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      call ESMF_FieldGet(field, mesh=mesh, meshloc=meshloc, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       write(geomname,'(A)') 'mesh'
       dimids => self%mesh_dimensions(field)
-      !write(message,'(A)')  'Geometry type MESH cannot be handled sufficiently yet'
-      !call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
-      !return
+
+      call ESMF_MeshGet(mesh, coordSys=coordSys, rc=localrc)
+      dimCount = 1
+
+      if (coordSys == ESMF_COORDSYS_SPH_DEG) then
+        coordnames=(/'lon  ','lat  ','level'/)
+      elseif (coordSys == ESMF_COORDSYS_SPH_RAD) then
+        coordnames=(/'lon  ','lat  ','level'/)
+      else
+        coordnames=(/'x','y','z'/)
+      endif
+
     elseif (geomType==ESMF_GEOMTYPE_LOCSTREAM) then
       write(message,'(A)')  '  geometry type LOCSTREAM cannot be handled yet'
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
@@ -965,7 +981,7 @@ module mossco_netcdf
     if (ungriddedDimCount .ge. 1) then
       allocate(ulbnd(ungriddedDimCount))
       allocate(uubnd(ungriddedDimCount))
-      call ESMF_FieldGet(field,ungriddedLBound=ulbnd,ungriddedUBound=uubnd,rc=localrc)
+      call ESMF_FieldGet(field, ungriddedLBound=ulbnd, ungriddedUBound=uubnd, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       ! re-allocate dimids and add dimension-id(s) of ungridded dimension
@@ -988,8 +1004,8 @@ module mossco_netcdf
     !> The CF-standard demands that only the 2D (lat lon) coordinates are written
     !> to this attribute.  We assume that these are the first two coordinates.
     if (geomType == ESMF_GEOMTYPE_GRID .and. dimRank >= 2) then
-      write(coordinates,'(A)') trim(geomName)//'_'//trim(coordnames(2))
-      write(coordinates,'(A)') trim(coordinates)//' '//trim(geomName)//'_'//trim(coordnames(1))
+      write(coordinates,'(A)') trim(geomName)//'_'//trim(coordnames(1))
+      write(coordinates,'(A)') trim(coordinates)//' '//trim(geomName)//'_'//trim(coordnames(2))
     endif
 
     !! define variable
