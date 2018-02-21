@@ -195,30 +195,36 @@ module regrid_coupler
         write(message, '(A)') trim(name)//' created grid from SCRIP '//trim(geomFileName)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      elseif (trim(gridFileFormatString) == 'GRIDSPEC') then
+      elseif (trim(geomFileFormatString) == 'GRIDSPEC') then
         if (hasMaskVariable) then
-          externalGrid = ESMF_GridCreate(filename=trim(gridFileName), fileFormat=ESMF_FILEFORMAT_GRIDSPEC, &
+          externalGrid = ESMF_GridCreate(filename=trim(geomFileName), fileFormat=ESMF_FILEFORMAT_GRIDSPEC, &
             isSphere=.false., addmask=.true., varname=trim(mask_variable), rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-          write(message, '(A)') trim(name)//' created grid from CF '//trim(geomFileName)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-        if (hasMaskVariable) then
-          call ESMF_AttributeGet(cplComp, 'mask_variable',  &
-            mask_variable, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-          call ESMF_GridGet(externalGrid, rank=rank, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        else
+          externalGrid = ESMF_GridCreate(filename=trim(geomFileName), fileFormat=ESMF_FILEFORMAT_GRIDSPEC, &
+            isSphere=.false., rc=localrc)          
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         endif
 
+        write(message, '(A)') trim(name)//' created grid from CF '//trim(geomFileName)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+        ! if (hasMaskVariable) then
+        !   call ESMF_AttributeGet(cplComp, 'mask_variable',  &
+        !     mask_variable, rc=localrc)
+        !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        ! 
+        !   call ESMF_GridGet(externalGrid, rank=rank, rc=localrc)
+        !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        ! endif
+        ! 
         ! if (hasMaskVariable .and. rank==2) then
-        !   call MOSSCO_GridAddMaskFromVariable(externalGrid, trim(geomFileName), &
+        !   call MOSSCO_GridAddMaskFromVariable(externalGrid, trim(gridFileName), &
         !     trim(mask_variable), owner=trim(name), rc=localrc)
         !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         !   write(message, '(A)') trim(name)//' added grid mask from '//trim(mask_variable)
         !   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        ! endif
 
       elseif (trim(geomFileFormatString) == 'UGRID' .and. geomTypeString == 'MESH') then
         if (hasMaskVariable) then
