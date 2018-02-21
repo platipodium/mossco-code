@@ -48,7 +48,6 @@ module regrid_coupler
     type(ESMF_Mesh)               :: srcMesh, dstMesh
     type(ESMF_GeomType_Flag)      :: srcGeomType, dstGeomType
     type(type_mossco_routes), pointer :: next=>null()
-
   end type
 
   ! This is a module-globale variable that is accessible
@@ -111,11 +110,11 @@ module regrid_coupler
     integer(ESMF_KIND_I4)       :: keycount, matchIndex, importFieldCount
     integer(ESMF_KIND_I4)       :: exportFieldCount, unmappedCount
     logical                     :: geomIsPresent, isPresent, hasMaskVariable
-    logical                     :: isUnstructured
 
     type(ESMF_Field), allocatable :: importFieldList(:)
     type(ESMF_Field), allocatable :: exportFieldList(:)
     character(len=ESMF_MAXSTR)    :: gridFileFormatString = 'SCRIP', mask_variable
+    character(len=ESMF_MAXSTR)    :: geomTypeString = 'GRID'
     character(len=ESMF_MAXSTR)    :: regridMethodString, edgeMethodString
     type(ESMF_RegridMethod_Flag)  :: regridMethod, currentMethod, edgeMethod
     integer(ESMF_KIND_I4),pointer :: unmappedDstList(:) => null()
@@ -185,10 +184,10 @@ module regrid_coupler
       call ESMF_AttributeGet(cplComp, 'grid_file_format',  gridFileFormatString, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call MOSSCO_AttributeGet(cplComp, 'is_unstructured',  isUnstructured, rc=localrc)
+      call ESMF_AttributeGet(cplComp, 'geom_file_type',  geomTypeString, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (trim(gridFileFormatString) == 'SCRIP' .and. .not. isUnstructured) then
+      if (trim(gridFileFormatString) == 'SCRIP' .and. geomTypeString == 'GRID') then
         externalGrid = ESMF_GridCreate(filename=trim(gridFileName), &
           fileFormat=ESMF_FILEFORMAT_SCRIP, isSphere=.false., rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -221,7 +220,7 @@ module regrid_coupler
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         endif
 
-      elseif (trim(gridFileFormatString) == 'UGRID') then
+      elseif (trim(gridFileFormatString) == 'UGRID' .and. geomTypeString == 'MESH') then
         if (hasMaskVariable) then
           write(message,'(A)') trim(name)//' does not implement mask variable for UGRID'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
@@ -238,7 +237,7 @@ module regrid_coupler
         write(message, '(A)') trim(name)//' created mesh from UGRID '//trim(gridFileName)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      elseif (trim(gridFileFormatString) == 'ESMF') then
+      elseif (trim(gridFileFormatString) == 'ESMF'  .and. geomTypeString == 'MESH') then
         externalMesh = ESMF_MeshCreate(trim(gridFileName), &
           fileformat=ESMF_FILEFORMAT_ESMFMESH, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -246,7 +245,7 @@ module regrid_coupler
         write(message, '(A)') trim(name)//' created mesh from ESMF '//trim(gridFileName)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      elseif (trim(gridFileFormatString) == 'SCRIP' .and. isUnstructured) then
+      elseif (trim(gridFileFormatString) == 'SCRIP'  .and. geomTypeString == 'MESH') then
         externalMesh = ESMF_MeshCreate(trim(gridFileName), &
           fileformat=ESMF_FILEFORMAT_SCRIP, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -255,7 +254,8 @@ module regrid_coupler
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       else
-        write(message, '(A)') trim(name)//' unknown file format '//trim(gridFileFormatString)
+        write(message, '(A,A)') trim(name)//' unknown file format/type ' &
+          ,trim(gridFileFormatString)//'/'//trim(geomTypeString)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         localrc = ESMF_RC_NOT_IMPL
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -276,11 +276,14 @@ module regrid_coupler
         exportField = ESMF_FieldEmptyCreate(name=trim(importFieldName), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        if (isUnstructured) then
+        if (trim(geomTypeString) == 'MESH') then
           call ESMF_FieldEmptySet(exportField, mesh=externalMesh, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        else
+        elseif (trim(geomTypeString) == 'GRID') then
           call ESMF_FieldEmptySet(exportField, grid=externalGrid, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        else
+          localrc = ESMF_RC_NOT_IMPL
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         endif
 
@@ -932,7 +935,7 @@ module regrid_coupler
     integer(ESMF_KIND_I4)             :: rc_, localRc
     character(len=ESMF_MAXSTR)        :: configFileName, srcGridFileName, message
     character(len=ESMF_MAXSTR)        :: cplCompName, dstGridFileName
-    logical                           :: labelIsPresent, fileIsPresent, isUnstructured
+    logical                           :: labelIsPresent, fileIsPresent
     logical                           :: configIsPresent, configFileIsPresent
     type(ESMF_Config)                 :: config
     character(len=ESMF_MAXSTR), pointer :: filterExcludeList(:) => null()
@@ -940,6 +943,7 @@ module regrid_coupler
     character(len=ESMF_MAXSTR)        :: edgeMethodString, regridMethodString
 
     character(len=ESMF_MAXSTR)        :: gridFileFormatString = 'SCRIP'
+    character(len=ESMF_MAXSTR)        :: geomTypeString = 'GRID'
     character(len=ESMF_MAXSTR)        :: mask_variable
 
     rc_ = ESMF_SUCCESS
@@ -1007,18 +1011,22 @@ module regrid_coupler
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
 
-    call MOSSCO_ConfigGet(config, label='unstructured', value=isUnstructured, &
-      defaultValue=.false., isPresent=labelIsPresent, rc = localrc)
+    call MOSSCO_ConfigGet(config, label='type', value=geomTypeString, &
+      defaultValue='GRID', isPresent=labelIsPresent, rc = localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    if (trim(gridFileFormatString) == 'GRIDSPEC') then
-      isUnstructured=.false.
-    elseif (trim(gridFileFormatString) == 'ESMF' &
-      .or. trim(gridFileFormatString) == 'UGRID') then
-      isUnstructured =.true.
+    !> Overrides from file format
+    if (trim(gridFileFormatString) == 'GRIDSPEC' .and. labelIsPresent) then
+      geomTypeString='GRID'
+    elseif (.not.labelIsPresent .and. (trim(gridFileFormatString) == 'ESMF' &
+      .or. trim(gridFileFormatString) == 'UGRID')) then
+      geomTypeString='MESH'
+    elseif (trim(geomTypeString) == 'GRID' .and. (trim(gridFileFormatString) == 'ESMF' &
+      .or. trim(gridFileFormatString) == 'UGRID')) then
+      geomTypeString='MESH'
     endif
 
-    call MOSSCO_AttributeSet(cplComp, 'is_unstructured', isUnstructured, rc=localrc)
+    call ESMF_AttributeSet(cplComp, 'geom_file_type', trim(geomTypeString), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call MOSSCO_ConfigGet(config, label='mask', value=mask_variable, &
