@@ -396,10 +396,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       if (exportFieldCount == 0) then
 
         if (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
-          fieldBundle = ESMF_FieldBundleCreate(name='avg_'//trim(itemNameList(i)), rc=localrc)
+          fieldBundle = ESMF_FieldBundleCreate(name='avg_'//trim(itemNameList(i)),  rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
-          call ESMF_FieldBundleAdd(fieldBundle, (/exportField/), multiflag=.true., rc=localrc)
+          call ESMF_StateAdd(exportState, (/fieldBundle/), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
           write(message,'(A)') trim(name)//' created fieldBundle '//trim(itemNameList(i))
@@ -429,18 +429,19 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         enddo
 
         if (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
-          call ESMF_StateAdd(exportState, (/fieldBundle/), rc=localrc)
+          call ESMF_FieldBundleAdd(fieldBundle, (/exportField/), multiflag=.true., rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
         else
           call ESMF_StateAdd(exportState, (/exportField/), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
         endif
 
-        call MOSSCO_StateGetFieldList(exportState, exportFieldList, fieldCount=exportFieldCount, &
-          itemSearch='avg_'//trim(itemNameList(i)),  rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
-
       endif
+
+      call MOSSCO_StateLog(exportState)
+      call MOSSCO_StateGetFieldList(exportState, exportFieldList, fieldCount=exportFieldCount, &
+        itemSearch='avg_'//trim(itemNameList(i)),  rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
       if (needReset) then
         do j=1, exportFieldCount
@@ -483,7 +484,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       !> At this point, we are within the same itemName, but can have different
       !> order/index of fields in import and export State
       if (exportFieldCount /= fieldCount) then
-        write(message,'(A)') trim(name)//' mismatch in field counts for item '//trim(itemNameList(i))
+        write(message,'(A,I1,A,I1)') trim(name)//' mismatch in field counts for item '//trim(itemNameList(i))//' ',fieldCount,'/=',exportFieldCount
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         localrc = ESMF_RC_ARG_BAD
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
