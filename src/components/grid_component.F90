@@ -337,9 +337,18 @@ module grid_component
           regDecomp=decompositionList, isSphere=.false., rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       elseif (trim(fileFormat) == 'GRIDSPEC') then
-        grid = ESMF_GridCreate(filename=trim(gridFileName), fileFormat=ESMF_FILEFORMAT_GRIDSPEC, &
-          regDecomp=decompositionList, isSphere=.false., rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        if (hasMaskVariable) then
+          grid = ESMF_GridCreate(filename=trim(gridFileName), &
+            fileFormat=ESMF_FILEFORMAT_GRIDSPEC, regDecomp=decompositionList, &
+            isSphere=.false., addMask=.true., varname=trim(mask_variable), &
+            rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        else
+          grid = ESMF_GridCreate(filename=trim(gridFileName), &
+            fileFormat=ESMF_FILEFORMAT_GRIDSPEC, regDecomp=decompositionList, &
+            isSphere=.false., rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        endif
       else
         write(message, '(A)') trim(name)//' wrong file format '//trim(fileformat)//', valid options are SCRIP or GRIDSPEC'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -368,14 +377,14 @@ module grid_component
         return
       endif
 
-      !> Try to add a mask from a variable, hardcoded for now
-      if (hasMaskVariable .and. trim(fileFormat) == 'GRIDSPEC' .and. rank==2) then
-        call MOSSCO_GridAddMaskFromVariable(grid2, gridFileName, trim(mask_variable), &
-          owner=trim(name), rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        write(message, '(A)') trim(name)//' added grid mask from '//trim(mask_variable)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      endif
+      ! !> Try to add a mask from a variable, hardcoded for now
+      ! if (hasMaskVariable .and. trim(fileFormat) == 'GRIDSPEC' .and. rank==2) then
+      !   call MOSSCO_GridAddMaskFromVariable(grid2, gridFileName, trim(mask_variable), &
+      !     owner=trim(name), rc=localrc)
+      !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      !   write(message, '(A)') trim(name)//' added grid mask from '//trim(mask_variable)
+      !   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      ! endif
 
       call ESMF_GridGet(grid3, name=geomName)
 

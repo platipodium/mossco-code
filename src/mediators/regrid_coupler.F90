@@ -189,26 +189,31 @@ module regrid_coupler
           fileFormat=ESMF_FILEFORMAT_SCRIP, isSphere=.false., rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       elseif (trim(gridFileFormatString) == 'GRIDSPEC') then
-        externalGrid = ESMF_GridCreate(filename=trim(gridFileName), fileFormat=ESMF_FILEFORMAT_GRIDSPEC, &
-          isSphere=.false., rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
         if (hasMaskVariable) then
-          call ESMF_AttributeGet(cplComp, 'mask_variable',  &
-            mask_variable, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-          call ESMF_GridGet(externalGrid, rank=rank, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          externalGrid = ESMF_GridCreate(filename=trim(gridFileName), fileFormat=ESMF_FILEFORMAT_GRIDSPEC, &
+            isSphere=.false., addmask=.true., varname=trim(mask_variable), rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        else
+          externalGrid = ESMF_GridCreate(filename=trim(gridFileName), fileFormat=ESMF_FILEFORMAT_GRIDSPEC, &
+            isSphere=.false., rc=localrc)          
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         endif
-
-        if (hasMaskVariable .and. rank==2) then
-          call MOSSCO_GridAddMaskFromVariable(externalGrid, trim(gridFileName), &
-            trim(mask_variable), owner=trim(name), rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-          write(message, '(A)') trim(name)//' added grid mask from '//trim(mask_variable)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        endif
+        ! if (hasMaskVariable) then
+        !   call ESMF_AttributeGet(cplComp, 'mask_variable',  &
+        !     mask_variable, rc=localrc)
+        !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        ! 
+        !   call ESMF_GridGet(externalGrid, rank=rank, rc=localrc)
+        !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        ! endif
+        ! 
+        ! if (hasMaskVariable .and. rank==2) then
+        !   call MOSSCO_GridAddMaskFromVariable(externalGrid, trim(gridFileName), &
+        !     trim(mask_variable), owner=trim(name), rc=localrc)
+        !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        !   write(message, '(A)') trim(name)//' added grid mask from '//trim(mask_variable)
+        !   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        ! endif
 
       else
         write(message, '(A)') trim(name)//' unknown file format '//trim(gridFileFormatString)
@@ -404,13 +409,14 @@ module regrid_coupler
 
       fieldRoute=>Routes
 
-      do m = 1,2
+      ! do m = 1,2
+      ! do m = 1
 
-        if ( m==1 ) currentMethod = edgeMethod
-        if ( m==2 ) then
+        ! if ( m==1 ) currentMethod = edgeMethod
+        ! if ( m==2 ) then
           currentMethod = regridMethod
-          if (regridMethod == edgeMethod) exit ! no need to do this twice
-        endif
+        !   if (regridMethod == edgeMethod) exit ! no need to do this twice
+        ! endif
 
       !> Field pair / Method matching
       do while (associated(fieldRoute%next))
@@ -457,9 +463,10 @@ module regrid_coupler
           !> @todo this needs to consider masks!
           call ESMF_FieldRegridStore(srcField=importField, dstField=exportField, &
             !filename="weights.nc", &!routeHandle=routehandle, &
-            srcMaskValues=(/1,2/), dstMaskValues=(/1,2/), &
+            srcMaskValues=(/0/), dstMaskValues=(/0/), &
             routeHandle=routehandle, &
             regridmethod=currentMethod, &
+            extrapMethod=ESMF_EXTRAPMETHOD_NEAREST_IDAVG, &
             unmappedaction=ESMF_UNMAPPEDACTION_IGNORE, &
             ! unmappedDstList=unmappedDstList, & ! ESMF internal error
             rc=localrc)
@@ -527,7 +534,7 @@ module regrid_coupler
         ! do while(associated(currentRoute%next))
         !   currentRoute=>currentRoute%next
         ! enddo
-      enddo ! loop over methods
+      ! enddo ! loop over methods
     enddo  ! loop over fields
 
     call MOSSCO_CompExit(cplComp, localrc)
