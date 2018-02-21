@@ -372,16 +372,14 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
       if (fieldCount < 1) then
-        if (advanceCount < 1) then
-          write(message,'(A)') trim(name)//' skipped non-field or incomplete item '
-          call MOSSCO_MessageAdd(message,' '//itemNameList(i))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        endif
+        write(message,'(A)') trim(name)//' skipped non-field or incomplete item '
+        call MOSSCO_MessageAdd(message,' '//itemNameList(i))
+        if (advanceCount < 1) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         cycle
       endif
 
       if (advanceCount < 1) then
-        do j=1,fieldCount
+        do j=1, fieldCount
           write(message,'(A)') trim(name)//' will time aggregate '
           if (fieldCount > 1) write(message,'(A)') trim(message)//' bundled '
           call MOSSCO_MessageAdd(message,' '//itemNameList(i))
@@ -441,7 +439,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
       endif
 
-      call MOSSCO_StateLog(exportState)
       call MOSSCO_StateGetFieldList(exportState, exportFieldList, fieldCount=exportFieldCount, &
         itemSearch='avg_'//trim(itemNameList(i)),  rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
@@ -521,11 +518,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         if (matchIndex < 1 .or. matchIndex > fieldCount) then
-          write(message,'(A)') trim(name)//' could not find match for  '
+          write(message,'(A)') trim(name)//' skipped unmatched  '
           call MOSSCO_FieldString(exportFieldList(j), message)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-          localrc = ESMF_RC_NOT_FOUND
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+          return
         endif
 
         if (allocated(iubnd)) deallocate(iubnd)
@@ -537,9 +533,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
         if (any((iubnd - ilbnd) - ( ubnd - lbnd )  /= 0)) then
-          write(message,'(A)') trim(name)//' array bounds mismatch for'
+          write(message,'(A)') trim(name)//' skipped array bounds mismatch in '
           call MOSSCO_FieldString(fieldList(j),message)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
           cycle
         endif
 
@@ -549,7 +545,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           call MOSSCO_FieldString(fieldList(matchIndex), message)
           call MOSSCO_MessageAdd(message,' to ')
           call MOSSCO_FieldString(exportFieldList(j), message)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          if (advanceCount < 1) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
           call ESMF_FieldGet(fieldList(matchIndex), farrayPtr=farrayPtr2, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
@@ -572,7 +568,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           call MOSSCO_FieldString(fieldList(matchIndex), message)
           call MOSSCO_MessageAdd(message,' to ')
           call MOSSCO_FieldString(exportFieldList(j), message)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          if (advanceCount < 1) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
           call ESMF_FieldGet(fieldList(matchIndex), farrayPtr=farrayPtr3, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
@@ -591,7 +587,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
         else
           write(message,'(A)') trim(name)//' not implemented aggregating fields with rank not 2 or 3,    '//trim(itemNameList(i))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+          if (advanceCount < 1) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
         endif
       enddo
     enddo
