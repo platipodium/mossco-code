@@ -36,4 +36,3 @@ ifneq ($(wildcard $(external_GETMDIR)/src/getm/main.F90),)
 	@#echo "CPPFLAGS+=-DGETM_VERSION="${GETM_VERSION} >> $(MOSSCO_DIR)/src/include/versions.mk
 	@#echo "CPPFLAGS+=-DGETM_GIT_SHA="${GETM_GIT_SHA} >> $(MOSSCO_DIR)/src/include/versions.mk
 endif
-
