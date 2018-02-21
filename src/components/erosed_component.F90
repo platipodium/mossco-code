@@ -1613,10 +1613,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         do k = lbnd(3),ubnd(3)
 
           thickness_of_layers(RANGE2D,k) = &
-            layers_height(RANGE2D,k) - layers_height(RANGE2D,k-1)
+            layers_height(RANGE2D,k+1) - layers_height(RANGE2D,k)
 
           relative_thickness_of_layers(RANGE2D,k) =  thickness_of_layers(RANGE2D,k) &
-            / (layers_height(RANGE2D,ubnd(3)) - layers_height(RANGE2D,0))
+            / (layers_height(RANGE2D,ubnd(3)+1) - layers_height(RANGE2D,lbnd(3)))
         end do
 
         do k = ubnd(3),1,-1
