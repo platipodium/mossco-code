@@ -609,14 +609,18 @@ module regrid_coupler
     type(ESMF_Field)              :: exportField
     type(ESMF_RouteHandle)        :: routeHandle
     type(ESMF_RegridMethod_Flag)  :: regridMethod, edgeMethod, currentMethod
+    real(ESMF_KIND_R8), allocatable  :: farrayPtr1near(:)
     real(ESMF_KIND_R8), allocatable  :: farrayPtr2near(:,:)
     real(ESMF_KIND_R8), allocatable  :: farrayPtr3near(:,:,:)
+    real(ESMF_KIND_R8), pointer      :: farrayPtr1(:) => null()
     real(ESMF_KIND_R8), pointer      :: farrayPtr2(:,:) => null()
     real(ESMF_KIND_R8), pointer      :: farrayPtr3(:,:,:) => null()
     integer(ESMF_KIND_I4), allocatable :: ubnd(:), lbnd(:)
     type(ESMF_Clock)                   :: clock
     type(ESMF_GeomType_Flag)      :: importGeomType, exportGeomType
     type(ESMF_Grid)               :: grid
+    type(ESMF_Mesh)               :: mesh
+    type(ESMF_LocStream)          :: locstream
     character(len=ESMF_MAXSTR), pointer :: includeList(:) => null()
 
     rc = ESMF_SUCCESS
@@ -698,15 +702,33 @@ module regrid_coupler
           if (importGeomType == ESMF_GEOMTYPE_GRID) then
             call ESMF_FieldGet(importFieldList(i), grid=grid, rc=localrc)
             if (currentRoute%srcGrid /= grid) cycle
+          elseif (importGeomType == ESMF_GEOMTYPE_MESH) then
+            call ESMF_FieldGet(importFieldList(i), mesh=mesh, rc=localrc)
+            if (currentRoute%srcMesh /= mesh) cycle
+          elseif (importGeomType == ESMF_GEOMTYPE_MESH) then
+            call ESMF_FieldGet(importFieldList(i), locStream=locStream, rc=localrc)
+            if (currentRoute%srcLocStream /= locStream) cycle
+          elseif (importGeomType == ESMF_GEOMTYPE_XGRID) then
+            call ESMF_LogWrite(trim(name)//' xgrid not implemented', &
+              ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           else
-            call ESMF_LogWrite(trim(name)//' other than grid not implemented', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+            call ESMF_LogWrite(trim(name)//' other geomType not implemented', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           endif
 
           if (exportGeomType == ESMF_GEOMTYPE_GRID) then
-            call ESMF_FieldGet(exportFieldList(j), grid=grid, rc=localrc)
+            call ESMF_FieldGet(exportFieldList(i), grid=grid, rc=localrc)
             if (currentRoute%dstGrid /= grid) cycle
+          elseif (exportGeomType == ESMF_GEOMTYPE_MESH) then
+            call ESMF_FieldGet(exportFieldList(i), mesh=mesh, rc=localrc)
+            if (currentRoute%dstMesh /= mesh) cycle
+          elseif (exportGeomType == ESMF_GEOMTYPE_MESH) then
+            call ESMF_FieldGet(exportFieldList(i), locStream=locStream, rc=localrc)
+            if (currentRoute%dstLocStream /= locStream) cycle
+          elseif (exportGeomType == ESMF_GEOMTYPE_XGRID) then
+            call ESMF_LogWrite(trim(name)//' xgrid not implemented', &
+              ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           else
-            call ESMF_LogWrite(trim(name)//' other than grid not implemented', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+            call ESMF_LogWrite(trim(name)//' other geomType not implemented', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           endif
 
           !> At this point we have found in at least one route and for the specified
@@ -728,7 +750,10 @@ module regrid_coupler
           allocate(ubnd(rank))
           allocate(lbnd(rank))
 
-          if (rank == 2) then
+          if (rank == 1) then
+            call ESMF_FieldGet(exportFieldList(j), farrayPtr=farrayPtr1, &
+              exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
+          elseif (rank == 2) then
             call ESMF_FieldGet(exportFieldList(j), farrayPtr=farrayPtr2, &
               exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
           elseif (rank == 3) then
@@ -752,15 +777,33 @@ module regrid_coupler
           if (importGeomType == ESMF_GEOMTYPE_GRID) then
             call ESMF_FieldGet(importFieldList(i), grid=grid, rc=localrc)
             if (currentRoute%srcGrid /= grid) cycle
+          elseif (importGeomType == ESMF_GEOMTYPE_MESH) then
+            call ESMF_FieldGet(importFieldList(i), mesh=mesh, rc=localrc)
+            if (currentRoute%srcMesh /= mesh) cycle
+          elseif (importGeomType == ESMF_GEOMTYPE_MESH) then
+            call ESMF_FieldGet(importFieldList(i), locStream=locStream, rc=localrc)
+            if (currentRoute%srcLocStream /= locStream) cycle
+          elseif (importGeomType == ESMF_GEOMTYPE_XGRID) then
+            call ESMF_LogWrite(trim(name)//' xgrid not implemented', &
+              ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           else
-            call ESMF_LogWrite(trim(name)//' other than grid not implemented', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+            call ESMF_LogWrite(trim(name)//' other geomType not implemented', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           endif
 
           if (exportGeomType == ESMF_GEOMTYPE_GRID) then
-            call ESMF_FieldGet(exportFieldList(j), grid=grid, rc=localrc)
+            call ESMF_FieldGet(exportFieldList(i), grid=grid, rc=localrc)
             if (currentRoute%dstGrid /= grid) cycle
+          elseif (exportGeomType == ESMF_GEOMTYPE_MESH) then
+            call ESMF_FieldGet(exportFieldList(i), mesh=mesh, rc=localrc)
+            if (currentRoute%dstMesh /= mesh) cycle
+          elseif (exportGeomType == ESMF_GEOMTYPE_MESH) then
+            call ESMF_FieldGet(exportFieldList(i), locStream=locStream, rc=localrc)
+            if (currentRoute%dstLocStream /= locStream) cycle
+          elseif (exportGeomType == ESMF_GEOMTYPE_XGRID) then
+            call ESMF_LogWrite(trim(name)//' xgrid not implemented', &
+              ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           else
-            call ESMF_LogWrite(trim(name)//' other than grid not implemented', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+            call ESMF_LogWrite(trim(name)//' other geomType not implemented', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           endif
 
           !> At this point we have found in at least one route and for the specified
@@ -774,7 +817,10 @@ module regrid_coupler
 
           ! Save old state from prior nearest neighbour regridding before
           ! performing this regridding step
-          if (rank == 2) then
+          if (rank == 1) then
+            allocate(farrayPtr1near(RANGE1D))
+            farrayPtr1near(RANGE1D) = farrayPtr1(RANGE1D)
+          elseif (rank == 2) then
             allocate(farrayPtr2near(RANGE2D))
             farrayPtr2near(RANGE2D) = farrayPtr2(RANGE2D)
           elseif (rank == 3) then
@@ -786,7 +832,10 @@ module regrid_coupler
             routeHandle=currentRoute%routehandle, zeroregion=ESMF_REGION_SELECT, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          if (rank == 2) then
+          if (rank == 1) then
+            call ESMF_FieldGet(exportFieldList(j), farrayPtr=farrayPtr1, &
+              exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
+          elseif (rank == 2) then
             call ESMF_FieldGet(exportFieldList(j), farrayPtr=farrayPtr2, &
               exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
           elseif (rank == 3) then
@@ -796,7 +845,14 @@ module regrid_coupler
 
           !> @todo update values in farrayPtr with values from farrayPtrNear,
           !> where this is necessary.  Maybe need to consider mask.
-          if (rank == 2) then
+          if (rank == 1) then
+            where ( farrayPtr1(RANGE1D) /= farrayPtr1(RANGE1D) .and. &
+              farrayPtr1near(RANGE1D) == farrayPtr1near(RANGE1D))
+              farrayPtr1(RANGE1D) = farrayPtr1near(RANGE1D)
+            endwhere
+            deallocate(farrayPtr1near)
+            nullify(farrayPtr1)
+          elseif (rank == 2) then
             where ( farrayPtr2(RANGE2D) /= farrayPtr2(RANGE2D) .and. &
               farrayPtr2near(RANGE2D) == farrayPtr2near(RANGE2D))
               farrayPtr2(RANGE2D) = farrayPtr2near(RANGE2D)
@@ -812,13 +868,15 @@ module regrid_coupler
             nullify(farrayPtr3)
           endif
           exit ! no need to search for more routes
-        enddo
-      enddo
-    enddo
+        enddo ! while(associated(currentRoute%next))
+      enddo ! j=1, exportFieldCount
+    enddo ! i=1, importFieldCount
     if (associated(includeList)) deallocate(includeList)
 
+    nullify(farrayPtr1)
     nullify(farrayPtr2)
     nullify(farrayPtr3)
+    if (allocated(farrayPtr1near)) deallocate(farrayPtr1near)
     if (allocated(farrayPtr2near)) deallocate(farrayPtr2near)
     if (allocated(farrayPtr3near)) deallocate(farrayPtr3near)
 
@@ -1265,9 +1323,16 @@ subroutine MOSSCO_RouteString(route, string)
 
   if (route%srcGeomType == ESMF_GEOMTYPE_GRID) then
     call MOSSCO_GridString(route%srcGrid, string)
+  elseif (route%srcGeomType == ESMF_GEOMTYPE_XGRID) then
+    call MOSSCO_MessageAdd(string,' (xgrid) ')
+  elseif (route%srcGeomType == ESMF_GEOMTYPE_MESH) then
+    call MOSSCO_MessageAdd(string,' (mesh) ')
+  elseif (route%srcGeomType == ESMF_GEOMTYPE_LOCSTREAM) then
+    call MOSSCO_MessageAdd(string,' (mesh) ')
   else
-    call MOSSCO_MessageAdd(string,' (non-grid) ')
+    call MOSSCO_MessageAdd(string,' (unknown) ')
   endif
+
   call MOSSCO_MessageAdd(string,' --')
   if (route%regridMethod == ESMF_REGRIDMETHOD_BILINEAR) then
     call MOSSCO_MessageAdd(string,'BILIN--> ')
@@ -1282,8 +1347,14 @@ subroutine MOSSCO_RouteString(route, string)
   endif
   if (route%dstGeomType == ESMF_GEOMTYPE_GRID) then
     call MOSSCO_GridString(route%dstGrid, string)
+  elseif (route%dstGeomType == ESMF_GEOMTYPE_XGRID) then
+    call MOSSCO_MessageAdd(string,' (xgrid) ')
+  elseif (route%dstGeomType == ESMF_GEOMTYPE_MESH) then
+    call MOSSCO_MessageAdd(string,' (mesh) ')
+  elseif (route%dstGeomType == ESMF_GEOMTYPE_LOCSTREAM) then
+    call MOSSCO_MessageAdd(string,' (mesh) ')
   else
-    call MOSSCO_MessageAdd(string,' (non-grid) ')
+    call MOSSCO_MessageAdd(string,' (unknown) ')
   endif
 
 end subroutine MOSSCO_RouteString
