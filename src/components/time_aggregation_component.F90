@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF time aggregation component
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2017 Helmholtz-Zentrum Geesthacht, Bundesanstalt für
+!> @copyright Copyright 2017, 2018 Helmholtz-Zentrum Geesthacht, Bundesanstalt für
 !> Wasserbau
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !> @author Markus Kreus <markus.kreus@baw.de>
@@ -189,7 +189,7 @@ module time_aggregation_component
 
       write(message,'(A)') trim(name)//' include patterns: '//trim(message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      
+
       deallocate(filterIncludeList)
     endif
 
@@ -261,7 +261,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     real(ESMF_KIND_R8)      :: seconds
     integer(ESMF_KIND_I4)   :: itemCount, timeSlice, localPet,  petCount
     integer(ESMF_KIND_I4)   :: localrc, fieldCount, alarmCount, counter
-    integer(ESMF_KIND_I4)   :: exportFieldCount, rank
+    integer(ESMF_KIND_I4)   :: exportFieldCount, rank, matchIndex
     type(ESMF_StateItem_Flag), allocatable, dimension(:) :: itemTypeList
     character(len=ESMF_MAXSTR), allocatable, dimension(:) :: itemNameList
     type(ESMF_Clock)        :: clock
@@ -269,9 +269,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     logical ,save                :: needReset=.false.
     character(len=ESMF_MAXSTR) :: form
     type(ESMF_Alarm), dimension(:), allocatable :: alarmList
-    integer(ESMF_KIND_I4), allocatable :: ubnd(:), lbnd(:)
-    real(ESMF_KIND_R8), pointer :: farrayPtr2(:,:), farrayPtr3(:,:,:)
-    real(ESMF_KIND_R8), pointer :: exportPtr2(:,:), exportPtr3(:,:,:)
+    integer(ESMF_KIND_I4), allocatable :: ubnd(:), lbnd(:), iubnd(:), ilbnd(:)
+    real(ESMF_KIND_R8), pointer :: farrayPtr2(:,:) => null(), farrayPtr3(:,:,:) => null()
+    real(ESMF_KIND_R8), pointer :: exportPtr2(:,:) => null(), exportPtr3(:,:,:) => null()
 
     character(len=ESMF_MAXSTR) :: message, name, timeUnit, alarmName
     character(len=ESMF_MAXSTR), allocatable :: filterIncludeList(:), filterExcludeList(:)
@@ -347,7 +347,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       itemNameList=itemNameList, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
-    do i=1,itemCount
+    do i=1, itemCount
 
       ! Only deal with fields and field bundles, otherwise skip
       if (itemTypeList(i) /= ESMF_STATEITEM_FIELD .and. &
@@ -372,18 +372,19 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
       if (fieldCount < 1) then
-        if (advanceCount < 1) then
-          write(message,'(A)') trim(name)//' skipped non-field or incomplete item '
-          call MOSSCO_MessageAdd(message,' '//itemNameList(i))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        endif
+        write(message,'(A)') trim(name)//' skipped non-field or incomplete item '
+        call MOSSCO_MessageAdd(message,' '//itemNameList(i))
+        if (advanceCount < 1) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         cycle
       endif
 
       if (advanceCount < 1) then
-        write(message,'(A)') trim(name)//' will time aggregate '
-        call MOSSCO_MessageAdd(message,' '//itemNameList(i))
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        do j=1, fieldCount
+          write(message,'(A)') trim(name)//' will time aggregate '
+          if (fieldCount > 1) write(message,'(A)') trim(message)//' bundled '
+          call MOSSCO_MessageAdd(message,' '//itemNameList(i))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        enddo
       endif
 
       call MOSSCO_StateGetFieldList(exportState, exportFieldList, fieldCount=exportFieldCount, &
@@ -393,8 +394,14 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       if (exportFieldCount == 0) then
 
         if (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
-          fieldBundle = ESMF_FieldBundleCreate(name='avg_'//trim(itemNameList(i)), rc=localrc)
+          fieldBundle = ESMF_FieldBundleCreate(name='avg_'//trim(itemNameList(i)),  rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+          call ESMF_StateAdd(exportState, (/fieldBundle/), rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+          write(message,'(A)') trim(name)//' created fieldBundle '//trim(itemNameList(i))
+          if (advanceCount < 1) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         endif
 
         do j=1,fieldCount
@@ -409,28 +416,35 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           call MOSSCO_FieldInitialize(exportField, value=0.0d0, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
+          write(message,'(A)') trim(name)//' created '
+
           if (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
-            call ESMF_FieldBundleAdd(fieldBundle, (/exportField/), rc=localrc)
+            write(message,'(A)') trim(message)//' '//trim(itemNameList(i))//'/'
+          endif
+
+          call MOSSCO_FieldString(exportField, message)
+          if (advanceCount < 1) call  ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+          if (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
+            call ESMF_FieldBundleAdd(fieldBundle, (/exportField/), multiflag=.true., rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
           endif
+
         enddo
 
-        if (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
-          call ESMF_StateAdd(exportState, (/fieldBundle/), rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
-        else
+        if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
           call ESMF_StateAdd(exportState, (/exportField/), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
         endif
 
-        call MOSSCO_StateGetFieldList(exportState, exportFieldList, fieldCount=exportFieldCount, &
-          itemSearch='avg_'//trim(itemNameList(i)),  rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
-
       endif
 
+      call MOSSCO_StateGetFieldList(exportState, exportFieldList, fieldCount=exportFieldCount, &
+        itemSearch='avg_'//trim(itemNameList(i)),  rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
       if (needReset) then
-        do j=1,fieldCount
+        do j=1, exportFieldCount
           call MOSSCO_FieldInitialize(exportFieldList(j), value=0.0D0, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
@@ -467,9 +481,18 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         endif
       enddo
 
-      do j=1,fieldCount
+      !> At this point, we are within the same itemName, but can have different
+      !> order/index of fields in import and export State
+      if (exportFieldCount /= fieldCount) then
+        write(message,'(A,I1,A,I1)') trim(name)//' mismatch in field counts for item '//trim(itemNameList(i))//' ',fieldCount,'/=',exportFieldCount
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        localrc = ESMF_RC_ARG_BAD
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      endif
 
-        call ESMF_FieldGet(fieldList(j), rank=rank, rc=localrc)
+      do j=1, exportFieldCount
+
+        call ESMF_FieldGet(exportfieldList(j), rank=rank, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
         if (allocated(ubnd)) deallocate(ubnd)
@@ -477,37 +500,61 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         allocate(ubnd(rank))
         allocate(lbnd(rank))
 
-        call ESMF_FieldGetBounds(fieldList(j), exclusiveUbound=ubnd, &
+        call ESMF_FieldGetBounds(exportFieldList(j), exclusiveUbound=ubnd, &
           exclusiveLbound=lbnd, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
-        call ESMF_AttributeGet(exportFieldList(j), 'averaging_counter', counter, rc=localrc)
+        call ESMF_AttributeGet(exportFieldList(j), 'averaging_counter', counter, &
+          defaultValue=0, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
         counter = counter + 1
         call ESMF_AttributeSet(exportFieldList(j), 'averaging_counter', counter, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
+        !> look for matching field in importState's selected item
+        call MOSSCO_FieldMatchFields(exportFieldList(j), fieldList, &
+          index=matchIndex, owner=trim(name), verbose=.true., rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        if (matchIndex < 1 .or. matchIndex > fieldCount) then
+          write(message,'(A)') trim(name)//' skipped unmatched  '
+          call MOSSCO_FieldString(exportFieldList(j), message)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+          return
+        endif
+
+        if (allocated(iubnd)) deallocate(iubnd)
+        if (allocated(ilbnd)) deallocate(ilbnd)
+        allocate(iubnd(rank))
+        allocate(ilbnd(rank))
+        call ESMF_FieldGetBounds(fieldList(matchIndex), exclusiveUbound=iubnd, &
+          exclusiveLbound=ilbnd, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+        if (any((iubnd - ilbnd) - ( ubnd - lbnd )  /= 0)) then
+          write(message,'(A)') trim(name)//' skipped array bounds mismatch in '
+          call MOSSCO_FieldString(fieldList(j),message)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+          cycle
+        endif
+
         if (rank == 2) then
 
-          write(message,'(A)') trim(name)//' aggregating field with rank 2 '//trim(itemNameList(i))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+          write(message,'(A)') trim(name)//' aggregating '
+          call MOSSCO_FieldString(fieldList(matchIndex), message)
+          call MOSSCO_MessageAdd(message,' to ')
+          call MOSSCO_FieldString(exportFieldList(j), message)
+          if (advanceCount < 1) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-          call ESMF_FieldGet(fieldList(j), farrayPtr=farrayPtr2, rc=localrc)
+          call ESMF_FieldGet(fieldList(matchIndex), farrayPtr=farrayPtr2, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
           call ESMF_FieldGet(exportFieldList(j), farrayPtr=exportPtr2, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
-          if (any(lbound(exportPtr2) - lbound(farrayPtr2) /= 0) .or. &
-              any(ubound(exportPtr2) - ubound(farrayPtr2) /= 0)) then
-            write(message,'(A)') trim(name)//' array bounds do not match for'
-            call MOSSCO_FieldString(fieldList(j),message)
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-            cycle
-          endif
-
-          exportPtr2(RANGE2D) = exportPtr2(RANGE2D)  + farrayPtr2(RANGE2D)
+          exportPtr2(RANGE2D) = exportPtr2(RANGE2D)  + &
+            farrayPtr2(ilbnd(1):iubnd(1), ilbnd(2):iubnd(2))
 
           ! Divide by number of steps for state variables (i.e. arithmetic
           ! mean, do not divide for fluxes, that are summed)
@@ -517,24 +564,20 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
         elseif (rank == 3)  then
 
-          write(message,'(A)') trim(name)//' aggregating field with rank 3 '//trim(itemNameList(i))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+          write(message,'(A)') trim(name)//' aggregating '
+          call MOSSCO_FieldString(fieldList(matchIndex), message)
+          call MOSSCO_MessageAdd(message,' to ')
+          call MOSSCO_FieldString(exportFieldList(j), message)
+          if (advanceCount < 1) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-          call ESMF_FieldGet(fieldList(j), farrayPtr=farrayPtr3, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+          call ESMF_FieldGet(fieldList(matchIndex), farrayPtr=farrayPtr3, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
           call ESMF_FieldGet(exportFieldList(j), farrayPtr=exportPtr3, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
-          if (any(lbound(exportPtr3) - lbound(farrayPtr3) /= 0) .or. &
-              any(ubound(exportPtr3) - ubound(farrayPtr3) /= 0)) then
-            write(message,'(A)') trim(name)//' array bounds do not match for'
-            call MOSSCO_FieldString(fieldList(j),message)
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-            cycle
-          endif
-
-          exportPtr3(RANGE3D) = exportPtr3(RANGE3D)  + farrayPtr3(RANGE3D)
+          exportPtr3(RANGE3D) = exportPtr3(RANGE3D)  &
+             + farrayPtr3(ilbnd(1):iubnd(1), ilbnd(2):iubnd(2), ilbnd(3):iubnd(3))
 
           ! Divide by number of steps for state variables (i.e. arithmetic
           ! mean, do not divide for fluxes, that are summed)
@@ -544,12 +587,18 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
         else
           write(message,'(A)') trim(name)//' not implemented aggregating fields with rank not 2 or 3,    '//trim(itemNameList(i))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+          if (advanceCount < 1) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
         endif
       enddo
-
     enddo
 
+    nullify(farrayPtr2)
+    nullify(exportPtr2)
+    nullify(farrayPtr3)
+    nullify(exportPtr3)
+
+    if (allocated(iubnd)) deallocate(iubnd)
+    if (allocated(ilbnd)) deallocate(ilbnd)
     if (allocated(ubnd)) deallocate(ubnd)
     if (allocated(lbnd)) deallocate(lbnd)
     if (allocated(alarmList)) deallocate(alarmList)

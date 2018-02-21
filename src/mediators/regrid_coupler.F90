@@ -48,7 +48,6 @@ module regrid_coupler
     type(ESMF_Mesh)               :: srcMesh, dstMesh
     type(ESMF_GeomType_Flag)      :: srcGeomType, dstGeomType
     type(type_mossco_routes), pointer :: next=>null()
-
   end type
 
   ! This is a module-globale variable that is accessible
@@ -102,19 +101,20 @@ module regrid_coupler
 
     integer(ESMF_KIND_I4)       :: rank, localDeCount
     type(ESMF_FieldStatus_Flag) :: status
-    type(ESMF_Mesh)             :: importMesh, exportMesh
+    type(ESMF_Mesh)             :: importMesh, exportMesh, externalMesh
     type(ESMF_Grid)             :: externalGrid, importGrid, exportGrid
-    type(ESMF_LocStream)        :: importLocstream, exportLocstream
+    type(ESMF_LocStream)        :: importLocstream, exportLocstream, externalLocStream
     type(ESMF_GeomType_Flag)    :: importGeomType, exportGeomType
-    character(ESMF_MAXSTR)      :: importGeomName, exportGeomName, gridFileName
+    character(ESMF_MAXSTR)      :: importGeomName, exportGeomName, geomFileName
     integer                     :: numOwnedNodes, dimCount
     integer(ESMF_KIND_I4)       :: keycount, matchIndex, importFieldCount
     integer(ESMF_KIND_I4)       :: exportFieldCount, unmappedCount
-    logical                     :: gridIsPresent, isPresent, hasMaskVariable
+    logical                     :: geomIsPresent, isPresent, hasMaskVariable
 
     type(ESMF_Field), allocatable :: importFieldList(:)
     type(ESMF_Field), allocatable :: exportFieldList(:)
-    character(len=ESMF_MAXSTR)    :: gridFileFormatString = 'SCRIP', mask_variable
+    character(len=ESMF_MAXSTR)    :: geomFileFormatString = 'SCRIP', mask_variable
+    character(len=ESMF_MAXSTR)    :: geomTypeString = 'GRID'
     character(len=ESMF_MAXSTR)    :: regridMethodString, edgeMethodString
     type(ESMF_RegridMethod_Flag)  :: regridMethod, currentMethod, edgeMethod
     integer(ESMF_KIND_I4),pointer :: unmappedDstList(:) => null()
@@ -129,8 +129,8 @@ module regrid_coupler
     call read_config(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeGet(cplComp, 'grid_filename',  &
-      isPresent=gridIsPresent, rc=localrc)
+    call ESMF_AttributeGet(cplComp, 'geom_filename',  &
+      isPresent=geomIsPresent, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (isPresent) then
@@ -176,54 +176,93 @@ module regrid_coupler
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
     endif
 
-    if (gridIsPresent) then
+    if (geomIsPresent) then
 
-      call ESMF_AttributeGet(cplComp, 'grid_filename',  gridFileName, rc=localrc)
+      call ESMF_AttributeGet(cplComp, 'geom_filename',  geomFileName, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_AttributeGet(cplComp, 'grid_file_format',  gridFileFormatString, rc=localrc)
+      call ESMF_AttributeGet(cplComp, 'geom_file_format',  geomFileFormatString, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (trim(gridFileFormatString) == 'SCRIP') then
-        externalGrid = ESMF_GridCreate(filename=trim(gridFileName), &
+      call ESMF_AttributeGet(cplComp, 'geom_file_type',  geomTypeString, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (trim(geomFileFormatString) == 'SCRIP' .and. geomTypeString == 'GRID') then
+        externalGrid = ESMF_GridCreate(filename=trim(geomFileName), &
           fileFormat=ESMF_FILEFORMAT_SCRIP, isSphere=.false., rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        write(message, '(A)') trim(name)//' created grid from SCRIP '//trim(geomFileName)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
       elseif (trim(gridFileFormatString) == 'GRIDSPEC') then
         if (hasMaskVariable) then
           externalGrid = ESMF_GridCreate(filename=trim(gridFileName), fileFormat=ESMF_FILEFORMAT_GRIDSPEC, &
             isSphere=.false., addmask=.true., varname=trim(mask_variable), rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        else
-          externalGrid = ESMF_GridCreate(filename=trim(gridFileName), fileFormat=ESMF_FILEFORMAT_GRIDSPEC, &
-            isSphere=.false., rc=localrc)          
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          write(message, '(A)') trim(name)//' created grid from CF '//trim(geomFileName)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+        if (hasMaskVariable) then
+          call ESMF_AttributeGet(cplComp, 'mask_variable',  &
+            mask_variable, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          call ESMF_GridGet(externalGrid, rank=rank, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         endif
-        ! if (hasMaskVariable) then
-        !   call ESMF_AttributeGet(cplComp, 'mask_variable',  &
-        !     mask_variable, rc=localrc)
-        !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        ! 
-        !   call ESMF_GridGet(externalGrid, rank=rank, rc=localrc)
-        !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        ! endif
-        ! 
+
         ! if (hasMaskVariable .and. rank==2) then
-        !   call MOSSCO_GridAddMaskFromVariable(externalGrid, trim(gridFileName), &
+        !   call MOSSCO_GridAddMaskFromVariable(externalGrid, trim(geomFileName), &
         !     trim(mask_variable), owner=trim(name), rc=localrc)
         !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         !   write(message, '(A)') trim(name)//' added grid mask from '//trim(mask_variable)
         !   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        ! endif
+
+      elseif (trim(geomFileFormatString) == 'UGRID' .and. geomTypeString == 'MESH') then
+        if (hasMaskVariable) then
+          write(message,'(A)') trim(name)//' does not implement mask variable for UGRID'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+        !   externalMesh = ESMF_MeshCreateFromFile(trim(geomFileName), &
+        !     fileformat=ESMF_FILEFORMAT_UGRID, convertToDual=.false., &
+        !     maskFlag=ESMF_MESHLOC_ELEMENT, varname=trim(mask_variable),  rc=localrc)
+        !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        ! else
+        endif
+        externalMesh = ESMF_MeshCreate(trim(geomFileName), &
+          fileformat=ESMF_FILEFORMAT_UGRID, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        write(message, '(A)') trim(name)//' created mesh from UGRID '//trim(geomFileName)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      elseif (trim(geomFileFormatString) == 'ESMF'  .and. geomTypeString == 'MESH') then
+        externalMesh = ESMF_MeshCreate(trim(geomFileName), &
+          fileformat=ESMF_FILEFORMAT_ESMFMESH, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        write(message, '(A)') trim(name)//' created mesh from ESMF '//trim(geomFileName)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      elseif (trim(geomFileFormatString) == 'SCRIP'  .and. geomTypeString == 'MESH') then
+        externalMesh = ESMF_MeshCreate(trim(geomFileName), &
+          fileformat=ESMF_FILEFORMAT_SCRIP, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        write(message, '(A)') trim(name)//' created mesh from SCRIP '//trim(geomFileName)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       else
-        write(message, '(A)') trim(name)//' unknown file format '//trim(gridFileFormatString)
+        write(message, '(A,A)') trim(name)//' unknown file format/type ' &
+          ,trim(geomFileFormatString)//'/'//trim(geomTypeString)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         localrc = ESMF_RC_NOT_IMPL
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
     endif
 
-    if (gridIsPresent) then
+    if (geomIsPresent) then
 
       allocate(exportFieldList(importFieldCount))
 
@@ -237,8 +276,16 @@ module regrid_coupler
         exportField = ESMF_FieldEmptyCreate(name=trim(importFieldName), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        call ESMF_FieldEmptySet(exportField, grid=externalGrid, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        if (trim(geomTypeString) == 'MESH') then
+          call ESMF_FieldEmptySet(exportField, mesh=externalMesh, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        elseif (trim(geomTypeString) == 'GRID') then
+          call ESMF_FieldEmptySet(exportField, grid=externalGrid, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        else
+          localrc = ESMF_RC_NOT_IMPL
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        endif
 
         call ESMF_StateAddReplace(exportState, (/exportField/), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -564,14 +611,18 @@ module regrid_coupler
     type(ESMF_Field)              :: exportField
     type(ESMF_RouteHandle)        :: routeHandle
     type(ESMF_RegridMethod_Flag)  :: regridMethod, edgeMethod, currentMethod
+    real(ESMF_KIND_R8), allocatable  :: farrayPtr1near(:)
     real(ESMF_KIND_R8), allocatable  :: farrayPtr2near(:,:)
     real(ESMF_KIND_R8), allocatable  :: farrayPtr3near(:,:,:)
+    real(ESMF_KIND_R8), pointer      :: farrayPtr1(:) => null()
     real(ESMF_KIND_R8), pointer      :: farrayPtr2(:,:) => null()
     real(ESMF_KIND_R8), pointer      :: farrayPtr3(:,:,:) => null()
     integer(ESMF_KIND_I4), allocatable :: ubnd(:), lbnd(:)
     type(ESMF_Clock)                   :: clock
     type(ESMF_GeomType_Flag)      :: importGeomType, exportGeomType
     type(ESMF_Grid)               :: grid
+    type(ESMF_Mesh)               :: mesh
+    type(ESMF_LocStream)          :: locstream
     character(len=ESMF_MAXSTR), pointer :: includeList(:) => null()
 
     rc = ESMF_SUCCESS
@@ -653,15 +704,33 @@ module regrid_coupler
           if (importGeomType == ESMF_GEOMTYPE_GRID) then
             call ESMF_FieldGet(importFieldList(i), grid=grid, rc=localrc)
             if (currentRoute%srcGrid /= grid) cycle
+          elseif (importGeomType == ESMF_GEOMTYPE_MESH) then
+            call ESMF_FieldGet(importFieldList(i), mesh=mesh, rc=localrc)
+            if (currentRoute%srcMesh /= mesh) cycle
+          elseif (importGeomType == ESMF_GEOMTYPE_MESH) then
+            call ESMF_FieldGet(importFieldList(i), locStream=locStream, rc=localrc)
+            if (currentRoute%srcLocStream /= locStream) cycle
+          elseif (importGeomType == ESMF_GEOMTYPE_XGRID) then
+            call ESMF_LogWrite(trim(name)//' xgrid not implemented', &
+              ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           else
-            call ESMF_LogWrite(trim(name)//' other than grid not implemented', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+            call ESMF_LogWrite(trim(name)//' other geomType not implemented', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           endif
 
           if (exportGeomType == ESMF_GEOMTYPE_GRID) then
-            call ESMF_FieldGet(exportFieldList(j), grid=grid, rc=localrc)
+            call ESMF_FieldGet(exportFieldList(i), grid=grid, rc=localrc)
             if (currentRoute%dstGrid /= grid) cycle
+          elseif (exportGeomType == ESMF_GEOMTYPE_MESH) then
+            call ESMF_FieldGet(exportFieldList(i), mesh=mesh, rc=localrc)
+            if (currentRoute%dstMesh /= mesh) cycle
+          elseif (exportGeomType == ESMF_GEOMTYPE_MESH) then
+            call ESMF_FieldGet(exportFieldList(i), locStream=locStream, rc=localrc)
+            if (currentRoute%dstLocStream /= locStream) cycle
+          elseif (exportGeomType == ESMF_GEOMTYPE_XGRID) then
+            call ESMF_LogWrite(trim(name)//' xgrid not implemented', &
+              ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           else
-            call ESMF_LogWrite(trim(name)//' other than grid not implemented', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+            call ESMF_LogWrite(trim(name)//' other geomType not implemented', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           endif
 
           !> At this point we have found in at least one route and for the specified
@@ -683,7 +752,10 @@ module regrid_coupler
           allocate(ubnd(rank))
           allocate(lbnd(rank))
 
-          if (rank == 2) then
+          if (rank == 1) then
+            call ESMF_FieldGet(exportFieldList(j), farrayPtr=farrayPtr1, &
+              exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
+          elseif (rank == 2) then
             call ESMF_FieldGet(exportFieldList(j), farrayPtr=farrayPtr2, &
               exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
           elseif (rank == 3) then
@@ -707,15 +779,33 @@ module regrid_coupler
           if (importGeomType == ESMF_GEOMTYPE_GRID) then
             call ESMF_FieldGet(importFieldList(i), grid=grid, rc=localrc)
             if (currentRoute%srcGrid /= grid) cycle
+          elseif (importGeomType == ESMF_GEOMTYPE_MESH) then
+            call ESMF_FieldGet(importFieldList(i), mesh=mesh, rc=localrc)
+            if (currentRoute%srcMesh /= mesh) cycle
+          elseif (importGeomType == ESMF_GEOMTYPE_MESH) then
+            call ESMF_FieldGet(importFieldList(i), locStream=locStream, rc=localrc)
+            if (currentRoute%srcLocStream /= locStream) cycle
+          elseif (importGeomType == ESMF_GEOMTYPE_XGRID) then
+            call ESMF_LogWrite(trim(name)//' xgrid not implemented', &
+              ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           else
-            call ESMF_LogWrite(trim(name)//' other than grid not implemented', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+            call ESMF_LogWrite(trim(name)//' other geomType not implemented', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           endif
 
           if (exportGeomType == ESMF_GEOMTYPE_GRID) then
-            call ESMF_FieldGet(exportFieldList(j), grid=grid, rc=localrc)
+            call ESMF_FieldGet(exportFieldList(i), grid=grid, rc=localrc)
             if (currentRoute%dstGrid /= grid) cycle
+          elseif (exportGeomType == ESMF_GEOMTYPE_MESH) then
+            call ESMF_FieldGet(exportFieldList(i), mesh=mesh, rc=localrc)
+            if (currentRoute%dstMesh /= mesh) cycle
+          elseif (exportGeomType == ESMF_GEOMTYPE_MESH) then
+            call ESMF_FieldGet(exportFieldList(i), locStream=locStream, rc=localrc)
+            if (currentRoute%dstLocStream /= locStream) cycle
+          elseif (exportGeomType == ESMF_GEOMTYPE_XGRID) then
+            call ESMF_LogWrite(trim(name)//' xgrid not implemented', &
+              ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           else
-            call ESMF_LogWrite(trim(name)//' other than grid not implemented', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+            call ESMF_LogWrite(trim(name)//' other geomType not implemented', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           endif
 
           !> At this point we have found in at least one route and for the specified
@@ -729,7 +819,10 @@ module regrid_coupler
 
           ! Save old state from prior nearest neighbour regridding before
           ! performing this regridding step
-          if (rank == 2) then
+          if (rank == 1) then
+            allocate(farrayPtr1near(RANGE1D))
+            farrayPtr1near(RANGE1D) = farrayPtr1(RANGE1D)
+          elseif (rank == 2) then
             allocate(farrayPtr2near(RANGE2D))
             farrayPtr2near(RANGE2D) = farrayPtr2(RANGE2D)
           elseif (rank == 3) then
@@ -741,7 +834,10 @@ module regrid_coupler
             routeHandle=currentRoute%routehandle, zeroregion=ESMF_REGION_SELECT, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          if (rank == 2) then
+          if (rank == 1) then
+            call ESMF_FieldGet(exportFieldList(j), farrayPtr=farrayPtr1, &
+              exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
+          elseif (rank == 2) then
             call ESMF_FieldGet(exportFieldList(j), farrayPtr=farrayPtr2, &
               exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
           elseif (rank == 3) then
@@ -751,7 +847,14 @@ module regrid_coupler
 
           !> @todo update values in farrayPtr with values from farrayPtrNear,
           !> where this is necessary.  Maybe need to consider mask.
-          if (rank == 2) then
+          if (rank == 1) then
+            where ( farrayPtr1(RANGE1D) /= farrayPtr1(RANGE1D) .and. &
+              farrayPtr1near(RANGE1D) == farrayPtr1near(RANGE1D))
+              farrayPtr1(RANGE1D) = farrayPtr1near(RANGE1D)
+            endwhere
+            deallocate(farrayPtr1near)
+            nullify(farrayPtr1)
+          elseif (rank == 2) then
             where ( farrayPtr2(RANGE2D) /= farrayPtr2(RANGE2D) .and. &
               farrayPtr2near(RANGE2D) == farrayPtr2near(RANGE2D))
               farrayPtr2(RANGE2D) = farrayPtr2near(RANGE2D)
@@ -767,13 +870,15 @@ module regrid_coupler
             nullify(farrayPtr3)
           endif
           exit ! no need to search for more routes
-        enddo
-      enddo
-    enddo
+        enddo ! while(associated(currentRoute%next))
+      enddo ! j=1, exportFieldCount
+    enddo ! i=1, importFieldCount
     if (associated(includeList)) deallocate(includeList)
 
+    nullify(farrayPtr1)
     nullify(farrayPtr2)
     nullify(farrayPtr3)
+    if (allocated(farrayPtr1near)) deallocate(farrayPtr1near)
     if (allocated(farrayPtr2near)) deallocate(farrayPtr2near)
     if (allocated(farrayPtr3near)) deallocate(farrayPtr3near)
 
@@ -888,8 +993,8 @@ module regrid_coupler
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)             :: rc_, localRc
-    character(len=ESMF_MAXSTR)        :: configFileName, srcGridFileName, message
-    character(len=ESMF_MAXSTR)        :: cplCompName, dstGridFileName
+    character(len=ESMF_MAXSTR)        :: configFileName, srcgeomFileName, message
+    character(len=ESMF_MAXSTR)        :: cplCompName, dstgeomFileName
     logical                           :: labelIsPresent, fileIsPresent
     logical                           :: configIsPresent, configFileIsPresent
     type(ESMF_Config)                 :: config
@@ -897,7 +1002,8 @@ module regrid_coupler
     character(len=ESMF_MAXSTR), pointer :: filterIncludeList(:) => null()
     character(len=ESMF_MAXSTR)        :: edgeMethodString, regridMethodString
 
-    character(len=ESMF_MAXSTR)        :: gridFileFormatString = 'SCRIP'
+    character(len=ESMF_MAXSTR)        :: geomFileFormatString = 'SCRIP'
+    character(len=ESMF_MAXSTR)        :: geomTypeString = 'GRID'
     character(len=ESMF_MAXSTR)        :: mask_variable
 
     rc_ = ESMF_SUCCESS
@@ -941,29 +1047,47 @@ module regrid_coupler
     call ESMF_ConfigLoadFile(config, trim(configfilename), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call MOSSCO_ConfigGet(config, label='format', value=gridFileFormatString, &
+    call MOSSCO_ConfigGet(config, label='format', value=geomFileFormatString, &
       defaultValue='SCRIP', isPresent=labelIsPresent, rc = localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (labelIsPresent) then
-      write(message,'(A)') trim(cplCompName)// ' found config item format = '//trim(gridFileFormatString)
+      write(message,'(A)') trim(cplCompName)// ' found config item format = '//trim(geomFileFormatString)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      call ESMF_AttributeSet(cplComp, 'grid_file_format', trim(gridFileFormatString), rc=localrc)
+      call ESMF_AttributeSet(cplComp, 'geom_file_format', trim(geomFileFormatString), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
 
-    call MOSSCO_ConfigGet(config, label='grid', value=dstGridFileName, &
+    call MOSSCO_ConfigGet(config, label='grid', value=dstgeomFileName, &
       defaultValue=trim(cplCompName)//'_grid.nc', isPresent=labelIsPresent, rc = localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (labelIsPresent) then
-      write(message,'(A)') trim(cplCompName)// ' found config item grid = '//trim(dstGridFileName)
+      write(message,'(A)') trim(cplCompName)// ' found config item grid = '//trim(dstgeomFileName)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      call ESMF_AttributeSet(cplComp, 'grid_filename', trim(dstGridFileName), rc=localrc)
+      call ESMF_AttributeSet(cplComp, 'geom_filename', trim(dstgeomFileName), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-      call ESMF_AttributeSet(cplComp, 'grid_file_format', trim(gridFileFormatString), rc=localrc)
+      call ESMF_AttributeSet(cplComp, 'geom_file_format', trim(geomFileFormatString), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
+
+    call MOSSCO_ConfigGet(config, label='type', value=geomTypeString, &
+      defaultValue='GRID', isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    !> Overrides from file format
+    if (trim(geomFileFormatString) == 'GRIDSPEC' .and. labelIsPresent) then
+      geomTypeString='GRID'
+    elseif (.not.labelIsPresent .and. (trim(geomFileFormatString) == 'ESMF' &
+      .or. trim(geomFileFormatString) == 'UGRID')) then
+      geomTypeString='MESH'
+    elseif (trim(geomTypeString) == 'GRID' .and. (trim(geomFileFormatString) == 'ESMF' &
+      .or. trim(geomFileFormatString) == 'UGRID')) then
+      geomTypeString='MESH'
+    endif
+
+    call ESMF_AttributeSet(cplComp, 'geom_file_type', trim(geomTypeString), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call MOSSCO_ConfigGet(config, label='mask', value=mask_variable, &
       defaultValue='mask', isPresent=labelIsPresent, rc = localrc)
@@ -1000,10 +1124,10 @@ module regrid_coupler
 
     !> Find out whether the label was specified.  If yes, then require
     !> the file to be present, and return if not found
-    inquire(file=trim(dstGridFileName), exist=fileIsPresent)
+    inquire(file=trim(dstgeomFileName), exist=fileIsPresent)
 
     if (labelIsPresent .and..not. fileIsPresent) then
-      write(message, '(A)') trim(cplCompName)//' cannot find '//trim(dstGridFileName)
+      write(message, '(A)') trim(cplCompName)//' cannot find '//trim(dstgeomFileName)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       if (present(rc)) then
         rc = ESMF_RC_NOT_FOUND
@@ -1201,9 +1325,16 @@ subroutine MOSSCO_RouteString(route, string)
 
   if (route%srcGeomType == ESMF_GEOMTYPE_GRID) then
     call MOSSCO_GridString(route%srcGrid, string)
+  elseif (route%srcGeomType == ESMF_GEOMTYPE_XGRID) then
+    call MOSSCO_MessageAdd(string,' (xgrid) ')
+  elseif (route%srcGeomType == ESMF_GEOMTYPE_MESH) then
+    call MOSSCO_MessageAdd(string,' (mesh) ')
+  elseif (route%srcGeomType == ESMF_GEOMTYPE_LOCSTREAM) then
+    call MOSSCO_MessageAdd(string,' (mesh) ')
   else
-    call MOSSCO_MessageAdd(string,' (non-grid) ')
+    call MOSSCO_MessageAdd(string,' (unknown) ')
   endif
+
   call MOSSCO_MessageAdd(string,' --')
   if (route%regridMethod == ESMF_REGRIDMETHOD_BILINEAR) then
     call MOSSCO_MessageAdd(string,'BILIN--> ')
@@ -1218,8 +1349,14 @@ subroutine MOSSCO_RouteString(route, string)
   endif
   if (route%dstGeomType == ESMF_GEOMTYPE_GRID) then
     call MOSSCO_GridString(route%dstGrid, string)
+  elseif (route%dstGeomType == ESMF_GEOMTYPE_XGRID) then
+    call MOSSCO_MessageAdd(string,' (xgrid) ')
+  elseif (route%dstGeomType == ESMF_GEOMTYPE_MESH) then
+    call MOSSCO_MessageAdd(string,' (mesh) ')
+  elseif (route%dstGeomType == ESMF_GEOMTYPE_LOCSTREAM) then
+    call MOSSCO_MessageAdd(string,' (mesh) ')
   else
-    call MOSSCO_MessageAdd(string,' (non-grid) ')
+    call MOSSCO_MessageAdd(string,' (unknown) ')
   endif
 
 end subroutine MOSSCO_RouteString

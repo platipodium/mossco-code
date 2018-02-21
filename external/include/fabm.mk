@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2017 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2017, 2018 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 # @author Knut Klingbeil, Institut für Ostseeforschung Warnemünde
 #
@@ -42,4 +42,3 @@ ifneq ($(wildcard $(external_FABMDIR)/src/fabm.F90),)
 	@#echo "CPPFLAGS+=-DGETM_VERSION="${GETM_VERSION} >> $(MOSSCO_DIR)/src/include/versions.mk
 	@#echo "CPPFLAGS+=-DGETM_GIT_SHA="${GETM_GIT_SHA} >> $(MOSSCO_DIR)/src/include/versions.mk
 endif
-
