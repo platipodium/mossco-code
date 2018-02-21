@@ -102,15 +102,16 @@ module regrid_coupler
 
     integer(ESMF_KIND_I4)       :: rank, localDeCount
     type(ESMF_FieldStatus_Flag) :: status
-    type(ESMF_Mesh)             :: importMesh, exportMesh
+    type(ESMF_Mesh)             :: importMesh, exportMesh, externalMesh
     type(ESMF_Grid)             :: externalGrid, importGrid, exportGrid
-    type(ESMF_LocStream)        :: importLocstream, exportLocstream
+    type(ESMF_LocStream)        :: importLocstream, exportLocstream, externalLocStream
     type(ESMF_GeomType_Flag)    :: importGeomType, exportGeomType
     character(ESMF_MAXSTR)      :: importGeomName, exportGeomName, gridFileName
     integer                     :: numOwnedNodes, dimCount
     integer(ESMF_KIND_I4)       :: keycount, matchIndex, importFieldCount
     integer(ESMF_KIND_I4)       :: exportFieldCount, unmappedCount
-    logical                     :: gridIsPresent, isPresent, hasMaskVariable
+    logical                     :: geomIsPresent, isPresent, hasMaskVariable
+    logical                     :: isUnstructured
 
     type(ESMF_Field), allocatable :: importFieldList(:)
     type(ESMF_Field), allocatable :: exportFieldList(:)
@@ -130,7 +131,7 @@ module regrid_coupler
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_AttributeGet(cplComp, 'grid_filename',  &
-      isPresent=gridIsPresent, rc=localrc)
+      isPresent=geomIsPresent, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (isPresent) then
@@ -176,7 +177,7 @@ module regrid_coupler
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
     endif
 
-    if (gridIsPresent) then
+    if (geomIsPresent) then
 
       call ESMF_AttributeGet(cplComp, 'grid_filename',  gridFileName, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -184,14 +185,24 @@ module regrid_coupler
       call ESMF_AttributeGet(cplComp, 'grid_file_format',  gridFileFormatString, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (trim(gridFileFormatString) == 'SCRIP') then
+      call MOSSCO_AttributeGet(cplComp, 'is_unstructured',  isUnstructured, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (trim(gridFileFormatString) == 'SCRIP' .and. .not. isUnstructured) then
         externalGrid = ESMF_GridCreate(filename=trim(gridFileName), &
           fileFormat=ESMF_FILEFORMAT_SCRIP, isSphere=.false., rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        write(message, '(A)') trim(name)//' created grid from SCRIP '//trim(gridFileName)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
       elseif (trim(gridFileFormatString) == 'GRIDSPEC') then
         externalGrid = ESMF_GridCreate(filename=trim(gridFileName), fileFormat=ESMF_FILEFORMAT_GRIDSPEC, &
           isSphere=.false., rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        write(message, '(A)') trim(name)//' created grid from CF '//trim(gridFileName)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
         if (hasMaskVariable) then
           call ESMF_AttributeGet(cplComp, 'mask_variable',  &
@@ -210,6 +221,39 @@ module regrid_coupler
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         endif
 
+      elseif (trim(gridFileFormatString) == 'UGRID') then
+        if (hasMaskVariable) then
+          write(message,'(A)') trim(name)//' does not implement mask variable for UGRID'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+        !   externalMesh = ESMF_MeshCreateFromFile(trim(gridFileName), &
+        !     fileformat=ESMF_FILEFORMAT_UGRID, convertToDual=.false., &
+        !     maskFlag=ESMF_MESHLOC_ELEMENT, varname=trim(mask_variable),  rc=localrc)
+        !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        ! else
+        endif
+        externalMesh = ESMF_MeshCreate(trim(gridFileName), &
+          fileformat=ESMF_FILEFORMAT_UGRID, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        write(message, '(A)') trim(name)//' created mesh from UGRID '//trim(gridFileName)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      elseif (trim(gridFileFormatString) == 'ESMF') then
+        externalMesh = ESMF_MeshCreate(trim(gridFileName), &
+          fileformat=ESMF_FILEFORMAT_ESMFMESH, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        write(message, '(A)') trim(name)//' created mesh from ESMF '//trim(gridFileName)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      elseif (trim(gridFileFormatString) == 'SCRIP' .and. isUnstructured) then
+        externalMesh = ESMF_MeshCreate(trim(gridFileName), &
+          fileformat=ESMF_FILEFORMAT_SCRIP, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        write(message, '(A)') trim(name)//' created mesh from SCRIP '//trim(gridFileName)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
       else
         write(message, '(A)') trim(name)//' unknown file format '//trim(gridFileFormatString)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
@@ -218,7 +262,7 @@ module regrid_coupler
       endif
     endif
 
-    if (gridIsPresent) then
+    if (geomIsPresent) then
 
       allocate(exportFieldList(importFieldCount))
 
@@ -232,8 +276,13 @@ module regrid_coupler
         exportField = ESMF_FieldEmptyCreate(name=trim(importFieldName), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        call ESMF_FieldEmptySet(exportField, grid=externalGrid, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        if (isUnstructured) then
+          call ESMF_FieldEmptySet(exportField, mesh=externalMesh, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        else
+          call ESMF_FieldEmptySet(exportField, grid=externalGrid, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        endif
 
         call ESMF_StateAddReplace(exportState, (/exportField/), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -883,7 +932,7 @@ module regrid_coupler
     integer(ESMF_KIND_I4)             :: rc_, localRc
     character(len=ESMF_MAXSTR)        :: configFileName, srcGridFileName, message
     character(len=ESMF_MAXSTR)        :: cplCompName, dstGridFileName
-    logical                           :: labelIsPresent, fileIsPresent
+    logical                           :: labelIsPresent, fileIsPresent, isUnstructured
     logical                           :: configIsPresent, configFileIsPresent
     type(ESMF_Config)                 :: config
     character(len=ESMF_MAXSTR), pointer :: filterExcludeList(:) => null()
@@ -957,6 +1006,20 @@ module regrid_coupler
       call ESMF_AttributeSet(cplComp, 'grid_file_format', trim(gridFileFormatString), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
+
+    call MOSSCO_ConfigGet(config, label='unstructured', value=isUnstructured, &
+      defaultValue=.false., isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (trim(gridFileFormatString) == 'GRIDSPEC') then
+      isUnstructured=.false.
+    elseif (trim(gridFileFormatString) == 'ESMF' &
+      .or. trim(gridFileFormatString) == 'UGRID') then
+      isUnstructured =.true.
+    endif
+
+    call MOSSCO_AttributeSet(cplComp, 'is_unstructured', isUnstructured, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call MOSSCO_ConfigGet(config, label='mask', value=mask_variable, &
       defaultValue='mask', isPresent=labelIsPresent, rc = localrc)
