@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2017 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2017, 2018 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 # @author Knut Klingbeil, Institut für Ostseeforschung Warnemünde
 #
