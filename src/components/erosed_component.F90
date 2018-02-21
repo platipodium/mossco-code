@@ -169,7 +169,6 @@ module erosed_component
     integer                     :: localrc
     logical                     :: isPresent
 
-
     rc=ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
@@ -507,6 +506,7 @@ module erosed_component
       if (istat /= 0) then
         write(message,'(A)') trim(name)//' cannot read file sedparams.txt'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        call MOSSCO_CompExit(gridComp, localrc)
         localrc = ESMF_RC_NOT_FOUND
         return
       endif
@@ -538,6 +538,7 @@ module erosed_component
     else
       write(message, '(A)') trim(name)//' cannot find required file sedparams.txt'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      call MOSSCO_CompExit(gridComp, localrc)
       localrc = ESMF_RC_NOT_FOUND
       return
     end if
@@ -1222,7 +1223,6 @@ module erosed_component
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       if (allocated(importFieldList)) deallocate(importFieldList)
       call MOSSCO_CompExit(gridComp, localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       return
     endif
 
@@ -1230,6 +1230,7 @@ module erosed_component
       write(message, '(A)') trim(name)//' cannot handle more than one field with sediment mass'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       if (allocated(importFieldList)) deallocate(importFieldList)
+      call MOSSCO_CompExit(gridComp, localrc)
       rc = ESMF_RC_NOT_IMPL
       return
     endif
@@ -1300,6 +1301,7 @@ module erosed_component
 
     if (exportFieldCount < 1) then
       if (allocated(exportFieldList)) deallocate(exportFieldList)
+      call MOSSCO_CompExit(gridComp, localrc)
       return
     endif
 
@@ -1307,6 +1309,7 @@ module erosed_component
       write(message, '(A)') trim(name)//' cannot handle more than one field with sediment mass'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       if (allocated(exportFieldList)) deallocate(exportFieldList)
+      call MOSSCO_CompExit(gridComp, localrc)
       rc = ESMF_RC_NOT_IMPL
       return
     endif
@@ -1588,6 +1591,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         allocate (thickness_of_layers(RANGE3D), stat=istat)
         write(message,'(A)') trim(name)//' cannot allocate memory for thickness_of_layers'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        call MOSSCO_CompExit(gridComp, localrc)
         localrc = ESMF_RC_MEM_ALLOCATE
         return
       end if
@@ -1596,6 +1600,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         allocate (relative_thickness_of_layers(RANGE3D), stat=istat)
         write(message,'(A)') trim(name)//' cannot allocate memory for relative_thickness_of_layers'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        call MOSSCO_CompExit(gridComp, localrc)
         localrc = ESMF_RC_MEM_ALLOCATE
         return
       end if
@@ -1604,6 +1609,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         allocate (sigma_midlayer  (RANGE3D), stat = istat)
         write(message,'(A)') trim(name)//' cannot allocate memory for mid_layer'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        call MOSSCO_CompExit(gridComp, localrc)
         localrc = ESMF_RC_MEM_ALLOCATE
         return
       end if
@@ -2049,7 +2055,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_CompExit(gridComp, localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     return
 #ifdef DEBUG
