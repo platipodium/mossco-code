@@ -512,7 +512,7 @@ module regrid_coupler
           write(message,'(A)') trim(name)//' field '//trim(importFieldName) &
             //' creating routeHandle'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
+#ifdef ESMF_UNRELEASED
           !> @todo this needs to consider masks!
           call ESMF_FieldRegridStore(srcField=importField, dstField=exportField, &
             !filename="weights.nc", &!routeHandle=routehandle, &
@@ -524,6 +524,7 @@ module regrid_coupler
             ! unmappedDstList=unmappedDstList, & ! ESMF internal error
             rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+#endif
 
           if (associated(unmappedDstList) .and. ubound(unmappedDstList,1) > 0) then
             write(message, '(A)') trim(name)//' has unmapped destination points '
