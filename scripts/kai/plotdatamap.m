@@ -1,13 +1,12 @@
-x0=0.06+(ix-1)*1.15*dxpm; 
+x0=0.06+(ix-1)*1.15*dxpm;
 y0=0.1+iy*1.03*dypm;
 %y0=0.1+(nrowm-iy)*1.03*dypm;
  % cmp different scenarios
 gca=subplot('Position',[x0 y0 dxpm dypm]);
 hold on
 
-%% prepare 2D plot 
+%% prepare 2D plot
 m_proj('equidistant','lat',latlimit,'lon',lonlimit);
-
 
 %% plot 2D data
 % value(find(value<1E-4 | value>1E4 ))=-1;
@@ -28,15 +27,15 @@ a2=ly0-b2e/b1e*(lyfv0-a1);
 value(indv)=power(10,(-a2+lyfv(indv))./b2e);
 else
 %  value=power(10,0.11+0.84*log10(value));
-vex=1.2*power(value,3.12)./(8+power(value,3));
-value=0.35*(1+power(10,vex));
+%%vex=1.2*power(value,3.12)./(8+power(value,3));
+%%value=0.35*(1+power(10,vex));
+value(55,60:70)
 % value=7*(value-1.2)./(sqrt(value)+0.5);
 end
 
 value(find(value<minval*1.1))=minval*1.1;
-if(islog) 
-
-value=log10(value);
+if(islog)
+  value=log10(value);
 end
 
 m_pcolor(m_lon,m_lat,value);
@@ -45,7 +44,7 @@ if(islog) set(gca,'Clim',log10([minval maxVal]));
 else set(gca,'Clim',[minval maxVal]); end
 shading flat;
 colormap(coljm);
-m_grid('box','off','color','k','backcolor','none','tickdir','out','linestyle','none','xtick',[],'ytick',[],'xticklabel','','yticklabel',''); 
+m_grid('box','off','color','k','backcolor','none','tickdir','out','linestyle','none','xtick',[],'ytick',[],'xticklabel','','yticklabel','');
 m_usercoast('sns_coast','color',ones(3,1)*0.5,'linewidth',1.0,'linestyle','-');
 if ShowMore
 ta=sprintf('    %d',doyg(ii(mdi)));%yearg(ii(mdi)),

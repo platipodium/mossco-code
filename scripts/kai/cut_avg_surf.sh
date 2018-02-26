@@ -14,13 +14,16 @@
 # ---------------------
 # User configuration
 # Declare a list of variables to extract
-declare -a vn=("Chl_chl_in_water"  "Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water" "Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water"   "Detritus_Carbon_detC_in_water" "Phytplankton_Carbon_phyC_in_water" "Zooplankton_Carbon_zooC_in_water" "Virus_C_density_in_cells_vir_in_water") # "pPads_in_water" 
+declare -a vn=("Chl_chl_in_water"  "Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water" "Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water"   "Detritus_Carbon_detC_in_water" "Detritus_Nitrogen_detN_in_water" "Phytplankton_Carbon_phyC_in_water" "Zooplankton_Carbon_zooC_in_water" "Virus_C_density_in_cells_vir_in_water" ) 
+# "pPads_in_water" 
 declare -a vnp=("x_velocity_at_soil_surface" "y_velocity_at_soil_surface" "temperature_in_water" "practical_salinity_in_water" "_datt_in_water" "turbulent_kinetic_energy_at_soil_surface" "layer_height_in_water")
-#declare -a vnp=("maximum_bottom_stress" "temperature_in_water" "_datt_in_water" "_vphys_in_water" "turbulent_kinetic_energy_in_water" "practical_salinity_in_water" "maximum_bottom_stress" "layer_height_in_water")
+#declare -a vnp=("maximum_bottom_stress" "temperature_in_water" "_datt_in_water" "turbulent_kinetic_energy_at_soil_surface")
+#"_vphys_in_water" "turbulent_kinetic_energy_in_water" "practical_salinity_in_water" "maximum_bottom_stress" "layer_height_in_water")
 #"x_velocity_in_water" "y_velocity_in_water" "wind_x_velocity_at_10m""turbulent_diffusivity_of_momentum_at_soil_surface" "dissipation_of_tke_at_soil_surface"
 declare -a vnt=("Phytplankton_Phosphorus_phyP_in_water" "Phytplankton_Nitrogen_phyN_in_water" "fraction_of_Rubisco_Rub_in_water")
 declare -a vns=( "denitrification_rate_in_soil" "fast_detritus_C_in_soil" "layer_height_in_soil" "detritus-P_in_soil" "mole_concentration_of_phosphate_in_soil" "dissolved_oxygen_in_soil" "mole_concentration_of_nitrate_in_soil" "mole_concentration_of_ammonium_in_soil" )
 declare -a vnf=("dissolved_oxygen_upward_flux_at_soil_surface" "dissolved_reduced_substances_upward_flux_at_soil_surface")
+#declare -a vnf=("fast_detritus_C_upward_flux_at_soil_surface" "detritus-P_upward_flux_at_soil_surface" "slow_detritus_C_upward_flux_at_soil_surface")
 # "Dissolved_Organic_Carbon_domC_in_water""Dissolved_Organic_Nitrogen_domN_in_water"  "Detritus_Phosphorus_detP_in_water" "Detritus_Nitrogen_detN_in_water" 
 #  "N\:C_ratio__QN_in_water" "P\:C_ratio__QP_in_water" "Rubisco_fract._allocation__fracR_in_water""chlorophyll_to_carbon_ratio_in_water" "water_depth_at_soil_surface" 
 tb='denitrification_rate_in_soil,layer_height_in_soil,fast_detritus_C_in_soil,detritus-P_in_soil,mole_concentration_of_nitrate_in_soil,mole_concentration_of_phosphate_in_soil,dissolved_oxygen_in_soil,mole_concentration_of_ammonium_in_soil,slow_detritus_C_in_soil'
@@ -31,7 +34,7 @@ dn=1       # increment in domain-no of loop
 Nstart=1 # initial time-step; skips trailer ## 731 for 2003
 soil=0     # selects benthic BGC (TotNsoil)
 flux=0     # selects fluxes (NOAH)
-trait=1    # selects physiology 
+trait=0    # selects physiology 
 phys=0     # selects getm-phsics
 surf=0     # adds subsurface layer to CHL 
 #prefix=netcdf_fabm_pelagic.  # Prefix of files to process

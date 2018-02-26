@@ -1,5 +1,6 @@
 % set data matrix
-%%fprintf('%d %d in figure %d\n',ns,i,get(gcf,'Number'));
+
+%%fprintf('in figure %d\n',get(gcf,'Number'));
 dm=1; % eliminate borders
 statm={'mean','std_t','std-z'}; timl={'all','Mar-May','Jun-Aug','Sep-Oct','Nov-Jan'};
 ytl=[0.01 0.1 0.5 1 3 10 30 100 1E3 1E4 1E5 1E6];
@@ -20,11 +21,16 @@ else
 end
 
 if IsData
+
    value =datat(ii,:,:);
-   vex=1.2*power(value,3.12)./(8+power(value,3));
-   value=0.35*(1+power(10,vex));
+   %vex=1.2*power(value,3.12)./(8+power(value,3));
+   %value=0.35*(1+power(10,vex));
    sval(1,:,:)=nanmean(value,1); % average TODO: layer depth
-   sval(2,:,:)=squeeze(nanstd(value,0,1))./(squeeze(sval(1,:,:))+1E-3); % average TODO: layer depth
+   length(isnan(value))
+   sval(2,:,:)=squeeze(nanstd(value,1))./(squeeze(sval(1,:,:))+1E-3); % average TODO: layer depth
+   length(isnan(sval(1,:,:)))
+   length(isnan(sval(2,:,:)))
+
    lo=lon;
    la=lat;
 else
@@ -50,16 +56,15 @@ end
 % goes to new figure (if required)
 %vt{np-nfig}=[varshort0 tag];
 ncols=cell2mat(var{i}(8));
+figure(300+ns*5+i+IsData*50);
+set(gcf, 'visible',vis,'Color','w','Position',[0 0 150+ncols*350 470]); hold on
 
-gcf=figure(300+ns*5+i+IsData*50);
-set(gcf, 'visible',vis,'Color','w','Position',[0 0 150+ncols*350 470]); 
-fprintf('%d %d in figure %d\n',ns,i,get(gcf,'Number'));
 for(ix=1:ncols)
 % geometry of sub-plot
  x0=0.04+(ix-1)/ncols; y0=0.1;
 %%  else % cmp different scenarios
  axs=subplot('Position',[x0 y0 0.9/ncols 0.89]);
- hold on
+
  value=squeeze(sval(ix,:,:));
 
 %% process min-max value
@@ -107,11 +112,11 @@ for(ix=1:ncols)
   m_grid('box','off','color','k','backcolor','w','tickdir','out','linestyle','none','xtick',[],'ytick',[],'xticklabel','','yticklabel','');
   m_usercoast('sns_coast','color',ones(3,1)*0.5,'linewidth',1.0,'linestyle','-');
 
-  if(ix>=1 ) %& ~IsData 2-IsNOAH
+  if(ix>=1 & ~IsData) %2-IsNOAH
 %% colorbar settings
     cb=colorbar;
     title(cb,units,'FontSize',fs+2,'Color','k','FontWeight','bold');%
-    set(cb, 'Position', [x0+0.73-(ncols-ix)*0.42 y0+0.08 .025 0.28],'FontSize',fs+2);
+    set(cb, 'Position', [x0+0.72 y0+0.08 .025 0.28],'FontSize',fs+2);
     if(str2num(VerMat)<8.4)
        labAtt='YTicklabels';
     else
@@ -136,19 +141,15 @@ for(ix=1:ncols)
 %% plot sites of interest
 %pause
 end
-set(gcf,'PaperPositionMode','auto', 'InvertHardCopy', 'off','Visible','on');
+ set(gcf,'PaperPositionMode','auto', 'InvertHardCopy', 'off','Visible','on');
 fnam0=sprintf('%d_stat_%s_%s_%d',300+i+ns*5+IsData*50,varshort0,cell2mat(tags(ns)),IsData);
 fnam=fullfile(figdir,[fnam0 '.png']);
 fprintf('save PNG in %s ...\n',fnam);
 %  export_fig(fnam,'-eps','-r600');
-pause(0.3)
+pause(0.6)
 %export_fig(fnam,'-png','-r600'); %,'PaperUnits','cm','PaperSize',[30,40],'PaperPosition',[0 0 30 40],'-r300'
 %fnam=fullfile(figdir,[fnam0 '.pdf']);
 print(gcf,'-dpng',fnam);
-fprintf('print %d %d in figure %d\n',ns,i,get(gcf,'Number'));
-pause(0.2)
-finfo=dir(fnam);
-finfo.bytes
+)
 figure(np);
 %%fprintf('out figure %d\n',get(gcf,'Number'));
-

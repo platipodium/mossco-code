@@ -44,7 +44,6 @@ fprintf('%d %s/%s\t np=%d/%d\t%d\tminax=%1.2f %1.2f\n',i,varshort,varn,np,cell2m
   if max(max(value)) >0 m_pcolor(lo,la,value);  shading flat; end
  %       set(gca, 'Color', 'k')
   colormap(coljm);%(i0:end,:)
-
 %%  colormap(ssec);  %% choose color map
  %        set(p,'MeshStyle','both','EdgeAlpha',0);
 
@@ -55,6 +54,7 @@ fprintf('%d %s/%s\t np=%d/%d\t%d\tminax=%1.2f %1.2f\n',i,varshort,varn,np,cell2m
 %% colorbar settings
     cb=colorbar;
     title(cb,units,'FontSize',fs-2,'FontWeight','bold','Color','k');
+
     set(cb, 'Position', [x0+0.77*dxpm y0+dypm*0.07 .012 0.32*dypm],'FontSize',fs-4);
     if(str2num(VerMat)<8.4)
        labAtt='YTicklabels';
@@ -95,4 +95,3 @@ fprintf('%d %s/%s\t np=%d/%d\t%d\tminax=%1.2f %1.2f\n',i,varshort,varn,np,cell2m
 %   bold m_text(loc(ili,2),loc(ili,1),'o','Color','w','HorizontalAlignment','center','FontWeight','bold','FontSize',fs)
   end
 % ,'VerticalAlignment','center'annotation('textbox',tpos-[0 0.14*dyp 0 0],'String',compn{Zt(i)},'Color',col,'Fontweight','bold','FontSize',fs-2,'LineStyle','none');
-

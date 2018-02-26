@@ -1,12 +1,12 @@
 %
 % generic plot script for time variable mossco results:
-% "setvar" defines variables to show - and where/how to do it 
+% "setvar" defines variables to show - and where/how to do it
 %
 % kai wirtz Mar2016
 %
 %plot types:  L: trajectories
-%       L:show layer x only (TODO until now for x<10)  LM: depth average as line  
-%       DC:depth contours       N : not shown but stored	
+%       L:show layer x only (TODO until now for x<10)  LM: depth average as line
+%       DC:depth contours       N : not shown but stored
 %       P : profiles   	C : Depth-time countours
 %	long name		short name  min max fac	fig row col type
 %	1			2           3   4   5	6   7	8   9
@@ -22,14 +22,14 @@ var={
   {'Phytplankton_Nitrogen_phyN_in_water';'PhyN';0;-9; 1.0;	1; 1;1;'N'};
   {'Phytplankton_Phosphorus_phyP_in_water';'PhyP';0;-9; 1.0;	1; 1;1;'N'};
   {'fraction_of_Rubisco_Rub_in_water';'Rub';0;-9; 1;		1; 1;1;'N'};
-  {'c chl./(PhyC+1E-2)';'Chl2C';0.15;0.4; 2;			1; 1;0;'Mi'};
-  {'c chl./(PhyC+1E-2)';'Chl2C';0.15;0.4; 2;			2; 1;0;'Mi'};
-  {'c Rub./(PhyC+1E-2)';'fRub';0.15;0.45; 2;			3; 1;0;'Mi'};
-  {'c Rub./(PhyC+1E-2)';'fRub';0.15;0.45; 2;			4; 1;0;'Mi'};
+%  {'c chl./(PhyC+1E-2)';'Chl2C';0.15;0.4; 2;			1; 1;0;'Mi'};
+%  {'c chl./(PhyC+1E-2)';'Chl2C';0.15;0.4; 2;			2; 1;0;'Mi'};
+  {'c Rub./(PhyC+1E-2)';'fRub';0.25;0.52; 2;			1; 1;0;'Mi'};
+  {'c Rub./(PhyC+1E-2)';'fRub';0.25;0.52; 2;			2; 1;0;'Mi'};
 %   {'c Rub./(PhyC+1E-2)';'fRub';0.1;0.5; 2;			5; 1;0;'Mi'};
 %    {'c Rub./(PhyC+1E-2)';'fRub';0.2;0.6; 2;			6; 1;0;'Mi'};
-  {'c 1-(Rub+chl)./(PhyC+1E-2)';'fNut';0.35;0.55; 2;		5; 1;0;'Mi'};
-  {'c 1-(Rub+chl)./(PhyC+1E-2)';'fNut';0.35;0.55; 2;		6; 1;0;'Mi'};
+%{'c 1-(Rub+chl)./(PhyC+1E-2)';'fNut';0.35;0.55; 2;		3; 1;0;'Mi'};
+%{'c 1-(Rub+chl)./(PhyC+1E-2)';'fNut';0.35;0.55; 2;		4; 1;0;'Mi'};
 %  {'c PhyP./(PhyC+1E-2)';'P:C';0.005;0.02; 1;			3; 2;1;'L1'};
 %  {'c PhyP./(PhyC+1E-2)';'P:C';0.005;0.02; 1;			3; 2;1;'L0'};
 %  {'c PhyP./(PhyC+1E-2)';'P:C';0.005;0.012; 2;			11; 1;0;'Mi'};
@@ -37,8 +37,8 @@ var={
 %  {'c PhyN./(PhyC+1E-2)';'N:C';0;0.2; 1;			3; 1;1;'L0'};
 %  {'c PhyN./(PhyC+1E-2)';'N:C';0.06;0.18; 2;			14; 1;0;'Mi'};
 %  {'c PhyN./(PhyC+1E-2)';'N:C';0.06;0.18; 2;			15; 1;0;'Mi'};
-  {'c PhyN./(PhyP+1E-4)';'N:P';12;20; 2;			7; 1;0;'Mi'};
-  {'c PhyN./(PhyP+1E-4)';'N:P';12;20; 2;			8; 1;0;'Mi'};
+  {'c PhyN./(PhyP+1E-4)';'N:P';12;20; 2;			5; 1;0;'Mi'};
+  {'c PhyN./(PhyP+1E-4)';'N:P';12;20; 2;			6; 1;0;'Mi'};
 %  {'c 1-(Rub+0.6*CHL)./(PhyC+1E-2)';'fNut';0;1.; 1.0;		1; 1;3;'LM'};
 %  {'denitrification_rate_in_soil';'denit';0;50; 1.0;		4; 1;1;'DC'};
 %  {'N2flux';'N2 flux';0.;6; 1.; 				3; 1;1;'LM'};
