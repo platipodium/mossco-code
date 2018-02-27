@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.597629.svg)](https://doi.org/10.5281/zenodo.597629)
+
 This is the main directory of MOSSCO, also called `$MOSSCO_DIR`
 
 To *quickly start*, read the file `QuickStart.md` or `QuickStart.pdf`
@@ -16,7 +18,7 @@ to each other in the Earth System Modeling Framework (ESMF).
 
 MOSSCO is free software: you can redistribute it and/or modify it under the terms
 of the GNU General Public License v3+.  MOSSCO is distributed in the  hope that
-it will be useful, but WITHOUT ANY WARRANTY.  Consult the file  
+it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
 `doc/license/LICENSE.GPL` or http://www.gnu.org/licenses/gpl-3.0.txt for the full
 license terms.
 
