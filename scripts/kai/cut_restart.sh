@@ -15,7 +15,7 @@ nam='../mossco_gfbfrr.'
 echo 'retrieving last time step from ' $nam$[$ncpu -1]'.nc' 
 N=$(ncdump -h $nam$[$ncpu -1]'.nc' |grep '= UNLIMITED' |cut -f2 -d'(' |cut -f1 -d' ')
 N=$[$N -2]
-N=468
+N=752
 echo $N
 for p in $(seq -f $fg 0 1 $[$ncpu-1]); do fname=$nam$p'.nc'; ncks -O -d time,$N,$N $fname tmp.$p.nc; done 
 

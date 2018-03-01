@@ -14,7 +14,7 @@ function f = rotavg(array)
 
 [theta rho]=cart2pol(X,Y);
 
-fprintf('initializing indices\n');
+%%fprintf('initializing indices\n');
 
 rho=round(rho);
 i=cell(N/2+1,1);
@@ -22,7 +22,7 @@ for r=0:N/2
   i{r+1}=find(rho==r);
 end
 
-fprintf('doing rotational average\n');
+%%fprintf('doing rotational average\n');
 
 f=zeros(N/2+1,M);
 

@@ -356,7 +356,9 @@ module soil_pelagic_connector
 
     !> For omexdia_p, get detritus N from detritus C, could be streamlined with variables
     !> gathered above, but left from old code for now
-    if ( hasCarbon .and. (.not. hasNitrogen) .and. associated(detNFlux) ) then
+    !> if nitrogen did not match so far, use the carbon flux
+    !> as used in the sediment by omexdia for the nitrogen detritus.
+    if ( (.not. hasNitrogen) .and. associated(detNFlux) ) then
 
       call mossco_state_get(importState,(/'detritus_semilabile_carbon_upward_flux_at_soil_surface'/), &
         SDETCflux, verbose=verbose, rc=localrc)
@@ -370,9 +372,9 @@ module soil_pelagic_connector
     endif
 
     !> For models that lack phosphorous, add this according to Redfield
-    if ( hasNitrogen .and. (.not. hasPhosphorous) .and. associated(detPFlux) ) then
+    if ( associated(detNflux) .and. (.not. hasPhosphorous) .and. associated(detPFlux) ) then
       DETPflux(RANGE2D) = DETNflux(RANGE2D) / 16.0
-    elseif ( hasCarbon .and. (.not. hasPhosphorous) .and. associated(detPFlux) ) then
+    elseif ( associated(detCflux) .and. (.not. hasPhosphorous) .and. associated(detPFlux) ) then
       DETPflux(RANGE2D) = DETCflux(RANGE2D) / 106.0
     endif
 

@@ -20,7 +20,7 @@ for nsu=1:length(tags)
  tag=cell2mat(tags(nsu));
  files{1} = fullfile('~/sns/cut',['sns' tag '.nc']);
 %% Output directory
-dirname=['sns_Oflux02' tag]; if ~exist(dirname),  mkdir(dirname); end;
+dirname=['sns_Oflux' tag]; if ~exist(dirname),  mkdir(dirname); end;
 %files={'~/jureca/sns/cut/sns.nc'};%,
 files={'~/sns/cut/sns.nc'};%,'~/sns_kai_z2.nc'_ref_20002011
 
@@ -33,9 +33,9 @@ else
 %  varna='Temp (^oC)';  zlimit=[-1 20];varid=7;
 %  varna='N_2 flux (mmol/m2d)';  zlimit=[0 2.5];  varid=0;
 %  varna='depth (m)';  zlimit=[2 52];  varid=0;
-  varna='O_2 downward flux';varun='(mmol/m^2d)';  zlimit=[0 40];  varid=15;
+  varna='O_2 downward flux';varun='(mmol/m^2d)';  zlimit=[0 40];  varid=8;
 end
-dim3d=0; odu=1;odu_id=16;
+dim3d=0; odu=1;odu_id=9;
 %lx0=2;lx1=4;ly0=1;ly1=0;
 lx0=1;lx1=0;ly0=1;ly1=0;
 
@@ -65,10 +65,11 @@ m_proj('equidistant','lat',latlimit,'lon',lonlimit);
 
 
 %years(2)
-it0=min(find(year==years(2)));it1=max(find(year==years(5)))-1;
+%it0=min(find(year==years(12)));it1=max(find(year==years(14)))-1;
+it0=min(find(year==2013));it1=max(find(year==2013))-1;
 
-dit=20;
-for it=1:1:it1 %length(doy)
+dit=2;
+for it=it0-1:1:it1 %length(doy)
   %set(gcf,'position',[1 5 350 250],'Visible','off');
  %% extract data from matrix
   if(dim3d)
@@ -80,13 +81,15 @@ for it=1:1:it1 %length(doy)
   if odu, oduval=oduvala(:,:,it); value=(oduval(lx0:end-lx1,ly0:end-ly1)-value)*24*3600;
 %  else      value=-value*24*3600;
   end
-
+  if it==it0-1
+    value=value*0-12
+  end
  %%evaluate min-max for stations 
   for i=1:ndn
     o2flux(it,i)=value(nsgi(i,1),nsgi(i,2));
   end  
   mi=min(ceil(doy(it)/30.52),12);
-  if it>=it0 & it<it1 & mod(it,dit)==1
+  if  mod(it,dit)==1  %it>=it0 & it<it0+4 &
  %% Open figure
    fig=figure(1);
    clf;set(fig,'Position',[1 1 500 440]);
@@ -125,9 +128,9 @@ for it=1:1:it1 %length(doy)
    m_text(lonlimit(2)-7,latlimit(1)+0.5,ta,'FontWeight','bold','HorizontalAlignment','right','FontSize',fs);
    set(gca,'FontSize',fs);
    cc='kw';
-    for i=1:ndn
-    for rad=8:2:16
-      m_plot(lon(nsgi(i,1),nsgi(i,2)),lat(nsgi(i,1),nsgi(i,2)),'o','Color',cc(1+(rad>13 &rad<17)),'MarkerSize',rad,'Linewidth',2)
+   for i=[1:11 13:ndn]
+    for rad=6:2:12
+      m_plot(lon(nsgi(i,1),nsgi(i,2)),lat(nsgi(i,1),nsgi(i,2)),'o','Color',cc(1+(rad>8 &rad<12)),'MarkerSize',rad,'Linewidth',2)
     end
 
 %     m_text(lon(nsgi(i,1),nsgi(i,2)),lat(nsgi(i,1),nsgi(i,2)),'o','FontSize',15,'FontWeight','bold','HorizontalAlignment','center','Color','w');
