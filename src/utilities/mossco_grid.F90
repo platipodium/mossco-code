@@ -1000,7 +1000,7 @@ subroutine MOSSCO_GridGetDepth(grid, kwe, depth, height, interface, rc)
   if (allocated(ifubnd)) deallocate(ifubnd)
   if (allocated(iflbnd)) deallocate(iflbnd)
 
-  if (present(interface)) interface = interface_
+  if (present(interface)) interface => interface_
 
 end subroutine MOSSCO_GridGetDepth
 
