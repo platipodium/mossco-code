@@ -99,8 +99,38 @@ for C in $COMMS ; do
     if ! [ -z $(which nc-config) ]; then
       ESMF_NETCDF_INCLUDE=$(bash nc-config --includedir)
     fi
-
     ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_INCLUDE%%include}lib
+
+    if test -d ${ESMF_NETCDF_INCLUDE} ; then
+      echo "  $0 uses netcdf include ${ESMF_NETCDF_INCLUDE}"
+    else
+      continue
+    fi
+
+    if test -d ${ESMF_NETCDF_LIBPATH} ; then
+      echo "  $0 uses netcdf libdir ${ESMF_NETCDF_LIBPATH}"
+    else
+      continue
+    fi
+
+    if ! [ -z $(which nf-config) ]; then
+       ESMF_NETCDFF_INCLUDE=$(bash nf-config --includedir)
+    fi
+    ESMF_NETCDFF_LIBPATH=${ESMF_NETCDFF_INCLUDE%%include}lib
+
+    if test -d ${ESMF_NETCDFF_INCLUDE} ; then
+      echo "  $0 uses netcdf-fortran include ${ESMF_NETCDFF_INCLUDE}"
+      ESMF_NETCDF_INCLUDE=\"${ESMF_NETCDF_INCLUDE}" -I"${ESMF_NETCDFF_INCLUDE}\"
+    else
+      continue
+    fi
+
+    if test -d ${ESMF_NETCDFF_LIBPATH} ; then
+      echo "  $0 uses netcdf-fortran libdir ${ESMF_NETCDFF_LIBPATH}"
+      ESMF_NETCDF_LIBPATH=\"${ESMF_NETCDF_LIBPATH}" -L"${ESMF_NETCDFF_LIBPATH}\"
+    else
+      continue
+    fi
 
     if [ $(hostname) = ocean-fe.fzg.local ]; then
       ESMF_NETCDF_INCLUDE=/opt/netcdf/3.6.2/${G}/include
@@ -123,17 +153,7 @@ for C in $COMMS ; do
 #    module load netcdf/3.6.2 || continue
 #    module list
 
-    if test -d ${ESMF_NETCDF_INCLUDE} ; then
-      echo "  $0 uses netcdf include ${ESMF_NETCDF_INCLUDE}"
-    else
-      continue
-    fi
 
-    if test -d ${ESMF_NETCDF_LIBPATH} ; then
-      echo "  $0 uses netcdf libdir ${ESMF_NETCDF_LIBPATH}"
-    else
-      continue
-    fi
 
     for T in $TAGS; do
        echo "  $0 iterates for Tag $T "
