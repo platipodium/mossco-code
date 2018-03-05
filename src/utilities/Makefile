@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2013, 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -36,6 +36,7 @@ LIBMOSSCO_UTIL_OBJS+= 							\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_time.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_variable_types.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_grid.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_locstream.o) \
   $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(ESMF_GridCreate3D.o)
 
 ifeq ($(MOSSCO_NETCDF),true)
@@ -69,6 +70,7 @@ mossco_logging.o : mossco_strings.o mossco_field.o mossco_state.o mossco_logging
 mossco_field.o : mossco_strings.o mossco_field.F90 mossco_memory.o mossco_attribute.o mossco_grid.o
 mossco_gridspec.o : mossco_strings.o mossco_gridspec.F90
 mossco_grid.o : mossco_strings.o mossco_grid.F90
+mossco_locstream.o : mossco_strings.o mossco_locstream.F90
 mossco_component.o : mossco_strings.o mossco_state.o mossco_field.o mossco_component.F90
 mossco_netcdf.o : mossco_gridspec.o mossco_netcdf.F90 mossco_time.o
 mossco_attribute.o : mossco_attribute.F90
@@ -108,6 +110,7 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_memory.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_strings.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_grid.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_locstream.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_netcdf.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_parameter.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_config.mod
