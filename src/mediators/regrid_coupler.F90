@@ -32,6 +32,7 @@ module regrid_coupler
   use mossco_component
   use mossco_config
   use mossco_netcdf
+  use mossco_locstream
 
   implicit none
 
@@ -202,7 +203,7 @@ module regrid_coupler
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         else
           externalGrid = ESMF_GridCreate(filename=trim(geomFileName), fileFormat=ESMF_FILEFORMAT_GRIDSPEC, &
-            isSphere=.false., rc=localrc)          
+            isSphere=.false., rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         endif
 
@@ -213,11 +214,11 @@ module regrid_coupler
         !   call ESMF_AttributeGet(cplComp, 'mask_variable',  &
         !     mask_variable, rc=localrc)
         !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        ! 
+        !
         !   call ESMF_GridGet(externalGrid, rank=rank, rc=localrc)
         !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         ! endif
-        ! 
+        !
         ! if (hasMaskVariable .and. rank==2) then
         !   call MOSSCO_GridAddMaskFromVariable(externalGrid, trim(gridFileName), &
         !     trim(mask_variable), owner=trim(name), rc=localrc)
@@ -259,6 +260,45 @@ module regrid_coupler
         write(message, '(A)') trim(name)//' created mesh from SCRIP '//trim(geomFileName)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
+      elseif (geomTypeString == 'LOCSTREAM') then
+        ! Private name: call using ESMF_LocStreamCreate()
+        !       function ESMF_LocStreamCreateFromFile(filename, &
+        !            fileformat, varname, indexflag, centerflag, name, rc)
+        ! For a grid in ESMF or UGRID format, it can use center coordinates
+        ! or  corner coordinates. For SCRIP only center coordinates.
+
+        if (trim(geomFileFormatString) == 'SCRIP') then
+          externalLocStream = ESMF_LocStreamCreate(filename=trim(geomFileName), &
+            fileformat=ESMF_FILEFORMAT_SCRIP, name=trim(geomFileName), rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        elseif (trim(geomFileFormatString) == 'UGRID' .and. hasMaskVariable) then
+          externalLocStream = ESMF_LocStreamCreate(filename=trim(geomFileName), &
+            fileformat=ESMF_FILEFORMAT_UGRID, varname=trim(mask_variable), &
+            name=trim(geomFileName), rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        elseif (trim(geomFileFormatString) == 'UGRID') then
+          externalLocStream = ESMF_LocStreamCreate(filename=trim(geomFileName), &
+            fileformat=ESMF_FILEFORMAT_UGRID, name=trim(geomFileName), rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        elseif (trim(geomFileFormatString) == 'ESMF') then
+          externalLocStream = ESMF_LocStreamCreate(filename=trim(geomFileName), &
+            fileformat=ESMF_FILEFORMAT_UGRID, name=trim(geomFileName), rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        else
+          write(message, '(A,A)') trim(name)//' unknown file format/type ' &
+            ,trim(geomFileFormatString)//'/'//trim(geomTypeString)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+          localrc = ESMF_RC_NOT_IMPL
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        endif
+
+        write(message, '(A)') trim(name)//' created locstream from '//trim(geomFileFormatString)//' '//trim(geomFileName)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
       else
         write(message, '(A,A)') trim(name)//' unknown file format/type ' &
           ,trim(geomFileFormatString)//'/'//trim(geomTypeString)
@@ -287,6 +327,9 @@ module regrid_coupler
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         elseif (trim(geomTypeString) == 'GRID') then
           call ESMF_FieldEmptySet(exportField, grid=externalGrid, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        elseif (trim(geomTypeString) == 'LOCSTREAM') then
+          call ESMF_FieldEmptySet(exportField, locstream=externalLocStream, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         else
           localrc = ESMF_RC_NOT_IMPL
@@ -540,10 +583,15 @@ module regrid_coupler
 
           if (importGeomType == ESMF_GEOMTYPE_GRID) then
             call MOSSCO_GridString(importGrid, message)
+          elseif (importGeomType == ESMF_GEOMTYPE_LOCSTREAM) then
+            call MOSSCO_LocStreamString(importLocStream, message)
           endif
           if (exportGeomType == ESMF_GEOMTYPE_GRID) then
             call MOSSCO_MessageAdd(message,' --> ')
             call MOSSCO_GridString(exportGrid, message)
+          elseif (exportGeomType == ESMF_GEOMTYPE_LOCSTREAM) then
+            call MOSSCO_MessageAdd(message,' --> ')
+            call MOSSCO_LocStreamString(exportLocStream, message)
           endif
 
         else
@@ -805,7 +853,7 @@ module regrid_coupler
           elseif (exportGeomType == ESMF_GEOMTYPE_MESH) then
             call ESMF_FieldGet(exportFieldList(i), mesh=mesh, rc=localrc)
             if (currentRoute%dstMesh /= mesh) cycle
-          elseif (exportGeomType == ESMF_GEOMTYPE_MESH) then
+          elseif (exportGeomType == ESMF_GEOMTYPE_LOCSTREAM) then
             call ESMF_FieldGet(exportFieldList(i), locStream=locStream, rc=localrc)
             if (currentRoute%dstLocStream /= locStream) cycle
           elseif (exportGeomType == ESMF_GEOMTYPE_XGRID) then
@@ -1337,7 +1385,7 @@ subroutine MOSSCO_RouteString(route, string)
   elseif (route%srcGeomType == ESMF_GEOMTYPE_MESH) then
     call MOSSCO_MessageAdd(string,' (mesh) ')
   elseif (route%srcGeomType == ESMF_GEOMTYPE_LOCSTREAM) then
-    call MOSSCO_MessageAdd(string,' (mesh) ')
+    call MOSSCO_LocStreamString(route%srcLocStream, string)
   else
     call MOSSCO_MessageAdd(string,' (unknown) ')
   endif
@@ -1361,7 +1409,7 @@ subroutine MOSSCO_RouteString(route, string)
   elseif (route%dstGeomType == ESMF_GEOMTYPE_MESH) then
     call MOSSCO_MessageAdd(string,' (mesh) ')
   elseif (route%dstGeomType == ESMF_GEOMTYPE_LOCSTREAM) then
-    call MOSSCO_MessageAdd(string,' (mesh) ')
+    call MOSSCO_LocStreamString(route%dstLocStream, string)
   else
     call MOSSCO_MessageAdd(string,' (unknown) ')
   endif
