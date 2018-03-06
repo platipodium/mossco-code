@@ -111,7 +111,7 @@ module regrid_coupler
     integer                     :: numOwnedNodes, dimCount
     integer(ESMF_KIND_I4)       :: keycount, matchIndex, importFieldCount
     integer(ESMF_KIND_I4)       :: exportFieldCount, unmappedCount
-    logical                     :: geomIsPresent, isPresent, hasMaskVariable
+    logical                     :: geomIsPresent, hasMaskVariable
 
     type(ESMF_Field), allocatable :: importFieldList(:)
     type(ESMF_Field), allocatable :: exportFieldList(:)
@@ -135,12 +135,12 @@ module regrid_coupler
       isPresent=geomIsPresent, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    if (isPresent) then
+    hasMaskVariable = .false.
+    if (geomIsPresent) then
       call ESMF_AttributeGet(cplComp, 'mask_variable',  &
         isPresent=hasMaskVariable, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-    else
-      hasMaskVariable = .false.
+      hasMaskVariable = .true.
     endif
 
     call ESMF_AttributeGet(cplComp, 'regrid_method',  &
@@ -202,11 +202,20 @@ module regrid_coupler
           externalGrid = ESMF_GridCreate(filename=trim(geomFileName), fileFormat=ESMF_FILEFORMAT_GRIDSPEC, &
             isSphere=.false., addmask=.true., varname=trim(mask_variable), rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          write(message, '(A)') trim(name)//' created grid WITH mask ' //trim(mask_variable)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         else
           externalGrid = ESMF_GridCreate(filename=trim(geomFileName), fileFormat=ESMF_FILEFORMAT_GRIDSPEC, &
             isSphere=.false., rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          write(message, '(A)') trim(name)//' created grid WITHOUT mask '
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         endif
+
+        call ESMF_GridWriteVTK(externalGrid, staggerLoc=ESMF_STAGGERLOC_CENTER, &
+                             filename="esmfgridspecgrid", rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
 
         write(message, '(A)') trim(name)//' created grid from CF '//trim(geomFileName)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
