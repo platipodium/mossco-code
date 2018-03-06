@@ -77,6 +77,7 @@ module mossco_netcdf
     procedure :: put_variable => mossco_netcdf_variable_put
     procedure :: create_coordinate =>mossco_netcdf_coordinate_create
     procedure :: create_mesh_coordinate =>mossco_netcdf_mesh_coordinate_create
+    procedure :: create_locstream_coordinates =>mossco_netcdf_locstream_coordinates_create
     procedure :: ungridded_dimension_id => mossco_netcdf_ungridded_dimension_id
     procedure :: gridget  => mossco_netcdf_grid_get
     procedure :: getvarvar => mossco_netcdf_var_get_var
@@ -2405,8 +2406,8 @@ module mossco_netcdf
       ncStatus = nf90_enddef(self%ncid)
     end if
 
-    !! if grid not present, also create the coordinate variables
-    ! if (dimcheck == -1) call self%create_mesh_coordinate(mesh)
+    !if locStream not present, also create the coordinate variables
+    if (dimcheck == -1) call self%create_locstream_coordinates(locStream)
 
     call self%update()
 
@@ -2584,6 +2585,124 @@ module mossco_netcdf
     return
 
   end function mossco_netcdf_grid_dimensions
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "mossco_netcdf_locstream_coordinates_create"
+  subroutine mossco_netcdf_locStream_coordinates_create(self, locStream, kwe, owner, rc)
+
+    implicit none
+
+    class(type_mossco_netcdf)                        :: self
+    type(ESMF_LocStream), intent(in)                 :: locStream
+    type(ESMF_KeyWordEnforcer), optional, intent(in) :: kwe
+    character(len=*), intent(in), optional           :: owner
+    integer(ESMF_KIND_I4), optional, intent(out)     :: rc
+
+    integer                     :: ncStatus, varid, rc_, localrc, keyCount
+    integer                     :: i, locationDimid, locationCount
+    character(len=ESMF_MAXSTR)  :: varName, geomName, message, dimName, owner_
+    character(len=ESMF_MAXSTR)  :: keyName, string
+
+    character(len=ESMF_MAXSTR), allocatable  :: keyNames(:)
+    real(ESMF_KIND_R8), pointer, dimension(:)        :: f8arrayPtr1 => null()
+    real(ESMF_KIND_R4), pointer, dimension(:)        :: f4arrayPtr1 => null()
+    integer(ESMF_KIND_I8), pointer, dimension(:)     :: i8arrayPtr1 => null()
+    integer(ESMF_KIND_I4), pointer, dimension(:)     :: i4arrayPtr1 => null()
+    type(ESMF_CoordSys_Flag)                         :: coordSys
+    type(ESMF_Array)                                 :: array
+    type(ESMF_Typekind_Flag)                         :: typeKind
+
+    owner_ ='--'
+    rc_    = ESMF_SUCCESS
+
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+    if (present(rc)) rc = ESMF_SUCCESS
+
+    call ESMF_LocStreamGet(locStream, name=geomName, keyCount=keyCount, &
+      coordSys=coordSys, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (keyCount < 1) return
+
+    if (allocated(keyNames)) deallocate(keyNames)
+    allocate(keyNames(keyCount))
+
+    call ESMF_LocStreamGetBounds(locStream, exclusiveCount=locationCount, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_LocStreamGet(locStream, keyNames=keyNames, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    do i=1, keyCount
+
+      ! Construct the coordinate variable from the geomName and the key
+      ! without the "ESMF:" prefix.
+      keyName=keyNames(i)
+      write(varName,'(A)') trim(geomName)//'_'//trim(keyName(6:))
+      if (self%variable_present(varName)) cycle
+
+      write(dimName,'(A,I1)') trim(geomName)//'_location'
+      ncStatus = nf90_inq_dimid(self%ncid,trim(dimName),locationDimid)
+
+      ncStatus = nf90_redef(self%ncid)
+      ncStatus = nf90_def_var(self%ncid,trim(varname), NF90_DOUBLE, (/locationDimid/), varid)
+      if (ncStatus /= NF90_NOERR) then
+        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//' cannot define variable '//trim(varname),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        if (present(rc)) rc=ESMF_RC_FILE_WRITE
+        return
+      endif
+
+      if (i==1) ncStatus = nf90_put_att(self%ncid,varid,'standard_name','longitude')
+      if (i==2) ncStatus = nf90_put_att(self%ncid,varid,'standard_name','latitude')
+      ncStatus = nf90_put_att(self%ncid,varid,'long_name',varName)
+      ncStatus = nf90_enddef(self%ncid)
+
+      call ESMF_LocStreamGetKey(locStream, keyName=keyNames(i), keyArray=array, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      write(message,'(A)') trim(owner_)//' creates coordinate variable '//trim(Varname)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      !subroutine ESMF_LocStreamGetKeyInfo(locstream, keyName, keywordEnforcer,&
+      !        keyUnits, keyLongName, typekind, isPresent, rc)
+      call ESMF_LocStreamGetKey(locStream, keyName=keyNames(i), keyUnits=string, &
+        typeKind=typeKind, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      if (typeKind /= ESMF_TYPEKIND_R8) then
+        allocate(f8arrayPtr1(locationCount))
+      else
+        call ESMF_ArrayGet(array, farrayPtr=f8arrayPtr1, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      endif
+
+      if (typeKind == ESMF_TYPEKIND_R4) then
+        call ESMF_ArrayGet(array, farrayPtr=f4arrayPtr1, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+        f8arrayPtr1(:) = f4arrayPtr1(:)*1.0D0
+      elseif (typeKind == ESMF_TYPEKIND_I4) then
+        call ESMF_ArrayGet(array, farrayPtr=i4arrayPtr1, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+        f8arrayPtr1(:) = i4arrayPtr1(:)*1.0D0
+      elseif (typeKind == ESMF_TYPEKIND_I8) then
+        call ESMF_ArrayGet(array, farrayPtr=i8arrayPtr1, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+        f8arrayPtr1(:) = i8arrayPtr1(:)*1.0D0
+      endif
+
+      ncStatus = nf90_put_var(self%ncid, varid, f8arrayPtr1)
+
+      if (typeKind /= ESMF_TYPEKIND_R8) deallocate(f8arrayPtr1)
+
+    enddo
+
+    if (allocated(keyNames)) deallocate(keyNames)
+
+    call self%update_variables()
+    call self%update()
+
+  end subroutine mossco_netcdf_locstream_coordinates_create
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_mesh_coordinate_create"
