@@ -33,6 +33,7 @@ module regrid_coupler
   use mossco_config
   use mossco_netcdf
   use mossco_locstream
+  use mossco_routehandle
 
   implicit none
 
