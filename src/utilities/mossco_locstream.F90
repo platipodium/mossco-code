@@ -38,11 +38,13 @@ subroutine MOSSCO_LocStreamString(locStream, message, kwe, length, rc)
   integer(ESMF_KIND_I4), intent(inout), optional :: length
   integer(ESMF_KIND_I4), intent(out), optional   :: rc
 
-  integer(ESMF_KIND_I4)   :: rc_, length_, keyCount, localrc
-  character(ESMF_MAXSTR)  :: stringValue, name
+  integer(ESMF_KIND_I4)   :: rc_, length_, keyCount, localrc, locationCount
+  integer(ESMF_KIND_I4)   :: lbnd, ubnd, i
+  character(ESMF_MAXSTR)  :: string, name
+  character(ESMF_MAXSTR), allocatable :: keyNames(:)
+  type(ESMF_Array)        :: array
 
   logical                     :: isPresent
-  integer(ESMF_KIND_I4), allocatable :: ubnd(:), lbnd(:)
 
   rc_ = ESMF_SUCCESS
   if (present(kwe)) rc_ = ESMF_SUCCESS
@@ -54,9 +56,9 @@ subroutine MOSSCO_LocStreamString(locStream, message, kwe, length, rc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   if (isPresent) then
-    call ESMF_AttributeGet(locStream, name='creator', value=stringValue, rc=localrc)
+    call ESMF_AttributeGet(locStream, name='creator', value=string, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-    call MOSSCO_MessageAdd(message, ' ['//stringValue)
+    call MOSSCO_MessageAdd(message, ' ['//string)
     call MOSSCO_MessageAdd(message, ']'//name)
   else
     call MOSSCO_MessageAdd(message,' '//name)
@@ -65,21 +67,36 @@ subroutine MOSSCO_LocStreamString(locStream, message, kwe, length, rc)
   call ESMF_LocStreamGet(locStream, keyCount=keyCount, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-  if (keyCount<10 .and. (len_trim(message) + 3 <=len(message))) then
-    write(message,'(A,I1)') trim(message)//' (', keyCount
-  elseif (keyCount<100 .and. (len_trim(message) + 4 <=len(message))) then
-    write(message,'(A,I2)') trim(message)//' (', keyCount
-  elseif (keyCount<1000 .and. (len_trim(message) + 5 <=len(message))) then
-    write(message,'(A,I2)') trim(message)//' (', keyCount
-  elseif (keyCount<10000 .and. (len_trim(message) + 6 <=len(message))) then
-    write(message,'(A,I2)') trim(message)//' (', keyCount
-  elseif (keyCount<100000 .and. (len_trim(message) + 7 <=len(message))) then
-    write(message,'(A,I2)') trim(message)//' (', keyCount
-  elseif (keyCount<1000000 .and. (len_trim(message) + 8 <=len(message))) then
-    write(message,'(A,I2)') trim(message)//' (', keyCount
+  if (keyCount < 1) then
+    call MOSSCO_MessageAdd(message, '(no keys)')
+  else
+    allocate(keyNames(keyCount), stat=localrc)
+    write(string,*) keyCount
+    call MOSSCO_MessageAdd(message, ' '//trim(adjustl(string)))
+    call ESMF_LocStreamGet(locStream, keyNames=keyNames, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    ! call MOSSCO_MessageAdd(message, ' ('//trim(keyNames(1)))
+    ! do i=2,keyCount
+    !   call MOSSCO_MessageAdd(message, ','//keyNames(i))
+    ! enddo
+    ! call MOSSCO_MessageAdd(message,')')
   endif
 
-  if (len_trim(message) + 1 <=len(message)) write(message,'(A)') trim(message)//')'
+  locationCount = -1
+
+  if (keyCount>0) then
+    call ESMF_LocStreamGetBounds(locStream, exclusiveLBound=lbnd, &
+      exclusiveUbound=ubnd, exclusiveCount=locationCount, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    !call ESMF_LocStreamGetKey(locStream, keyName=keyNames(1), keyArray=array, rc=localrc)
+    !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    write(string,*) locationCount
+    call MOSSCO_MessageAdd(message,' ('//trim(adjustl(string))//')')
+  endif
+
+  if (allocated(keyNames)) deallocate(keyNames)
 
   length_=len_trim(message)
   if (present(length)) length=length_
