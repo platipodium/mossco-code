@@ -66,6 +66,7 @@ module mossco_netcdf
     contains
     procedure :: close => mossco_netcdf_close
     procedure :: add_timestep => mossco_netcdf_add_timestep
+    procedure :: locstream_dimensions => mossco_netcdf_locstream_dimensions
     procedure :: grid_dimensions => mossco_netcdf_grid_dimensions
     procedure :: mesh_dimensions => mossco_netcdf_mesh_dimensions
     procedure :: init_time => mossco_netcdf_init_time
@@ -926,14 +927,6 @@ module mossco_netcdf
       call ESMF_GridGet(grid, coordSys=coordSys,rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      if (coordSys == ESMF_COORDSYS_SPH_DEG) then
-        coordnames=(/'lon  ','lat  ','level'/)
-      elseif (coordSys == ESMF_COORDSYS_SPH_RAD) then
-        coordnames=(/'lon  ','lat  ','level'/)
-      else
-        coordnames=(/'x','y','z'/)
-      endif
-
     elseif (geomType==ESMF_GEOMTYPE_MESH) then
       call ESMF_FieldGet(field, mesh=mesh, meshloc=meshloc, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -944,22 +937,28 @@ module mossco_netcdf
       call ESMF_MeshGet(mesh, coordSys=coordSys, rc=localrc)
       dimCount = 1
 
-      if (coordSys == ESMF_COORDSYS_SPH_DEG) then
-        coordnames=(/'lon  ','lat  ','level'/)
-      elseif (coordSys == ESMF_COORDSYS_SPH_RAD) then
-        coordnames=(/'lon  ','lat  ','level'/)
-      else
-        coordnames=(/'x','y','z'/)
-      endif
-
     elseif (geomType==ESMF_GEOMTYPE_LOCSTREAM) then
-      write(message,'(A)')  '  geometry type LOCSTREAM cannot be handled yet'
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
-      return
+      call ESMF_FieldGet(field, locStream=locStream, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      write(geomname,'(A)') 'locstream'
+      dimids => self%locstream_dimensions(field)
+
+      call ESMF_LocStreamGet(locStream, coordSys=coordSys, rc=localrc)
+      dimCount = 1
+
     elseif (geomType==ESMF_GEOMTYPE_XGRID) then
       write(message,'(A)')  '  geometry type XGRID cannot be handled yet'
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
       return
+    endif
+
+    if (coordSys == ESMF_COORDSYS_SPH_DEG) then
+      coordnames=(/'lon  ','lat  ','level'/)
+    elseif (coordSys == ESMF_COORDSYS_SPH_RAD) then
+      coordnames=(/'lon  ','lat  ','level'/)
+    else
+      coordnames=(/'x','y','z'/)
     endif
 
     !> enter definition mode to use netcdf_write commands
@@ -2329,6 +2328,91 @@ module mossco_netcdf
     enddo
 
   end subroutine mossco_netcdf_update
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "mossco_netcdf_locstream_dimensions"
+  function mossco_netcdf_locstream_dimensions(self, field, kwe, owner, rc) result(dimids)
+
+    implicit none
+
+    class(type_mossco_netcdf)     :: self
+    type(ESMF_Field)              :: field
+    type(ESMF_KeyWordEnforcer), optional, intent(in)     :: kwe
+    character(len=*), optional, intent(in)               :: owner
+    integer(ESMF_KIND_I4), optional, intent(out)         :: rc
+
+    type(ESMF_LocStream)          :: locStream
+    integer                       :: ncStatus,rc_, localrc, dimcheck
+    character(len=ESMF_MAXSTR)    :: geomName, name
+    integer,pointer,dimension(:)  :: dimids
+
+    integer(ESMF_KIND_I4)         :: rank, i, keyCount, locationCount
+    character(len=ESMF_MAXSTR)    :: message, owner_
+
+    rc_ = ESMF_SUCCESS
+    owner_ = '--'
+
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = ESMF_SUCCESS
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+
+    dimcheck=0
+    call ESMF_FieldGet(field, locStream=locStream, rank=rank, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_LocStreamGet(locStream, keyCount=keyCount, name=geomName, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (keyCount < 1) then
+      write(message,'(A)') trim(owner_)//' cannot find any (required) keys in locSstream'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      if (present(rc)) rc = ESMF_RC_NOT_FOUND
+      return
+    endif
+
+    if (rank  /= 1) then
+      write(message,'(A)') trim(owner_)//' currently only handles rank 1 fields'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+      if (present(rc)) rc = ESMF_SUCCESS
+      return
+    endif
+
+    call ESMF_LocStreamGetBounds(locStream, exclusiveCount=locationCount, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    nullify(dimids)
+    allocate(dimids(rank+1))
+
+    dimids(:)=-1
+    dimids(rank+1)=self%timeDimId
+
+    ! get location dimension-id
+    write(name,'(A)') trim(geomName)//'_location'
+    ncStatus = nf90_inq_dimid(self%ncid,trim(name),dimids(rank))
+    if (ncStatus /= NF90_NOERR) dimcheck=-1
+
+    !! if dimension not present, create it
+    if (dimcheck == -1) then
+      ncStatus = nf90_redef(self%ncid)
+      ncStatus = nf90_def_dim(self%ncid, trim(name), locationCount,dimids(1))
+      if (ncStatus==NF90_ENAMEINUSE) then
+        rc_ = MOSSCO_NC_EXISTING
+      elseif  (ncStatus==NF90_NOERR) then
+        rc_ = ESMF_SUCCESS
+      else
+        rc_ = ESMF_SUCCESS
+      end if
+      ncStatus = nf90_enddef(self%ncid)
+    end if
+
+    !! if grid not present, also create the coordinate variables
+    ! if (dimcheck == -1) call self%create_mesh_coordinate(mesh)
+
+    call self%update()
+
+    return
+
+ end function mossco_netcdf_locstream_dimensions
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_mesh_dimensions"
