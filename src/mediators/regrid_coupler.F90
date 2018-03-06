@@ -567,6 +567,16 @@ module regrid_coupler
             ! unmappedDstList=unmappedDstList, & ! ESMF internal error
             rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+#else
+          !> @todo this needs to consider masks!
+          call ESMF_FieldRegridStore(srcField=importField, dstField=exportField, &
+            srcMaskValues=(/0/), dstMaskValues=(/0/), &
+            routeHandle=routehandle, &
+            regridmethod=currentMethod, &
+            unmappedaction=ESMF_UNMAPPEDACTION_IGNORE, &
+            ! unmappedDstList=unmappedDstList, & ! ESMF internal error
+            rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 #endif
 
           if (associated(unmappedDstList) .and. ubound(unmappedDstList,1) > 0) then
