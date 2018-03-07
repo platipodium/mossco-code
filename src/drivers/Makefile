@@ -53,6 +53,7 @@ ifeq ($(MOSSCO_HAMSOM),true)
 endif
 
 ifeq ($(MOSSCO_CMAQ),true)
+include $(MOSSCO_DIR)/src/include/cmaq.mk
   TARGETS += libmossco_cmaq
   CPPFLAGS += -I$(CMAQ_DIR)/src
 endif
@@ -251,9 +252,11 @@ libmossco_cmaq_dependencies:
 libmossco_cmaq: prefix libmossco_cmaq_dependencies \
   $(MOSSCO_LIBRARY_PATH)/libmossco_cmaq.a(cmaq_driver.o)
 
-cmaq_driver.o: cmaq_driver.F90
+cmaq_driver.o: driver.F # cmaq_driver.F90
 	@echo "Compiling $<"
-	$(F90)  $(HAMSOM_CPPFLAGS) $(CPPFLAGS) $(HAMSOM_FFLAGS) $(F90FLAGS) -c $< -o $@
+	#$(F90)  $(CMAQ_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
+	#$(F90)  $(CMAQ_CPPFLAGS) $(CPPFLAGS) $(F_FLAGS) -c $< -o $@
+	$(FC) -c $(F_FLAGS) $(CPP_FLAGS) $(INCLUDES) $< -o $@
 
 
 # Generic section
