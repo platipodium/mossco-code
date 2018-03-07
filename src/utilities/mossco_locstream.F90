@@ -52,6 +52,8 @@ subroutine MOSSCO_LocStreamString(locStream, message, kwe, length, rc)
   call ESMF_LocStreamGet(locStream, name=name, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
+#if ESMF_VERSION_MAJOR > 6
+#if ESMF_VERSION_MINOR > 0
   call ESMF_AttributeGet(locStream, name='creator', isPresent=isPresent, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
@@ -63,6 +65,12 @@ subroutine MOSSCO_LocStreamString(locStream, message, kwe, length, rc)
   else
     call MOSSCO_MessageAdd(message,' '//name)
   endif
+#else
+  call MOSSCO_MessageAdd(message,' '//name)
+#endif
+#else
+  call MOSSCO_MessageAdd(message,' '//name)
+#endif
 
   call ESMF_LocStreamGet(locStream, keyCount=keyCount, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
