@@ -201,7 +201,7 @@ module regrid_coupler
         if (hasMaskVariable) then
           externalGrid = ESMF_GridCreate(filename=trim(geomFileName), fileFormat=ESMF_FILEFORMAT_GRIDSPEC, &
             isSphere=.false., addmask=.true., varname=trim(mask_variable), rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
           write(message, '(A)') trim(name)//' created grid WITH mask ' //trim(mask_variable)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         else
