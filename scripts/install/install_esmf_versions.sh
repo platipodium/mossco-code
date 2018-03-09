@@ -33,7 +33,7 @@ echo "  $0 uses ESMF sources in ${ESMF_DIR}"
 # Determine what git tags of the ESMF repo are used.  Prefer the most
 # recent one (we need >= 7_1_0_beta_snapshot_52 for regridding with extrapolation)
 if [ -z "${ESMF_TAGS}" ]; then
-  TAGS=ESMF_7_1_0_beta_snapshot_54
+  TAGS=ESMF_7_1_0r
 else
   TAGS=${ESMF_TAGS}
 fi
