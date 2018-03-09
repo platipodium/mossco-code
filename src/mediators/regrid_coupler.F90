@@ -115,9 +115,9 @@ module regrid_coupler
 
     type(ESMF_Field), allocatable :: importFieldList(:)
     type(ESMF_Field), allocatable :: exportFieldList(:)
-    character(len=ESMF_MAXSTR)    :: geomFileFormatString = 'SCRIP', mask_variable
+    character(len=ESMF_MAXSTR)    :: geomFileFormatString = 'SCRIP', mask_variable='mask'
     character(len=ESMF_MAXSTR)    :: geomTypeString = 'GRID'
-    character(len=ESMF_MAXSTR)    :: regridMethodString, edgeMethodString
+    character(len=ESMF_MAXSTR)    :: regridMethodString = 'bilinear', edgeMethodString = 'stod'
     type(ESMF_RegridMethod_Flag)  :: regridMethod, currentMethod, edgeMethod
     integer(ESMF_KIND_I4),pointer :: unmappedDstList(:) => null()
 
@@ -134,13 +134,6 @@ module regrid_coupler
     call ESMF_AttributeGet(cplComp, 'geom_filename',  &
       isPresent=geomIsPresent, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    hasMaskVariable = .false.
-    if (geomIsPresent) then
-      call ESMF_AttributeGet(cplComp, 'mask_variable',  &
-        isPresent=hasMaskVariable, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-    endif
 
     call ESMF_AttributeGet(cplComp, 'regrid_method',  &
       regridMethodString, defaultValue='bilinear', rc=localrc)
@@ -179,6 +172,16 @@ module regrid_coupler
 
     if (geomIsPresent) then
 
+      call ESMF_AttributeGet(cplComp, 'mask_variable',  &
+        isPresent=hasMaskVariable, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (hasMaskVariable) then
+        call ESMF_AttributeGet(cplComp, 'mask_variable',  &
+          mask_variable, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      endif
+
       call ESMF_AttributeGet(cplComp, 'geom_filename',  geomFileName, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -198,6 +201,10 @@ module regrid_coupler
 
       elseif (trim(geomFileFormatString) == 'GRIDSPEC') then
         if (hasMaskVariable) then
+
+          write(message, '(A)') trim(name)//' creating grid WITH mask ' //trim(mask_variable)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+
           externalGrid = ESMF_GridCreate(filename=trim(geomFileName), fileFormat=ESMF_FILEFORMAT_GRIDSPEC, &
             isSphere=.false., addmask=.true., varname=trim(mask_variable), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
