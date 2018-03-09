@@ -83,8 +83,8 @@ env:
     - NETCDF_VERSION=NETCDF4
     - COMMS="openmpi"       # @todo make this a matrix with mpich
     - COMPS="gfortranclang" # @todo make this a matrix with gfortran
-    - TAGS="ESMF_7_1_0_beta_snapshot_52"
-    - ESMFMKFILE=${ESMF_INSTALL_PREFIX}/lib/libg/Linux.gfortranclang.64.openmpi.ESMF_7_1_0_beta_snapshot_52/esmf.mk
+    - TAGS="ESMF_7_1_0r"
+    - ESMFMKFILE=${ESMF_INSTALL_PREFIX}/lib/libg/Linux.gfortranclang.64.openmpi.ESMF_7_1_0r/esmf.mk
 
 #  matrix:
 #    - make doc
@@ -95,8 +95,10 @@ install:
 #  - test -d ${ESMF_DIR} || bash ${MOSSCO_DIR}/scripts/installation/install_esmf_versions.sh
 #  - source ${HOME}/.esmf_Linux.gfortranclang.64.openmpi.ESMF_7_1_0_beta_snapshot_52
   - bash ${MOSSCO_DIR}/scripts/install/install_esmf_versions.sh
-  - mkdir -p ${MOSSCO_DIR}/external/fabm/code
+  - mkdir -p ${MOSSCO_DIR}/external/fabm/
   - git clone -b master --depth 1 https://github.com/platipodium/mossco-fabm.git ${MOSSCO_DIR}/external/fabm/code
+  - mkdir -p ${MOSSCO_DIR}/external/getm/
+  - git clone -b master --depth 1 https://github.com/platipodium/mossco-getm.git ${MOSSCO_DIR}/external/getm/code
   - make external
   - make libfabm_external
   - make libgotm_external
