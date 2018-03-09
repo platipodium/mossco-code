@@ -98,7 +98,7 @@ install:
   - mkdir -p ${MOSSCO_DIR}/external/fabm/
   - git clone -b master --depth 1 https://github.com/platipodium/mossco-fabm.git ${MOSSCO_DIR}/external/fabm/code
   - mkdir -p ${MOSSCO_DIR}/external/getm/
-  - git clone -b master --depth 1 https://github.com/platipodium/mossco-getm.git ${MOSSCO_DIR}/external/getm/code
+  - git clone -b iow --depth 1 https://github.com/platipodium/mossco-getm.git ${MOSSCO_DIR}/external/getm/code
   - make external
   - make libfabm_external
   - make libgotm_external
