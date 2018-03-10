@@ -76,7 +76,7 @@ env:
   global:
     - MOSSCO_FFLAGS="-g -Wall -fprofile-arcs -ftest-coverage -O0"
     - EXTRA_FFLAGS="-D_TEST_TRACERFLUXES_"
-    - FFLAGS="-D_ESMF_UNRELEASED_"
+    - FFLAGS="-DESMF_UNRELEASED"
     - MOSSCO_DIR=${TRAVIS_BUILD_DIR}
     - ESMF_DIR=${MOSSCO_DIR}/../esmf-code
     - ESMF_INSTALL_PREFIX=${MOSSCO_DIR}/../esmf
@@ -93,7 +93,7 @@ env:
 install:
   - rm -rf ${ESMF_DIR}
 #  - test -d ${ESMF_DIR} || bash ${MOSSCO_DIR}/scripts/installation/install_esmf_versions.sh
-#  - source ${HOME}/.esmf_Linux.gfortranclang.64.openmpi.ESMF_7_1_0_beta_snapshot_52
+#  - source ${HOME}/.esmf_Linux.gfortranclang.64.openmpi.ESMF_7_1_0r
   - bash ${MOSSCO_DIR}/scripts/install/install_esmf_versions.sh
   - mkdir -p ${MOSSCO_DIR}/external/fabm/
   - git clone -b master --depth 1 https://github.com/platipodium/mossco-fabm.git ${MOSSCO_DIR}/external/fabm/code
