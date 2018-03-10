@@ -64,6 +64,10 @@ coupling:
      - mossco_gfs
     interval: 12 h
   - components:
+     - fabm_pelagic
+     - mossco_gfs
+    interval: 12 h
+  - components:
      - fabm_sediment
      - mossco_gfs
     interval: 12 h
