@@ -4,21 +4,25 @@ These instructions should get you started on building your own coupled system wi
 MOSSCO. It is really only a quick start, if you or someone else has already installed
 
 - Python with YAML support (python >= 2.7)
-- Fortran2003 compliant compiler (e.g. PGI > 13.1, Intel > 12.0, GCC >= 4.8.2)
+- Fortran2003 compliant compiler (e.g. PGI > 13.1, Intel > 12.0, GCC >= 4.8.3)
 - CMake (>= 2.8.6)
-- ESMF (The Earth System Modeling Framework) with NetCDF and MPI support (>= 7.0.0)
+- ESMF (The Earth System Modeling Framework) with NetCDF and MPI support (>= 7.1.0)
 
-for you to use at this point. If not, you have to do it now (ESMF cannot be
-installed from the package manager). You will find some help at
+for you to use at this point. If not, you have to do it now.  For some port managers
+we provide a list of packages you need.  On Ubuntu Linux, you would usally use `apt`,
+on MacOS `ports` or `fink`.
+
+| Package/Installer | apt                       | yast           | ports          | fink                       | conda |
+| ----------------- |:------------------------- |:-------------- |:-------------- |:-------------------------- |:----- |
+| compilers         | gfortran, g++             | gcc-4_8-branch | clang50        | gcc48-compiler             |       |
+| NetCDF            | libnetcdf-dev, netcdf-bin | libnetcdf-dev  | netcdf-fortran | netcdf-c7, netcdf-fortran4 |       |
+| MPI               | libmpich2-dev, mpich2     | openmpi-dev    | openmpi        | openmpi                    |       |
+| YAML              | python-yaml               | Python-yaml    | py27-yaml      | yaml-py27                  |       |
+| cmake             | cmake                     | cmake          | cmake          | cmake                      |       |
+| ESMF              | n/a                       | n/a            | esmf           | n/a                        | esmf  |
+
+If your package manager cannot install ESMF, you will find some help at
 [www.mossco.de/doc](http://www.mossco.de/doc/index.html#installing-esmf).
-
-Package    | Ubuntu        | Suse | MacPorts      | Fink
------------|:--------------|:-----|:--------------|:---------------
-compilers  | gcc, gfortran, g++ | gcc-4_8-branch revision 202388  | gcc5         | gcc48-compiler
-NetCDF     | libnetcdf-dev, netcdf-bin | libnetcdf-dev    |               | netcdf-c7, netcdf-fortran4, netcdf-cxx4
-MPI        | libmpich2-dev, mpich2     | openmpi-dev      | mpich-gcc5 *or* openmpi-gcc5  | openmpi
-YAML       | python-yaml               | Python-yaml | py27-yaml  | yaml-py27
-cmake      | cmake                     | cmake       | cmake      | cmake
 
 The ESMF installation finally provides a file `esmf.mk`, this location must be
 provided to MOSSCO.  On my Linux system with gfortran and mpich, the path is, e.g.:
@@ -42,7 +46,7 @@ model to a benthic-pelagic ecosystem, using two external models
 For these models, we will combine several MOSSCO components (you can find them in
 `src/components`)
 
-- `constant` (Delivers constants to other components)
+- `default` (Delivers constants to other components)
 - `gotm`     (Hydrology using GOTM)
 - `fabm_pelagic` (Ecology of FABM running in ocean)
 - `fabm_sediment` (Ecology of FABM running in ocean soil)
@@ -55,11 +59,10 @@ get the codes:
 		export MOSSCO_DIR=$HOME/MOSSCO/code
 		export MOSSCO_SETUPDIR=$HOME/MOSSCO/setups
 
-		git clone git://git.code.sf.net/p/mossco/code $MOSSCO_DIR
-		git clone git://git.code.sf.net/p/mossco/setups $MOSSCO_SETUPDIR
+		git clone --depth=1 git://git.code.sf.net/p/mossco/code $MOSSCO_DIR
+		git clone --depth=1 git://git.code.sf.net/p/mossco/setups $MOSSCO_SETUPDIR
 
-This could take some time, as the complete `git` repositories occupy roughly 170 Mb (code) and 1.6 Gb (setups) of space.  Alternatively, you can obtain a snapshot
-from https://sourceforge.net/projects/mossco/files/Snapshots/ that needs only half the space (we do not recommend this).
+Alternatively, you can obtain a snapshot from https://sourceforge.net/projects/mossco/files/Snapshots/.
 
 # Preparing external programs for use with MOSSCO
 
