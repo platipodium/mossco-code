@@ -1,6 +1,6 @@
 @section what What is MOSSCO?
 
-1. The Modular System for Shelves and Coasts.  
+1. The Modular System for Shelves and Coasts.
 2. A coupling infrastructure that facilitates the coupling of heterogeneous software components describing aspects of the coastal Earth System.
 3. A project as well as a software system.
 
@@ -13,7 +13,6 @@ You can make good use of MOSSCO, if you are
 1. A model developer or scientific computer engineer who would like to couple different models on high-performance computing architectures.
 2. A scientific modeler with a specific model that should be integrated with other models.
 3. An experimentalist who would like to make data available to the modeling community and have her data assimilated/used by computer models.
-
 
 @section what-for What do we get funding for?
 
@@ -48,7 +47,7 @@ Goals and objectives from our funding proposal
   - the General Estuarine Transport Model (<http://www.getm.eu>),
   - the SandMudBedModule from the OpenEarthTools (<http://www.openearth.nl>).
 
-MOSSCO is mainly developed on Ubuntu Linux workstations.  
+MOSSCO is mainly developed on Ubuntu Linux workstations.
 # Obtaining and installing MOSSCO
 
 MOSSCO is distributed *only* as source code. There is no binary package available that we distribute.
@@ -65,7 +64,6 @@ Choose a local directory `$MOSSCO_DIR`, where you would like the mossco code to 
 
 		export MOSSCO_DIR=$HOME/some/local/directory # for bash users
 		setenv MOSSCO_DIR $HOME/some/local/directory # for csh users
-
 
 The code is available via  `git` for read-only access. If you don't have  `git`, you can download and install a suitable version from <http://git-scm.com>.
 
@@ -86,14 +84,13 @@ If you are a developer and registered as a participant of the MOSSCO project, yo
 
 MOSSCO has some necessary and some optional prerequisites.  Please make sure you meet these prerequisites before you try to compile MOSSCO.
 
-@subsubsection system-prereqs 	^^^														Necessary system prerequisites
+@subsubsection system-prereqs Necessary system prerequisites
 
 Program | Minimum version and alternatives
 --------|----------
 GNU `make` | 3.0
 Fortran 2003 Compiler | e.g. GNU  >= 4.8.2, Intel >= 12.0, PGI >= 13.2
-ESMF | 5.2.0rp3, preferably 6.3.0r
-
+ESMF | 7.1.0r preferably 6.3.0r
 
 ### Optional system prerequisites
 
@@ -102,9 +99,9 @@ Program | Minimum version and alternatives
 NetCDF | 3.6, preferably version 4
 Message Passing Interface | OpenMPI >= 1.7 or MPICH >= 3.0.4
 
-We recommend strongly that you delegate the installation of ESMF (including Fortran compiler, MPI, NetCDF) to your local tech support or IT department. Other versions of the necessary and optional required programs may also work, but have not necessarily been tested.  
+We recommend strongly that you delegate the installation of ESMF (including Fortran compiler, MPI, NetCDF) to your local tech support or IT department. Other versions of the necessary and optional required programs may also work, but have not necessarily been tested.
 
-You may also try to go ahead with an existing lower version of any of the required software packages, report possible errors, and argue why you would like us to support your version.  
+You may also try to go ahead with an existing lower version of any of the required software packages, report possible errors, and argue why you would like us to support your version.
 
 For help and hints on installing ESMF, MPI, and NetCDF, see the appropriate sections below.  Please make sure to use the same compiler for all your software components.
 
@@ -134,9 +131,18 @@ There is a pre-built documentation available online at <http://www.mossco.de/doc
 
 ## Installing MPI and NetCDF
 
-Quite likely, a version MPI and NetCDF are preinstalled on your system.  If not, it is preferable to use your package manager (Yast, zypper, apt, port, etc. ...) to install these programs.  Make sure that both MPI and NetCDF are compiled with the *same* Fortran 2003 compiler that you would like to use for ESMF and MOSSCO subsequently. Often, this is not the case (unless you're using a very recent operating system), so please check carefully.  We experienced a lot of difficulties and bugs with outdated compilers, and mismatches between the compiler (and respective libraries) used for the different requirements for MOSSCO. You may also consult the bug data base <http://www.mossco.de/bugs> for solving these problems.
+Quite likely, a version MPI and NetCDF are preinstalled on your system.  If not,
+it is preferable to use your package manager (Yast, zypper, apt, port, etc. ...)
+to install these programs.  Make sure that both MPI and NetCDF are compiled with
+the *same* Fortran 2003 compiler that you would like to use for ESMF and MOSSCO
+subsequently. Often, this is not the case (unless you're using a very recent
+operating system), so please check carefully.  We experienced a lot of
+difficulties and bugs with outdated compilers, and mismatches between the compiler
+(and respective libraries) used for the different requirements for MOSSCO. You
+may also consult the bug data base <http://www.mossco.de/bugs> for solving these problems.
 
-For ESMF, you need both the NetCDF C library and (in later versions of netCDF > 4.1.3) the separate legacy NetCDF-C++ library.  For GOTM and the NetCDF data components in MOSSCO, you need to install the NetCDF Fortran library (if using NetCDF > 4.1.3).
+For ESMF, you optionally need the NetCDF C library.  For GOTM and the NetCDF data components
+in MOSSCO, you need to install the NetCDF Fortran library (if using NetCDF > 4.1.3).
 
 ## Installing ESMF
 
@@ -150,25 +156,28 @@ Decide on a directory where to put the ESMF source, and set the environment vari
 
 		cd $ESMF_DIR
 
-3. checkout the ESMF_6_3_0r tagged version
+3. checkout the ESMF_7_1_0r tagged version
 
-		git checkout ESMF_6_3_0r
+		git checkout ESMF_7_1_0r
 
 4. set ESMF's environment variables (these can be a lot, see below)
 
 An example environment for ESMF could look like this:
 
-Environment variable | value
----|---
-ESMF_DIR | $HOME/opt/src/esmf
-ESMF_COMM | mpich2
-ESMF_NETCDF | split
-ESMF_NETCDF_INCLUDE | /opt/local/include
-ESMF_NETCDF_LIBPATH | /opt/local/lib
-ESMF_LAPACK | netlib
-ESMF_PIO | internal
+| Environment variable | value              |
+| -------------------- | ------------------ |
+| ESMF_DIR             | $HOME/opt/src/esmf |
+| ESMF_COMM            | mpich2             |
+| ESMF_NETCDF          | split              |
+| ESMF_NETCDF_INCLUDE  | /opt/local/include |
+| ESMF_NETCDF_LIBPATH  | /opt/local/lib     |
+| ESMF_LAPACK          | netlib             |
+| ESMF_PIO             | internal           |
 
-See the ESMF manual for a complete list of ESMF environment variables and their relevance.
+See the ESMF manual for a complete list of ESMF environment variables and their
+relevance. On our own testing systems, we regulary run with `ESMF_COMPILER` set
+to `intel`, `gfortran`, or `clang` and with ESMF_COMM set to `intelmpi`, `openmpi`,
+and `mpich`.
 
 Build and install ESMF by issuing  `make`.
 For MOSSCO and the ESMF tools to work, you need to define the environment variable `$ESMFMKFKILE`, e.g.
@@ -188,23 +197,20 @@ This will download FABM, GETM, and GOTM to your system in subdirectories of `$MO
 Alternatively, you can set environment variables `$FABMDIR`, `$GOTMDIR`, and `$GETMDIR` and then clone the respective `git` repositories
 
 	git clone git://git.code.sf.net/p/fabm/code $FABMDIR
-	git clone git://git.code.sf.net/p/gotm/code $GOTMDIR		
+  git clone git://git.code.sf.net/p/gotm/code $GOTMDIR
+  git clone git://git.code.sf.net/p/getm/code $GETMDIR
 
+### Building FABM, GOTM, GETM within MOSSCO
 
-### Building FABM
+MOSSCO takes care of the FABM and GOTM builts via `cmake` and of the GETM built
+via configure/make/install, if they are installed in `$MOSSCO_DIR/external` or
+if their location has been defined by environment variables pointing to the
+respective installation.
 
-MOSSCO takes care of the FABM built via `cmake`.
+### Building FABM, GOTM, GETM outside of MOSSCO
 
-### Building GOTM or GETM
-
-GOTM and GETM can be automatically built by MOSSCO if you set the following environment variables:
-
-Environment variable | value
----|---
-MOSSCO_GOTMDIR | $GOTMDIR
-MOSSCO_GETMDIR | $GETMDIR
-
-Alternatively, you can build GOTM and GETM yourself by specifying the following environment variables (adapt to your local system):
+Alternatively, you can build FABM, GOTM and GETM yourself by specifying the
+following environment variables (adapt to your local system):
 
 Environment variable | value
 ---|---
@@ -218,10 +224,20 @@ Then change to the respective directories and issue `make`
 	(cd $GOTMDIR/src ; make distclean all)
 	(cd $GETMDIR/src ; make distclean all)
 
+Help MOSSCO to see these external software packages by specifiying the following
+environment variables:
+
+Environment variable | value
+---|---
+MOSSCO_FABMDIR | $FABMDIR
+MOSSCO_GOTMDIR | $GOTMDIR
+MOSSCO_GETMDIR | $GETMDIR
+
 ## Building MOSSCO
 
-To create the MOSSCO libraries,  simply issue
- `make` in your  `$MOSSCO_DIR`.  This will automaticall build the  src target and provide the libraries in  `$MOSSCO_DIR/lib/$FORTRAN_COMPILER`
+To create the MOSSCO libraries,  simply issue `make` in your  `$MOSSCO_DIR`.
+This will automaticall build the src target and provide the libraries in
+`$MOSSCO_DIR/lib/$FORTRAN_COMPILER`
 
 	cd $MOSSCO_DIR ; make
 
@@ -229,7 +245,12 @@ To create the documentation (the file you're reading right now), issue
 
 	make doc
 
-(don't worry too much about the warning messages that occur with outdated `doxygen` version.  Also, some of the heading and table markup may not render correctly with old doxygen versions). If you do not have `doxygen` installed, you can alternatively consult the fairly recent online documentation at <http://www.mossco.de/doc>, or download a - probably outdated -  pdf of the documentation from <https://sf.net/p/mossco/files/Reference%20Manual/>.
+(don't worry too much about the warning messages that occur with outdated `doxygen`
+version.  Also, some of the heading and table markup may not render correctly with
+old doxygen versions). If you do not have `doxygen` installed, you can alternatively
+consult the fairly recent online documentation at <http://www.mossco.de/doc>, or
+download a - probably outdated -  pdf of the documentation from
+<https://sf.net/p/mossco/files/Reference%20Manual/>.
 
 To create the examples and test your installation, issue
 
@@ -239,35 +260,47 @@ Then change to the examples subdirectories and run the testcases (see later sect
 
 To clean everything and start anew, type
 
-	make distclean
+	make mossco_clean
 
 ## Summary settings
 
-It may be convenient for you to assemble all variable settings in a shell resource file or add variable settings to your shell's login commands.  Only very few environment variables should be set after your first installation.  
+It may be convenient for you to assemble all variable settings in a shell resource
+file or add variable settings to your shell's login commands.  Only very few
+environment variables should be set after your first installation.
 
 Sample setting for `bash` could look as follows
 
-	export MOSSCO_DIR=${HOME}/opt/mossco/code
-	export NETCDF_VERSION=NETCDF4
-    export ESMFMKFILE=/opt/esmf/lib/libo/Linux.gfortran.64.openmpi.ESMF_6_3_0rp1_beta_snapshot_09/esmf.mk
+        export MOSSCO_DIR=${HOME}/opt/mossco/code
+        export NETCDF_VERSION=NETCDF4
+        export ESMFMKFILE=/opt/esmf/lib/libo/Linux.gfortran.64.openmpi.ESMF_7_1_0r/esmf.mk
 
 For `csh` you would, in a similar fashion, say
 
-	setenv MOSSCO_DIR ${HOME}/opt/mossco/code
-    setenv NETCDF_VERSION NETCDF4
-    setenv ESMFMKFILE /opt/esmf/lib/libo/Linux.gfortran.64.openmpi.ESMF_6_3_0rp1_beta_snapshot_09/esmf.mk
+        setenv MOSSCO_DIR ${HOME}/opt/mossco/code
+        setenv NETCDF_VERSION NETCDF4
+        setenv ESMFMKFILE /opt/esmf/lib/libo/Linux.gfortran.64.openmpi.ESMF_7_1_0r/esmf.mk
 
 # Reporting errors
 
-Bugs as well as annoyances and feature requests are collected in a bug tracker located at <https://sf.net/p/mossco/tickets/>.  Please search for an existing ticket before reporting a new one.  
+Bugs as well as annoyances and feature requests are collected in a bug tracker
+located at <https://sf.net/p/mossco/tickets/>.  Please search for an existing
+ticket before reporting a new one.
 
-Do report any issue that you observe, even if this later turns out to be a problem related to your local computing environment and not to the MOSSCO code itself.  We encourage to document any problem that you encountered during the installation of MOSSCO: someone else might have the same issue and could profit from your experience.
+Do report any issue that you observe, even if this later turns out to be a problem
+related to your local computing environment and not to the MOSSCO code itself.
+We encourage to document any problem that you encountered during the installation
+of MOSSCO: someone else might have the same issue and could profit from your experience.
 
-You are also welcome to fix errors yourself, commit them in your local repository, and upload the patch to the bug tracker.  If you would like to get involved more, you are welcome to join our team.  Please contact us via the sourceforge project web site.
+You are also welcome to fix errors yourself, commit them in your local repository,
+and upload the patch to the bug tracker.  If you would like to get involved more,
+you are welcome to join our team.  Please contact us via the sourceforge project
+web site.
 
 # MOSSCO status
 
-The MOSSCO system was successfully tested on the following machines and environments.  Please report successful testing on your machine (e.g., in the project wiki <http://www.mossco.de/wiki>), and issue a new tag, if you are a developer.
+The MOSSCO system was successfully tested on the following machines and environments.
+Please report successful testing on your machine (e.g., in the project wiki
+<http://www.mossco.de/wiki>), and issue a new tag, if you are a developer.
 
 ## Successful compilation and execution of examples
 
@@ -282,7 +315,6 @@ SUSE Linux 3.0 | ifort-12.1.5 | FABM | ICE-X (BAW) | complete
 Debian Linux 7.1 | gfortran 4.7.2/mpich2-1.4 | FABM/ESMF | grpsrv09 (hk) | complete
 
 We are working on testing the pgfortran compiler on different systems.
-
 
 @section references References
 
@@ -348,11 +380,11 @@ This example describes a system of 3 coupled components [find a shorter way to s
 
 In this example, the GOTM component provides data to FABM0D at 40 min intervals and to FABMSED at 60 min intervals.  FABMSED provides data to FABM0D at 60 min intervals, and FABM0D provides data to GOTM at 90 minutes, and to FABMSED at 60 minutes intervals (note the direction "both" argument).
 
-During initialize, the components add alarms with the specified interval to the parent clock [demonstrate that this works], each alarm obtains as attributes the meta-information about each two-way coupling.  
+During initialize, the components add alarms with the specified interval to the parent clock [demonstrate that this works], each alarm obtains as attributes the meta-information about each two-way coupling.
 
 The parent clock in the top level component, which calls FABM0D, GOTM and FABMSED repeatedly in its  Run() routine, examines its alarms for those next ringing ones and calls each component with a time duration until the next alarm suitable for that component. It then advance its own clock to the next alarm time, exchanges data, and calls the Run() routines of the two components whos alarm had triggered with a time duration until the next alarm related to each component.
 
-In our example above.  
+In our example above.
 1) GOTM and FABM0D are run for 40 mins, FABMSED for 60 mins
 2) at t=40 GOTM gives data to FABM0D, GOTM and FABM0D are run for another 20 minutes
 3) at t=60 GOTM and FABM0D give data to FABMSED, FABMSED gives data to FABM0D; GOTM and FABM0D are run for 20 mins, FABMSED for 60 mins.
@@ -425,7 +457,7 @@ All configuration files are contained in the example.
 
 @subsection Delft3D erosion-sedimentation (erosed) test case
 
-Prerequisite for this test case is ESMF.  You also need to obtain original Delft3D routines.  
+Prerequisite for this test case is ESMF.  You also need to obtain original Delft3D routines.
 Create a directory  $EROSED_DIR, and get up-to-date sources via subversion
 
 ~~~~sh
@@ -435,4 +467,4 @@ svn checkout https://svn.oss.deltares.nl/repos/openearthtools/trunk/programs/San
 Access to the Delft3D open source repository is restricted to registered users.  You can register at
 [oss.deltares.nl](http://oss.deltares.nl) (look at the top right)
 
-After compilation of the example, you can run it in the local directory.  
+After compilation of the example, you can run it in the local directory.
