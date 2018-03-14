@@ -34,6 +34,8 @@ module regrid_coupler
   use mossco_netcdf
   use mossco_locstream
   use mossco_routehandle
+  use mossco_attribute
+  use mossco_grid
 
   implicit none
 
