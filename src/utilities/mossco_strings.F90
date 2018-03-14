@@ -428,7 +428,7 @@ contains
       string='GRIDSPEC'
     elseif (trim(string) == 'cf') then
       string='GRIDSPEC'
-    elseif (trim(string) == 'grispec') then
+    elseif (trim(string) == 'gridspec') then
       string='GRIDSPEC'
     elseif (trim(string) == 'ugrid') then
       string='UGRID'
