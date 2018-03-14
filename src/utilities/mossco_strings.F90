@@ -30,7 +30,7 @@ module mossco_strings
 
   public intformat, order, MOSSCO_MessageAdd, MOSSCO_MessageAddListPtr, only_var_name, replace_character
   public split_string, MOSSCO_StringMatch, MOSSCO_StringClean
-  public MOSSCO_CheckUnits, MOSSCO_CleanUnit, MOSSCO_StringCopy
+  public MOSSCO_CheckUnits, MOSSCO_CleanUnit, MOSSCO_StringCopy, MOSSCO_CleanGeomFormatString
 
   !> @brief Returns the order of magnitude of its input argument
   !> @param <integer|real>(kind=4|8)
@@ -377,13 +377,14 @@ contains
     character(len=1), intent(in), optional   :: char
     integer(ESMF_KIND_I4), optional, intent(out)  :: rc
 
-    integer(ESMF_KIND_I4)                    :: localrc, i, n, j
+    integer(ESMF_KIND_I4)                    :: localrc, i, n, j, rc_
     character(len=ESMF_MAXSTR)               :: exclude_, string_
     character(len=1)                         :: char_
 
     string_ = trim(string(1:len(string_)))
-    rc = ESMF_SUCCESS
-    if (present(kwe)) rc = ESMF_SUCCESS
+    rc_ = ESMF_SUCCESS
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
     if (present(char)) then
       char_ = char
     else
@@ -406,6 +407,36 @@ contains
     enddo
 
   end function MOSSCO_StringClean
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_CleanGeomFormatString"
+  subroutine MOSSCO_CleanGeomFormatString(string, kwe, rc)
+
+    character(len=*), intent(inout)               :: string
+    logical, intent(in), optional                 :: kwe
+    integer(ESMF_KIND_I4), optional, intent(out)  :: rc
+
+    integer(ESMF_KIND_I4)                    :: localrc, rc_
+
+    rc_ = ESMF_SUCCESS
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
+
+    if (trim(string) == 'scrip') then
+      string='SCRIP'
+    elseif (trim(string) == 'CF') then
+      string='GRIDSPEC'
+    elseif (trim(string) == 'cf') then
+      string='GRIDSPEC'
+    elseif (trim(string) == 'grispec') then
+      string='GRIDSPEC'
+    elseif (trim(string) == 'ugrid') then
+      string='UGRID'
+    elseif (trim(string) == 'esmf') then
+      string='ESMF'
+    endif
+
+  end subroutine MOSSCO_CleanGeomFormatString
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_MessageAddListPtr"
