@@ -795,7 +795,7 @@ module netcdf_input_component
       endif
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call nc%getvar(fieldList(i), nc%variables(i), itime=itime, rc=localrc)
+      call nc%getvar(fieldList(i), nc%variables(i), owner=trim(name), itime=itime, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_AttributeGet(fieldList(i), 'creator', isPresent=isPresent, rc=localrc)
@@ -1196,7 +1196,8 @@ module netcdf_input_component
 
         !write(message,'(A,I9,A,I9)') trim(name)//' reads ',itime, ' / ',int(itime, kind=ESMF_KIND_I4)
         !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-        call nc%getvar(field, var, itime=int(itime, kind=ESMF_KIND_I4), rc=localrc)
+        call nc%getvar(field, var, owner=trim(name), &
+          itime=int(itime, kind=ESMF_KIND_I4), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
 
@@ -1212,7 +1213,8 @@ module netcdf_input_component
         nextField = ESMF_FieldCreate(grid=grid, typeKind=typeKind, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        call nc%getvar(nextField, var, itime=int(jtime, kind=ESMF_KIND_I4), rc=localrc)
+        call nc%getvar(nextField, var, owner=trim(name), &
+          itime=int(jtime, kind=ESMF_KIND_I4), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call MOSSCO_FieldWeightField(field, nextField, weight, rc=localrc)
@@ -1227,7 +1229,7 @@ module netcdf_input_component
       elseif ((trim(interpolationMethod) == 'next') &
         .or. (trim(interpolationMethod) == 'nearest' .and. weight > 0.5)) then
 
-        call nc%getvar(field, var, itime=int(jtime, kind=ESMF_KIND_I4), rc=localrc)
+        call nc%getvar(field, var, owner=trim(name), itime=int(jtime, kind=ESMF_KIND_I4), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         write(message,'(A,I3)') trim(name)//' uses climatology for future time ',jtime
