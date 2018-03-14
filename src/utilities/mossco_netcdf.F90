@@ -163,6 +163,9 @@ module mossco_netcdf
     logical                           :: isPresent, gridIsPresent
 
     rc_ = ESMF_SUCCESS
+    checkNaN_ = .true.
+    checkInf_ = .true.
+     
     if (present(kwe)) rc_ = rc_
     if (present(checkNaN)) checkNaN_ = checkNaN
     if (present(checkInf)) checkInf_ = checkInf
