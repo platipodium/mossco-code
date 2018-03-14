@@ -242,6 +242,9 @@ module grid_component
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
+      !> Convert strings to standard format strings
+      call MOSSCO_CleanGeomFormatString(fileFormat, rc=localrc)
+
       call MOSSCO_ConfigGet(config, label='decomposition', value=decompositionList, isPresent=labelIsPresent, rc = localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 

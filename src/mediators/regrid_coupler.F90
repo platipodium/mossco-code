@@ -36,6 +36,7 @@ module regrid_coupler
   use mossco_routehandle
   use mossco_attribute
   use mossco_grid
+  use mossco_strings
 
   implicit none
 
@@ -192,6 +193,9 @@ module regrid_coupler
 
       call ESMF_AttributeGet(cplComp, 'geom_file_type',  geomTypeString, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      !> Convert strings to standard format strings
+      call MOSSCO_CleanGeomFormatString(geomFileFormatString, rc=localrc)
 
       if (trim(geomFileFormatString) == 'SCRIP' .and. geomTypeString == 'GRID') then
         externalGrid = ESMF_GridCreate(filename=trim(geomFileName), &
