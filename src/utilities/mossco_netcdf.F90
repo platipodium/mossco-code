@@ -3672,11 +3672,14 @@ module mossco_netcdf
       if (var%dimids(i) == self%timeDimId) tdimloc=i
     enddo
 
-    if (tdimloc > -1 .and. self%dimlens(self%timeDimId) < itime_) then
-      write(message,'(A,I3,A,I3,A)') trim(owner_)//' requested index ',itime_,' exceeds time dimension ',self%dimlens(self%timeDimId)
-      call MOSSCO_MessageAdd(message, ' when reading '//trim(var%name))
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (tdimloc > -1) then
+      !> @todo the dimlen is here wrongly indexed. check!
+      if (self%dimlens(self%timeDimId) < itime_) then
+        write(message,'(A,I3,A,I3,A)') trim(owner_)//' requested index ',itime_,' exceeds time dimension ',self%dimlens(self%timeDimId)
+        call MOSSCO_MessageAdd(message, ' when reading '//trim(var%name))
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
     endif
 
     if (fieldRank == 1) then
