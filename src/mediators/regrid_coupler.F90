@@ -802,13 +802,13 @@ module regrid_coupler
           endif
 
           if (exportGeomType == ESMF_GEOMTYPE_GRID) then
-            call ESMF_FieldGet(exportFieldList(i), grid=grid, rc=localrc)
+            call ESMF_FieldGet(exportFieldList(j), grid=grid, rc=localrc)
             if (currentRoute%dstGrid /= grid) cycle
           elseif (exportGeomType == ESMF_GEOMTYPE_MESH) then
-            call ESMF_FieldGet(exportFieldList(i), mesh=mesh, rc=localrc)
+            call ESMF_FieldGet(exportFieldList(j), mesh=mesh, rc=localrc)
             if (currentRoute%dstMesh /= mesh) cycle
           elseif (exportGeomType == ESMF_GEOMTYPE_MESH) then
-            call ESMF_FieldGet(exportFieldList(i), locStream=locStream, rc=localrc)
+            call ESMF_FieldGet(exportFieldList(j), locStream=locStream, rc=localrc)
             if (currentRoute%dstLocStream /= locStream) cycle
           elseif (exportGeomType == ESMF_GEOMTYPE_XGRID) then
             call ESMF_LogWrite(trim(name)//' xgrid not implemented', &
@@ -877,13 +877,13 @@ module regrid_coupler
           endif
 
           if (exportGeomType == ESMF_GEOMTYPE_GRID) then
-            call ESMF_FieldGet(exportFieldList(i), grid=grid, rc=localrc)
+            call ESMF_FieldGet(exportFieldList(j), grid=grid, rc=localrc)
             if (currentRoute%dstGrid /= grid) cycle
           elseif (exportGeomType == ESMF_GEOMTYPE_MESH) then
-            call ESMF_FieldGet(exportFieldList(i), mesh=mesh, rc=localrc)
+            call ESMF_FieldGet(exportFieldList(j), mesh=mesh, rc=localrc)
             if (currentRoute%dstMesh /= mesh) cycle
           elseif (exportGeomType == ESMF_GEOMTYPE_LOCSTREAM) then
-            call ESMF_FieldGet(exportFieldList(i), locStream=locStream, rc=localrc)
+            call ESMF_FieldGet(exportFieldList(j), locStream=locStream, rc=localrc)
             if (currentRoute%dstLocStream /= locStream) cycle
           elseif (exportGeomType == ESMF_GEOMTYPE_XGRID) then
             call ESMF_LogWrite(trim(name)//' xgrid not implemented', &
