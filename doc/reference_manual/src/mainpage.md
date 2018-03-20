@@ -343,7 +343,7 @@ Please report successful testing on your machine (e.g., in the project wiki
 | Debian Linux 7.1            | gfortran/mpich2        | grpsrv09 (HZG, hk)    |
 | macOS 10.9                  | gfortran/mpich2        | possum (HZG, cl)      |
 | macOS 10.13                 | clang/gfortran/openmpi | sugarglider (HZG, cl) |
-|                             |                        |                       |
+| CentOS Linux AMD 16 CPU     | intel/openmpi          | ocean (HZG, cl)       |
 
 We are working on testing the pgfortran compiler on different systems.
 
