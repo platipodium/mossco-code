@@ -714,6 +714,19 @@ module regrid_coupler
     call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+    !> If there are no routes, then don't do anything
+    if (.not.allocated(Routes)) then
+      if (startTime == currTime ) then
+        write(message,'(A)') trim(name)//' has no routes'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
+
+      call MOSSCO_CompExit(cplComp, localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      return
+    endif
+
     call ESMF_CplCompGet(cplComp, clock=clock, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
