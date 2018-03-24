@@ -126,7 +126,7 @@ for item in coupling:
         else:
           gridComplist.extend(item.keys())
           gridCompList.extend(item.values())
-          for key,value in item.iteritems():
+          for key,value in item.items():
              couplingList.append(key, "link_connector",value)
           cplCompList.append("link_connector")
 
@@ -151,7 +151,7 @@ if type(dependencies) is dict:
 
 gridOrder=[]
 for item in dependencies:
-  for key,value in item.iteritems():
+  for key,value in item.items():
     if type(value) is list:
       value=value[0]
     if type(value) is dict:
@@ -180,7 +180,7 @@ for component in componentSet:
               elif (type(jtem) is dict) and 'component' in jtem.keys():
                  compdeps.append(jtem['component'])
                  if 'grid' in jtem.keys():
-                    foreignGrid[item.keys()[0]]=jtem['grid']
+                    foreignGrid[list(item.keys())[0]]=jtem['grid']
           for compdep in compdeps:
             if componentList.index(component)< componentList.index(compdep):
               if component in gridOrder and compdep in gridOrder:
@@ -188,12 +188,12 @@ for component in componentSet:
                   continue
               c=componentList.pop(componentList.index(component))
               componentList.insert(componentList.index(compdep)+1,c)
-          if item.keys()[0] in dependencyDict.keys():
-            dependencyDict[item.keys()[0]].extend(compdeps)
+          if list(item.keys())[0] in dependencyDict.keys():
+            dependencyDict[list(item.keys())[0]].extend(compdeps)
           else:
-            dependencyDict[item.keys()[0]]=compdeps
+            dependencyDict[list(item.keys())[0]]=compdeps
 
-for key,value in dependencyDict.iteritems():
+for key,value in dependencyDict.items():
     unique=[]
     for item in value:
       if item not in unique:
@@ -219,14 +219,14 @@ if type(instances) is list:
   for i in range(0,len(instances)):
     item=instances[i]
     if 'component' in item.keys():
-       instanceDict[item.keys()[0]]=item['component']
+       instanceDict[list(item.keys())[0]]=item['component']
     else:
-      instanceDict[item.keys()[0]]=item.values()[0]
+      instanceDict[list(item.keys())[0]]=list(item.values())[0]
 
     if 'petList' in item.keys():
-      instancePetDict[item.keys()[0]]=item['petList']
+      instancePetDict[list(item.keys())[0]]=item['petList']
 else:
-  for key,value in instances.iteritems():
+  for key,value in instances.items():
     if type(value) is str:
       instanceDict[key] = value
     elif type(value) is dict and 'component' in value.keys():
@@ -235,18 +235,18 @@ else:
           instancePetDict[key]=value['petList']
 
 if len(instanceDict)>0:
-  for key,value in instanceDict.iteritems():
+  for key,value in instanceDict.items():
     sys.stdout.write(key + ' is running as an instance of ' + value)
     if key in instancePetDict.keys():
       sys.stdout.write(' on PET ' + str(instancePetDict[key]))
     sys.stdout.write('\n')
 if len(dependencyDict)>0:
-  for key,value in dependencyDict.iteritems():
+  for key,value in dependencyDict.items():
     sys.stdout.write(key + ' depends on ')
     print (value)
 
 if len(foreignGrid)>0:
-  for key,value in foreignGrid.iteritems():
+  for key,value in foreignGrid.items():
     print(key + ' obtains grid information from ' + value + ' field')
 
 for item in gridCompList:
