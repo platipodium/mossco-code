@@ -88,6 +88,8 @@ module regrid_coupler
 #define ESMF_METHOD "Initialize"
   subroutine Initialize(cplcomp, importState, exportState, parentClock, rc)
 
+    use ESMF_PointListMod
+
     type(ESMF_CplComp)   :: cplcomp
     type(ESMF_State)     :: importState
     type(ESMF_State)     :: exportState
@@ -118,11 +120,14 @@ module regrid_coupler
 
     type(ESMF_Field), allocatable :: importFieldList(:)
     type(ESMF_Field), allocatable :: exportFieldList(:)
-    character(len=ESMF_MAXSTR)    :: geomFileFormatString = 'SCRIP', mask_variable='mask'
+    character(len=ESMF_MAXSTR)    :: geomFileFormatString = 'SCRIP'
+    character(len=ESMF_MAXSTR)    :: geomBaseFileName
+    character(len=ESMF_MAXSTR)    :: mask_variable='mask'
     character(len=ESMF_MAXSTR)    :: geomTypeString = 'GRID'
     character(len=ESMF_MAXSTR)    :: regridMethodString = 'bilinear', edgeMethodString = 'stod'
     type(ESMF_RegridMethod_Flag)  :: regridMethod, currentMethod, edgeMethod
     integer(ESMF_KIND_I4),pointer :: unmappedDstList(:) => null()
+    type(ESMF_PointList)          :: pointList
 
     rc = ESMF_SUCCESS
 
@@ -188,6 +193,10 @@ module regrid_coupler
       call ESMF_AttributeGet(cplComp, 'geom_filename',  geomFileName, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+      ! Remove extension (.nc)
+      i=index(geomFileName,'.',back=.true.)
+      geomBaseFileName = geomFileName(1:i-1)
+
       call ESMF_AttributeGet(cplComp, 'geom_file_format',  geomFileFormatString, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -200,6 +209,10 @@ module regrid_coupler
       if (trim(geomFileFormatString) == 'SCRIP' .and. geomTypeString == 'GRID') then
         externalGrid = ESMF_GridCreate(filename=trim(geomFileName), &
           fileFormat=ESMF_FILEFORMAT_SCRIP, isSphere=.false., rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        call ESMF_GridWriteVTK(externalGrid, staggerLoc=ESMF_STAGGERLOC_CENTER, &
+          filename=trim(geomBaseFileName), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         write(message, '(A)') trim(name)//' created grid from SCRIP '//trim(geomFileName)
@@ -222,9 +235,8 @@ module regrid_coupler
         endif
 
         call ESMF_GridWriteVTK(externalGrid, staggerLoc=ESMF_STAGGERLOC_CENTER, &
-                             filename="esmfgridspecgrid", rc=localrc)
+          filename=trim(geomBaseFileName), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
 
         write(message, '(A)') trim(name)//' created grid from CF '//trim(geomFileName)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
@@ -260,6 +272,9 @@ module regrid_coupler
           fileformat=ESMF_FILEFORMAT_UGRID, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+        call ESMF_MeshWrite(externalMesh, trim(geomBaseFileName), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
         write(message, '(A)') trim(name)//' created mesh from UGRID '//trim(geomFileName)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
@@ -268,12 +283,18 @@ module regrid_coupler
           fileformat=ESMF_FILEFORMAT_ESMFMESH, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+        call ESMF_MeshWrite(externalMesh, trim(geomBaseFileName), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
         write(message, '(A)') trim(name)//' created mesh from ESMF '//trim(geomFileName)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       elseif (trim(geomFileFormatString) == 'SCRIP'  .and. geomTypeString == 'MESH') then
         externalMesh = ESMF_MeshCreate(trim(geomFileName), &
           fileformat=ESMF_FILEFORMAT_SCRIP, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        call ESMF_MeshWrite(externalMesh, trim(geomBaseFileName), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         write(message, '(A)') trim(name)//' created mesh from SCRIP '//trim(geomFileName)
@@ -314,6 +335,15 @@ module regrid_coupler
           localrc = ESMF_RC_NOT_IMPL
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         endif
+
+        pointList=ESMF_PointListCreate(externalLocStream, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        call ESMF_PointListWriteVTK(pointList, trim(geomBaseFileName), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        call ESMF_PointListDestroy(pointList, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         write(message, '(A)') trim(name)//' created locstream from '//trim(geomFileFormatString)//' '//trim(geomFileName)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
