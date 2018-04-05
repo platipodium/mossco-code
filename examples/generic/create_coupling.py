@@ -1,13 +1,16 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
 # This script is is part of MOSSCO. It creates from YAML descriptions of
 # couplings a toplevel_component.F90 source file
 #
-# @copyright (C) 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2014,2015,2016,2017,2018 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the
-
+# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 
 from __future__ import absolute_import, division, unicode_literals
 import sys
@@ -18,7 +21,42 @@ def sequential_iterator(obj):
     return obj if isinstance(obj, dict) else xrange(len(obj))
 
 try:
-    import yaml
+  import yaml
+
+  class Loader(yaml.Loader):
+    # The loader class was suggested by David Hall (Oxford)
+    # on https://higgshunter.wordpress.com, and adapted to python3
+    def __init__(self, stream):
+        self._root = os.path.split(stream.name)[0]
+        super(Loader, self).__init__(stream)
+        Loader.add_constructor('!include', Loader.include)
+        Loader.add_constructor('!import',  Loader.include)
+
+    def include(self, node):
+        if   isinstance(node, yaml.ScalarNode):
+            return self.extractFile(self.construct_scalar(node))
+
+        elif isinstance(node, yaml.SequenceNode):
+            result = []
+            for filename in self.construct_sequence(node):
+                result += self.extractFile(filename)
+            return result
+
+        elif isinstance(node, yaml.MappingNode):
+            result = {}
+            for k,v in self.construct_mapping(node).items():
+                result[k] = self.extractFile(v)
+            return result
+
+        else:
+            print "Error:: unrecognised node type in !include statement"
+            raise yaml.constructor.ConstructorError
+
+    def extractFile(self, filename):
+        filepath = os.path.join(self._root, filename)
+        with open(filepath, 'r') as f:
+            return yaml.load(f, Loader)
+
 except:
     print('Please install the python-yaml package or set your PYTHONPATH variable\n')
     print('to the location of the python yaml package.')
