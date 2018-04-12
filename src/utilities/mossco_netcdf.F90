@@ -3978,11 +3978,11 @@ module mossco_netcdf
       write(message,'(A)') '-- no time variable in '//trim(self%name)//', choosing default time index 1'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     else
-      call self%reftimeString(refTimeISOString, localrc)
+      call self%reftimeString(refTimeISOString, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       if (len_trim(refTimeISOString) > 0) then
-        call MOSSCO_TimeSet(refTime, refTimeISOString, localrc)
+        call MOSSCO_TimeSet(refTime, refTimeISOString, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       else
         !> Create a copy of currTime
@@ -4108,17 +4108,19 @@ module mossco_netcdf
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_reftime_string"
-  subroutine mossco_netcdf_reftime_string(self, refTimeISOString, rc)
+  subroutine mossco_netcdf_reftime_string(self, refTimeISOString, kwe, rc)
 
     implicit none
     class(type_mossco_netcdf)                    :: self
-    integer(ESMF_KIND_I4), intent(out), optional :: rc
     character(len=*), intent(out)                :: refTimeISOString
+    type(ESMF_KeyWordEnforcer), intent(in), optional :: kwe
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)                        :: i, rc_, localrc
     type(ESMF_Time)                              :: refTime
 
     rc_ = ESMF_SUCCESS
+    if (present(kwe)) rc_ = ESMF_SUCCESS
 
     call mossco_netcdf_reftime(self, refTime, rc=localrc)
     if (localrc == ESMF_SUCCESS) then
@@ -4185,7 +4187,7 @@ module mossco_netcdf
     !> @todo consider "climatological month" as possible unit, and have a look at
     !> CF conventions on their climatological time handling.
 
-    call MOSSCO_TimeSet(refTime, ISOString, localrc)
+    call MOSSCO_TimeSet(refTime, ISOString, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   end subroutine mossco_netcdf_reftime
