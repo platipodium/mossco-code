@@ -31,6 +31,7 @@ module mossco_strings
   public intformat, order, MOSSCO_MessageAdd, MOSSCO_MessageAddListPtr, only_var_name, replace_character
   public split_string, MOSSCO_StringMatch, MOSSCO_StringClean
   public MOSSCO_CheckUnits, MOSSCO_CleanUnit, MOSSCO_StringCopy, MOSSCO_CleanGeomFormatString
+  public MOSSCO_StringLower, MOSSCO_StringUpper
 
   !> @brief Returns the order of magnitude of its input argument
   !> @param <integer|real>(kind=4|8)
@@ -832,6 +833,48 @@ contains
     to(1:toLen) = from(1:toLen)
 
   end subroutine MOSSCO_StringCopy
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_StringLower"
+!> Changes a string to lowercase letters for the
+!> 26 basic characters
+pure function MOSSCO_StringLower(from) result(to)
+
+  character(len=*), intent(in) :: from
+  character(len(from))          :: to
+
+  integer :: i, ind
+  character(len=26), parameter :: majuscules = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  character(len=26), parameter :: minuscules = 'abcdefghijklmnopqrstuvwxyz'
+
+  to = from
+  do i = 1, len_trim(from)
+    ind = index(majuscules, from(i:i))
+    if (ind > 0) to(i:i) = minuscules(ind:ind)
+  enddo
+
+end function MOSSCO_StringLower
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_StringLower"
+
+!> Changes a string to uppercase letters for the
+!> 26 basic characters
+pure function MOSSCO_StringUpper(from) result(to)
+
+  character(len=*), intent(in) :: from
+  character(len(from))          :: to
+
+  integer :: i, ind
+  character(len=26), parameter :: majuscules = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  character(len=26), parameter :: minuscules = 'abcdefghijklmnopqrstuvwxyz'
+
+  to = from
+  do i = 1, len_trim(from)
+    ind = index(minuscules, from(i:i))
+    if (ind > 0) to(i:i) = majuscules(ind:ind)
+  enddo
+
+end function MOSSCO_StringUpper
 
 end module mossco_strings
 
