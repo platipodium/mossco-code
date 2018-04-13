@@ -1807,11 +1807,19 @@ module fabm_pelagic_component
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
 
-      ! integrate rates
-      call ode_solver(pel,dt,ode_method)
-
       !check for NaN
       call check_NaN(pel,rc)
+      if (rc == ESMF_RC_VAL_OUTOFRANGE ) then
+        write(message,'(A)')  '-- NaN detected before solver'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      ! integrate rates
+      call ode_solver(pel, dt, ode_method)
+
+      !check for NaN
+      call check_NaN(pel, rc)
       if (rc == ESMF_RC_VAL_OUTOFRANGE ) then
         write(message,'(A)')  '  NaN detected applying ode_solver'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -1956,16 +1964,56 @@ module fabm_pelagic_component
 
       enddo
 
+      !check for NaN
+      call check_NaN(pel,rc)
+      if (rc == ESMF_RC_VAL_OUTOFRANGE ) then
+        write(message,'(A)')  '-- NaN detected applying external fluxes'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
       ! clip concentrations that are below minimum
       call pel%clip_below_minimum()
+      call check_NaN(pel,rc)
+      if (rc == ESMF_RC_VAL_OUTOFRANGE ) then
+        write(message,'(A)')  '-- NaN detected applying clipping'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
       ! time integration of diagnostic variables
       call pel%integrate_diagnostic_variables(dt)
+      call check_NaN(pel,rc)
+      if (rc == ESMF_RC_VAL_OUTOFRANGE ) then
+        write(message,'(A)')  '-- NaN detected integrating diags'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
       call pel%integrate_horizontal_diagnostic_variables(dt)
+      call check_NaN(pel,rc)
+      if (rc == ESMF_RC_VAL_OUTOFRANGE ) then
+        write(message,'(A)')  '-- NaN detected integrating horizontal diags'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
       ! link fabm state
       call pel%update_pointers()
+      call check_NaN(pel,rc)
+      if (rc == ESMF_RC_VAL_OUTOFRANGE ) then
+        write(message,'(A)')  '-- NaN detected updating pointers'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
       call pel%update_expressions()
+      call check_NaN(pel,rc)
+      if (rc == ESMF_RC_VAL_OUTOFRANGE ) then
+        write(message,'(A)')  '-- NaN detected updating expressions'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
       call ESMF_ClockAdvance(clock, timeStep=timeStep, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -2351,17 +2399,19 @@ module fabm_pelagic_component
     class(type_mossco_fabm_pelagic) :: pel
     integer, intent(out)            :: rc
     character(len=ESMF_MAXSTR)      :: message
-    integer                         :: i, j, k, n
+    integer                         :: i, j, k, n, lbnd(3), ubnd(3)
     logical                         :: foundNaN
 
     rc = ESMF_SUCCESS
     foundNaN = .false.
+    lbnd=(/1,1,1/)
+    ubnd=(/pel%inum, pel%jnum, pel%knum/)
 
     !> Perform a first quick check that tests that all concentrations
     !> are one of valid numbers or are masked
     !
     do n = 1,pel%nvar
-      if (any((pel%conc(:,:,:,n)) /= pel%conc(:,:,:,n) .and..not.pel%mask)) then
+      if (any((pel%conc(RANGE3D,n)) /= pel%conc(RANGE3D,n) .and..not.pel%mask(RANGE3D))) then
         foundNaN = .true.
         exit
       endif
