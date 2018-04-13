@@ -240,7 +240,7 @@ module fabm_pelagic_component
     ! put concentration array and vertical velocity into export state
     ! it might be enough to do this once in initialize(?)
     do n=1,size(pel%export_states)
-    end do
+    enddo
 
     !> this will not work, if state_grid contains halo zones
     do n=1,size(pel%model%diagnostic_variables)
@@ -259,20 +259,20 @@ module fabm_pelagic_component
 
         call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      end if
-    end do
+      endif
+    enddo
 
     !! create forcing fields in import State
     do n=1,size(pel%bulk_dependencies)
-    end do
+    enddo
 
     !! create forcing fields in import State
     do n=1,size(pel%horizontal_dependencies)
-    end do
+    enddo
 
     !! prepare upward_flux forcing
     do n=1,size(pel%model%state_variables)
-    end do
+    enddo
 
   end subroutine Initialise_Advertise
 
@@ -473,9 +473,9 @@ module fabm_pelagic_component
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         rc = ESMF_RC_ARG_BAD
         return
-      end if
+      endif
       deallocate(maxIndex)
-    end if
+    endif
 
     call ESMF_GridGet(state_Grid,distgrid=distGrid_3D,        &
                                  coordSys=coordSys,           &
@@ -531,7 +531,7 @@ module fabm_pelagic_component
         else
           array_corner = ESMF_ArrayCreate(distGrid_2D,coord1d,indexflag=ESMF_INDEX_DELOCAL,distgridToArrayMap=distgridToArrayMap, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        end if
+        endif
 #endif
       else
         call ESMF_GridGetCoord(state_grid, staggerloc=ESMF_STAGGERLOC_CENTER, coorddim=n, farrayptr=coord2d, rc=localrc)
@@ -548,14 +548,14 @@ module fabm_pelagic_component
         else
           array_corner = ESMF_ArrayCreate(distGrid_2D,coord2d,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        end if
+        endif
 #endif
-      end if
+      endif
       call ESMF_GridSetCoord(horizontal_grid,n,array=array,staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       !call ESMF_GridSetCoord(horizontal_grid,n,array=array_corner,staggerloc=ESMF_STAGGERLOC_CORNER, rc=localrc)
       !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-    end do
+    enddo
 
     !! Initialize FABM
     inquire(file=trim(fabm_nml), exist=isPresent)
@@ -624,7 +624,7 @@ module fabm_pelagic_component
       mask = ( gridmask.le.0 ) !>@todo: mask where gridmask /= 1
       pel%is_openboundary = ( gridmask > 1 )
       pel%is_openboundary_hz = pel%is_openboundary(:,:,1)
-    end if
+    endif
 
     !! add cell area to horizontal grid
     call ESMF_GridAddItem(horizontal_grid, itemflag=ESMF_GRIDITEM_AREA, &
@@ -650,7 +650,7 @@ module fabm_pelagic_component
       pel%column_area = 1.0d0
       write(message, '(A)') trim(name)//' cannot find vcenter area in grid, set to 1.0 and assume fluxes_in_water to come as mass m-2 s-1'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-    end if
+    endif
 
     call pel%initialize_domain(inum,jnum,numlayers,dt,mask=mask(1:inum,1:jnum,1:numlayers))
     !> set Albedo from namelist
@@ -882,7 +882,7 @@ module fabm_pelagic_component
         write(message,'(A)') '  added '//trim(wsname)//' to fieldBundle '
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
-      end if
+      endif
 
       !> create empty fields for restarts
       restartField = ESMF_FieldEmptyCreate(name=trim(varname),rc=localrc)
@@ -944,9 +944,9 @@ module fabm_pelagic_component
         write(message,'(A)') '  added '//trim(varname)//' to fieldBundle'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
-      end if
+      endif
 
-    end do
+    enddo
 
     !> this will not work, is state_grid contains halo zones
     do n=1, size(pel%model%diagnostic_variables)
@@ -973,8 +973,8 @@ module fabm_pelagic_component
 
         call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      end if
-    end do
+      endif
+    enddo
 
     !! create forcing fields in import State
     if (associated(pel%bulk_dependencies)) then
@@ -1008,7 +1008,7 @@ module fabm_pelagic_component
           write(message,'(A)') trim(name)//' uses existing bulk dependency field '
           call MOSSCO_FieldString(field, message, rc=localrc)
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-        end if
+        endif
         attribute_name=trim(pel%bulk_dependencies(n)%name)//'_in_water'
         call set_item_flags(importState,attribute_name,requiredFlag=.true.,requiredRank=3)
         !! set FABM's pointers to dependencies data,
@@ -1020,8 +1020,8 @@ module fabm_pelagic_component
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call pel%set_environment(pel%bulk_dependencies(n)%name,ptr_bulk=ptr_f3)
-      end do
-    end if
+      enddo
+    endif
 
     if (associated(pel%horizontal_dependencies)) then
       do n=1, size(pel%horizontal_dependencies)
@@ -1031,7 +1031,7 @@ module fabm_pelagic_component
           esmf_name = 'water_depth_at_soil_surface'
         else
           esmf_name = pel%horizontal_dependencies(n)%name(1:ESMF_MAXSTR)
-        end if
+        endif
 
         call ESMF_StateGet(importState, trim(esmf_name), itemType,rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -1060,7 +1060,7 @@ module fabm_pelagic_component
           write(message,'(A)') trim(name)//' uses existing horizontal dependency field '
           call MOSSCO_FieldString(field, message, rc=localrc)
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-        end if
+        endif
 
         attribute_name=trim(esmf_name)
         call set_item_flags(importState,attribute_name,requiredFlag=.true.,requiredRank=2)
@@ -1075,7 +1075,7 @@ module fabm_pelagic_component
 
         if (itemType == ESMF_STATEITEM_NOTFOUND) then
           ptr_f2 = 0.0_rk
-        end if
+        endif
 
         !> Try to fill coordinates with grid information
         do while (itemType == ESMF_STATEITEM_NOTFOUND .and. ( &
@@ -1132,10 +1132,10 @@ module fabm_pelagic_component
                            'vs.',pel%inum,pel%jnum
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR,rc=localrc)
           call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        end if
+        endif
         call pel%set_environment(pel%horizontal_dependencies(n)%name,ptr_horizontal=ptr_f2)
-      end do
-    end if
+      enddo
+    endif
 
 
     !! prepare upward_flux forcing
@@ -1188,8 +1188,8 @@ module fabm_pelagic_component
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         call ESMF_FieldBundleAdd(fieldBundle,(/field/),multiflag=.true.,rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      end if
-    end do
+      endif
+    enddo
 
     !> get z-positions of vertical layer interfaces
     call ESMF_GridGetCoord(state_grid, coordDim=3, staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
@@ -1245,8 +1245,8 @@ module fabm_pelagic_component
 
         call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      end if
-    end do
+      endif
+    enddo
 
     !> The next was commented as this information is alread present in
     !> te netcdf writeout of GRIDITEM_AREA
@@ -1319,7 +1319,7 @@ module fabm_pelagic_component
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     else
       pel%volume_flux=>null()
-    end if
+    endif
 
     !> update sinking after restart
     call pel%update_export_states(update_sinking=.true.)
@@ -1353,9 +1353,9 @@ module fabm_pelagic_component
           call ESMF_StateGet(importState, trim(pel%bulk_dependencies(n)%name)//'_in_water', field=field, rc=localrc)
           call ESMF_FieldGet(field, farrayPtr=ptr_f3, rc=localrc)
           call pel%set_environment(pel%bulk_dependencies(n)%name,ptr_bulk=ptr_f3)
-        end if
-      end do
-    end if
+        endif
+      enddo
+    endif
 
     ! link horizontal dependencies
     if (associated(pel%horizontal_dependencies)) then
@@ -1366,9 +1366,9 @@ module fabm_pelagic_component
           call ESMF_StateGet(importState, trim(pel%horizontal_dependencies(n)%name), field=field, rc=localrc)
           call ESMF_FieldGet(field, farrayPtr=ptr_f2, rc=localrc)
           call pel%set_environment(pel%horizontal_dependencies(n)%name,ptr_horizontal=ptr_f2)
-        end if
-      end do
-    end if
+        endif
+      enddo
+    endif
 
 #if 0
     !! re-link upward_flux forcing
@@ -1379,8 +1379,8 @@ module fabm_pelagic_component
       if (itemType == ESMF_STATEITEM_FIELD) then
         call ESMF_StateGet(importState, trim(varname), field=field, rc=localrc)
         call ESMF_FieldGet(field, farrayPtr=bfl(n)%p, rc=localrc)
-      end if
-    end do
+      endif
+    enddo
 #endif
 
   end subroutine
@@ -1469,7 +1469,7 @@ module fabm_pelagic_component
           write(message,'(A)') trim(name)//' empty fieldBundle, skipped hotstart for variable '//trim(varname)
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
           cycle
-        end if
+        endif
 
         call MOSSCO_Reallocate(fieldList, fieldCount, rc=localrc)
         !call MOSSCO_Reallocate(fieldName, fieldCount, rc=localrc)
@@ -1491,9 +1491,9 @@ module fabm_pelagic_component
             field = fieldList(k)
             foundItem=.true.
             exit
-          end if
+          endif
 
-        end do
+        enddo
 
         if (foundItem) then
           call RestartConcFromField(n,field)
@@ -1501,7 +1501,7 @@ module fabm_pelagic_component
           write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
           cycle
-        end if
+        endif
 
       else
 
@@ -1510,9 +1510,9 @@ module fabm_pelagic_component
         !write(message,'(A)') "  don't know how to handle this itemType"
         !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
 
-      end if
+      endif
 
-    end do
+    enddo
 
     !> update sinking after restart
     call pel%update_export_states(update_sinking=.true.)
@@ -1827,11 +1827,12 @@ module fabm_pelagic_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      !where (pel%layer_height(RANGE2D,1) > 0)
       do n=1,pel%nvar
-        pel%conc(RANGE2D,1,n) = pel%conc(RANGE2D,1,n) + bfl(n)%p(RANGE2D)*dt/pel%layer_height(RANGE2D,1)
-      end do
-      !endwhere
+        where (pel%layer_height(RANGE2D,1) > 0)
+          pel%conc(RANGE2D,1,n) = pel%conc(RANGE2D,1,n) &
+            + bfl(n)%p(RANGE2D) * dt/pel%layer_height(RANGE2D,1)
+        endwhere
+      enddo
 
       !check for NaN
       call check_nan(pel,rc)
@@ -1861,17 +1862,17 @@ module fabm_pelagic_component
           do k=1,pel%knum
             where (pel%is_openboundary_hz(RANGE2D))
               pel%conc(RANGE2D,k,n) = ratePtr2(RANGE2D)
-            end where
-          end do
+            endwhere
+          enddo
         else
           ! no field found
           cycle
           !do k=1,pel%knum
           !where (pel%is_openboundary_hz(RANGE2D))
           !  pel%conc(RANGE2D,k,n) = 1.234
-          !end where
-          !end do
-        end if
+          !endwhere
+          !enddo
+        endif
 
         !check for NaN
         call check_nan(pel,rc)
@@ -1881,8 +1882,8 @@ module fabm_pelagic_component
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
 
-      end do
-      end if
+      enddo
+      endif
 
       call integrate_flux_in_water(gridComp, pel, importState)
 
@@ -1923,14 +1924,16 @@ module fabm_pelagic_component
           if (index(itemName,'_flux_at_surface')>0 .or. &
                   index(itemName,'_flux_at_water_surface')>0) then
             farrayPtr3(RANGE2D,pel%knum) = farrayPtr3(RANGE2D,pel%knum) + ratePtr2(RANGE2D) * dt / pel%layer_height(RANGE2D,pel%knum)
+
           elseif (index(itemName,'_flux_at_soil_surface')>0) then
             !> @todo Skip if  .not.pel%mask(RANGE2D,k)
             ! if (all(ratePtr2(RANGE2D) == 0.0 .or. pel%mask(RANGE2D,1)) cycle
             ! Avoid overshoot of negative fluxes within a timestep
-            ! where (farrayPtr3(RANGE2D,1) + ratePtr2(RANGE2D) * dt / pel%layer_height(RANGE2D,1) > 0)
+
+            where (farrayPtr3(RANGE2D,1) + ratePtr2(RANGE2D) * dt / pel%layer_height(RANGE2D,1) > 0)
               farrayPtr3(RANGE2D,1) = farrayPtr3(RANGE2D,1) + ratePtr2(RANGE2D) * dt / pel%layer_height(RANGE2D,1)
-            !endwhere
-            write (message,'(A,ES10.3,A)') trim(name)//' added ',maxval(ratePtr2(RANGE2D) * dt / pel%layer_height(RANGE2D,1)),' from '
+            endwhere
+            write (message,'(A,ES10.3,A)') trim(name)//' added max. ',maxval(ratePtr2(RANGE2D) * dt / pel%layer_height(RANGE2D,1)),' from '
             call MOSSCO_FieldString(importFieldList(i),message)
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
           else
@@ -1944,8 +1947,9 @@ module fabm_pelagic_component
           call ESMF_FieldGet(importFieldList(i), farrayPtr=ratePtr3, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+          !> @todo check for underflow
           farrayPtr3(RANGE3D) = farrayPtr3(RANGE3D)  + ratePtr3(RANGE3D) * dt
-          write (message,'(A,ES10.3,A)') trim(name)//' added ',maxval(ratePtr3(RANGE3D) * dt),' from '
+          write (message,'(A,ES10.3,A)') trim(name)//' added max. ',maxval(ratePtr3(RANGE3D) * dt),' from '
           call MOSSCO_FieldString(importFieldList(i),message)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         endif
@@ -2059,7 +2063,7 @@ module fabm_pelagic_component
     if (.not.(associated(pel%cell_column_fraction))) then
       allocate(pel%cell_column_fraction(RANGE2D,lbnd3(3):ubnd3(3)))
       pel%cell_column_fraction = 0.0d0
-    end if
+    endif
 
     if (.not.(associated(pel%volume_change))) then
       allocate(pel%volume_change(RANGE2D,lbnd3(3):ubnd3(3)))
@@ -2135,7 +2139,7 @@ module fabm_pelagic_component
           .and. external_index > -1) cycle
         m = m + 1
         tempList(m) = fieldlist(k)
-      end do
+      enddo
 
       fieldCount = m
       if (fieldCount == 0) cycle
@@ -2159,7 +2163,7 @@ module fabm_pelagic_component
         if (external_index /= int(pel%export_states(n)%fabm_id,ESMF_KIND_I8)) cycle
         m = m + 1
         tempList(m) = fieldlist(k)
-      end do
+      enddo
 
       if (m > 0) then ! found exactly matching external index
         fieldCount = m
@@ -2238,23 +2242,23 @@ module fabm_pelagic_component
                 + dt * ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) &
                 / (pel%column_height(RANGE2D) * pel%column_area(RANGE2D) &
                 + dt * pel%volume_flux(RANGE2D))
-              end where
-            end do
+              endwhere
+            enddo
           elseif (isPowder) then
             do k=1, pel%knum
               where (.not.pel%mask(RANGE2D,k))
               pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
                 + dt * ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) &
                 / (pel%column_height(RANGE2D) * pel%column_area(RANGE2D))
-              end where
-            end do
+              endwhere
+            enddo
           elseif (isConcentration) then
             do k=1, pel%knum
               where (.not.pel%mask(RANGE2D,k))
               pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
                 + dt * ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))
-              end where
-            end do
+              endwhere
+            enddo
           endif
 
           if (advanceCount < 2000) then
@@ -2306,9 +2310,9 @@ module fabm_pelagic_component
           !  / (pel%layer_height(RANGE2D,k) &
           !  * pel%column_area(RANGE2D) &
           !  + pel%volume_change(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2),k))
-          !end do
-        end if
-      end do
+          !enddo
+        endif
+      enddo
 
     enddo
 
