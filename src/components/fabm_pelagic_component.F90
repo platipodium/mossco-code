@@ -2333,7 +2333,7 @@ module fabm_pelagic_component
     call ESMF_AttributeSet(field,'hackmaxmin', valid_min, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    write(message, '(A,ES9.3,A,ES9.3,A)') '  uses range restriction ', &
+    write(message, '(A,ES10.3,A,ES10.3,A)') '  uses range restriction ', &
       valid_min,'--',valid_max,' on field '
     call MOSSCO_FieldString(field, message)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
