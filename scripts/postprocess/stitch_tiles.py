@@ -1,8 +1,9 @@
 #!/usr/bin/env python
-#> @brief Stitching script for multiprocessor tiled output of getm/netcdf components
+#> @brief Stitching script for multiprocessor tiled output of MOSSCO's
+#  netcdf components
 
 #  This computer program is part of MOSSCO.
-#> @copyright Copyright (C) 2015, 2016, 2017 Helmholtz Zentrum Geesthacht
+#> @copyright Copyright (C) 2015, 2016, 2017, 2018 Helmholtz Zentrum Geesthacht
 #> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -15,17 +16,14 @@ import netCDF4 as netcdf
 import glob as glob
 import numpy as np
 import sys
+import os
 
 if len(sys.argv) > 1:
   prefix = sys.argv[1]
 else:
-  prefix = u"mossco_gffrr"
+  prefix = u"mossco_gfs"
   prefix = u"/Users/lemmen/devel/mossco/setups/sns/netcdf"
 
-if len(sys.argv) > 3:
-  excl_variables = sys.argv[2].split(',')
-else:
-  excl_variables = []
 
 if prefix.endswith('.nc'):
   pattern=prefix
@@ -40,17 +38,63 @@ else:
 print prefix
 print pattern
 
-files=glob.glob(pattern)
+petlist=[]
+key=''
+val=''
+excl_variables=[]
+outfile=prefix + '_stitched.nc'
+incl_variables=[]
 
-if len(sys.argv) > 2:
-  outfile=sys.argv[-1]
-else:
-  outfile=prefix + '_stitched.nc'
+for i in range(1,len(sys.argv)):
+    arg=sys.argv[i]
+    if arg[0:2] == '--':
+        key=arg.split('=')[0]
+        val=arg.split('=')[1]
+
+    if key=='--pet':
+        plist=val.split(',')
+        for pet in plist:
+            pets=pet.split('-')
+            if len(pets) == 1:
+                p=int(pets[0])
+                petlist.append(p)
+            else:
+                p=range(int(pets[0]),int(pets[1])+1,1)
+                petlist.extend(p)
+
+    if key=='--include':
+        incl_variables=val.split(',')
+
+    if key=='--out':
+        outfile=val
+
+    if key=='--exclude':
+        excl_variables=val.split(',')
+
+    if key=='--level':
+        levellist=val.split(',')
+
+print petlist
+files=glob.glob(pattern)
+if len(petlist) > 0 and len(files) > 0:
+    fileparts=files[0].split('.')
+    files=[]
+    print fileparts
+    petlen=len(fileparts[-2])
+    for i,p in enumerate(petlist):
+        if petlen==1: f='%s.%1.1d.nc'%(os.path.join(fileparts[:-2])[0],int(p))
+        if petlen==2: f='%s.%2.2d.nc'%(os.path.join(fileparts[:-2])[0],int(p))
+        if petlen==3: f='%s.%3.3d.nc'%(os.path.join(fileparts[:-2])[0],int(p))
+        if petlen==4: f='%s.%4.4d.nc'%(os.path.join(fileparts[:-2])[0],int(p))
+        if petlen==5: f='%s.%5.5d.nc'%(os.path.join(fileparts[:-2])[0],int(p))
+        files.append(f)
 
 if len(files)<1:
   print "Did not find any files for pattern "+pattern
+  quit()
 else:
   print "Using input files " + pattern + " for output file " + outfile
+
 
 alat={}
 alon={}
@@ -117,7 +161,6 @@ except:
   ncout.close()
   ncout = netcdf.Dataset(outfile, 'w', format='NETCDF4_CLASSIC')
 
-
 for key,value in alon.iteritems():
   dim=nc.variables[key].dimensions[0]
   if ncout.dimensions.has_key(dim): continue
@@ -137,17 +180,27 @@ for key,value in nc.dimensions.iteritems():
 # attribute, as adding this after variable creation causes spurious "variable not
 # found" errors.
 
-if (excl_variables == []):
-  excl_variables = nc.variables.keys()
+if (incl_variables == []):
+  incl_variables = nc.variables.keys()
+
 else:
-  excl_variables.extend(list(set(alon)))
-  excl_variables.extend(list(set(alat)))
-  excl_variables.append('time')
+  incl_variables.extend(list(set(alon)))
+  incl_variables.extend(list(set(alat)))
+  incl_variables.append('time')
+
+  for key,value in nc.variables.iteritems():
+    try:
+        incl_variables.extend(value.coordinates.split(' '))
+    except:
+        pass
+
+incl_variables=list(set(incl_variables))
+print incl_variables
 
 for key,value in nc.variables.iteritems():
   dims=list(value.dimensions)
 
-  if (key in excl_variables):
+  if (key in incl_variables):
     try:
       var=ncout.createVariable(key,value.dtype,tuple(dims),fill_value=value.getncattr('_FillValue'))
     except:
@@ -221,7 +274,7 @@ for f in files[:]:
 
     if key in ['time']: continue
     if key in coords: continue
-    if not(key in excl_variables): continue
+    if not(key in incl_variables): continue
 
     var=ncout.variables[key]
 

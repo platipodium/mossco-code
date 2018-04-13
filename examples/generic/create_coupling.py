@@ -1,13 +1,18 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
 # This script is is part of MOSSCO. It creates from YAML descriptions of
 # couplings a toplevel_component.F90 source file
 #
-# @copyright (C) 2014,2015,2016,2017 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2014,2015,2016,2017,2018 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 
+from __future__ import absolute_import, division, unicode_literals
 import sys
 import os
 
@@ -16,7 +21,42 @@ def sequential_iterator(obj):
     return obj if isinstance(obj, dict) else xrange(len(obj))
 
 try:
-    import yaml
+  import yaml
+
+  class Loader(yaml.Loader):
+    # The loader class was suggested by David Hall (Oxford)
+    # on https://higgshunter.wordpress.com, and adapted to python3
+    def __init__(self, stream):
+        self._root = os.path.split(stream.name)[0]
+        super(Loader, self).__init__(stream)
+        Loader.add_constructor('!include', Loader.include)
+        Loader.add_constructor('!import',  Loader.include)
+
+    def include(self, node):
+        if   isinstance(node, yaml.ScalarNode):
+            return self.extractFile(self.construct_scalar(node))
+
+        elif isinstance(node, yaml.SequenceNode):
+            result = []
+            for filename in self.construct_sequence(node):
+                result += self.extractFile(filename)
+            return result
+
+        elif isinstance(node, yaml.MappingNode):
+            result = {}
+            for k,v in self.construct_mapping(node).items():
+                result[k] = self.extractFile(v)
+            return result
+
+        else:
+            print "Error:: unrecognised node type in !include statement"
+            raise yaml.constructor.ConstructorError
+
+    def extractFile(self, filename):
+        filepath = os.path.join(self._root, filename)
+        with open(filepath, 'r') as f:
+            return yaml.load(f, Loader)
+
 except:
     print('Please install the python-yaml package or set your PYTHONPATH variable\n')
     print('to the location of the python yaml package.')
@@ -25,25 +65,19 @@ except:
 if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
-     filename = 'fabm_benthic_pelagic+wave.yaml'
-     #filename = 'constant_fabm_sediment_netcdf.yaml'
-     filename = 'constant_constant_netcdf.yaml'
-     filename = 'getm--fabm_pelagic--netcdf.yaml'
      filename='gotm--fabm_pelagic--fabm_sediment'
 
 if not filename.endswith('yaml'):
   filename = filename + '.yaml'
 
-print sys.argv, len(sys.argv)
+print (sys.argv, len(sys.argv))
 if not os.path.exists(filename):
-    print 'File ' + filename + ' does not exist.'
-    exit(1)
+    print ('File ' + filename + ' does not exist.')
+    sys.exit(1)
 
-print 'Using ' + filename + ' ...'
-
-fid = file(filename,'rU')
-config = yaml.load(fid)
-fid.close()
+with open(filename,'rU') as fid:
+    print ('Using ' + filename + ' ...')
+    config = yaml.load(fid)
 
 # Search for the key with name "coupling".  If part of the filename is the word "coupling" then assume that the first item on the list read is the name of the coupling
 coupling_name = os.path.splitext(os.path.basename(filename))[0]
@@ -57,34 +91,32 @@ variables = []
 coupling_properties = []
 
 if not type(config) is dict:
-  print 'File ' + filename + ' does not contain data or does not contain a'
-  print 'dictionary.'
-  exit(1)
+  print ('File ' + filename + ' does not contain data or does not contain a dictionary.')
+  sys.exit(1)
 
-if config.has_key('author'):
+if 'author' in config.keys():
     author = config.pop('author')
 else:
     author = 'Carsten Lemmen <carsten.lemmen@hzg.de>'
 
-if config.has_key('copyright'):
+if 'copyright' in config.keys():
     copyright = config.pop('copyright')
 else:
-    copyright = 'Copyright (C) 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht'
+    copyright = 'Copyright (C) 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht'
 
-if config.has_key('dependencies'):
+if 'dependencies' in config.keys():
   dependencies = config.pop('dependencies')
 else:
   dependencies=[]
 
-if config.has_key('instances'):
+if 'instances' in config.keys():
   instances = config.pop('instances')
 else:
   instances=[]
 
 componentList=[]
 gridCompList=[]
-cplCompList=['link_connector','rename_connector']
-#cplCompList=['link_connector']
+cplCompList=['link_connector']
 couplingList=[]
 petList=[]
 foreignGrid={}
@@ -92,10 +124,10 @@ foreignGrid={}
 intervals =[]
 directions = []
 
-if not config.has_key('coupling'):
-  print 'File ' + filename + ' must contain a coupling dictionary.'
-  print 'Try adding a first line consisting only of the word "coupling:".'
-  exit(1)
+if not 'coupling' in config.keys():
+  print ('File ' + filename + ' must contain a coupling dictionary.')
+  print ('Try adding a first line consisting only of the word "coupling:".')
+  sys.exit(1)
 
 coupling = config.pop("coupling")
 
@@ -104,16 +136,16 @@ if not (type(coupling) is list):
   coupling=[coupling]
 
 if len(coupling)<1:
-  print 'File ' + filename + ' contains an empty coupling list.'
-  print coupling
-  exit(1)
+  print ('File ' + filename + ' contains an empty coupling list.')
+  print (coupling)
+  sys.exit(1)
 
 # Loop over the list of couuplings.  Each entry in this list is a dictionary
 # that has at least the key 'components:'
 # todo: we could shortcut this by allowing comp1:comp2 to
 for item in coupling:
     if type(item) is dict:
-        if item.has_key("components"):
+        if 'components' in item.keys():
             gridCompList.extend([item["components"][0], item["components"][-1]])
             n=len(item["components"])
             if n>2:
@@ -123,21 +155,21 @@ for item in coupling:
                 cplCompList.append("link_connector")
             for i in range(1,n-1):
                 cplCompList.append(item["components"][i])
-            if item.has_key("interval"):
+            if 'interval' in item.keys():
                 intervals.append(item["interval"])
             else:
                 intervals.append("6 m")
-            if item.has_key("direction"):
+            if 'direction' in item.keys():
                 directions.append(item["direction"])
         else:
           gridComplist.extend(item.keys())
           gridCompList.extend(item.values())
-          for key,value in item.iteritems():
+          for key,value in item.items():
              couplingList.append(key, "link_connector",value)
           cplCompList.append("link_connector")
 
     else:
-        print 'Warning, dictionary expected for item ' + item + ', it is of type ',  type(item)
+        print ('Warning, dictionary expected for item ' + item + ', it is of type ',  type(item))
 
 gridCompSet=set(gridCompList)
 gridCompList=list(gridCompSet)
@@ -157,18 +189,18 @@ if type(dependencies) is dict:
 
 gridOrder=[]
 for item in dependencies:
-  for key,value in item.iteritems():
+  for key,value in item.items():
     if type(value) is list:
       value=value[0]
     if type(value) is dict:
-      if value.has_key('grid'):
+      if 'grid' in value.keys():
         donator=value['component']
         if key not in gridOrder:
           gridOrder.append(key)
         if donator not in gridOrder:
           gridOrder.insert(gridOrder.index(key),donator)
         if gridOrder.index(donator) > gridOrder.index(key):
-          print "ERROR: cyclic grid dependencies"
+          print ("ERROR: cyclic grid dependencies")
           sys.exit(1)
 
 dependencyDict={}
@@ -176,17 +208,17 @@ for component in componentSet:
     for item in dependencies:
         compdeps=[]
         if type(item) is dict:
-          if not item.has_key(component):
+          if not component in item.keys():
             continue
           for jtem in item.values():
               if type(jtem) is list and len(jtem) == 1:
                   jtem=jtem[0]
               if type(jtem) is str:
                  compdeps.append(jtem)
-              elif (type(jtem) is dict) and jtem.has_key('component'):
+              elif (type(jtem) is dict) and 'component' in jtem.keys():
                  compdeps.append(jtem['component'])
-                 if jtem.has_key('grid'):
-                    foreignGrid[item.keys()[0]]=jtem['grid']
+                 if 'grid' in jtem.keys():
+                    foreignGrid[list(item.keys())[0]]=jtem['grid']
           for compdep in compdeps:
             if componentList.index(component)< componentList.index(compdep):
               if component in gridOrder and compdep in gridOrder:
@@ -194,12 +226,12 @@ for component in componentSet:
                   continue
               c=componentList.pop(componentList.index(component))
               componentList.insert(componentList.index(compdep)+1,c)
-          if dependencyDict.has_key(item.keys()[0]):
-            dependencyDict[item.keys()[0]].extend(compdeps)
+          if list(item.keys())[0] in dependencyDict.keys():
+            dependencyDict[list(item.keys())[0]].extend(compdeps)
           else:
-            dependencyDict[item.keys()[0]]=compdeps
+            dependencyDict[list(item.keys())[0]]=compdeps
 
-for key,value in dependencyDict.iteritems():
+for key,value in dependencyDict.items():
     unique=[]
     for item in value:
       if item not in unique:
@@ -224,41 +256,39 @@ instancePetDict={}
 if type(instances) is list:
   for i in range(0,len(instances)):
     item=instances[i]
-    if item.has_key('component'):
-       instanceDict[item.keys()[0]]=item['component']
+    if 'component' in item.keys():
+       instanceDict[list(item.keys())[0]]=item['component']
     else:
-      instanceDict[item.keys()[0]]=item.values()[0]
+      instanceDict[list(item.keys())[0]]=list(item.values())[0]
 
-    if item.has_key('petList'):
-      instancePetDict[item.keys()[0]]=item['petList']
-    if item.has_key('petlist'):
-      instancePetDict[item.keys()[0]]=item['petlist']
+    if 'petList' in item.keys():
+      instancePetDict[list(item.keys())[0]]=item['petList']
 else:
-  for key,value in instances.iteritems():
+  for key,value in instances.items():
     if type(value) is str:
       instanceDict[key] = value
-    elif type(value) is dict and value.has_key('component'):
+    elif type(value) is dict and 'component' in value.keys():
       instanceDict[key] = value['component']
-      if value.has_key('petList'):
+      if 'petList' in value.keys():
           instancePetDict[key]=value['petList']
 
 if len(instanceDict)>0:
-  for key,value in instanceDict.iteritems():
+  for key,value in instanceDict.items():
     sys.stdout.write(key + ' is running as an instance of ' + value)
-    if instancePetDict.has_key(key):
+    if key in instancePetDict.keys():
       sys.stdout.write(' on PET ' + str(instancePetDict[key]))
     sys.stdout.write('\n')
 if len(dependencyDict)>0:
-  for key,value in dependencyDict.iteritems():
+  for key,value in dependencyDict.items():
     sys.stdout.write(key + ' depends on ')
-    print value
+    print (value)
 
 if len(foreignGrid)>0:
-  for key,value in foreignGrid.iteritems():
+  for key,value in foreignGrid.items():
     print(key + ' obtains grid information from ' + value + ' field')
 
 for item in gridCompList:
-  if not instanceDict.has_key(item):
+  if not item in instanceDict.keys():
     instanceDict[item]=item
 
 cplCompList=[]
@@ -267,7 +297,7 @@ petList=[]
 
 for item in componentList:
   i=componentList.index(item)
-  if dependencyDict.has_key(item):
+  if item in dependencyDict.keys():
     for dep in dependencyDict[item]:
       j=componentList.index(dep)
       if j>i:
@@ -278,7 +308,7 @@ for item in componentList:
 for item in componentList:
     if item in gridCompSet:
         gridCompList.append(item)
-        if instanceDict.has_key(item) and instancePetDict.has_key(item):
+        if item in instanceDict.keys() and item in instancePetDict.keys():
             petList.append(str(instancePetDict[item]))
         else:
             petList.append('all')
@@ -288,7 +318,7 @@ for item in componentList:
 # sort netcdf instances to the beginning of the gridCompList
 sortedGridCompList = []
 for item in gridCompList:
-  if item=='netcdf' or (instanceDict.has_key(item) and instanceDict[item]=='netcdf'):
+  if item=='netcdf' or (item in instanceDict.keys() and instanceDict[item]=='netcdf'):
     sortedGridCompList.insert(0,item)
   else:
     sortedGridCompList.append(item)
@@ -303,19 +333,19 @@ if 'link_connector' in cplCompList:
   cplCompList.insert(0,c)
 
 for item in cplCompList:
-  if not instanceDict.has_key(item):
+  if not item in instanceDict.keys():
     instanceDict[item]=item
 
 instanceList=list(set(instanceDict.values()))
-print 'Components to process:', componentList
-print 'Grid components to process:', gridCompList
-print 'Couple components to process:', cplCompList
-print 'Base instances to process:', instanceList
+print ('Components to process:', componentList)
+print ('Grid components to process:', gridCompList)
+print ('Couple components to process:', cplCompList)
+print ('Base instances to process:', instanceList)
 
 # Done parsing the list, now write the new toplevel_component file
 
 outfilename = os.path.join( os.path.dirname( os.path.realpath(__file__) ) , 'toplevel_component.F90' )
-fid = file(outfilename,'w')
+fid = open(outfilename,'w')
 
 fid.write('''!> @brief Implementation of an ESMF toplevel coupling
 !>
@@ -352,12 +382,9 @@ fid.write('''
 
 for jtem in instanceList:
 
-    if jtem.find('_mediator')>0 or jtem.find('_connector')>0 or jtem == 'vertical_reduction' or jtem == 'calculator' :
+    if jtem.find('_mediator')>0 or jtem.find('_connector')>0 or jtem == 'vertical_reduction' or jtem == 'calculator' or jtem.find('_coupler')>0:
       fid.write('  use ' + jtem + ', only : ' + jtem + '_SetServices => SetServices \n')
     else: fid.write('  use ' + jtem + '_component, only : ' + jtem + '_SetServices => SetServices \n')
-
-#for jtem in cplCompList:
-#    fid.write('  use ' + jtem + ', only : ' + jtem + '_SetServices => SetServices \n')
 
 fid.write('\n  implicit none\n\n  private\n\n  public SetServices\n')
 fid.write('''
@@ -654,8 +681,16 @@ fid.write('''
         name=trim(gridCompNameList(i))//'Export')
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_LogWrite('toplevel reconciles '//trim(gridCompNameList(i))//'Export', ESMF_LOGMSG_INFO)
+      call ESMF_StateReconcile(gridExportStateList(i), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       gridImportStateList(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED, &
         name=trim(gridCompNameList(i))//'Import')
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_LogWrite('toplevel reconciles '//trim(gridCompNameList(i))//'Import', ESMF_LOGMSG_INFO)
+      call ESMF_StateReconcile(gridImportStateList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
@@ -663,7 +698,7 @@ fid.write('''
 
 for i in range(0, len(gridCompList)):
   item=gridCompList[i]
-  if instanceDict.has_key(item):
+  if item in instanceDict.keys():
     if instanceDict[item] != 'netcdf': continue
   else:
     continue
@@ -690,7 +725,7 @@ fid.write('''
 
 for i in range(0, len(gridCompList)):
     item=gridCompList[i]
-    if instanceDict.has_key(item):
+    if item in instanceDict.keys():
         item=instanceDict[item]
     fid.write('    call ESMF_GridCompSetServices(gridCompList(' + str(i+1) + '), ' +item + '_SetServices, rc=localrc)\n')
     fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
@@ -726,7 +761,7 @@ fid.write('''
 ''')
 for i in range(0,len(cplCompList)):
     item = cplCompList[i]
-    if instanceDict.has_key(item):
+    if item in instanceDict.keys():
             item=instanceDict[item]
 
     fid.write('    call ESMF_CplCompSetServices(cplCompList(' + str(i+1) + '), ' + item + '_SetServices, rc=localrc)\n')
@@ -752,7 +787,7 @@ fid.write('''
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       gridCompPhaseCountList(i)=phaseCount
-      GridCompHasPhaseZeroList(i)=hasPhaseZero
+      gridCompHasPhaseZeroList(i)=hasPhaseZero
     enddo
 
     !! Go through all phase 0 if components have it
@@ -794,7 +829,7 @@ for item in gridCompList:
     if jtem[-1]==item:
       ifrom=gridCompList.index(jtem[0])
   j=gridCompList.index(item)
-  if (foreignGrid.has_key(item)):
+  if (item in foreignGrid.keys()):
     #print item
     fid.write('    call ESMF_AttributeSet(gridImportStateList(' + str(ito+1)+'), name="foreign_grid_field_name", value="'+foreignGrid[item]+'", rc=localrc)\n')
     fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
@@ -807,7 +842,7 @@ for item in gridCompList:
     fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
     fid.write('      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
 
-  if dependencyDict.has_key(item) and len(dependencyDict[item]) > 0:
+  if item in dependencyDict.keys() and len(dependencyDict[item]) > 0:
     fid.write('    allocate(charValueList(' + str(len(dependencyDict[item])) + '), intValueList(' + str(len(dependencyDict[item])) + '))\n')
     for i,jtem in enumerate(dependencyDict[item]):
       fid.write('    charValueList(' + str(i+1) + ') = \'' + jtem + '\'\n')
@@ -849,7 +884,7 @@ if (True):
     fid.write('      !! Initializing ' + item + '\n')
     ito=gridCompList.index(item)
 
-    if dependencyDict.has_key(item):
+    if item in dependencyDict.keys():
       for jtem in dependencyDict[item]:
         ifrom=gridCompList.index(jtem)
         fid.write('      !! linking ' + jtem + 'Export to ' + item + 'Import\n')
@@ -892,7 +927,8 @@ if (True):
         fid.write('      !! linking ' + item + ' and ' + jtem + '\n')
         fid.write('      if (gridCompPhaseCountList( ' + str(i+1) + ')>= phase .or. gridCompPhaseCountList( ' + str(j+1) + ')>= phase) then\n')
         for c in couplingList:
-          if c[1]=='nudge_connector': continue
+          if instanceDict[c[1]] == 'nudge_connector' : continue
+          if instanceDict[c[1]] == 'regrid_coupler' : continue
           if c[0]==item and c[-1]==jtem:
             fid.write('        !! linking ' + item + 'Export to ' + jtem + 'Import\n')
             fid.write('        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(' + str(i+1) +'))//"Export to "//trim(gridCompNameList(' + str(j+1)+'))//"Import"\n')
@@ -973,7 +1009,7 @@ if (True):
 
 # Go through all output components and link toplevel metadata to it
 for item in gridCompList:
-  if instanceDict.has_key(item):
+  if item in instanceDict.keys():
     if not instanceDict[item] == 'netcdf' : continue
   elif not item == 'netcdf' : continue
   ito=gridCompList.index(item)
@@ -1048,7 +1084,7 @@ for item in gridCompList:
     if coupling[-1] != item: continue
     jtem=coupling[0]
     ifrom=gridCompList.index(jtem)
-    if not instanceDict.has_key(jtem): continue
+    if not jtem in instanceDict.keys(): continue
     if not instanceDict[jtem] == 'netcdf_input' : continue
     if coupling[1] == 'nudge_connector' : continue
     fid.write('    !! ReadRestarting ' + item + ' with data from ' + jtem + '\n')
@@ -1060,9 +1096,11 @@ fid.write('    !! End of ReadRestart \n\n')
 
 fid.write('''
     do i=1, numGridComp
-      !call ESMF_StateReconcile(state=gridImportStateList(i), rc=localrc)
+      call ESMF_LogWrite('toplevel reconciles '//trim(gridCompNameList(i))//'Import', ESMF_LOGMSG_INFO)
+      call ESMF_StateReconcile(state=gridImportStateList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      !call ESMF_StateReconcile(state=gridExportStateList(i), rc=localrc)
+      call ESMF_LogWrite('toplevel reconciles '//trim(gridCompNameList(i))//'Export', ESMF_LOGMSG_INFO)
+      call ESMF_StateReconcile(state=gridExportStateList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
  ''')
@@ -1200,7 +1238,7 @@ for i in range(0,len(couplingList)):
       number = str(value)
 
     else:
-        print 'Unknown interval specification "' + intervals[i] + '"'
+        print ('Unknown interval specification "' + intervals[i] + '"')
         sys.exit(1)
 
       # Special case infinity
@@ -1298,6 +1336,13 @@ fid.write('''
     write(message,'(A)') trim(myName)//' '//trim(childName)//' alarms ring next at '//trim(timestring)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
+    stringList(1,1)='Name';               stringList(1,2)='Carsten Lemmen'
+    stringList(2,1)='Abbreviation';       stringList(2,2)='cl'
+    stringList(3,1)='PhysicalAddress';    stringList(3,2)='Helmholtz-Zentrum Geesthacht'
+    stringList(4,1)='EmailAddress';       stringList(4,2)='carsten.lemmen@hzg.de'
+    stringList(5,1)='ResponsiblePartyRole';   stringList(5,2)='Contact'
+    stringList(6,1)='URL';   stringList(6,2)='http://www.hzg.de'
+
     !> @todo te following code throws attribute warnings in ESMF7, this needs
     !> to be investigated and is disabled for now.
 
@@ -1305,12 +1350,6 @@ fid.write('''
     !> Write Responsible party ISO 19115 attributes
     convention = 'ISO 19115'
     purpose    = 'RespParty'
-    stringList(1,1)='Name';               stringList(1,2)='Carsten Lemmen'
-    stringList(2,1)='Abbreviation';       stringList(2,2)='cl'
-    stringList(3,1)='PhysicalAddress';    stringList(3,2)='Helmholtz-Zentrum Geesthacht'
-    stringList(4,1)='EmailAddress';       stringList(4,2)='carsten.lemmen@hzg.de'
-    stringList(5,1)='ResponsiblePartyRole';   stringList(5,2)='Contact'
-    stringList(6,1)='URL';   stringList(6,2)='http://www.hzg.de'
 
     do i=1,6
       call ESMF_AttributeSet(gridComp, trim(stringList(i,1)), trim(stringList(i,2)), &
@@ -1805,6 +1844,12 @@ fid.write('''
         !! phases
         do phase=1,gridCompPhaseCountList(i)
           !call MOSSCO_GridCompFieldsTable(gridCompList(i), importState=gridImportStateList(i), exportState=gridExportStateList(i),rc=localrc)
+          call ESMF_LogWrite('toplevel reconciles '//trim(gridCompNameList(i))//'Import', ESMF_LOGMSG_INFO)
+          call ESMF_StateReconcile(gridImportStateList(i), rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call ESMF_LogWrite('toplevel reconciles '//trim(gridCompNameList(i))//'Export', ESMF_LOGMSG_INFO)
+          call ESMF_StateReconcile(gridExportStateList(i), rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           call ESMF_GridCompRun(gridCompList(i),importState=gridImportStateList(i),&
             exportState=gridExportStateList(i), clock=controlClock, phase=phase, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1933,7 +1978,7 @@ fid.write('''
 for coupling in couplingList:
   jtem = coupling[-1]
 
-  if instanceDict.has_key(jtem):
+  if jtem in instanceDict.keys():
     if instanceDict[jtem] != 'netcdf': continue
 
   item = coupling[0]
@@ -2116,7 +2161,7 @@ end module toplevel_component
 fid.close()
 
 outfilename = os.path.join( os.path.dirname( os.path.realpath(__file__) ) , 'Makefile.coupling' )
-fid = file(outfilename,'w')
+fid = open(outfilename,'w')
 
 fid.write('# This Makefile is part of MOSSCO\n#\n')
 fid.write('# Do not edit this file, it is automatically generated by\n')
@@ -2143,7 +2188,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 conditionals = {'gotm' : 'GOTM', 'fabm' : 'FABM', 'erosed' : 'EROSED',
                 'fabm_gotm' : 'GOTM_FABM', 'getm' : 'GETM', 'gotmfabm' : 'GOTM_FABM'}
 for item in gridCompSet.union(cplCompSet):
-    if conditionals.has_key(item):
+    if item in conditionals.keys():
         fid.write('ifneq ($(MOSSCO_' + conditionals[item] + '),true)\n')
         fid.write('$(error This example only works with MOSSCO_' + conditionals[item] + ' = true)\n')
         fid.write('endif\n')
@@ -2247,9 +2292,9 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
 #fid.write('\nNC_LIBS += $(shell nf-config --flibs)\n\n')
 fid.write('LDFLAGS += -L$(MOSSCO_LIBRARY_PATH)\n')
 for item in gridCompSet.union(cplCompSet):
-    if instanceDict.has_key(item):
+    if item in instanceDict.keys():
         item=instanceDict[item]
-    if libs.has_key(item):
+    if item in libs.keys():
         fid.write('LDFLAGS +=')
         for lib in libs[item]:
             fid.write(' -l' + lib)
@@ -2282,9 +2327,9 @@ fid.write('.PHONY: all exec ' + coupling_name + '\n\n')
 fid.write('all: exec\n\n')
 fid.write('exec: libmossco_util libmossco_connector ')
 for item in gridCompSet.union(cplCompSet):
-    if instanceDict.has_key(item):
+    if item in instanceDict.keys():
         item=instanceDict[item]
-    if deps.has_key(item):
+    if item in deps.keys():
         for dep in deps[item]:
             fid.write(' ' + dep)
 fid.write(' ' + coupling_name + '\n\n')

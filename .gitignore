@@ -13,7 +13,6 @@ modules/
 *.o
 *.so
 *.a
-*.a
 .cproject
 .project
 .settings

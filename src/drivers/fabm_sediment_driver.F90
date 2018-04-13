@@ -49,6 +49,12 @@ contains
    procedure :: init_grid
 end type fabm_sed_grid
 
+type :: fabm_sed_bulk_var
+   real(rk),dimension(:,:,:),pointer :: data=>null()
+   character(len=256)                :: name=''
+   real(rk)                          :: factor=1.0d0
+end type
+
 type,extends(MOSSCO_VariableFArray3d),public :: export_state_type !< sediment driver type for export states
    integer            :: fabm_id=-1
    logical            :: particulate=.false.
@@ -58,8 +64,12 @@ type,extends(type_rhs_driver), public :: type_sed !< sediment driver class (exte
    type(fabm_sed_grid)          :: grid
    type(type_model),pointer     :: model
    real(rk)                     :: bioturbation,diffusivity
+   integer                      :: bioturbation_profile
+   real(rk)                     :: beta,k_l,b,L1,L2
+   type(fabm_sed_bulk_var),pointer :: poc_classes(:)=>null()
    real(rk)                     :: k_par
-   real(rk),dimension(:,:,:),pointer :: fluxes,bdys
+   real(rk),dimension(:,:,:),pointer :: fluxes => null()
+   real(rk),dimension(:,:,:),pointer :: bdys => null()
    integer                      :: bcup_dissolved_variables=2
    integer                      :: bcup_particulate_variables=1
    integer                      :: ndiag=0
@@ -69,14 +79,19 @@ type,extends(type_rhs_driver), public :: type_sed !< sediment driver class (exte
    real(rk)                     :: missing_value=1.e20_rk
    type(export_state_type),dimension(:),allocatable :: export_states
 
-   real(rk),dimension(:,:,:),pointer     :: porosity,temp,intf_porosity,bioturbation_factor
-   real(rk),dimension(:,:,:),pointer     :: par
-   real(rk),dimension(:,:),pointer       :: par_surface
+   real(rk),dimension(:,:,:),pointer     :: porosity => null()
+   real(rk),dimension(:,:,:),pointer     :: temp => null()
+   real(rk),dimension(:,:,:),pointer     :: intf_porosity => null()
+   real(rk),dimension(:,:,:),pointer     :: bioturbation_factor => null()
+   real(rk),dimension(:,:,:),pointer     :: par => null()
+   real(rk),dimension(:,:),pointer       :: par_surface => null()
    real(rk),dimension(:,:,:),allocatable :: zeros2dv,zeros3d,ones3d,diff
-   real(rk),dimension(:,:,:),pointer     :: temp3d
+   real(rk),dimension(:,:,:),pointer     :: temp3d => null()
    real(rk),dimension(:,:,:,:),allocatable :: transport,zeros3dv
    real(rk),dimension(:,:),allocatable     :: zeros2d
-   real(rk),dimension(:,:,:),pointer     :: flux_cap
+   real(rk),dimension(:,:,:),pointer     :: flux_cap => null()
+   real(rk),dimension(:,:,:),pointer     :: biomass=>null()
+   real(rk),dimension(:,:,:),pointer     :: weighted_toc=>null()
 
 contains
    procedure :: initialize
@@ -176,11 +191,13 @@ integer :: bioturbation_profile
 logical :: distributed_pom_flux=.false.
 integer :: nml_unit=128
 real(rk) :: diffusivity,bioturbation,porosity_max,porosity_fac
+real(rk) :: bioturb_k_l,bioturb_L1,bioturb_L2,bioturb_beta,bioturb_b,bioturb_dry_density
 real(rk) :: k_par,bioturbation_depth,bioturbation_min
 real(rk) :: pom_flux_max
 namelist /sed_nml/ diffusivity,bioturbation_profile,bioturbation, &
         porosity_max,porosity_fac,k_par, distributed_pom_flux, pom_flux_max, &
-        bioturbation_depth,bioturbation_min
+        bioturbation_depth,bioturbation_min,bioturb_k_l,bioturb_L1, &
+        bioturb_L2,bioturb_beta,bioturb_b,bioturb_dry_density
 
 ! read parameters
 bioturbation_profile = 1
@@ -190,12 +207,19 @@ bioturbation_depth = 5.0 ! cm
 bioturbation_min = 0.2 ! cm2/d
 porosity_max  = 0.7
 porosity_fac  = 0.9 ! per m
-k_par         = 2.0d-3 ! 1/m
+k_par         = 2.0d-3 ! light absorption length (m) (2.0 mm)
 pom_flux_max  = 2.0d4  ! so far mmol/m2/d
+bioturb_k_l=0.11
+bioturb_L1=0.2
+bioturb_L2=0.6
+bioturb_beta=0.22
+bioturb_b=1.334
+bioturb_dry_density=1000. !kg/m3
 
 read(33,nml=sed_nml)
 
 sed%bioturbation = bioturbation
+sed%bioturbation_profile = bioturbation_profile
 sed%diffusivity  = diffusivity
 sed%k_par        = k_par
 if (distributed_pom_flux) then
@@ -220,6 +244,10 @@ sed%grid%mask => sed%mask
 allocate(sed%porosity(_INUM_,_JNUM_,_KNUM_))
 allocate(sed%intf_porosity(_INUM_,_JNUM_,_KNUM_))
 allocate(sed%bioturbation_factor(_INUM_,_JNUM_,_KNUM_))
+allocate(sed%biomass(_INUM_,_JNUM_,_KNUM_))
+sed%biomass=0.0d0
+allocate(sed%weighted_toc(_INUM_,_JNUM_,_KNUM_))
+sed%weighted_toc=0.0d0
 allocate(sed%temp(_INUM_,_JNUM_,_KNUM_))
 allocate(sed%par (_INUM_,_JNUM_,_KNUM_))
 sed%par = 0.0d0
@@ -295,6 +323,22 @@ allocate(sed%temp3d(_INUM_,_JNUM_,_KNUM_))
 sed%temp3d=-999.0_rk
 
 sed%diff = diffusivity
+
+! initialise bioturbation for bioturbation_profile=3 (Zhang&Wirtz)
+sed%k_l  = bioturb_k_l
+sed%L1   = bioturb_L1
+sed%L2   = bioturb_L2
+sed%beta = bioturb_beta
+sed%b    = bioturb_b
+! hard-coded two-class POC model, later replace by name-based
+! link to state variables
+allocate(sed%poc_classes(2))
+sed%poc_classes(1)%data => null()
+sed%poc_classes(1)%name = 'detritus_labile_carbon'
+sed%poc_classes(1)%factor = 1.0d0/1.2d0*12.01d0/bioturb_dry_density/1000.0d0 ! mmolC/m3 -> mgC/g_dry_weight
+sed%poc_classes(2)%data => null()
+sed%poc_classes(2)%name = 'detritus_semilabile_carbon'
+sed%poc_classes(2)%factor = 1.0d0/6.0d0*12.01d0/bioturb_dry_density/1000.0d0 ! mmolC/m3 -> mgC/g_dry_weight
 
 end subroutine initialize
 
@@ -377,6 +421,18 @@ if(associated(sed%mask)) then
     end do
   end do
 end if
+
+! initialise biotubation_profile=3
+do n=1,sed%nvar
+  !write(0,*) 'check for POC class ',trim(only_var_name(sed%model%state_variables(n)%long_name))
+  do i=1,size(sed%poc_classes)
+    if (trim(only_var_name(sed%model%state_variables(n)%long_name))==trim(sed%poc_classes(i)%name)) then
+      !write(0,*) 'found matching POC class ',trim(sed%poc_classes(i)%name),' in state_variable',n
+      sed%poc_classes(i)%data=>sed%conc(:,:,:,n)
+    end if
+  end do
+end do
+
 end subroutine init_concentrations
 
 
@@ -480,17 +536,22 @@ class(type_sed)      ,intent(inout)          :: rhs_driver
 real(rk),intent(inout),dimension(:,:,:,:),pointer :: rhs
 
 real(rk),dimension(1:rhs_driver%inum,1:rhs_driver%jnum,1:rhs_driver%knum)   :: conc_insitu,f_T
+real(rk),dimension(1:rhs_driver%inum,1:rhs_driver%jnum,1:rhs_driver%knum)   :: weighted_toc
 real(rk),dimension(1:rhs_driver%inum,1:rhs_driver%jnum,1:rhs_driver%knum+1) :: intFLux
-real(rk),dimension(1:rhs_driver%inum,1:rhs_driver%jnum)                     :: cumdepth
+real(rk),dimension(1:rhs_driver%inum,1:rhs_driver%jnum)                     :: cumdepth, averaged_weighted_toc
 
 integer :: n,i,j,k,bcup=1,bcdown=3
 
-do k=1,rhs_driver%knum
-   cumdepth=sum(rhs_driver%grid%dz(:,:,1:k),dim=3)
+! calculate environmental properties in sediment
+do k = 1, rhs_driver%knum
+   if (k == 1) then
+      cumdepth = 0.0
+   else
+      cumdepth = sum(rhs_driver%grid%dz(:,:,1:k-1),dim=3)  ! light is calculated at upper layer interfaces
+   endif
    where (.not.rhs_driver%mask(:,:,k))
-     rhs_driver%temp3d(:,:,k) = rhs_driver%bdys(:,:,1)
-     rhs_driver%par(:,:,k) = &
-           rhs_driver%par_surface * exp(-cumdepth/rhs_driver%k_par)
+      rhs_driver%temp3d(:,:,k) = rhs_driver%bdys(:,:,1)
+      rhs_driver%par(:,:,k) = rhs_driver%par_surface * exp(-cumdepth/rhs_driver%k_par)
    end where
 end do
 
@@ -505,12 +566,49 @@ call fabm_link_bulk_data(rhs_driver%model,standard_variables%downwelling_photosy
 !call fabm_link_bulk_data(rhs_driver%model,standard_variables%porosity,rhs_driver%porosity)
 
 ! calculate diffusivities (temperature)
-f_T = _ONE_*exp(-4500.d0*(1.d0/(rhs_driver%temp3d+273.d0) - (1.d0/288.d0)))
+if (rhs_driver%bioturbation_profile .eq. 3) then
+  ! calculate bioturbation depending on infauna biomass, which is
+  ! estimated from steady-state dependency on the TOC profile
+  ! following Zhang & Wirtz (2017).
+  f_T = _ONE_
+  rhs_driver%bioturbation=_ONE_
+  ! calculate weighted TOC profile
+  weighted_toc = 0.0d0 ! [mg-C/g-dry_mass]
+  do n=1,size(rhs_driver%poc_classes)
+    weighted_toc = weighted_toc + rhs_driver%poc_classes(n)%factor*rhs_driver%porosity/(rhs_driver%ones3d-rhs_driver%porosity)*rhs_driver%poc_classes(n)%data
+  end do
+  do i=1,rhs_driver%inum
+    do j=1,rhs_driver%jnum
+      averaged_weighted_toc(i,j) = sum(rhs_driver%grid%dz(i,j,:)*weighted_toc(i,j,:))/cumdepth(i,j)
+    end do
+  end do
+  ! save diagnostic values for output
+  rhs_driver%weighted_toc(1:rhs_driver%inum,1:rhs_driver%jnum,1:rhs_driver%knum) = weighted_toc(1:rhs_driver%inum,1:rhs_driver%jnum,1:rhs_driver%knum)
+
+  ! calculate infauna biomass [100 g/m2]
+  do k=1,rhs_driver%knum
+    rhs_driver%biomass(:,:,k) = weighted_toc(:,:,k) * exp(rhs_driver%grid%zc(:,:,k)*100.0d0*rhs_driver%k_l) * averaged_weighted_toc / &
+                         (rhs_driver%L1 + rhs_driver%L2*exp(rhs_driver%grid%zc(:,:,k)*200.0d0*rhs_driver%k_l))
+  end do
+
+  ! calculate bioturbation [cm2/d]
+  rhs_driver%bioturbation_factor = rhs_driver%beta * rhs_driver%biomass**rhs_driver%b / weighted_toc
+
+else
+  ! set temperature dependency factor for temporally constant bioturbation profile
+  f_T = _ONE_*exp(-4500.d0*(1.d0/(rhs_driver%temp3d+273.d0) - (1.d0/288.d0)))
+endif
+
 do n=1,size(rhs_driver%model%state_variables)
    rhs_driver%diff = rhs_driver%bioturbation * f_T / 86400.0_rk / 10000_rk * &
               (rhs_driver%ones3d - rhs_driver%intf_porosity)*rhs_driver%bioturbation_factor
+
+! print*,'fabm_sediment_driver#606 ',   trim(rhs_driver%model%state_variables(n)%long_name), &
+!         rhs_driver%model%state_variables(n)%properties%get_logical('particulate',default=.false.), &
+!         rhs_driver%conc(1,1,:,n)
    if (rhs_driver%model%state_variables(n)%properties%get_logical('particulate',default=.false.)) then
       bcup = rhs_driver%bcup_particulate_variables
+
       !write(0,*) rhs_driver%diff(1,1,:),'fac',rhs_driver%bioturbation_factor(1,1,:)
       !stop
       conc_insitu = rhs_driver%conc(:,:,:,n)*rhs_driver%porosity!/ &
@@ -521,10 +619,15 @@ do n=1,size(rhs_driver%model%state_variables)
               bcup, bcdown, rhs_driver%diff, &
               rhs_driver%ones3d - rhs_driver%porosity, intFlux, &
               rhs_driver%transport(:,:,:,n),flux_cap=rhs_driver%flux_cap)
+! do k=1,2
+!       print*,'fabm_sediment_driver#616 ',   conc_insitu(1,1,k), rhs_driver%transport(1,1,k,n), &
+!               rhs_driver%bdys(1,1,n+1), rhs_driver%fluxes(1,1,n), intFlux(1,1,k)
+! enddo
       rhs_driver%transport(:,:,:,n) = rhs_driver%transport(:,:,:,n) * &
               (rhs_driver%ones3d - rhs_driver%porosity)/rhs_driver%porosity
    else
       bcup = rhs_driver%bcup_dissolved_variables
+
       rhs_driver%diff = rhs_driver%diff+(rhs_driver%diffusivity + rhs_driver%temp3d * 0.035d0) &
              * rhs_driver%intf_porosity / 86400.0_rk / 10000_rk
 
@@ -719,8 +822,12 @@ end function get_export_state_by_diag_id
 subroutine get_all_export_states(self)
    class(type_sed) :: self
    integer  :: n,fabm_id
+   integer  :: nvar_export
 
-   allocate(self%export_states(self%nvar+5))
+   nvar_export = self%nvar+5
+   if (self%bioturbation_profile.eq.3) nvar_export=nvar_export+3
+   allocate(self%export_states(nvar_export))
+
    self%export_states(1)%standard_name='porosity'
    self%export_states(1)%data => self%porosity
    self%export_states(1)%units ='m3 m-3'
@@ -737,13 +844,27 @@ subroutine get_all_export_states(self)
    self%export_states(4)%data => self%temp3d
    self%export_states(4)%units ='degC'
 
-   self%export_states(5)%standard_name='photosynthetically_available_radiation'
+   self%export_states(5)%standard_name='photosynthetically_active_radiation'
    self%export_states(5)%data => self%par
    self%export_states(5)%units ='W m-2'
 
    do fabm_id=1,self%nvar
        self%export_states(5+fabm_id) = self%get_export_state_by_id(fabm_id)
    end do
+
+   if (self%bioturbation_profile.eq.3) then
+     self%export_states(6+self%nvar)%standard_name='biomass'
+     self%export_states(6+self%nvar)%data => self%biomass
+     self%export_states(6+self%nvar)%units ='100g m-3'
+
+     self%export_states(7+self%nvar)%standard_name='bioturbation'
+     self%export_states(7+self%nvar)%data => self%bioturbation_factor
+     self%export_states(7+self%nvar)%units ='cm2 d-1'
+
+     self%export_states(8+self%nvar)%standard_name='weighted_toc'
+     self%export_states(8+self%nvar)%data => self%weighted_toc
+     self%export_states(8+self%nvar)%units ='mg/g-dry_weight'
+   end if
 
 end subroutine get_all_export_states
 

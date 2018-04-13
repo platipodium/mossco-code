@@ -38,17 +38,20 @@ $SCRDIR/catnml
 # retrieve final time-step
 N=$(ncdump -h $fname |grep '= UNLIMITED' |cut -f2 -d'(' |cut -f1 -d' ')
 N=$[$N - 1]
+#N=1218
 echo 'cutting until time step ' $N
 
 # here for 178-cpu setup using 6 processors; 
-for ((a=0;a<6;a++)); do $SCRDIR/cut_avg_surf.sh $nproc ~/sns/cut $a 6 $N & done
+#for ((a=0;a<6;a++)); do $SCRDIR/cut_avg_benpel.sh $nproc /$HOME/sns/cut $a 6 $N & done
+for ((a=0;a<6;a++)); do $SCRDIR/cut_avg_surf.sh $nproc $HOME/sns/cut $a 6 $N & done
 #for ((a=0;a<6;a++)); do $SCRDIR/cut_avg_phygetm.sh $nproc cut $a 6 $N & done
 wait
 #check for completeness;
 
 #if necessary re-run and/or re-process single domains: "~/tools/cut_avg.sh 56 cut 54 1 120"
 
-cd ~/sns/cut
+#cd /scratch/wirtz/cut
+cd $HOME/sns/cut
 fname='*tmp*.nc'
 rm $fname
 fname='cut1_*.nc'

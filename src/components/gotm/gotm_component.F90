@@ -167,6 +167,8 @@ module gotm_component
     use meanflow, only : gotm_v => v
     use meanflow, only: h
     use turbulence, only : gotm_tknu => num
+    use airsea, only : gotm_u10 => u10
+    use airsea, only : gotm_v10 => v10
 
     implicit none
 
@@ -326,20 +328,26 @@ module gotm_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     nexport_3d = 6
-    nexport_2d = 9
+    nexport_2d = 12
     allocate(exportFieldList(nexport_3d + nexport_2d))
 
     !> Create 3d export fields and add them to export state, allocate the space for these
-    !> that will be filled later with data, copying of data is necessary to provide 3d fields
+    !> that will be filled lated with data, copying of data is necessary to provide 3d fields
     !> for ESMF
 
     allocate(export_variables_3d(nexport_3d))
     export_variables_3d(1)%standard_name="temperature"
-    export_variables_3d(2)%standard_name="grid_height"
-    export_variables_3d(3)%standard_name="salinity"
-    export_variables_3d(4)%standard_name="radiation"
+    export_variables_3d(1)%units="degree_C"
+    export_variables_3d(2)%standard_name="layer_height"
+    export_variables_3d(2)%units="m"
+    export_variables_3d(3)%standard_name="practical_salinity"
+    export_variables_3d(3)%units="1E-3"
+    export_variables_3d(4)%standard_name="downwelling_photosynthetic_radiative_flux"
+    export_variables_3d(4)%units="W m-2"
     export_variables_3d(5)%standard_name="x_velocity"
+    export_variables_3d(5)%units="m s-1"
     export_variables_3d(6)%standard_name="y_velocity"
+    export_variables_3d(6)%units="m s-1"
     allocate(variables_3d(farray_shape(1),farray_shape(2),0:farray_shape(3),nexport_3d))
 
     call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=localrc)
@@ -347,12 +355,21 @@ module gotm_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     do k=1,nexport_3d
+      export_variables_3d(k)%creator='gotm'
       farrayPtr => variables_3d(:,:,:,k)
-      exportFieldList(k) = ESMF_FieldCreate(grid, farrayPtr=farrayPtr, name=trim(export_variables_3d(k)%standard_name)//'_in_water', &
-        staggerloc=ESMF_STAGGERLOC_CENTER, &
-        totalLWidth=(/0,0,1/), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (k==4) then
+         exportFieldList(k) = ESMF_FieldCreate(grid, farrayPtr=farrayPtr, name=trim(export_variables_3d(k)%standard_name)//'_in_water', &
+           staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
+           totalLWidth=(/0,0,0/), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      else
+         exportFieldList(k) = ESMF_FieldCreate(grid, farrayPtr=farrayPtr, name=trim(export_variables_3d(k)%standard_name)//'_in_water', &
+           staggerloc=ESMF_STAGGERLOC_CENTER, &
+           totalLWidth=(/0,0,1/), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
       call ESMF_StateAddReplace(exportState,(/exportFieldList(k)/),rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -368,43 +385,60 @@ module gotm_component
       variables_3d(:,:,k,5) = gotm_u(k)
       variables_3d(:,:,k,6) = gotm_v(k)
     end do
+    variables_3d(:,:,0,4) = gotm_radiation(0)
 
     !> Create 2d export fields and add them to export state, allocate the space for these
     !> that will be filled later with data, copying of data is necessary to provide 2d fields
     !> for ESMF
 
     allocate(export_variables_2d(nexport_2d))
-    export_variables_2d(1)%standard_name="water_depth_at_soil_surface"
-    export_variables_2d(2)%standard_name="layer_height_at_soil_surface"
-    export_variables_2d(3)%standard_name="depth_averaged_x_velocity_in_water"
-    export_variables_2d(4)%standard_name="depth_averaged_y_velocity_in_water"
-    export_variables_2d(5)%standard_name="x_velocity_at_soil_surface"
-    export_variables_2d(6)%standard_name="y_velocity_at_soil_surface"
-    export_variables_2d(7)%standard_name="temperature_at_soil_surface"
-    export_variables_2d(8)%standard_name="turbulent_diffusivity_of_momentum_at_soil_surface"
-    export_variables_2d(9)%standard_name="surface_downwelling_photosynthetic_radiative_flux"
-
-
+    export_variables_2d( 1)%standard_name="water_depth_at_soil_surface"
+    export_variables_2d( 1)%units="m"
+    export_variables_2d( 2)%standard_name="layer_height_at_soil_surface"
+    export_variables_2d( 2)%units="m"
+    export_variables_2d( 3)%standard_name="depth_averaged_x_velocity_in_water"
+    export_variables_2d( 3)%units="m s-1"
+    export_variables_2d( 4)%standard_name="depth_averaged_y_velocity_in_water"
+    export_variables_2d( 4)%units="m s-1"
+    export_variables_2d( 5)%standard_name="x_velocity_at_soil_surface"
+    export_variables_2d( 5)%units="m s-1"
+    export_variables_2d( 6)%standard_name="y_velocity_at_soil_surface"
+    export_variables_2d( 6)%units="m s-1"
+    export_variables_2d( 7)%standard_name="temperature_at_soil_surface"
+    export_variables_2d( 7)%units="degree_C"
+    export_variables_2d( 8)%standard_name="turbulent_diffusivity_of_momentum_at_soil_surface"
+    export_variables_2d( 8)%units="m2 s-2"
+    export_variables_2d( 9)%standard_name="surface_downwelling_photosynthetic_radiative_flux"
+    export_variables_2d( 9)%units="W m-2"
+    export_variables_2d(10)%standard_name="downwelling_photosynthetic_radiative_flux_at_soil_surface"
+    export_variables_2d(10)%units="W m-2"
+    export_variables_2d(11)%standard_name="wind_x_velocity_at_10m"
+    export_variables_2d(11)%units="m s-1"
+    export_variables_2d(12)%standard_name="wind_y_velocity_at_10m"
+    export_variables_2d(12)%units="m s-1"
 
     allocate(variables_2d(farray_shape(1),farray_shape(2),nexport_2d))
 
     !!> @todo bound checking and not restricting to 1 column in the following calls
-    variables_2d(1,1,1) = sum(variables_3d(1,1,:,2))
-    variables_2d(1,1,2) = variables_3d(1,1,1,2)
-    variables_2d(1,1,3) = sum (variables_3d(1,1,:,2) * variables_3d(1,1,:,5)) / variables_2d(1,1,1)
-    variables_2d(1,1,4) = sum (variables_3d(1,1,:,2) * variables_3d(1,1,:,6)) / variables_2d(1,1,1)
-    variables_2d(1,1,5) = variables_3d(1,1,1,5)
-    variables_2d(1,1,6) = variables_3d(1,1,1,6)
-    variables_2d(1,1,7) = variables_3d(1,1,1,1)
-    variables_2d(1,1,8) = gotm_tknu(1)
-    variables_2d(1,1,9) = gotm_radiation(nlev)
-
+    variables_2d(1,1, 1) = sum(variables_3d(1,1,:,2))
+    variables_2d(1,1, 2) = variables_3d(1,1,1,2)
+    variables_2d(1,1, 3) = sum (variables_3d(1,1,:,2) * variables_3d(1,1,:,5)) / variables_2d(1,1,1)
+    variables_2d(1,1, 4) = sum (variables_3d(1,1,:,2) * variables_3d(1,1,:,6)) / variables_2d(1,1,1)
+    variables_2d(1,1, 5) = variables_3d(1,1,1,5)
+    variables_2d(1,1, 6) = variables_3d(1,1,1,6)
+    variables_2d(1,1, 7) = variables_3d(1,1,1,1)
+    variables_2d(1,1, 8) = gotm_tknu(1)
+    variables_2d(1,1, 9) = gotm_radiation(nlev) ! @gotm/temperature.F90: rad(nlev)=I_0               ! at watersurface
+    variables_2d(1,1,10) = gotm_radiation(0)    ! @gotm/temperature.F90: rad(0)=I_O*A*exp(-sum(h)/g) ! at soilsurface
+    variables_2d(1,1,11) = gotm_u10
+    variables_2d(1,1,12) = gotm_v10
 
     call ESMF_ArraySpecSet(arrayspec, rank=2, typekind=ESMF_TYPEKIND_R8, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     do k=1,nexport_2d
+      export_variables_2d(k)%creator = 'gotm'
       ptr_f2 => variables_2d(:,:,k)
       exportFieldList(k) = ESMF_FieldCreate(grid2d, farrayPtr=ptr_f2, name=trim(export_variables_2d(k)%standard_name), &
         staggerloc=ESMF_STAGGERLOC_CENTER, &
@@ -472,16 +506,21 @@ module gotm_component
       character(len=ESMF_MAXSTR)                          :: itemName
       integer                   ,dimension(:),allocatable :: namelenList,concFlags
       integer                                             :: concFieldCount,transportFieldCount,FieldCount
-      integer                                             :: conc_id,ws_id
+      integer(ESMF_KIND_I8)                               :: conc_id,ws_id
       integer                                             :: i,ii,n
       character(len=*),parameter :: ws_suffix="_z_velocity_in_water"
       character(len=*),parameter :: conc_suffix="_in_water"
       integer(ESMF_KIND_I4) :: localrc
       real(ESMF_KIND_R8), dimension(:,:,:), pointer  :: ptrf3
+      type(ESMF_Clock)                                   :: parentClock
+      type(ESMF_Time)                                    :: currTime
 
       rc=ESMF_SUCCESS
 
-      call MOSSCO_GridCompEntryLog(gridComp)
+      call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
+        importState=importState,exportState=exportState, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_StateGet(importState,"concentrations_in_water",concFieldBundle, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -561,13 +600,13 @@ module gotm_component
                   call ESMF_FieldBundleGet(wsFieldBundle, itemName, field=wsField, rc=localrc)
                   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
                else
-                  call ESMF_AttributeGet(concFieldList(i), 'external_index', value=conc_id, defaultValue=-1, rc=localrc)
+                  call ESMF_AttributeGet(concFieldList(i), 'external_index', value=conc_id, defaultValue=int(-1, ESMF_KIND_I8), rc=localrc)
                   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
                   allocate(fieldList(fieldCount))
                   call ESMF_FieldBundleGet(wsFieldBundle, itemName, fieldList=fieldList, rc=localrc)
                   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
                   do ii=1,fieldCount
-                     call ESMF_AttributeGet(fieldList(ii), 'external_index', value=ws_id, defaultValue=-2, rc=localrc)
+                     call ESMF_AttributeGet(fieldList(ii), 'external_index', value=ws_id, defaultValue=int(-2, ESMF_KIND_I8), rc=localrc)
                      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
                      if (ws_id .eq. conc_id) then
                         wsField = fieldList(ii)
@@ -613,8 +652,10 @@ module gotm_component
 
       end if
 
-    call MOSSCO_GridCompExitLog(gridComp)
-    rc = ESMF_SUCCESS
+      call MOSSCO_CompExit(gridComp, localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      rc=ESMF_SUCCESS
 
    end subroutine InitializeP2
 
@@ -631,6 +672,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     use meanflow, only : gotm_u => u
     use meanflow, only : gotm_v => v
     use turbulence, only : gotm_tknu => num
+    use airsea, only : gotm_u10 => u10
+    use airsea, only : gotm_v10 => v10
+
 
     type(ESMF_GridComp)  :: gridComp
     type(ESMF_State)     :: importState, exportState
@@ -652,10 +696,11 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     integer(ESMF_KIND_I4)   :: petCount, localPet
     integer(ESMF_KIND_I4)   :: seconds, hours, localrc
 
+
     rc = ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
-      exportState=exportState, rc=localrc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
+      importState=importState, exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -679,7 +724,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     write(message,'(A)') trim(message)//' '//trim(timeString)//' ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+    !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     do while (.not.ESMF_ClockIsStopTime(clock))
 
@@ -723,17 +768,21 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       variables_3d(:,:,k,5) = gotm_u(k)
       variables_3d(:,:,k,6) = gotm_v(k)
     end do
+    variables_3d(:,:,0,4) = gotm_radiation(0)
 
     !!> @todo bound checking and not restricting to 1 column in the following calls
-    variables_2d(1,1,1) = sum(variables_3d(1,1,:,2))
-    variables_2d(1,1,2) = variables_3d(1,1,1,2)
-    variables_2d(1,1,3) = sum (variables_3d(1,1,:,2) * variables_3d(1,1,:,5)) / variables_2d(1,1,1)
-    variables_2d(1,1,4) = sum (variables_3d(1,1,:,2) * variables_3d(1,1,:,6)) / variables_2d(1,1,1)
-    variables_2d(1,1,5) = variables_3d(1,1,1,5)
-    variables_2d(1,1,6) = variables_3d(1,1,1,6)
-    variables_2d(1,1,7) = variables_3d(1,1,1,1)
-    variables_2d(1,1,8) = gotm_tknu(1)
-    variables_2d(1,1,9) = gotm_radiation(nlev)
+    variables_2d(1,1, 1) = sum(variables_3d(1,1,:,2))
+    variables_2d(1,1, 2) = variables_3d(1,1,1,2)
+    variables_2d(1,1, 3) = sum (variables_3d(1,1,:,2) * variables_3d(1,1,:,5)) / variables_2d(1,1,1)
+    variables_2d(1,1, 4) = sum (variables_3d(1,1,:,2) * variables_3d(1,1,:,6)) / variables_2d(1,1,1)
+    variables_2d(1,1, 5) = variables_3d(1,1,1,5)
+    variables_2d(1,1, 6) = variables_3d(1,1,1,6)
+    variables_2d(1,1, 7) = variables_3d(1,1,1,1)
+    variables_2d(1,1, 8) = gotm_tknu(1)
+    variables_2d(1,1, 9) = gotm_radiation(nlev) ! @gotm/temperature.F90: rad(nlev)=I_0               ! at watersurface
+    variables_2d(1,1,10) = gotm_radiation(0)    ! @gotm/temperature.F90: rad(0)=I_O*A*exp(-sum(h)/g) ! at soilsurface
+    variables_2d(1,1,11) = gotm_u10
+    variables_2d(1,1,12) = gotm_v10
 
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &

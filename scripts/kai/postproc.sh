@@ -7,7 +7,7 @@
 cd /data/wirtz
 cp tag.lst ~/sns/cut
 #sns
-for a in  sns_*
+for a in sns sns_*
  do 
  cd $a;
  ~/kai/cutavg_all.sh;

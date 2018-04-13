@@ -1,6 +1,6 @@
 !> @brief Implementation of an ESMF link coupling
 !>
-!> This computer program is part of MOSSCO. 
+!> This computer program is part of MOSSCO.
 !> @copyright Copyright (C) 2014, Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister
 
@@ -17,7 +17,7 @@
 #define ESMF_FILENAME "benthic_pelagic_coupler.F90"
 
 module benthic_pelagic_coupler
-    
+
   use esmf
   use mossco_state
   use mossco_field
@@ -37,6 +37,10 @@ module benthic_pelagic_coupler
   real(ESMF_KIND_R8),dimension(:,:),   pointer :: SDETCflux,fDETCflux,omexDETPflux
   real(ESMF_KIND_R8) :: dinflux_const
   real(ESMF_KIND_R8) :: dipflux_const=-1.
+  real(ESMF_KIND_R8) :: molN_to_mgC=12.0d0*6.625d0
+  real(ESMF_KIND_R8) :: molP_to_mgC=12.0d0*106.0d0
+  real(ESMF_KIND_R8) :: convertN=1.0d0
+  real(ESMF_KIND_R8) :: convertP=1.0d0
   public SetServices
 
   contains
@@ -51,7 +55,7 @@ module benthic_pelagic_coupler
     integer, intent(out) :: rc
 
     integer              :: localrc
-    
+
     rc = ESMF_SUCCESS
 
     call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_INITIALIZE, phase=0, &
@@ -70,9 +74,9 @@ module benthic_pelagic_coupler
 #undef  ESMF_METHOD
 #define ESMF_METHOD "InitializeP0"
   subroutine InitializeP0(cplComp, importState, exportState, parentClock, rc)
-  
+
     implicit none
-  
+
     type(ESMF_cplComp)    :: cplComp
     type(ESMF_State)      :: importState
     type(ESMF_State)      :: exportState
@@ -113,11 +117,12 @@ module benthic_pelagic_coupler
     type(ESMF_Clock)     :: externalclock
     type(ESMF_Field)     :: newfield
     integer, intent(out) :: rc
-    
+
     character(len=ESMF_MAXSTR)  :: name, message
     type(ESMF_Time)       :: currTime
-    integer              :: nmlunit=127, localrc
-    namelist /benthic_pelagic_coupler/ dinflux_const,dipflux_const
+    integer               :: nmlunit=127, localrc
+    logical               :: pelagic_units_in_mgC=.false.
+    namelist /benthic_pelagic_coupler/ dinflux_const,dipflux_const,pelagic_units_in_mgC
 
     rc=ESMF_SUCCESS
 
@@ -129,6 +134,10 @@ module benthic_pelagic_coupler
     read(nmlunit,benthic_pelagic_coupler)
     close(nmlunit)
     if (dipflux_const < 0.0) dipflux_const=dinflux_const/16.0d0
+    if (pelagic_units_in_mgC) then
+      convertN = molN_to_mgC
+      convertP = molP_to_mgC
+    end if
 
     ! create exchange fields
     !> @todo: get grid size from exportState (so far using 1x1 horizontal grid
@@ -209,9 +218,9 @@ module benthic_pelagic_coupler
       call ESMF_FieldGet(field,localde=0,farrayPtr=val2_f2,rc=rc)
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call mossco_state_get(exportState,(/'nitrate_upward_flux_at_soil_surface'/),DINflux,rc=nitrc)
-      if (nitrc == 0) DINflux = val1_f2
+      if (nitrc == 0) DINflux = convertN*(val1_f2+dinflux_const/86400./365.)
       call mossco_state_get(exportState,(/'ammonium_upward_flux_at_soil_surface'/),DINflux,rc=nitrc)
-      if (nitrc == 0) DINflux = val2_f2
+      if (nitrc == 0) DINflux = convertN*val2_f2
 
       !RH: weak check, needs to be replaced:
       if (nitrc /= 0) then
@@ -237,16 +246,16 @@ module benthic_pelagic_coupler
       end if
 
       !   Det flux:
-      call mossco_state_get(importState,(/'slow_detritus_C_upward_flux_at_soil_surface'/),SDETCflux,rc=rc)
-      call mossco_state_get(importState,(/'fast_detritus_C_upward_flux_at_soil_surface'/),FDETCflux,rc=rc)
-      call mossco_state_get(importState,(/'detritus-P_upward_flux_at_soil_surface'/),omexDETPflux,rc=rc)
+      call mossco_state_get(importState,(/'detritus_semilabile_carbon_upward_flux_at_soil_surface'/),SDETCflux,rc=rc)
+      call mossco_state_get(importState,(/'detritus_labile_carbon_upward_flux_at_soil_surface'/),FDETCflux,rc=rc)
+      call mossco_state_get(importState,(/'detritus_phosphorus_upward_flux_at_soil_surface'/),omexDETPflux,rc=rc)
 
       call mossco_state_get(exportState,(/ &
             'detritus_upward_flux_at_soil_surface              ', &
             'detN_upward_flux_at_soil_surface                  ', &
             'Detritus_Nitrogen_detN_upward_flux_at_soil_surface'/),DETNflux,rc=rc)
       if(rc/=0) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      DETNflux = NC_fdet*FDETCflux + NC_sdet*SDETCflux
+      DETNflux = convertN*(NC_fdet*FDETCflux + NC_sdet*SDETCflux)
 
       !> search for Detritus-C
       call mossco_state_get(exportState,(/ &
@@ -285,11 +294,11 @@ module benthic_pelagic_coupler
     type(ESMF_State)     :: exportState
     type(ESMF_Clock)     :: externalclock
     integer,intent(out)  :: rc
-     
+
     character(len=ESMF_MAXSTR)  :: name, message
     type(ESMF_Time)       :: currTime
     integer :: localrc
-    
+
     call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 

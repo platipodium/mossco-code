@@ -7,24 +7,23 @@ You can apply for a testaccount by contacting their support at <dispatch.jsc@fz-
 
 ## Preparing your environment
 
-Load the appropriate modules of the prior "stage" (the current one does not have all necessary software yet)
+Load the appropriate modules of the current stage 2017b
 
-		module purge
-		module use /usr/local/software/jureca/OtherStages
-		module load Stages/2016a
-		module load Intel ParaStationMPI
-		module load ESMF/7.0.0
-		module load Python/2.7.11
-		module load netcdf4-python/1.2.4-Python-2.7.11
-		module load basemap/1.0.7-Python-2.7.11
-		module load PyYAML/3.11-Python-2.7.11
+		module load Intel/2018.0.128-GCC-5.4.0
+		module load ParaStationMPI/5.2.0-1
+		module load ESMF/7.0.1 # only available for Intel/Parastation
+		module load SciPy-Stack/2017b-Python-2.7.14
+		module load netcdf4-python/1.3.0-Python-2.7.14
+		module load basemap/1.0.7-Python-2.7.14
 		module load git Subversion
-		module load netCDF-Fortran
 		module load Doxygen
-		module load NCO  ncview
+		module load NCO
 		module load CMake
 
-		export ESMFMKFILE=/usr/local/software/jureca/Stages/2016a/software/ESMF/7.0.0-intel-para-2016a/lib/esmf.mk
+If you load the `module ncview`, then HDF and netCDF will be reloaded in
+a serial mode that prevents a successful build.
+
+		export ESMFMKFILE=/usr/local/software/jureca/Stages/2017b/software/ESMF/7.0.1-intel-para-2017b/lib/esmf.mk
 
 		export NETCDF=NETCDF4
 		export NETCDF_VERSION=$NETCDF
@@ -43,7 +42,7 @@ This example also assumes that you have downloaded or `git clone`ed MOSSCO into 
 		cd $MOSSCO_SETUPDIR/sns
 		make ref3d
 
-		ln -sf Forcing/meteofiles_clm_jureca.dat meteofiles_gen.dat  # link meterological files
+		ln -sf Forcing/meteofiles_clm_jureca.dat meteofiles.dat  # link meterological files
 		ln -sf Parallel/par_setup.192p.7x8.dat par_setup.dat	# setup getm for 192 processors
 
 		mossco -rbn192 getm
@@ -62,3 +61,23 @@ Make sure that  `--ntasks` is set to a multiple of the cpus on **both** partitio
 With the `mossco` script, you can also use the `-q` option to select a queue/partition.
 
 		mossco -n288 -q "compute2,compute" getm
+
+
+## Modules for prior stage 2016a
+
+Load the appropriate modules of the prior "stage"
+
+		module purge
+		module use /usr/local/software/jureca/OtherStages
+		module load Stages/2016a
+		module load Intel ParaStationMPI
+		module load ESMF/7.0.0
+		module load Python/2.7.11
+		module load netcdf4-python/1.2.4-Python-2.7.11
+		module load basemap/1.0.7-Python-2.7.11
+		module load PyYAML/3.11-Python-2.7.11
+		module load git Subversion
+		module load netCDF-Fortran
+		module load Doxygen
+		module load NCO  ncview
+		module load CMake

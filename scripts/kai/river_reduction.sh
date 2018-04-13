@@ -16,8 +16,8 @@ if ! [[ -f $fname ]] ; then
    exit 1
 fi
 
-rP=0.7
-rN=0.7
+rP=0.3
+rN=0.3
 nname=$(basename $fname .nc)'_rN'$rN'rP'$rP'.nc'
 
 # "Chl_chl_in_water" "Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water"  "Phytplankton_Phosphorus_phyP_in_water" "Phytplankton_Nitrogen_phyN_in_water"  
@@ -27,7 +27,7 @@ echo "Dissolved_Inorganic_Nitrogen_DIN_nutN_flux_in_water * "  $rN
 #for p in $(seq -f $fg 0 1 $[$ncpu-1]); do 
 #ncap2 -O -s "Dissolved_Inorganic_Phosphorus_DIP_nutP_flux_in_water='$rP'*Dissolved_Inorganic_Phosphorus_DIP_nutP_flux_in_water" $fname tmp.nc
 
-ncap2 -O -s "Dissolved_Inorganic_Phosphorus_DIP_nutP_flux_in_water=${rP}*Dissolved_Inorganic_Phosphorus_DIP_nutP_flux_in_water;Dissolved_Inorganic_Nitrogen_DIN_nutN_flux_in_water=${rN}*Dissolved_Inorganic_Nitrogen_DIN_nutN_flux_in_water" $fname $nname
+ncap2 -O -s "where(Dissolved_Inorganic_Phosphorus_DIP_nutP_flux_in_water>10) {Dissolved_Inorganic_Phosphorus_DIP_nutP_flux_in_water=${rP}*Dissolved_Inorganic_Phosphorus_DIP_nutP_flux_in_water;Dissolved_Inorganic_Nitrogen_DIN_nutN_flux_in_water=${rN}*Dissolved_Inorganic_Nitrogen_DIN_nutN_flux_in_water; }" $fname $nname
 
 
 
