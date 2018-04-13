@@ -19,8 +19,6 @@
 ! Licensed under the University of Illinois-NCSA License.
 !
 
-#ifdef _ESMF_UNRELEASED_
-
 #define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
 #define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
 #undef ESMF_FILENAME
@@ -47,9 +45,9 @@ contains
 #define ESMF_METHOD "ESMF_GridCreateFrmGrid"
 !> @subsubsection ESMF_GridCreateFrmGrid "Grid Create From Grid"
 !> @brief Create a 3D Grid from a 2D Grid and an undistributed vertical dimension
-!> @param equivalent: 
-!> @param rulesets: 
-!> @param nameout: 
+!> @param equivalent:
+!> @param rulesets:
+!> @param nameout:
 
 
 !BOP
@@ -332,9 +330,9 @@ end function ESMF_GridCreateFrmGrid
 #define ESMF_METHOD "ESMF_GridCreateFrmField"
 !> @subsubsection ESMF_GridCreateFrmField "Grid Create From Field"
 !> @brief Create a 3D Grid from a 2D Grid and a Field with 1 ungridded dimension
-!> @param equivalent: 
-!> @param rulesets: 
-!> @param nameout: 
+!> @param equivalent:
+!> @param rulesets:
+!> @param nameout:
 
 
 !BOPI
@@ -496,4 +494,3 @@ end function ESMF_GridCreateFrmGrid
   end function ESMF_GridCreateFrmField
 
 end module esmfgridcreate3D
-#endif
