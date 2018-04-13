@@ -36,6 +36,7 @@ LIBMOSSCO_UTIL_OBJS+= 							\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_time.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_variable_types.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_grid.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_geom.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_routehandle.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_locstream.o) \
   $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(ESMF_GridCreate3D.o)
@@ -70,6 +71,7 @@ mossco_state.o : mossco_field.o mossco_state.F90
 mossco_logging.o : mossco_strings.o mossco_field.o mossco_state.o mossco_logging.F90
 mossco_field.o : mossco_strings.o mossco_field.F90 mossco_memory.o mossco_attribute.o mossco_grid.o
 mossco_gridspec.o : mossco_strings.o mossco_gridspec.F90
+mossco_geom.o : mossco_strings.o ESMF_GridCreate3D.o
 mossco_grid.o : mossco_strings.o mossco_grid.F90
 mossco_locstream.o : mossco_strings.o mossco_locstream.F90
 mossco_routehandle.o : mossco_strings.o mossco_routehandle.F90
@@ -112,6 +114,7 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_memory.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_strings.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_grid.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_geom.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_routehandle.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_locstream.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_netcdf.mod
