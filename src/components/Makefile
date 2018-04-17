@@ -79,7 +79,7 @@ libmossco_hamsom_driver:  prefix $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a(hamso
 libmossco_hamsom_component: libmossco_hamsom_driver $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a(hamsom_component.o)
 
 libmossco_schism:  libmossco_schism_component
-libmossco_schism_component: $(MOSSCO_LIBRARY_PATH)/libmossco_schism.a(schism_component.o)
+libmossco_schism_component: prefix schism_component.F90 $(MOSSCO_LIBRARY_PATH)/libmossco_schism.a(schism_component.o)
 
 libmossco_cmaq: libmossco_cmaq_driver libmossco_cmaq_component
 libmossco_cmaq_driver:  prefix $(MOSSCO_LIBRARY_PATH)/libmossco_cmaq.a(cmaq_driver.o)
@@ -118,9 +118,6 @@ erosed_component: prefix libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.
 
 libmossco_benthos_driver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_benthos
-
-$(MOSSCO_LIBRARY_PATH)/libmossco_schism.a(schism_driver.o):
-		$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_hamsom
 
 $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a(hamsom_driver.o):
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_hamsom
@@ -218,7 +215,7 @@ hamsom_component.F90: dummy_component.F90
 
 schism_component.F90: dummy_component.F90
 	@echo "Creating dummy SCHISM component $@"
-	sed 's/dummy/hamsom/g' $< > $@
+	sed 's/dummy/schism/g' $< > $@
 
 tracer_component.F90: dummy_component.F90
 	@echo "Creating dummy TRACER component $@"
@@ -267,6 +264,7 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/hamsom_component.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/cmaq_component.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/tracer_component.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/schism_component.mod
 
 subdirs: $(SUBDIRS)
 
