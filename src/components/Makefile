@@ -28,7 +28,7 @@ TARGETS=libmossco_aggregation
 TARGETS+=libmossco_simplewave libmossco_info libmossco_filtration
 
 ifeq ($(MOSSCO_CMAQ),true)
-  TARGETS += libmossco_cmaq 
+  TARGETS += libmossco_cmaq
 endif
 ifeq ($(MOSSCO_NETCDF),true)
   TARGETS += libmossco_netcdf libmossco_clm #libmossco_river
@@ -55,6 +55,9 @@ endif
 ifeq ($(MOSSCO_HAMSOM),true)
   TARGETS += libmossco_hamsom
 endif
+ifeq ($(MOSSCO_SCHISM),true)
+  TARGETS += libmossco_schism
+endif
 
 .PHONY: $(TARGETS) $(SUBDIRS) subdirs utilities
 
@@ -74,6 +77,9 @@ libmossco_benthos: libmossco_benthos_driver libmossco_util \
 libmossco_hamsom: libmossco_hamsom_driver libmossco_hamsom_component
 libmossco_hamsom_driver:  prefix $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a(hamsom_driver.o)
 libmossco_hamsom_component: libmossco_hamsom_driver $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a(hamsom_component.o)
+
+libmossco_schism:  libmossco_schism_component
+libmossco_schism_component: $(MOSSCO_LIBRARY_PATH)/libmossco_schism.a(schism_component.o)
 
 libmossco_cmaq: libmossco_cmaq_driver libmossco_cmaq_component
 libmossco_cmaq_driver:  prefix $(MOSSCO_LIBRARY_PATH)/libmossco_cmaq.a(cmaq_driver.o)
@@ -112,6 +118,9 @@ erosed_component: prefix libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.
 
 libmossco_benthos_driver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_benthos
+
+$(MOSSCO_LIBRARY_PATH)/libmossco_schism.a(schism_driver.o):
+		$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_hamsom
 
 $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a(hamsom_driver.o):
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_hamsom
@@ -205,6 +214,10 @@ cmaq_component.o: cmaq_component.F90
 
 hamsom_component.F90: dummy_component.F90
 	@echo "Creating dummy HAMSOM component $@"
+	sed 's/dummy/hamsom/g' $< > $@
+
+schism_component.F90: dummy_component.F90
+	@echo "Creating dummy SCHISM component $@"
 	sed 's/dummy/hamsom/g' $< > $@
 
 tracer_component.F90: dummy_component.F90

@@ -219,7 +219,7 @@ ifneq ($(FABM_PREFIX),)
 endif
 export MOSSCO_FABM
 
-include schism.mk
+include $(MOSSCO_DIR/src/schism.mk)
 
 ifeq ($(MOSSCO_FABM),true)
 #!> @todo remove FABMHOST here and move it to makefiles where FABM is remade
