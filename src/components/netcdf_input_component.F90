@@ -1238,7 +1238,7 @@ module netcdf_input_component
       endif ! type of climatology
       endif ! reading from climatology
 
-      call ESMF_AttributeGet(gridComp, 'scale_factor', isPresent=isPresent, rc=localrc)
+      call ESMF_AttributeGet(gridComp, 'scale_factor',  isPresent=isPresent, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (isPresent) then
@@ -1252,6 +1252,9 @@ module netcdf_input_component
         call MOSSCO_FieldMultiply(field, scale_factor, owner=name, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
+      
+      call ESMF_AttributeGet(gridComp, 'add_offset',  isPresent=isPresent, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (isPresent) then
         call ESMF_AttributeGet(gridComp, 'add_offset', value=add_offset, rc=localrc)
