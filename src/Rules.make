@@ -1,6 +1,7 @@
-# This Makefile snippet is part of MOSSCO; definition of MOSSCO-wide make rules
+# This Makefile snippet is part of MOSSCO; definition of MOSSCO-wide
+# make rules
 #
-# Copyright (C) 2013, 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
+# Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 # Author Carsten Lemmen
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -20,6 +21,18 @@ ifndef MOSSCO_PREFIX
 #    Of course, this command already requires gmake, so a better solution is required here
 ifeq ($(shell make --version | grep -c GNU),0)
   $(error GNU make is required)
+endif
+
+export MOSSCO_GIT=false
+ifneq ($(wildcard $(shell which git)),)
+MOSSCO_GIT=true
+export MOSSCO_GIT_VERSION=$(shell git --version |cut -f3 -d" ")
+export MOSSCO_GIT_VERSION_MAJOR=$(shell git --version |cut -f3 -d" "|cut -f1 -d.)
+ifeq ($(MOSSCO_GIT_VERSION_MAJOR),1)
+  $(warning Consider upgrading git to version 2)
+endif
+else
+  $(warning Consider installing git)
 endif
 
 # System-dependent flags
@@ -60,9 +73,20 @@ else
     ifeq ($(ESMF_COMM),openmpi)
       ESMF_FC:=$(shell $(ESMF_F90COMPILER) --showme:command 2> /dev/null)
       ifeq ($(ESMF_FC),)
+	ifeq ($(ESMF_F90COMPILER),mpifort)
+          ESMF_FC:=$(shell mpif90 --showme:command 2> /dev/null)
+        endif
+      endif
+      ifeq ($(ESMF_FC),)
         $(error $(ESMF_F90COMPILER) is *not* based on $(ESMF_COMM)!)
       endif
       ESMF_CC:=$(shell $(ESMF_CXXCOMPILER) --showme:command 2> /dev/null)
+    endif
+    ifeq ($(ESMF_COMM),intelmpi)
+      ESMF_FC:=$(shell $(ESMF_F90COMPILER) -show 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
+      ifeq ($(ESMF_FC),)
+        $(error $(ESMF_F90COMPILER) is *not* based on $(ESMF_COMM)!)
+      endif
     endif
     ifeq ($(ESMF_COMM),mpich2)
       ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
@@ -195,6 +219,8 @@ ifneq ($(FABM_PREFIX),)
 endif
 export MOSSCO_FABM
 
+include $(MOSSCO_DIR/src/schism.mk)
+
 ifeq ($(MOSSCO_FABM),true)
 #!> @todo remove FABMHOST here and move it to makefiles where FABM is remade
 ifdef FABMHOST
@@ -272,11 +298,15 @@ ifdef GETMDIR
       ifeq ($(ESMF_COMM),openmpi)
         export MPI=OPENMPI
       else
+      ifeq ($(ESMF_COMM),intelmpi)
+        export MPI=INTELMPI
+      else
         ifeq ($(ESMF_COMM),mpi)
           export MPI=MPICH
         else
           export MPI=MPICH2
         endif
+      endif
       endif
     else
       export GETM_PARALLEL=false
@@ -600,11 +630,14 @@ ifeq ($(FORTRAN_COMPILER),GFORTRAN)
 F90FLAGS += -O3 -J$(MOSSCO_MODULE_PATH)
 #F90FLAGS += -ffast-math -march=native -fstack-arrays -fno-protect-parens
 # -flto crashes on darwin
-EXTRA_CPP=
+EXTRA_CPP =
+#EXTRA_CPP += -ffpe-trap=invalid,zero,overflow
+#EXTRA_CPP += -ffpe-trap=invalid
 else
 ifeq ($(FORTRAN_COMPILER),IFORT)
 F90FLAGS += -module $(MOSSCO_MODULE_PATH)
 EXTRA_CPP=-DNO_ISO_FORTRAN_ENV
+#EXTRA_CPP += -fpe0
 else
 ifeq ($(FORTRAN_COMPILER),PGFORTRAN)
 F90FLAGS += -module $(MOSSCO_MODULE_PATH)
@@ -642,7 +675,7 @@ export LIBRARY_PATHS
 
 export LIBS := $(ESMF_F90ESMFLINKLIBS)
 
-CPPFLAGS = $(DEFINES)
+CPPFLAGS = $(MOSSCO_CPPFLAGS) $(DEFINES)
 ifeq ($(FORTRAN_COMPILER),XLF)
 CPPFLAGS += -WF,-DESMF_VERSION_MAJOR=$(ESMF_VERSION_MAJOR) -WF,-DESMF_VERSION_MINOR=$(ESMF_VERSION_MINOR)
 else
@@ -672,17 +705,13 @@ endif # End of MAKELEVEL 1 preamble
 
 
 # Make targets
-.PHONY: default all clean doc info prefix libfabm_external libgotm_external libgetm_external libjson_external
+.PHONY: default all doc info prefix libfabm_external libgotm_external libgetm_external libjson_external
 .PHONY: distclean distupdate
 
 # Following GNU standards, "all" should be the default target in every Makefile.
 # Therefore we need to define it as a dependency for the first target in this file,
 # which is included in the beginning of each Makefile.
 default: all
-
-clean:
-	@rm -f *.o *.mod *.swp
-	@rm -f PET?.*
 
 # changed behaviour: distclean should clean all mossco code regardless of where you call it from
 distclean:
@@ -727,6 +756,9 @@ endif
 ifeq ($(MOSSCO_SQLITE),true)
 	@env | grep ^SQLITE | sort
 endif
+ifeq ($(MOSSCO_SCHISM),true)
+	@env | grep ^SCHISM | sort
+endif
 	@env | grep ^MOSSCO_ | sort
 
 
@@ -747,17 +779,6 @@ ifeq ($(MOSSCO_FABM),true)
 ifdef FABM_BINARY_DIR
 	@echo Recreating the FABM library in $(FABM_PREFIX)
 	$(MAKE) -sC $(FABM_BINARY_DIR) install
-endif
-endif
-
-fabm_clean:
-ifeq ($(MOSSCO_FABM),true)
-	@echo Cleaning the FABM library in $(FABM_PREFIX)
-ifndef MOSSCO_FABM_BINARY_DIR
-	$(RM) -rf $(FABM_BINARY_DIR)
-endif
-ifndef MOSSCO_FABM_PREFIX
-	$(RM) -rf $(FABM_PREFIX)
 endif
 endif
 
@@ -811,21 +832,10 @@ ifeq ($(MOSSCO_GOTM),true)
 ifdef GOTM_BINARY_DIR
 	@echo Recreating the GOTM library in $(GOTM_PREFIX)
 	$(MAKE) -sC $(GOTM_BINARY_DIR) install
-	cp $(GOTM_BINARY_DIR)/*.mod $(GOTM_PREFIX)/include/
-	( for lib in gotm airsea meanflow observations input ; do \
-       $(AR) rcs $(GOTM_PREFIX)/lib/lib$$lib.a $(GOTM_BINARY_DIR)/CMakeFiles/$$lib.dir/$$lib/*.o ; \
-     done )
-endif
-endif
-
-gotm_clean:
-ifeq ($(MOSSCO_GOTM),true)
-	@echo Cleaning the GOTM library in $(GOTM_PREFIX)
-ifndef MOSSCO_GOTM_BINARY_DIR
-	$(RM) -rf $(GOTM_BINARY_DIR)
-endif
-ifndef MOSSCO_GOTM_PREFIX
-	$(RM) -rf $(GOTM_PREFIX)
+#	cp $(GOTM_BINARY_DIR)/*.mod $(GOTM_PREFIX)/include/
+#	( for lib in gotm airsea meanflow observations input ; do \
+#       $(AR) rcs $(GOTM_PREFIX)/lib/lib$$lib.a $(GOTM_BINARY_DIR)/CMakeFiles/$$lib.dir/$$lib/*.o ; \
+#     done )
 endif
 endif
 
@@ -849,8 +859,8 @@ install:
 
 .PHONY: mossco_clean
 
-mossco_clean: distclean gotm_clean fabm_clean
-	$(MAKE) -C $(MOSSCO_DIR)/external getm_distclean
+mossco_clean: distclean
+	$(MAKE) -C $(MOSSCO_DIR)/external external_clean
 #ifdef MOSSCO_TRACERDIR
 #	$(MAKE) -C $(MOSSCO_TRACERDIR) distclean
 #endif
@@ -873,6 +883,7 @@ mossco_clean: distclean gotm_clean fabm_clean
 	$(ESMF_F90LINKER) $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) \
 	$(ESMF_F90LINKRPATHS) -o $@ $*.o $(ESMF_F90ESMFLINKLIBS)
 .F90:
+	@echo "SUFFIX Compiling $<"
 	$(ESMF_F90COMPILER) -c $(ESMF_F90COMPILEOPTS) $(ESMF_F90COMPILEPATHS) \
 	$(ESMF_F90COMPILEFREECPP) $(ESMF_F90COMPILECPPFLAGS) $< $(ESMF_F90LINKER) $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) \
 	$(ESMF_F90LINKRPATHS) -o $@ $*.o $(ESMF_F90ESMFLINKLIBS)

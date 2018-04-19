@@ -41,15 +41,15 @@ min(1) = -5.0
 max(1) = 20.0
 min(2) = 40.0
 max(2) = 60.0
-  
+
 dx = (max(1)-min(1))/(counts(1)-1)
 dy = (max(2)-min(2))/(counts(2)-1)
 
-    
+
 srcGrid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), maxIndex=counts, rc=rc, &
     indexflag=ESMF_INDEX_GLOBAL, regDecomp=(/1,1/), name="source grid")
 if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    
+
 call ESMF_GridAddCoord(srcGrid, rc=rc)
 if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
@@ -73,11 +73,11 @@ enddo
 #ifdef UGRID
 call ESMF_LogWrite('Create Mesh from UGRID', ESMF_LOGMSG_INFO, rc=rc)
 call ESMF_LogFlush(rc=rc)
-mesh = ESMF_MeshCreate(meshname='sediment_surface_mesh',filename='ugrid_sediment.nc',filetypeflag=ESMF_FILEFORMAT_UGRID,rc=rc)
+mesh = ESMF_MeshCreate(filename='ugrid_sediment.nc',filetypeflag=ESMF_FILEFORMAT_UGRID,rc=rc)
 #else
 call ESMF_LogWrite('Create Mesh from SCRIP', ESMF_LOGMSG_INFO, rc=rc)
 call ESMF_LogFlush(rc=rc)
-mesh = ESMF_MeshCreate(meshname='sediment_surface_mesh',filename='scrip_sediment.nc', &
+mesh = ESMF_MeshCreate(filename='scrip_sediment.nc', &
        convertToDual=.false.,filetypeflag=ESMF_FILEFORMAT_SCRIP,rc=rc)
 !           NOTE HERE   ^ SETTING TO FALSE, BECAUSE DEFAULT IS TRUE
 
@@ -112,10 +112,10 @@ call ESMF_FieldPrint(dstField)
 
 ! Mesh Create from file doesn't set center coordinates right now, so can't do dual,
 ! thus can't do bilinear on MESHLOC_ELEMENT when using MeshCreate
-! As a work around use MeshCreate from SCRIP file with convertToDual flag set. 
-! For historical reasons, this does things 
-! differently and thus doesn't require the center coordinates to be set in the Mesh. 
-! 
+! As a work around use MeshCreate from SCRIP file with convertToDual flag set.
+! For historical reasons, this does things
+! differently and thus doesn't require the center coordinates to be set in the Mesh.
+!
 ! The work around is this:
 ! 1. Create a Dual Mesh (dualMesh) from the SCRIP file
 ! 2. Create a tmp Field (dualDstField) on the NODEs of the Dual Mesh (which correspond to the ELEMENTs of the non-dual Mesh)
@@ -126,7 +126,7 @@ call ESMF_FieldPrint(dstField)
 ! 7. Clean up all the stuff from the workaround
 
 ! Create temporary dual mesh
-dualMesh = ESMF_MeshCreate(meshname='sediment_surface_mesh',filename='scrip_sediment.nc', &
+dualMesh = ESMF_MeshCreate(filename='scrip_sediment.nc', &
        convertToDual=.true.,filetypeflag=ESMF_FILEFORMAT_SCRIP,rc=rc)
 
 ! Build a field on it
@@ -181,4 +181,3 @@ call ESMF_LogFlush(rc=rc)
 call ESMF_Finalize()
 
 end program
-

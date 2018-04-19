@@ -1,6 +1,5 @@
 module Bio_critical_shear_stress
-
-!Effect of biota on the critical bed shear stress is defined here as functions
+!Effects of biota on the critical bed shear stress are defined here.
 !For each species a function is defined within this module.
 
 use BioTypes
@@ -8,106 +7,136 @@ use macrofauna_class
 implicit none
 
 interface Crit_shear_bioeffect
-! here new procedures for different species should be defined.
-! it shoudl be noted that for generic functions the arguments of functions
-! determine, which one should be used. It sould be avoided to deifne a generic function
-! with the same arguments as an already avaialble function listed here.
-! If it is inevitable then the function is not allowed to be defined within this interface,
-! but as a seprate function within this module.
-
-module procedure mircophyto_crit_shear_func
-module procedure Mbalthica_crit_shear_func
+! Here, new procedures for different species should be defined.
+! It should be noted, that for generic functions, the arguments of functions
+! determine the specific procedure to be used. It sould be avoided to define
+! generic functions with the same arguments as already available functions
+! listed here. If it is inevitable, then the function is not allowed to be
+! defined within this interface, but as a separate function within this module.
+  module procedure mircophyto_crit_shear_func
+  module procedure Mbalthica_crit_shear_func
 end interface
-contains
+
+!------------------------------------------------------------
+  contains
+!------------------------------------------------------------
 
 function mircophyto_crit_shear_func ( Chl, inum, jnum) result (fcr_microphyto)
-! The function to determine the effect of microphytobenthos on the critical bed shear stress.
-! By production of biofilm, this value can increae an order of magnitude.
+! Function to determine the effect of microphytobenthos on the critical bed shear stress.
+! By production of biofilm, this value can increase an order of magnitude.
 
-implicit none
-integer                            :: inum, jnum
-real (fp), dimension (inum, jnum)  :: fcr_microphyto
-type (statevariable)               :: Chl
-integer                            :: i,j
-!units    ! Unit of Bioamount (mgg: microgram/ g dry sediment weight)
-          ! or     (mgm-2 :: microgram/ m**2 area)
+  implicit none
+  integer                            :: inum, jnum
+  real (fp), dimension (inum, jnum)  :: fcr_microphyto
+  type (statevariable)               :: Chl
+  integer                            :: i,j
+  real(fp)                           :: a
 
+  ! local parameters Knaapen et al. 2003
+  real(fp), parameter :: b1     = 0.08
 
- do j = 1, jnum
-  do i = 1, inum
+  !units    ! Unit of Bioamount (mgg: microgram/ g dry sediment weight)
+            !        or       (mgm-2: microgram/ m**2 area)
 
-     if (trim(Chl%units) == 'mgg**-1' ) then
+  fcr_microphyto = 1.0
 
-       fcr_microphyto (i,j) = 1. + 0.08 * Chl%amount(i,j) ! Knaapen et al (2003)
+  select case (trim(Chl%units))
 
-     else
+    case ( 'mgg**-1' ) ! according to Knaapen et al (2003)
 
-       fcr_microphyto= 1.0
+      do j = 1, jnum
+        do i = 1, inum
+          a = Chl%amount(i,j)
+          fcr_microphyto(i,j) = 1. + b1*a  ! Knaapen et al (2003)
+        end do
+      end do
 
-      write (*,*) ' Warning: Missing unit: the microphytobenthos effect on critical shear stress can be only'// &
-                  ' calculated base on Chlorophyll a content in UNIT microgram /g dry Sediment (mgg**-1),'// &
-                  ' therefore, the effect was not calculated.'
-      exit
-     end if
-  end do
-end do
-return
+    case default
+
+      !do nothing except applying default value
+
+      !write (*,*) ' WARNING: Missing unit: the microphytobenthos effect on critical shear stress can be only'// &
+      !            ' calculated base on Chlorophyll a content in UNIT microgram /g dry Sediment (mgg**-1),'// &
+      !            ' therefore, the effect was not calculated.'
+
+  end select
+
+  return
 
 end function mircophyto_crit_shear_func
 
-!************************************************************
+!------------------------------------------------------------
+
 function Mbalthica_crit_shear_func (Mbalthica, inum, jnum) result (fcr_macrofauna)
-! Effect of Macoma balthica intensity on the critical bed seahr stress.
-implicit none
+! Effect of Macoma balthica intensity on the critical bed shear stress.
 
-type (Mc_statevariable)          :: Mbalthica
-integer                          :: inum, jnum
-real(fp), dimension (inum, jnum) :: fcr_macrofauna
-integer                          :: i,j
-!Units    ! Unit of Bioamount (mgg: microgram/ g dry sediment weight)
-          ! or     (mgm-2 :: microgram/ m**2 area)
+  implicit none
 
-!IT IS TO BE CHANGED
- do j = 1, jnum
-  do i = 1, inum
+  type (Mc_statevariable)          :: Mbalthica
+  integer                          :: inum, jnum
+  real(fp), dimension (inum, jnum) :: fcr_macrofauna
+  integer                          :: i,j
+  real(fp)                         :: a
 
-    if (trim(Mbalthica%units) == 'm**-2' )  then       ! according to Borsje et al. (2008)
-         if (Mbalthica%intensity(i,j) <= 1.0_fp ) then
+  ! local parameters Knaapen et al. 2003
+  real(fp), parameter :: b1     = 0.0016
+  real(fp), parameter :: b2     = 0.085
 
-           fcr_macrofauna (i,j)= 1.0
-        
-           cycle
-        else
+  ! local parameters Borsje et al. 2008
+  real(fp), parameter :: c1     = -0.15
+  real(fp), parameter :: c2     = 0.978
 
-           fcr_macrofauna (i,j)= 0.0016 * log (Mbalthica%intensity(i,j) * Mbalthica%intensity(i,j)) &
-                              & -0.085  * log (Mbalthica%intensity(i,j)) +1.0    ! Knaapen et al (2003)
-        endif
+  !Units    ! Unit of Bioamount (mgg: microgram/ g dry sediment weight)
+            ! or              (mgm-2: microgram/ m**2 area)
 
-    elseif (trim(Mbalthica%units) == 'gCm**-2' ) then
-         
-         if (Mbalthica%amount(i,j) <= 1.0_fp ) then
+  ! initialize with default value
+  fcr_macrofauna = 1.0
 
-            fcr_macrofauna (i,j) = 1.0
-          cycle
-         else                                      ! Borsje et al (2008), digitalized graphics
+  select case (trim(Mbalthica%units))
+    case ( 'm**-2' ) ! according to Knaapen et al (2003)
 
-            fcr_macrofauna (i,j) = -0.15 * log (Mbalthica%amount(i,j)) + 0.978
-         
-         endif
+      do j = 1, jnum
+        do i = 1, inum
 
-    else if (trim(Mbalthica%units) == '' ) then
+          a = Mbalthica%intensity(i,j)
+          if ( a <= 1.0_fp ) then
+            cycle
+          else
+            fcr_macrofauna(i,j) = b1 *log(a*a) - b2 *log(a) +1.0    ! Knaapen et al (2003)
+          endif
 
-            fcr_macrofauna = 1.0
+        end do
+      end do
 
-      write (*,*) ' WARNING!! Missing unit. The Macoma balthica effect on critical bed shear stress can at the'// &
-                  ' moment be calculated base on intensity (refer to Knaapen et al. (2003)),'// &
-                  ' ,therefore, without unit this effect is ignored.'
-      exit
-    end if
-  end do
-end do
-return
+    case ( 'gCm**-2' ) ! according to Borsje et al. (2008)
+
+      do j = 1, jnum
+        do i = 1, inum
+
+          a = Mbalthica%amount(i,j)
+          if ( a <= 1.0_fp ) then
+            cycle
+          else
+            fcr_macrofauna(i,j) = c1 *log(a) +c2  ! Borsje et al (2008), digitalized graphics
+          endif
+
+        end do
+      end do
+
+    case default
+
+      !do nothing except applying default value
+
+      !write (*,*) ' WARNING!! Missing unit. The Macoma balthica effect on critical bed shear stress can at the'// &
+      !            ' moment be calculated base on intensity (refer to Knaapen et al. (2003)),'// &
+      !            ' ,therefore, without unit this effect is ignored.'
+
+  end select
+
+  return
+
 end function Mbalthica_crit_shear_func
 
+!------------------------------------------------------------
 
 end module Bio_critical_shear_stress

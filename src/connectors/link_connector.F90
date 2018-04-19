@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF link coupling
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, <carsten.lemmen@hzg.de>
 
 !
@@ -120,6 +120,13 @@ module link_connector
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "InitializeP1"
+!> The Initialize routine in the link connector acts significantly different
+!> from the Run routine.  Here, four steps are performed that modify fields
+!> in the exportState:
+!> 1) Fields that are marked with the attribute ::needed are linked from importState
+!> 2) Fields that are marked as foreignGrid  are linked from importState
+!> 3) empty Fields are linked from importState
+!> 4) default Value attributes are used to initialize a field
   subroutine InitializeP1(cplComp, importState, exportState, parentClock, rc)
 
     type(ESMF_CplComp)   :: cplComp
@@ -172,6 +179,9 @@ module link_connector
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Run"
+!> The Run routine in the link connector acts significantly different
+!> from the Initialize routine. In the Run() phase, all complete fields are
+!> linked from importState to exportState
 subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
     type(ESMF_CplComp)   :: cplComp
@@ -773,7 +783,10 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-          write(message,'(A)') trim(name)//' replaced empty field with field '
+          write(message,'(A)') trim(name)//' replaced incomplete '
+          call MOSSCO_FieldString(exportField, message)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          write(message,'(A)') trim(name)//'     with '
           call MOSSCO_FieldString(importField, message)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 

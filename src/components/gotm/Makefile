@@ -1,7 +1,7 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hzg.de
 # @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
 # @author Knut Klingbeil, Institut für Ostseeforschung Warnemünde
 #
@@ -44,20 +44,8 @@ libmossco_fabmgotm: prefix libmossco_fabmgotm_driver \
 libmossco_gotmfabm: prefix libmossco_fabmpelagic libmossco_gotm libmossco_fabmgotm \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a(gotmfabm_component.o)
 
-gotm_component.o: gotm_component.F90
-	@echo "Compiling $<"
-	$(F90) $(GOTM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
-
-gotm_transport_component.o: gotm_transport_component.F90
-	@echo "Compiling $<"
-	$(F90) $(GOTM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
-
-fabm_gotm_component.o: fabm_gotm_component.F90
-	@echo "Compiling $<"
-	$(F90) $(GOTM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
-
-gotmfabm_component.o: gotmfabm_component.F90
-	@echo "Compiling $<"
+%.o: %.F90
+	@echo "Compiling components/gotm/$<"
 	$(F90) $(GOTM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
 libmossco_fabmpelagic:
@@ -66,12 +54,12 @@ libmossco_fabmpelagic:
 libmossco_fabmgotm_driver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_fabmgotm
 
-libmossco_util: prefix $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
-
-$(MOSSCO_MODULE_PATH)/mossco_variable_types.mod:
+libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities libmossco_util
 
 clean: extraclean
+	$(RM) *.o
+
 extraclean:
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_gotm.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_fabmgotm.a

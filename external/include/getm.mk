@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2017 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2017, 2018 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 # @author Knut Klingbeil, Institut für Ostseeforschung Warnemünde
 #
@@ -10,48 +10,28 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
 
-# This is a Makefile stub included by ../Makefile.  Do append (+=) or conditionally
-# define (?=) variables, but do not overwrite.
-# This Makefile uses the following variables
-# - $(MAKE) [read]
-# - $(external_GETMDIR) [read]
-# - $(GIT) [read]
-# - $(GETM_CLONE_TARGETS) [append]
-# - $(GETM_UPDATE_TARGETS) [append]
-# - $(DISTCLEAN_TARGETS) [append]
-# - $(VERSION_TARGETS) [append]
+.PHONY: getm getm_distclean getm_version
 
-.PHONY: getm_clone getm_update getm_distclean
-
-GIT_TARGETS += getm
-DISTCLEAN_TARGETS += getm_distclean
-VERSION_TARGETS += getm_version
-
-getm: getm_clone
-
-getm_clone:
-ifeq ($(wildcard $(external_GETMDIR)/src/Makefile),)
-	$(GIT) clone http://git.code.sf.net/p/getm/code $(external_GETMDIR)
-	( cd $(external_GETMDIR) ; $(GIT) checkout -b iow origin/iow )
+getm:
+ifeq ($(wildcard $(external_GETMDIR)/src/getm/main.F90),)
+	@$(GIT) clone -b iow --depth 1 https://git.code.sf.net/p/getm/code $(external_GETMDIR)
 else
-	$(MAKE) getm_update
-endif
-
-getm_update:
-ifneq ($(wildcard $(external_GETMDIR)/src/Makefile),)
-	( cd $(external_GETMDIR) ; $(GIT) pull origin iow)
+#	@$(GIT) -C $(external_GETMDIR) pull --ff-only
+#for old git
+	@( cd $(external_GETMDIR) && $(GIT) pull --ff-only )
 endif
 
 getm_distclean:
-ifneq ($(wildcard $(external_GETMDIR)/src/Makefile),)
-	( unset FABM ; $(MAKE) -C $(external_GETMDIR) distclean )
+ifneq ($(wildcard $(external_GETMDIR)/src/getm/main.F90),)
+	@( unset FABM ; $(MAKE) -C $(external_GETMDIR) distclean )
 endif
 
 getm_version:
-ifneq ($(wildcard $(external_GETMDIR)/src/Makefile),)
+ifneq ($(wildcard $(external_GETMDIR)/src/getm/main.F90),)
   # git describe --long --tags --dirty --always
-	GETM_VERSION=$(shell cat /Users/lemmen/devel/MOSSCO/code/external/getm/code/VERSION)
-	GETM_GIT_SHA=$(shell cd $(external_GETMDIR) ; $(GIT) log -n 1 |head -1 | cut -d" " -f2)
+#	GETM_VERSION=$(shell $(GIT) -C $(external_GETMDIR) log -1 --format="'%h (%ci)'")
+#for old git
+	GETM_VERSION=$(shell cd $(external_GETMDIR) && $(GIT) log -1 --format="'%h (%ci)'")
 
 	@#echo "CPPFLAGS+=-DGETM_VERSION="${GETM_VERSION} >> $(MOSSCO_DIR)/src/include/versions.mk
 	@#echo "CPPFLAGS+=-DGETM_GIT_SHA="${GETM_GIT_SHA} >> $(MOSSCO_DIR)/src/include/versions.mk

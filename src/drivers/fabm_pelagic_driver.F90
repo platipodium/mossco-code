@@ -1,10 +1,10 @@
-!> @file fabm0d_driver.F90
+!> @file fabm_pelagic_driver.F90
 !> @brief 3D generic driver for the Framework for Aquatic Biogeochemical Models (FABM)
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2013, 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2013,2014,2015,2016,2017, 2018 Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister <richard.hofmeister@hzg.de>
-
+!> @author Carsten Lemmen <carsten.lemmen@hzg.de
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -24,12 +24,15 @@
 
 #define RANGE3D 1:pf%inum,1:pf%jnum,1:pf%knum
 #define RANGE2D 1:pf%inum,1:pf%jnum
+
   use solver_library
   use mossco_strings
   use fabm
+  use fabm_version
   use fabm_types
   use fabm_expressions
   use fabm_standard_variables
+
   implicit none
   private
 
@@ -38,8 +41,13 @@
 
   type, extends(type_rhs_driver), public :: type_mossco_fabm_pelagic
     type(type_model),pointer           :: model
+    !type(type_model), target           :: model_state
     type(export_state_type),dimension(:),pointer :: export_states => null()
-    real(rk),dimension(:,:,:),pointer  :: temp,salt,par,dens,current_depth
+    real(rk),dimension(:,:,:),pointer  :: temp => null()
+    real(rk),dimension(:,:,:),pointer  :: salt  => null()
+    real(rk),dimension(:,:,:),pointer  :: par  => null()
+    real(rk),dimension(:,:,:),pointer  :: dens  => null()
+    real(rk),dimension(:,:,:),pointer  :: current_depth  => null()
     real(rk),dimension(:,:,:),pointer  :: layer_height=>null()
     real(rk),dimension(:,:),pointer    :: volume_flux=>null()
     real(rk),dimension(:,:,:),pointer  :: volume_change=>null()
@@ -65,8 +73,10 @@
     real(rk), dimension(:,:,:), pointer  :: horizontal_data => null()
     real(rk), dimension(:,:,:,:), pointer:: time_integrated_bulk_variables => null()
     real(rk), dimension(:,:,:), pointer  :: time_integrated_horizontal_variables => null()
-    integer, dimension(:), pointer       :: int_idx_from_diag_idx
-    integer, dimension(:), pointer       :: int_idx_from_hor_diag_idx
+    integer, dimension(:), pointer       :: int_idx_from_diag_idx  => null()
+    integer, dimension(:), pointer       :: int_idx_from_hor_diag_idx  => null()
+    character(len=255), allocatable      :: fabm_modules(:)
+    character(len=255)                   :: fabm_git_sha='', fabm_git_branch=''
     contains
     procedure :: get_rhs
     procedure :: get_dependencies
@@ -97,29 +107,57 @@
     logical            :: particulate=.false.
     real(rk),dimension(:,:,:),pointer   :: conc => null()
     real(rk),dimension(:,:,:),pointer   :: ws => null()
+    type(type_version), pointer :: fabm_version
   end type
 
   contains
 
   !> creates instance of pelagic fabm class
-  function mossco_create_fabm_pelagic(fabm_nml) result(pf)
+  function mossco_create_fabm_pelagic(fabm_nml, rc) result(pf)
+
+    use fabm_config
 
     character(len=*), optional, intent(in)  :: fabm_nml
+    integer, optional, intent(out) :: rc
     type(type_mossco_fabm_pelagic), allocatable :: pf
 
-    integer  :: n
+    integer  :: n, i
     integer  :: namlst_unit=123
     real(rk) :: dt
+    logical  :: fileIsPresent
+    type(type_version), pointer :: version => null()
 
     allocate(pf)
     pf%fabm_ready=.false.
     pf%conc => null()
     pf%par => null()
-    ! Build FABM model tree.
+
+    ! Build FABM model tree, based on extension try nml first then yaml,
+    ! yaml is still experimental. Later make yaml the default
+
     if (present(fabm_nml)) then
-      pf%model => fabm_create_model_from_file(namlst_unit,trim(fabm_nml))
+      if (index(fabm_nml,'.nml') > 2) then
+        pf%model => fabm_create_model_from_file(namlst_unit,trim(fabm_nml))
+      else
+        allocate(pf%model)
+        call fabm_create_model_from_yaml_file(pf%model,path=trim(fabm_nml))
+        !pf%model => pf%model_state
+      endif
     else
-      pf%model => fabm_create_model_from_file(namlst_unit,'fabm.nml')
+      inquire(file='fabm.nml',exist=fileIsPresent)
+      if (fileIsPresent) then
+        pf%model => fabm_create_model_from_file(namlst_unit,'fabm.nml')
+      else
+        inquire(file='fabm.yaml',exist=fileIsPresent)
+        if (fileIsPresent) then
+          allocate(pf%model)
+          call fabm_create_model_from_yaml_file(pf%model,path='fabm.yaml')
+          !pf%model => pf%model_state
+        else
+          if (present(rc)) rc=1
+          return
+        endif
+      endif
     endif
 
     pf%nvar = size(pf%model%state_variables)
@@ -143,6 +181,24 @@
         pf%int_idx_from_hor_diag_idx(n) = pf%ndiag_hz_int
       end if
     end do
+
+    pf%fabm_git_sha = trim(git_commit_id)
+    pf%fabm_git_branch = trim(git_branch_name)
+    version => first_module_version
+    i = 0
+    do while (associated(version))
+      i = i + 1
+      version => version%next
+    enddo
+    if (.not.allocated(pf%fabm_modules)) allocate(pf%fabm_modules(i))
+
+    version => first_module_version
+    i = 0
+    do while (associated(version))
+      i = i+1
+      pf%fabm_modules(i) = trim(version%module_name)//' version '//trim(version%version_string)
+      version => version%next
+    enddo
 
     ! initialise the export states and dependencies
     call pf%get_all_export_states()
@@ -297,13 +353,14 @@
 
     class(type_mossco_fabm_pelagic) :: pf
 
-    integer  :: i,j,k
+    integer  :: i,j,k,k0
 
+    k0 = lbound(pf%zi,3)
     do i=1,pf%inum
       do j=1,pf%jnum
         do k=1,pf%knum
           if (.not.pf%mask(i,j,k)) &
-            pf%layer_height(i,j,k) = pf%zi(i,j,k) - pf%zi(i,j,k-1)
+            pf%layer_height(i,j,k) = pf%zi(i,j,k0+k) - pf%zi(i,j,k0+k-1)
         end do
       end do
     end do
@@ -536,6 +593,7 @@
 
     export_state%fabm_id=fabm_id
     export_state%conc => null()
+    export_state%fabm_version => null()
   !  !! memory handling should be shifted to component, which has total grid layout
   !  export_state%conc => pf%conc(:,:,:,export_state%fabm_id)
   !  allocate(export_state%ws(pf%inum,pf%jnum,pf%knum))
@@ -572,7 +630,8 @@
   class(type_mossco_fabm_pelagic) :: pf
     integer  :: n,fabm_id
 
-    allocate(pf%export_states(pf%nvar))
+    if (pf%nvar > 0) allocate(pf%export_states(pf%nvar))
+
     do fabm_id=1,pf%nvar
       pf%export_states(fabm_id) = pf%get_export_state_by_id(fabm_id)
     end do
@@ -607,8 +666,10 @@
       end do
     end if
     lbnd = lbound(pf%conc)
-    do n=1,size(pf%export_states)
-      export_state => pf%export_states(n)
+
+    if (associated(pf%export_states)) then
+      do n=1,size(pf%export_states)
+        export_state => pf%export_states(n)
 #if 0
       export_state%conc(lbnd(1):,lbnd(2):,lbnd(3):) => pf%conc(:,:,:,export_state%fabm_id)
 #else
@@ -618,7 +679,8 @@
       if (update_sinking_eff) then
         export_state%ws(RANGE3D) = wstmp(:,:,:,export_state%fabm_id)
       end if
-    end do
+      end do
+    endif
     !> @todo add benthic state variables
   end subroutine update_export_states
 
@@ -705,32 +767,44 @@
 
      class(type_mossco_fabm_pelagic)     :: pf
      integer  :: i,j,k
-     real(rk) :: bioext(1:pf%inum,1:pf%jnum,1:pf%knum),localext
+     real(rk) :: bioext(1:pf%knum)
+     real(rk) :: localpar,localext
 
-     bioext = 0.0_rk
 
      do i=1,pf%inum
        do j=1,pf%jnum
-         do k=pf%knum,2,-1
-           if (.not.pf%mask(i,j,k)) then
-             call fabm_get_light_extinction(pf%model,i,j,k,localext)
+         localpar = pf%I_0(i,j) * (1.0d0-pf%albedo(i,j))
+         bioext = 0.0_rk
+         if (pf%mask(i,j,1)) then
+           pf%par(i,j,:) = localpar
+         else
+           do k=pf%knum,2,-1
+             if (.not.pf%mask(i,j,k)) then
+               call fabm_get_light_extinction(pf%model,i,j,k,localext)
 
-             ! Add the extinction of the first half of the grid box.
-             bioext(i,j,k) = bioext(i,j,k) + &
-               (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,k)
+               ! Add the extinction of the first half of the grid box.
+               bioext(k) = bioext(k) + (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,k)
 
-             ! Add the extinction of the second half of the grid box.
-             bioext(i,j,k-1) = bioext(i,j,k) + &
-               (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,k)
-           end if
-         end do
-         ! Add the extinction of the upper half of the last layer
-         if (.not.pf%mask(i,j,1)) then
+               ! Add the extinction of the second half of the grid box.
+               bioext(k-1) = bioext(k) + (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,k)
+             end if
+           end do
+           ! Add the extinction of the upper half of the last layer
            call fabm_get_light_extinction(pf%model,i,j,1,localext)
-           bioext(i,j,1) = bioext(i,j,1) + &
-             (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,1)
-         end if
-         pf%par(i,j,:) = pf%I_0(i,j) * (1.0d0-pf%albedo(i,j)) * exp(-bioext(i,j,:))
+           bioext(1) = bioext(1) + (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,1)
+           pf%par(i,j,:) = localpar * exp(-bioext(:))
+if ( any(bioext(:) /= bioext(:)) ) write(0,*) 'ERROR: fabm_pelagic_driver#800 bioext = ',i,j,bioext(:)
+         endif
+       end do
+     end do
+
+     do i=1,pf%inum
+       do j=1,pf%jnum
+!         if (.not.pf%mask(i,j,1)) then
+if ( pf%I_0(i,j) /= pf%I_0(i,j) ) write(0,*) 'ERROR: fabm_pelagic_driver#800 pf%I_0 = ',i,j,pf%I_0(i,j)
+if ( pf%albedo(i,j) /= pf%albedo(i,j) ) write(0,*) 'ERROR: fabm_pelagic_driver#809 pf%albedo = ',i,j,pf%albedo(i,j)
+if ( any(pf%par(i,j,:) /= pf%par(i,j,:)) ) write(0,*) 'ERROR: fabm_pelagic_driver#810 pf%par = ',i,j,pf%par(i,j,:)
+!         end if
        end do
      end do
 

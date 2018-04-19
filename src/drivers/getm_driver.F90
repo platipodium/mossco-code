@@ -14,13 +14,14 @@
 
    interface
       subroutine tracer_diffusion(f,hn,AH_method,AH_const,AH_Prt,AH_stirr_const, &
-                                  phymix)
+                                  ffluxu,ffluxv,phymix)
          use domain, only: imin,imax,jmin,jmax,kmax
          IMPLICIT NONE
          REALTYPE,intent(in)           :: hn(I3DFIELD)
          integer,intent(in)            :: AH_method
          REALTYPE,intent(in)           :: AH_const,AH_Prt,AH_stirr_const
          REALTYPE,intent(inout)        :: f(I3DFIELD)
+         REALTYPE,dimension(:,:,:),pointer,intent(inout),optional :: ffluxu,ffluxv
          REALTYPE,dimension(:,:,:),pointer,intent(out),optional :: phymix
       end subroutine tracer_diffusion
    end interface
@@ -102,7 +103,7 @@
 ! !ROUTINE: do_transport_3d() - transport of 3D fields
 !
 ! !INTERFACE:
-   subroutine do_transport_3d(f,ws)
+   subroutine do_transport_3d(f,ws,ffluxu,ffluxv)
 !
 ! !DESCRIPTION:
 !
@@ -122,6 +123,7 @@
 !
 ! !INPUT/OUPUT PARAMETERS:
    REALTYPE,dimension(I3DFIELD),intent(inout) :: f
+   REALTYPE,dimension(:,:,:),pointer,intent(inout),optional :: ffluxu,ffluxv
 !
 ! !REVISION HISTORY:
 !  Original Author(s): Knut Klingbeil
@@ -149,13 +151,16 @@
 !  see comments in do_transport()
    call update_3d_halo(f,f,az,imin,jmin,imax,jmax,kmax,H_TAG)
    call wait_halo(H_TAG)
-   call do_advection_3d(dt,f,uu,vv,ww,hun,hvn,ho,hn,HALFSPLIT,P2_PDM,P2_PDM,_ZERO_,H_TAG)
+   call do_advection_3d(dt,f,uu,vv,ww,hun,hvn,ho,hn,                   &
+                        HALFSPLIT,P2_PDM,P2_PDM,_ZERO_,H_TAG,          &
+                        ffluxu=ffluxu,ffluxv=ffluxv)
 
    if (les_mode.eq.LES_BOTH .or. les_mode.eq.LES_TRACER) then
 
       call update_3d_halo(f,f,az,imin,jmin,imax,jmax,kmax,H_TAG)
       call wait_halo(H_TAG)
-      call tracer_diffusion(f,hn,AH_method,AH_const,AH_Prt,AH_stirr_const)
+      call tracer_diffusion(f,hn,AH_method,AH_const,AH_Prt,AH_stirr_const, &
+                            ffluxu=ffluxu,ffluxv=ffluxv)
    end if
 
    sour = _ZERO_

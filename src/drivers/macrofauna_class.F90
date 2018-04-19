@@ -15,7 +15,7 @@ type , public , abstract   ,extends (BenthosEffect) :: Macrofauna
 
 type (Mc_statevariable)    ,pointer :: StateVar=> null ()
 type (BioturbationEffect)  ,pointer :: Bioturbation=> null ()
-type (BiogenicStrctures)   ,pointer :: Biogenic=> null ()
+type (BiogenicStructures)  ,pointer :: Biogenic=> null ()
 type (DirectBioeffect)     ,pointer :: DirectBioturbation=> null ()
 
 end type Macrofauna

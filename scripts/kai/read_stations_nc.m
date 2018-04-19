@@ -59,7 +59,8 @@ dayears=unique(dayear);
 for i=1:is
   dval = squeeze(data{i,1});
   indd  = find(~isnan(dval) & dayear>=2002 & dayear<=2005 );
-  fprintf('found %d in 2002-2005 for station %s\n',length(indd),statn{i});
+  ind2  = find(~isnan(dval) & dayear>=2010 & dayear<=2015 );
+  fprintf(' station %s: found %d in 2002-2005\t %d in 2010-2015\n',statn{i},length(indd),length(ind2));
 end
 
 % connect station and variable name to data index

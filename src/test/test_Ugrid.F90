@@ -3,14 +3,14 @@ program test_UGrid
 use esmf
 type(ESMF_Mesh)      :: mesh
 type(ESMF_Field)     :: field
-real(ESMF_KIND_R8),pointer,dimension(:) :: farrayptr 
+real(ESMF_KIND_R8),pointer,dimension(:) :: farrayptr
 integer              :: rc
 integer              :: numOwnedElements=-1,numNodes
 type(ESMF_FileFormat_Flag) :: fileformat=ESMF_FILEFORMAT_UGRID
 
 call esmf_initialize()
 
-mesh = ESMF_MeshCreate(meshname='sediment_mesh',filename='ugrid_sediment.nc',filetypeflag=ESMF_FILEFORMAT_UGRID,rc=rc)
+mesh = ESMF_MeshCreate(filename='ugrid_sediment.nc',filetypeflag=ESMF_FILEFORMAT_UGRID,rc=rc)
 if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
 call ESMF_MeshGet(mesh,numOwnedElements=numOwnedElements,numOwnedNodes=numNodes)

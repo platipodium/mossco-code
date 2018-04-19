@@ -1,5 +1,7 @@
 fdname='~/data/DeutscheBucht/NOAH/NOAH_benthic_O2fluxes.csv';
-statlabel={'A-permeable','B','C-imperm','CCPG','D','E','F','G','H','CCPJ','I','NSB3','NSB2','DB','Median','Median high permeable','Median low permeable'};
+%statlabel={'A-permeable','B','C-imperm','CCPG','D','E','F','G','H','CCPJ','I','NSB3','NSB2','DB','Median','Median high permeable','Median low permeable'};
+statlabel={'A-p','B','C-ip','CCPG','D','E','F','G','H','CCPJ','I','NSB3','NSB2','DB','Me','MeHi','MeLo'};
+
 hipor=[1 2 4 6 13];%11 
 lopor=[3 5 7 8 9 10 12 14];
 
@@ -34,6 +36,7 @@ for i=1:ndn
 end
 fprintf('\n');
 
+if 0
 % export variogram for given month
 ind=find(noahdat(:,1)==6); % june
 dat=noahdat(ind,2:ndn+1);
@@ -47,7 +50,7 @@ dvario.std=std(dat((i2)))
 text(2.,0.06,[num2str(min(dvario.val),'%1.2f') '-' num2str(max(dvario.val),'%1.1f')],'fontweight','bold','fontsize',16);
 outfilename=['noah_O2flux.mat'];
 save(outfilename,'dvario')
-
+end
 
 
 

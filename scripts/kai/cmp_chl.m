@@ -6,7 +6,7 @@
 clear all;close all; coljj=jet(9); tw=6;
 addpath('~/tools/m_map');  % map-toolbox needed for 2D plots
 datf='~/data/DeutscheBucht/stations.nc';
-datm='~/data/DeutscheBucht/esacci_2003_2013.mat';
+datm='~/data/DeutscheBucht/chl_esacciv3.1_2000_2014.mat';
 %% settings
 % locations; at least one site-name (locs) should be given 
 %loc =[]; 
@@ -24,8 +24,9 @@ locs={'NOORDWK70';'TERSLG50';'Helgoland';'NOORDWK10';'Sylt'; 'Norderney';'TERSLG
 % load and prepare data
 read_stations_nc;  
 datime= datime- datenum('2000-01-01','yyyy-mm-dd'); %days after 1/1/2000
-load(datm);[lon,lat] = meshgrid(lons,lats); 
-timeg = timeg  + datenum('1970-01-01','yyyy-mm-dd')- datenum('2000-01-01','yyyy-mm-dd'); %days after 1/1/2000
+load(datm);
+%%[lon,lat] = meshgrid(lons,lats); 
+%timeg = timeg  + datenum('2000-01-01','yyyy-mm-dd')- datenum('2000-01-01','yyyy-mm-dd'); %days after 1/1/2000
 set(gcf,'position',[1 5 850 850],'Visible','on');
 plot([0.1 100],[0.1 100],'k-');
 hold on
@@ -36,7 +37,7 @@ for li=1:size(loc,1)
   i_loc(li,1:2)=[i(j) min(j,size(datat,3))];
   
   fprintf('%s: lon %1.3f %1.3f\t lat %1.3f %1.3f\t%d %d\n',locs{li},lon(i_loc(li,1),i_loc(li,2)),loc(li,2),lat(i_loc(li,1),i_loc(li,2)),loc(li,1),i_loc(li,1),i_loc(li,2));
-  while length(find(isnan(datat(:,i_loc(li,2),i_loc(li,1)))))==size(datat,1)
+  while length(find(isnan(datat(:,i_loc(li,1),i_loc(li,2)))))==size(datat,1)
 %      length(find(isnan(datat(:,i_loc(li,1),i_loc(li,2)))))
       i_loc(li,2)=i_loc(li,2)-1;
       i_loc(li,1)=i_loc(li,1)+1;
@@ -58,7 +59,7 @@ for li=1:size(loc,1)
   for i=1:length(ii)
     [mdv mdi]=min(abs(timeg-datime(ii(i))));
     if(mdv < tw)
-      satvalue=datat(mdi,i_loc(li,2),i_loc(li,1));
+      satvalue=datat(mdi,i_loc(li,1),i_loc(li,2));
 %      chl(ii(i))
       if ~isnan(satvalue)
        plot(chl(ii(i)),satvalue,'o','Color',coljj(li,:),'Markersize',tw+1-mdv,'Linewidth',1+(li<4));%,'MarkerFaceColor'
@@ -70,7 +71,7 @@ for li=1:size(loc,1)
     end
   end
 %  text(0.22,37-3*li,locs{li},'Color',coljj(li,:),'fontsize',14,'fontweight','bold');
-  text(0.22,66*exp(-0.3*li),locs{li},'Color',coljj(li,:),'fontsize',14,'fontweight','bold');
+  text(0.2,66*exp(-0.3*li),locs{li},'Color',coljj(li,:),'fontsize',14,'fontweight','bold');
 end 
 %    t3 = find(years(t2)>=27);
     hold on
@@ -81,24 +82,47 @@ x1=log10(x1a(ind));x2=log10(x2a(ind));
 regression
 fprintf('yreg= %1.3f + %1.3f*x\n',mean(x2)-c*mean(x1),c);
 ta=sprintf('%1.2f + %1.2f*x',mean(x2)-c*mean(x1),c);
-text(22,34,ta,'Color','k','fontsize',14,'fontweight','bold');
+text(4,0.6,[ta ' (all)'],'Color','k','fontsize',14,'fontweight','bold');
 plot(power(10,xreg),power(10,yreg),'k-','LineWidth',2)
 
+if 0
+ind=find(x2a>1E-8 & x1a>4);% only case-I
+x1=log10(x1a(ind));x2=log10(x2a(ind));
+regression
+fprintf('yreg= %1.3f + %1.3f*x\n',mean(x2)-c*mean(x1),c);
+ta=sprintf('%1.2f + %1.2f*x',mean(x2)-c*mean(x1),c);
+text(4,0.3,[ta ' (chl_s>4)'],'Color','b','fontsize',14,'fontweight','bold');
+plot(power(10,xreg),power(10,yreg),'-','LineWidth',2,'Color',ones(3,1)*0.5)
+end
 ind=find(x1a>1E-8 & x2a>1E-8 & source<5);% only case-I
 x1=log10(x1a(ind));x2=log10(x2a(ind));
 regression
 fprintf('yreg= %1.3f + %1.3f*x\n',mean(x2)-c*mean(x1),c);
 ta=sprintf('%1.2f + %1.2f*x',mean(x2)-c*mean(x1),c);
-text(22,18,ta,'Color','b','fontsize',14,'fontweight','bold');
+text(4,0.3,[ta ' (no coast)'],'Color','b','fontsize',14,'fontweight','bold');
 plot(power(10,xreg),power(10,yreg),'b-','LineWidth',2)
+
+
+% non-linear fit
+
+yf = power(10,-1:0.05:2);
+lyf= log10(yf);
+a=0.2; b=0.4;
+xf=power(10,(-a+lyf)./b);
+ly0=0.66;
+ind=find(lyf>=ly0);
+b2=2;
+a2=ly0-b2/b*(ly0-a);
+xf(ind)=power(10,(-a2+lyf(ind))./b2);
+plot(xf,yf,'g-','LineWidth',2)
 
 set(gca,'YScale','log','XScale','log');
 set(gca,'Box','on','fontsize',14);
 xlabel('station chl')
 ylabel('ESACCI chl')
-axis([0.2 76 0.2 76]);
+axis([0.15 86 0.15 86]);
 %t0 = datenum('2003-03-01','yyyy-mm-dd')-1;ind=find(time>= t0 & time<=t1); %toffm = min(find(time>= t0))-1;
-fnam='~/data/DeutscheBucht/cmp_chl_log.png';
+fnam='~/data/DeutscheBucht/cmp_chl_log_v3.1.png';
 fprintf('save PNG in %s ...\n',fnam);
 print(gcf,'-dpng',fnam);
 

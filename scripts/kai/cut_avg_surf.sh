@@ -1,3 +1,4 @@
+
 #!/bin/bash
 #
 # This script is part of MOSSCO.  It tailors big netcdf files to relevant eco-variables
@@ -13,27 +14,54 @@
 # ---------------------
 # User configuration
 # Declare a list of variables to extract
-declare -a vn=("Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water" "Chl_chl_in_water" "Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water"  "Phytplankton_Phosphorus_phyP_in_water" "Phytplankton_Nitrogen_phyN_in_water"  "Detritus_Carbon_detC_in_water" "Phytplankton_Carbon_phyC_in_water" "Zooplankton_Carbon_zooC_in_water" "Dissolved_Organic_Carbon_domC_in_water" "denitrification_rate_in_soil"  "layer_height_in_soil" "detritus-P_in_soil" "mole_concentration_of_phosphate_in_soil" "fraction_of_Rubisco_Rub_in_water" "Detritus_Phosphorus_detP_in_water" "Detritus_Nitrogen_detN_in_water" "Virus_C_density_in_cells_vir_in_water" "_datt_in_water")
-# "dissolved_oxygen_upward_flux_at_soil_surface" "dissolved_reduced_substances_upward_flux_at_soil_surface" "mole_concentration_of_nitrate_in_soil" "Detritus_Phosphorus_detP_in_water""dissolved_oxygen_in_soil" "Phytplankton_Phosphorus_phyP_in_water" "Phytplankton_Nitrogen_phyN_in_water" "fraction_of_Rubisco_Rub_in_water""detritus-P_in_soil" "temperature_in_water""Phytplankton_Phosphorus_phyP_in_water" "Phytplankton_Nitrogen_phyN_in_water"    "N\:C_ratio__QN_in_water" "P\:C_ratio__QP_in_water" "Rubisco_fract._allocation__fracR_in_water" "chlorophyll_to_carbon_ratio_in_water" "water_depth_at_soil_surface" "denitrification_rate_in_soil" "mole_concentration_of_nitrate_in_soil  "mole_concentration_of_phosphate_in_soil"
-# 
-#tb='denitrification_rate_in_soil,layer_height_in_soil,fast_detritus_C_in_soil,detritus-P_in_soil,mole_concentration_of_nitrate_in_soil,mole_concentration_of_phosphate_in_soil,dissolved_oxygen_in_soil,dissolved_oxygen_upward_flux_at_soil_surface,dissolved_reduced_substances_upward_flux_at_soil_surface'
-tb='denitrification_rate_in_soil,layer_height_in_soil,fast_detritus_C_in_soil,detritus-P_in_soil,mole_concentration_of_nitrate_in_soil,mole_concentration_of_phosphate_in_soil,dissolved_oxygen_in_soil'
+declare -a vn=("Chl_chl_in_water"  "Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water" "Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water"   "Detritus_Carbon_detC_in_water" "Detritus_Nitrogen_detN_in_water" "Phytplankton_Carbon_phyC_in_water" "Zooplankton_Carbon_zooC_in_water" "Virus_C_density_in_cells_vir_in_water" ) 
+# "pPads_in_water" 
+declare -a vnp=("x_velocity_at_soil_surface" "y_velocity_at_soil_surface" "temperature_in_water" "practical_salinity_in_water" "_datt_in_water" "turbulent_kinetic_energy_at_soil_surface" "layer_height_in_water")
+#declare -a vnp=("maximum_bottom_stress" "temperature_in_water" "_datt_in_water" "turbulent_kinetic_energy_at_soil_surface")
+#"_vphys_in_water" "turbulent_kinetic_energy_in_water" "practical_salinity_in_water" "maximum_bottom_stress" "layer_height_in_water")
+#"x_velocity_in_water" "y_velocity_in_water" "wind_x_velocity_at_10m""turbulent_diffusivity_of_momentum_at_soil_surface" "dissipation_of_tke_at_soil_surface"
+declare -a vnt=("Phytplankton_Phosphorus_phyP_in_water" "Phytplankton_Nitrogen_phyN_in_water" "fraction_of_Rubisco_Rub_in_water")
+declare -a vns=( "denitrification_rate_in_soil" "fast_detritus_C_in_soil" "layer_height_in_soil" "detritus-P_in_soil" "mole_concentration_of_phosphate_in_soil" "dissolved_oxygen_in_soil" "mole_concentration_of_nitrate_in_soil" "mole_concentration_of_ammonium_in_soil" )
+declare -a vnf=("dissolved_oxygen_upward_flux_at_soil_surface" "dissolved_reduced_substances_upward_flux_at_soil_surface")
+#declare -a vnf=("fast_detritus_C_upward_flux_at_soil_surface" "detritus-P_upward_flux_at_soil_surface" "slow_detritus_C_upward_flux_at_soil_surface")
+# "Dissolved_Organic_Carbon_domC_in_water""Dissolved_Organic_Nitrogen_domN_in_water"  "Detritus_Phosphorus_detP_in_water" "Detritus_Nitrogen_detN_in_water" 
+#  "N\:C_ratio__QN_in_water" "P\:C_ratio__QP_in_water" "Rubisco_fract._allocation__fracR_in_water""chlorophyll_to_carbon_ratio_in_water" "water_depth_at_soil_surface" 
+tb='denitrification_rate_in_soil,layer_height_in_soil,fast_detritus_C_in_soil,detritus-P_in_soil,mole_concentration_of_nitrate_in_soil,mole_concentration_of_phosphate_in_soil,dissolved_oxygen_in_soil,mole_concentration_of_ammonium_in_soil,slow_detritus_C_in_soil'
+
 model=''   # FABM model name, e.g. hzg_maecs
 n1=0       # starting domain-no of loop
 dn=1       # increment in domain-no of loop
-Nstart=1  # initial time-step; skips trailer 
-soil=0
-
-#prefix=netcdf_getm_fabm_pelagic.  # Prefix of files to process
+Nstart=1 # initial time-step; skips trailer ## 731 for 2003
+soil=0     # selects benthic BGC (TotNsoil)
+flux=0     # selects fluxes (NOAH)
+trait=0    # selects physiology 
+phys=0     # selects getm-phsics
+surf=0     # adds subsurface layer to CHL 
+#prefix=netcdf_fabm_pelagic.  # Prefix of files to process
 if [ -z ${prefix+x} ]; then prefix=mossco_gfbfrr. ; fi  # Prefix of files to process
-dt=1         # slicing of time dimension; 20 gives monthly means at 36h-output
-#dt1=1   # creates high res output that is averaged 
-dt1=$dt    # only cuts every dt time slice
+dt=1        # slicing of time dimension; 20 gives monthly means at 36h-output
+dt1=1   # creates high res output that is averaged 
+#dt1=$dt    # only cuts every dt time slice
 dlat=1        # slicing of lat dimension
 dlon=1        # slicing of lon dimension
-dz=28         # slicing of vertical dimension; 18 retrieves upper and lower layer for N=20
+dz=18         # slicing of vertical dimension; 18 retrieves upper and lower layer for N=20
 # ---------------------
 dt2=$[$dt-$dt1]
+
+# assembles lists of VOIs
+if [[ $soil == 1 ]]; then
+  vn=("${vn[@]}" "${vns[@]}")
+fi
+if [[ $flux == 1 ]]; then
+  vn=("${vn[@]}" "${vnf[@]}")
+fi
+if [[ $phys == 1 ]]; then
+  vn=("${vn[@]}" "${vnp[@]}")
+fi
+if [[ $trait == 1 ]]; then
+  vn=("${vn[@]}" "${vnt[@]}")
+fi
+
 
 # Needs number of processors  as argument
 if [[ "x$1" == "x" ]] ; then
@@ -50,6 +78,7 @@ else
     fname=${prefix}'029.nc'
   fi
 fi
+indir=${PWD}    # simulation set-up folder
 
 if [ $# -lt 2 ]; then
   outdir=~/ocean/data/cut    # Where to put the extracted files
@@ -78,8 +107,7 @@ for (( i=1; i<${#vn[@]}; i++ )) do
 done # i
 #echo $ts
 
-tg='time,doy,getmGrid2D_getm_lat,getmGrid2D_getm_lon,getmGrid3D_getm_lat,getmGrid3D_getm_lon,getmGrid2D_getm_Y,getmGrid2D_getm_X,getmGrid3D_getm_Y,getmGrid3D_getm_X,layer_height_in_water'
-
+tg='time,doy,getmGrid2D_y,getmGrid2D_x,getmGrid3D_y,getmGrid3D_x,getmGrid2D_Y,getmGrid2D_X,getmGrid3D_Y,getmGrid3D_X,layer_height_in_water'
 
 # loop over all nc files generated by mossco for multiprocessor output
 for p in $(seq -f $form $n1 $dn $nproc); do
@@ -95,42 +123,50 @@ for p in $(seq -f $form $n1 $dn $nproc); do
   fi
   echo $fname '->' $outname
 	# invokes nco tool and writes output to folder "cut/"
-#        echo $tg,$ts
 
-  if [[ $soil == 1 ]]; then
-     ncks -O -v $tg,$tb -d time,$Nstart,$N $fname $outname2 
-     ncap2 -O -s 'N2r=denitrification_rate_in_soil*layer_height_in_soil'  $outname2 $outname
-     ncap2 -O -s 'N2flux=N2r.total($ungridded00015)'  $outname $outnamez
-  fi
+# -d getmGrid3D_3,1 \
+#	-d getmGrid3D_3,$[${dz}-1],$[${dz}+1] \
+#  -d getmGrid3D_3,1,,$[${dz}+1]
+#	-d getmGrid3D_3,$[${dz}-1],$[${dz}] \
   ncks -F -O -v $tg,$ts \
-	-d getmGrid2D_getm_1,1,,${dlon} \
-	-d getmGrid2D_getm_2,1,,${dlat} \
-	-d getmGrid3D_getm_1,1,,${dlon} \
-	-d getmGrid3D_getm_2,1,,${dlat} \
-	-d getmGrid3D_getm_3,1 \
-	-d getmGrid3D_getm_3,$[${dz}-1],$[${dz}+1] \
+	-d getmGrid2D_1,1,,${dlon} \
+	-d getmGrid2D_2,1,,${dlat} \
+	-d getmGrid3D_1,1,,${dlon} \
+	-d getmGrid3D_2,1,,${dlat} \
+	-d getmGrid3D_3,1,$[${dz}+1],${dz} \
         -d ungridded00015,1,,13 \
 	-d time,$Nstart,$N,$dt1 $fname $outname2
 
+  if [[ $surf == 1 ]]; then
+  ncks -F -O -v time,getmGrid3D_Y,getmGrid3D_X,Chl_chl_in_water \
+	-d getmGrid3D_3,$[${dz}-1],${dz} \
+	-d getmGrid3D_1,1,,${dlon} \
+	-d getmGrid3D_2,1,,${dlat} \
+	-d time,$Nstart,$N,$dt1 $fname $outnamec
+#  ncrcat -O  $outname2 $outnamec $outname2
+  fi
 
-#  ncks -F -O -v Chl_chl_in_water \
-#	-d getmGrid2D_getm_1,1,,${dlon} \
-#	-d getmGrid2D_getm_2,1,,${dlat} \
-#	-d getmGrid3D_getm_1,1,,${dlon} \
-#	-d getmGrid3D_getm_2,1,,${dlat} \
-#	-d getmGrid3D_getm_3,$[${dz}-1],$[${dz}+1] \
-#	-d time,$Nstart,$N,$dt1 $fname $outnamec
 
-#    ncap -O -s "O2flux=dissolved_oxygen_upward_flux_at_soil_surface"  $outname2 $outname
-#    ncap -O -s "NC=Phytplankton_Nitrogen_phyN_in_water/(Phytplankton_Carbon_phyC_in_water+0.001)"  $outname $outname2
-   ncap2 -O -s 'N2r=denitrification_rate_in_soil*layer_height_in_soil'  $outname2 $outname
-   ncap2 -O -s 'N2flux=N2r.total($ungridded00015)'  $outname $outname2
-   ncks -C -O -x -v layer_height_in_soil $outname2 $outname
-   ncks -C -O -x -v N2r $outname $outname2
-#    ncap -O -s "N2flux=dissolved_oxygen_upward_flux_at_soil_surface"  $outname2 $outname
-   ncap -O -s "PC=Phytplankton_Phosphorus_phyP_in_water/(Phytplankton_Carbon_phyC_in_water+0.001)"  $outname2 $outname
-   ncap -O -s "NC=Phytplankton_Nitrogen_phyN_in_water/(Phytplankton_Carbon_phyC_in_water+0.001)"  $outname $outname2
+  if [[ $soil == 1 ]]; then
+     ncks -O -v $tg,$tb -d time,$Nstart,$N $fname $outnamez 
+     ncap2 -O -s 'N2r=denitrification_rate_in_soil*layer_height_in_soil'  $outnamez $outnamez
+     ncap2 -O -s 'N2flux=N2r.total($ungridded00015)'  $outnamez $outnamez
+     ncap2 -O -s 'totbN=(mole_concentration_of_nitrate_in_soil+mole_concentration_of_ammonium_in_soil+0.23*fast_detritus_C_in_soil+0.01*slow_detritus_C_in_soil)*layer_height_in_soil'  $outnamez $outnamez
+     ncap2 -O -s 'TotBenN=totbN.total($ungridded00015)'  $outnamez $outnamez
+     ncks -A -v N2flux,TotBenN  $outnamez $outname2
+  fi
+
+  if [[ $trait == -1 ]]; then
+   ncap2 -O -s "PC=Phytplankton_Phosphorus_phyP_in_water/(Phytplankton_Carbon_phyC_in_water+0.001)"  $outname2 $outname
+   ncap2 -O -s "NC=Phytplankton_Nitrogen_phyN_in_water/(Phytplankton_Carbon_phyC_in_water+0.001)"  $outname $outname2
+   ncap2 -O -s "ChlC=Chl_chl_in_water/(Phytplankton_Carbon_phyC_in_water+0.001)"  $outname2 $outname
+   ncap2 -O -s "fRub=fraction_of_Rubisco_Rub_in_water/(Phytplankton_Carbon_phyC_in_water+0.001)"  $outname $outname2
    ncap2 -O -s "vir=Virus_C_density_in_cells_vir_in_water/(Phytplankton_Carbon_phyC_in_water+0.001)" $outname2 $outname2
+  fi
+
+#   ncap2 -O -s 'tot_N=(Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water+Phytplankton_Nitrogen_phyN_in_water+Detritus_Nitrogen_detN_in_water+0.3*Zooplankton_Carbon_zooC_in_water+Dissolved_Organic_Nitrogen_domN_in_water)*layer_height_in_water'  $outname2 $outname
+#   ncap2 -O -s 'TOTN=tot_N.total($getmGrid3D_3)'  $outname $outname2
+#   ncks -C -O -x -v Dissolved_Organic_Nitrogen_domN_in_water $outname2 $outname2
 
     # calculate time slice partitioning 
   nslice=$[($N- $Nstart)/$dt - 0]
@@ -143,25 +179,24 @@ for p in $(seq -f $form $n1 $dn $nproc); do
       nn=$[10#$na * $dt]         #last time step 
 #      nn=$[$nn + $nn/72]
       outname1=$na'-'$p'tmp.nc'
-      outname1m=$na'-'$p'tmp_max.nc'
+#      outname1m=$na'-'$p'tmp_max.nc'
       if [[ $soil == 1 ]]; then
         outname1z=$na'-'$p'tmp_z.nc'
         ncra -F -O -d time,$[$nn-$dt2],$nn  '../'$outnamez $outname1z
       fi
 ##      echo $p $[$nn-$dt+1] $nn $outname1
     # calculate mean and macimum in time slice  -v $tg,$ts
-
-        ncra -F -O -d time,$[$nn-$dt2],$nn  '../'$outname2 $outname1
-        ncra -F -O -y max -d time,$[$nn-$dt2],$nn '../'$outname2 $outname1m
+        ncra -F -O -d time,$[$nn-$dt2],$nn $outname2 $outname1
+#        ncra -F -O -y max -d time,$[$nn-$dt2],$nn '../'$outname2 $outname1m
      done
 
      fn='*-'$p'tmp.nc'
      fn2='cut_'$p'.nc'
 #  ncrcat -O $fn '../'$outname
      ncrcat -O $fn $fn2
-     fn='*-'$p'tmp_max.nc'
-     fn2='cutm_'$p'.nc'
-     ncrcat -O $fn $fn2
+##     fn='*-'$p'tmp_max.nc'
+##     fn2='cutm_'$p'.nc'
+##     ncrcat -O $fn $fn2
      if [[ $soil == 1 ]]; then
        fn='*-'$p'tmp_z.nc'
        fn2='cutz_'$p'.nc'
@@ -169,7 +204,7 @@ for p in $(seq -f $form $n1 $dn $nproc); do
      fi
 
    fi
-   cd ..
+   cd $indir
    ls -l  $fname $outdir'/cut_'$p'.nc'
  done
 # clean-up

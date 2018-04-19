@@ -3,7 +3,7 @@
 #> MOSSCO/ESMF component
 
 #  This computer program is part of MOSSCO.
-#> @copyright Copyright (C) 2014, 2015 Helmholtz Zentrum Geesthacht
+#> @copyright Copyright (C) 2014, 2015, 2016, 2017 Helmholtz Zentrum Geesthacht
 #> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -24,7 +24,7 @@ except:
 if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
-    filename = '../src/config/benthic_filtration_component.yaml'
+    filename = os.environ['MOSSCO_DIR'] + '/src/config/benthic_filtration_component.yaml'
 
 if not os.path.exists(filename):
     print 'File ' + filename + ' does not exist.'
@@ -49,7 +49,7 @@ else:
 if config.has_key('copyright'):
     copyright = config.pop('copyright')
 else:
-    copyright = 'Copyright (C) 2015, Helmholtz-Zentrum Geesthacht'
+    copyright = 'Copyright (C) 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht'
 
 if config.has_key('component'):
   component = config.pop('component')
@@ -89,7 +89,7 @@ for item in variables:
       module_list.append('  use ' + item.values()[0]['module'] + ', only : '
                          + item.values()[0]['internal_name'])
 
-filename = '../src/components/' + component_name + '_component.F90'
+filename =  os.environ['MOSSCO_DIR'] + '/src/components/' + component_name + '_component.F90'
 fid = file(filename,'w')
 
 fid.write('!> @brief Implementation of an ESMF/MOSSCO component for ' + component_name)
@@ -593,7 +593,7 @@ fid.write('''
 fid.write('end module ' + component_name + '_component')
 fid.close()
 
-filename='../src/components/' + component_name + '_component.mk'
+filename=os.environ['MOSSCO_DIR'] + '/src/components/' + component_name + '_component.mk'
 fid=open(filename,'w')
 fid.write('''
 # This Makefile is part of MOSSCO

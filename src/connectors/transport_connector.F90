@@ -9,7 +9,7 @@
 !> in the coupler's export state
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2015, 2016 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, <carsten.lemmen@hzg.de>
 
 !
@@ -32,6 +32,7 @@ module transport_connector
   use mossco_component
   use mossco_attribute
   use mossco_config
+  use mossco_strings
 
   implicit none
 
@@ -129,7 +130,8 @@ module transport_connector
     character (len=ESMF_MAXSTR) :: name
     type(ESMF_Time)             :: currTime
 
-    character(len=ESMF_MAXSTR), allocatable :: filterIncludeList(:), filterExcludeList(:)
+    character(len=ESMF_MAXSTR), pointer     :: filterIncludeList(:) => null()
+    character(len=ESMF_MAXSTR), pointer     :: filterExcludeList(:) => null()
     character(len=ESMF_MAXSTR)              :: configFileName, message
     logical                                 :: isPresent, createVelocity
     type(ESMF_Config)                       :: config
@@ -162,41 +164,36 @@ module transport_connector
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call MOSSCO_ConfigGet(config, 'exclude', filterExcludeList, localrc)
+      call MOSSCO_ConfigGet(config, 'exclude', filterExcludeList, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (allocated(filterExcludeList)) then
+      if (associated(filterExcludeList)) then
         call MOSSCO_AttributeSet(cplComp, 'filter_pattern_exclude', filterExcludeList, localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        call MOSSCO_Reallocate(filterExcludeList, 0, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        deallocate(filterExcludeList)
 
         call MOSSCO_AttributeGet(cplComp, 'filter_pattern_exclude', filterExcludeList, localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         write(message,'(A)') trim(name)//' uses exclude patterns:'
-        call MOSSCO_MessageAdd(message, filterExcludeList, rc=localrc)
+        call MOSSCO_MessageAddListPtr(message, filterExcludeList, localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
-      call MOSSCO_ConfigGet(config, 'include', filterIncludeList, localrc)
+      call MOSSCO_ConfigGet(config, 'include', filterIncludeList, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     endif
 
-    if (.not.allocated(filterIncludeList)) then
-      call MOSSCO_Reallocate(filterIncludeList, 1, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
+    if (.not.associated(filterIncludeList)) then
+      allocate(filterIncludeList(1))
       filterIncludeList(1) ='*_z_velocity_in_water'
     endif
 
@@ -204,16 +201,14 @@ module transport_connector
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_Reallocate(filterIncludeList, 0, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    deallocate(filterIncludeList)
 
     call MOSSCO_AttributeGet(cplComp, 'filter_pattern_include', filterIncludeList, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     write(message,'(A)') trim(name)//' uses include patterns:'
-    call MOSSCO_MessageAdd(message, filterIncludeList, rc=localrc)
+    call MOSSCO_MessageAddListPtr(message, filterIncludeList, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)

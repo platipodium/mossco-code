@@ -1,6 +1,6 @@
-## Filtration component
+## Component Filtraion
 
-The filtration component describes the instantaneous filtration of matter
+The `filtration_component` describes the instantaneous filtration of matter
 within the water column.  It creates a (negative) matter flux for filtered
 items.
 
