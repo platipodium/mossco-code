@@ -27,16 +27,12 @@ else:
 
 if prefix.endswith('.nc'):
   pattern=prefix
-  print pattern
   prefix=pattern.split('*')[0]
   if prefix.endswith('_'):
     prefix=prefix[0:-1]
 else:
   pattern=prefix + u'.*.nc'
 
-
-print prefix
-print pattern
 
 petlist=[]
 key=''
@@ -74,7 +70,7 @@ for i in range(1,len(sys.argv)):
     if key=='--level':
         levellist=val.split(',')
 
-print petlist
+#print petlist
 files=glob.glob(pattern)
 if len(petlist) > 0 and len(files) > 0:
     fileparts=files[0].split('.')
@@ -103,12 +99,15 @@ alon={}
 
 try:
   nc=netcdf.Dataset(files[0],'r')
+  print 'Finding variables and dimensions in file ' + files[0]
 except:
   print 'Dataset already open'
 
-for key, value in nc.variables.iteritems():
+print 'Found variables ', nc.variables.keys()
+print 'Found dimensions ', nc.dimensions.keys()
+for key, value in nc.variables.items():
   dim=value.dimensions
-  #print key, dim
+  print key, dim
   if len(value.dimensions) != 1 : continue
   if key.endswith('_lat'): alat[key]=[]
   elif key.endswith('_lon'): alon[key]=[]
@@ -125,8 +124,10 @@ for item in alon.keys():
 
 if len(alon)<1:
   print "Found no longitude/X information"
+  quit()
 if len(alat)<1:
   print "Found no latitude/Y information"
+  quit()
 
 for f in files:
   nc=netcdf.Dataset(f,'r')
