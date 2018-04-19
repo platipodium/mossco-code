@@ -219,6 +219,8 @@ ifneq ($(FABM_PREFIX),)
 endif
 export MOSSCO_FABM
 
+include $(MOSSCO_DIR/src/schism.mk)
+
 ifeq ($(MOSSCO_FABM),true)
 #!> @todo remove FABMHOST here and move it to makefiles where FABM is remade
 ifdef FABMHOST
@@ -753,6 +755,9 @@ ifeq ($(MOSSCO_GETM),true)
 endif
 ifeq ($(MOSSCO_SQLITE),true)
 	@env | grep ^SQLITE | sort
+endif
+ifeq ($(MOSSCO_SCHISM),true)
+	@env | grep ^SCHISM | sort
 endif
 	@env | grep ^MOSSCO_ | sort
 

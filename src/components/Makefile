@@ -59,6 +59,9 @@ endif
 ifeq ($(MOSSCO_HAMSOM),true)
   TARGETS += libmossco_hamsom
 endif
+ifeq ($(MOSSCO_SCHISM),true)
+  TARGETS += libmossco_schism
+endif
 
 .PHONY: $(TARGETS) $(SUBDIRS) subdirs utilities
 
@@ -80,6 +83,9 @@ libmossco_hamsom_driver:  prefix $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a(hamso
 libmossco_hamsom_component: libmossco_hamsom_driver $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a(hamsom_component.o)
 
 libmossco_xios: libmossco_xios $(MOSSCO_LIBRARY_PATH)/libmossco_xios.a(xios_component.o)
+libmossco_schism:  libmossco_schism_component
+libmossco_schism_component: prefix schism_component.F90 $(MOSSCO_LIBRARY_PATH)/libmossco_schism.a(schism_component.o)
+
 libmossco_cmaq: libmossco_cmaq_driver libmossco_cmaq_component
 libmossco_cmaq_driver:  prefix $(MOSSCO_LIBRARY_PATH)/libmossco_cmaq.a(cmaq_driver.o)
 libmossco_cmaq_component: libmossco_cmaq_driver $(MOSSCO_LIBRARY_PATH)/libmossco_cmaq.a(cmaq_component.o)
@@ -213,6 +219,10 @@ hamsom_component.F90: dummy_component.F90
 	@echo "Creating dummy HAMSOM component $@"
 	sed 's/dummy/hamsom/g' $< > $@
 
+schism_component.F90: dummy_component.F90
+	@echo "Creating dummy SCHISM component $@"
+	sed 's/dummy/schism/g' $< > $@
+
 tracer_component.F90: dummy_component.F90
 	@echo "Creating dummy TRACER component $@"
 	sed 's/dummy/tracer/g' $< > $@
@@ -260,6 +270,7 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/hamsom_component.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/cmaq_component.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/tracer_component.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/schism_component.mod
 
 subdirs: $(SUBDIRS)
 

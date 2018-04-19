@@ -4,7 +4,7 @@
 # This script is is part of MOSSCO. It creates from YAML descriptions of
 # couplings a toplevel_component.F90 source file
 #
-# @copyright (C) 2014,2015,2016,2017,2018 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -2207,6 +2207,7 @@ libs = {'gotm'       : ['solver', 'mossco_gotm'] ,
         'location'   : ['mossco_location'],
         'erosed'     : ['mossco_erosed'],
         'filtration'     : ['mossco_filtration'],
+        'schism'     : ['mossco_schism'],
         'hamsom'     : ['mossco_hamsom'],
         'tracer'     : ['mossco_tracer'],
         'netcdf'     : ['mossco_netcdf'],
@@ -2245,6 +2246,7 @@ libs = {'gotm'       : ['solver', 'mossco_gotm'] ,
 deps = {'clm_netcdf' : ['libmossco_clm'],
         'benthos'    : ['libmossco_benthos'],
         'hamsom'     : ['libmossco_hamsom'],
+        'schism'     : ['libmossco_schism'],
         'tracer'     : ['libmossco_tracer'],
         'erosed'     : ['libmossco_erosed'],
         'fabm0d'     : ['libmossco_fabm0d'],
@@ -2358,7 +2360,7 @@ libmossco_technical libmossco_getm libmossco_simplewave libmossco_netcdf libmoss
 libmossco_aggregation:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
-libmossco_info libmossco_test libmossco_river libmossco_hamsom libmossco_location:
+libmossco_info libmossco_test libmossco_river libmossco_hamsom libmossco_location libmossco_schism:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libmossco_sediment:

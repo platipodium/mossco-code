@@ -88,7 +88,7 @@ subroutine MOSSCO_GeomCreateFromFile(fileName, fileFormat, geomType, &
 
   !> Look for illegal combinations of geomType and fileFormat
   do while (.true.)
-    if ( (geomType == ESMF_GEOMTYPE_GRID) .and. (fileFormat == ESMF_FILEFORMAT_CFGRID)) exit
+    if ( (geomType == ESMF_GEOMTYPE_GRID) .and. (fileFormat == ESMF_FILEFORMAT_GRIDSPEC)) exit
     if ( (geomType == ESMF_GEOMTYPE_GRID) .and. (fileFormat == ESMF_FILEFORMAT_SCRIP)) exit
     if ( (geomType == ESMF_GEOMTYPE_MESH) .and. (fileFormat == ESMF_FILEFORMAT_SCRIP)) exit
     if ( (geomType == ESMF_GEOMTYPE_MESH) .and. (fileFormat == ESMF_FILEFORMAT_UGRID)) exit
@@ -117,7 +117,7 @@ subroutine MOSSCO_GeomCreateFromFile(fileName, fileFormat, geomType, &
     !   addMask, varname, coordNames, rc)
 
     addMask = .false.
-    if (fileFormat == ESMF_FILEFORMAT_CFGRID .and. (trim(maskVariable) /= '(none)')) addMask = .true.
+    if (fileFormat == ESMF_FILEFORMAT_GRIDSPEC .and. (trim(maskVariable) /= '(none)')) addMask = .true.
 
     grid = ESMF_GridCreate(filename=trim(fileName), fileFormat=fileFormat, &
       isSphere=.false., addmask=addMask, varname=trim(maskVariable), &
@@ -132,7 +132,7 @@ subroutine MOSSCO_GeomCreateFromFile(fileName, fileFormat, geomType, &
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   ! Create CF GRID, mask optional from mask variable
-  elseif (fileFormat == ESMF_FILEFORMAT_CFGRID .and. geomType == ESMF_GEOMTYPE_GRID) then
+  elseif (fileFormat == ESMF_FILEFORMAT_GRIDSPEC .and. geomType == ESMF_GEOMTYPE_GRID) then
 
     if (trim(maskVariable) /= '(none)') then
 
@@ -366,9 +366,9 @@ subroutine MOSSCO_FileFormatString(fileFormat, string, kwe, owner, rc)
   if (present(rc)) rc = ESMF_SUCCESS
   if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
 
-  if (fileFormat == ESMF_FILEFORMAT_CFGRID &
+  if (fileFormat == ESMF_FILEFORMAT_GRIDSPEC &
     .or. fileFormat == ESMF_FILEFORMAT_GRIDSPEC) then
-    string = 'CFGRID'
+    string = 'GRIDSPEC'
   elseif (fileFormat == ESMF_FILEFORMAT_SCRIP) then
     string = 'SCRIP'
   elseif (fileFormat == ESMF_FILEFORMAT_UGRID) then
@@ -412,9 +412,9 @@ recursive subroutine MOSSCO_FileFormatFromString(fileFormat, string, kwe, owner,
 
   fileFormatString =  MOSSCO_StringUpper(adjustl(trim(string)))
 
-  if (trim(fileFormatString) == 'CFGRID' .or. trim(fileFormatString) == 'CF' &
+  if (trim(fileFormatString) == 'GRIDSPEC' .or. trim(fileFormatString) == 'CF' &
     .or. trim(fileFormatString) == 'GRIDSPEC') then
-    fileFormat = ESMF_FILEFORMAT_CFGRID
+    fileFormat = ESMF_FILEFORMAT_GRIDSPEC
   elseif (trim(fileFormatString) == 'UGRID') then
     fileFormat = ESMF_FILEFORMAT_UGRID
   elseif (trim(fileFormatString) == 'SCRIP') then
