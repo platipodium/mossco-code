@@ -1,7 +1,7 @@
 !> @brief ESMF_GridCreate3D utility routines
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014, 2015 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2017, 2018 Helmholtz-Zentrum Geesthacht
 !> @author Ryan O'Kuinghttons
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -225,7 +225,7 @@ contains
     if (ESMF_LogFoundAllocError(statusToCheck=localrc, ESMF_ERR_PASSTHRU, &
       ESMF_CONTEXT, rcToReturn=rc)) return
 
-#ifdef _ESMF_UNRELEASED_
+#if (ESMF_VERSION_MAJOR == 7 & ESMF_VERSION_MINOR>0) | ESMF_VERSION_MAJOR > 7
 
     do item = 1, connectionCount
       call ESMF_DistGridConnectionGet(connectionList(item), &
@@ -248,8 +248,10 @@ contains
         ESMF_CONTEXT, rcToReturn=rc)) return
     end do
 #else
-    call ESMF_LogWrite('Upgrade ESMF to 7.1',ESMF_LOGMSG_ERROR)
-    return
+    call ESMF_LogWrite('ESMF_GridCreateFrmGrid needs at least ESMF 7.1', ESMF_LOGMSG_ERROR, &
+      ESMF_CONTEXT)
+      if (ESMF_LogFoundError(rcToCheck=ESMF_RC_NOT_IMPL, ESMF_ERR_PASSTHRU, &
+        ESMF_CONTEXT, rcToReturn=rc)) return
 #endif
 
     deallocate(newPositionVector, newOrientationVector, &
