@@ -1902,6 +1902,13 @@ end subroutine MOSSCO_FieldCopyAttribute
     select case (rank)
     case (1)
       call ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      write(message,'(A,ES10.3)') trim(owner)//' mean value before operation '//trim(operation)//' ', &
+        sum(farrayPtr1(RANGE1D),mask1(RANGE1D))/count(mask1(RANGE1D))
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+
       if (operation == '*') then
         where (mask1(RANGE1D))
           farrayPtr1(RANGE1D) = farrayPtr1(RANGE1D) * scalar
@@ -1915,8 +1922,17 @@ end subroutine MOSSCO_FieldCopyAttribute
           farrayPtr1(RANGE1D) = farrayPtr1(RANGE1D) ** scalar
         endwhere
       endif
+      write(message,'(A,ES10.3)') trim(owner)//' mean value after operation '//trim(operation)//' ', &
+        sum(farrayPtr1(RANGE1D),mask1(RANGE1D))/count(mask1(RANGE1D))
+
     case (2)
       call ESMF_FieldGet(field, farrayPtr=farrayPtr2, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      write(message,'(A,ES10.3)') trim(owner)//' mean value before operation '//trim(operation)//' ', &
+        sum(farrayPtr2(RANGE2D),mask2(RANGE2D))/count(mask2(RANGE2D))
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
       if (operation == '*') then
         where (mask2(RANGE2D))
           farrayPtr2(RANGE2D) = farrayPtr2(RANGE2D) * scalar
@@ -1930,8 +1946,17 @@ end subroutine MOSSCO_FieldCopyAttribute
           farrayPtr2(RANGE2D) = farrayPtr2(RANGE2D) ** scalar
         endwhere
       endif
+      write(message,'(A,ES10.3)') trim(owner)//' mean value after operation '//trim(operation)//' ', &
+        sum(farrayPtr2(RANGE2D),mask2(RANGE2D))/count(mask2(RANGE2D))
+
     case (3)
       call ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      write(message,'(A,ES10.3)') trim(owner)//' mean value before operation '//trim(operation)//' ', &
+        sum(farrayPtr3(RANGE3D),mask3(RANGE3D))/count(mask3(RANGE3D))
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
       if (operation == '*') then
         where (mask3(RANGE3D))
           farrayPtr3(RANGE3D) = farrayPtr3(RANGE3D) * scalar
@@ -1945,8 +1970,17 @@ end subroutine MOSSCO_FieldCopyAttribute
           farrayPtr3(RANGE3D) = farrayPtr3(RANGE3D) ** scalar
         endwhere
       endif
+      write(message,'(A,ES10.3)') trim(owner)//' mean value after operation '//trim(operation)//' ', &
+        sum(farrayPtr3(RANGE3D),mask3(RANGE3D))/count(mask3(RANGE3D))
+
     case (4)
       call ESMF_FieldGet(field, farrayPtr=farrayPtr4, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      write(message,'(A,ES10.3)') trim(owner)//' mean value before operation '//trim(operation)//' ', &
+        sum(farrayPtr4(RANGE4D),mask4(RANGE4D))/count(mask4(RANGE4D))
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
       if (operation == '*') then
         where (mask4(RANGE4D))
           farrayPtr4(RANGE4D) = farrayPtr4(RANGE4D) * scalar
@@ -1960,6 +1994,8 @@ end subroutine MOSSCO_FieldCopyAttribute
           farrayPtr4(RANGE4D) = farrayPtr4(RANGE4D) ** scalar
         endwhere
       endif
+      write(message,'(A,ES10.3)') trim(owner)//' mean value after operation '//trim(operation)//' ', &
+        sum(farrayPtr4(RANGE4D),mask4(RANGE4D))/count(mask4(RANGE4D))
     case default
       write(message,'(A)') trim(owner)//' only allows operations "*", "+", "^" on '
       call MOSSCO_FieldString(field, message)
@@ -1967,6 +2003,8 @@ end subroutine MOSSCO_FieldCopyAttribute
       if (present(rc)) rc = ESMF_RC_NOT_IMPL
       return
     endselect
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
 
     if (allocated(lbnd)) deallocate(lbnd)
     if (allocated(ubnd)) deallocate(ubnd)
