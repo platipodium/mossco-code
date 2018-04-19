@@ -1199,12 +1199,8 @@ module netcdf_input_component
         call nc%getvar(field, var, owner=trim(name), &
           itime=int(itime, kind=ESMF_KIND_I4), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      endif
 
-      !> continue to the next variable and next field
-      !> if not reading from a climatology
-      if (.not.isPresent) cycle
-
+      else 
       if (trim(interpolationMethod) == 'linear' .and. (jtime /= itime)) then
 
         call ESMF_FieldGet(field, typeKind=typeKind, grid=grid, rc=localrc)
@@ -1239,22 +1235,26 @@ module netcdf_input_component
         write(message,'(A,I3)') trim(name)//' uses climatology from past time ',itime
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      endif
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      endif ! type of climatology
+      endif ! reading from climatology
 
-      call ESMF_AttributeGet(field, 'scale_factor', isPresent=isPresent, rc=localrc)
+      call ESMF_AttributeGet(gridComp, 'scale_factor', isPresent=isPresent, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (isPresent) then
-        call ESMF_AttributeGet(field, 'scale_factor', value=scale_factor, rc=localrc)
+        call ESMF_AttributeGet(gridComp, 'scale_factor', value=scale_factor, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+
+        write(message,'(A,ES10.3)') trim(name)//' multiplies field by ',scale_factor
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
         call MOSSCO_FieldMultiply(field, scale_factor, owner=name, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
 
       if (isPresent) then
-        call ESMF_AttributeGet(field, 'add_offset', value=add_offset, rc=localrc)
+        call ESMF_AttributeGet(gridComp, 'add_offset', value=add_offset, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call MOSSCO_FieldAdd(field, add_offset, owner=name, rc=localrc)
