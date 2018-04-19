@@ -225,6 +225,8 @@ contains
     if (ESMF_LogFoundAllocError(statusToCheck=localrc, ESMF_ERR_PASSTHRU, &
       ESMF_CONTEXT, rcToReturn=rc)) return
 
+#ifdef _ESMF_UNRELEASED_
+
     do item = 1, connectionCount
       call ESMF_DistGridConnectionGet(connectionList(item), &
         tileIndexA=tileIndexA, tileIndexB=tileIndexB, &
@@ -245,6 +247,10 @@ contains
       if (ESMF_LogFoundError(rcToCheck=localrc, ESMF_ERR_PASSTHRU, &
         ESMF_CONTEXT, rcToReturn=rc)) return
     end do
+#else
+    call ESMF_LogWrite('Upgrade ESMF to 7.1',ESMF_LOGMSG_ERROR)
+    return
+#endif
 
     deallocate(newPositionVector, newOrientationVector, &
       positionVector, orientationVector, connectionList, stat=localrc)
