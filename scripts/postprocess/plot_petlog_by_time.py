@@ -2,7 +2,7 @@
 # This script is is part of MOSSCO. It creates from an ESMF Log file output
 # timing diagrams for all components
 #
-# @copyright (C) 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -19,7 +19,7 @@ if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
   filename = '/Volumes/Kiwi/mossco/output/PET0.NSBS153-1x153-3Dpelsedriv_TRACE'
-  filename = os.environ['MOSSCO_SETUPDIR'] + '/deep_lake/PET0.deep_lake-1x1-getm--fabm_pelagic--fabm_s'
+  filename = os.environ['MOSSCO_SETUPDIR'] + '/sns/PET0.sns-1x1-spm'
   #filename = os.environ['MOSSCO_SETUPDIR'] + '/deep_lake/PET0.deep_lake-1x1-river'
 
 print 'Using ' + filename + ' ...'
@@ -85,9 +85,9 @@ i=0
 for key,value in timingdict.iteritems():
   if value.has_key('initialized'):
     n=len(value['initialized'])
-    if (len(value['initializing'])<n or len(value['initializing']) > n+1 ):
-      print i,key,'has unbalanced initialize phase, skipped.'
-      continue
+    #if (len(value['initializing'])<n or len(value['initializing']) > n+1 ):
+    #  print i,key,'has unbalanced initialize phase, skipped.'
+    #  continue
     timediffs=np.array(value['initialized'][0:n])-np.array(value['initializing'][0:n])
     ax.bar(left=value['initializing'][0:n],height=np.multiply(value['initializing'][0:n],0.0)+0.8,
            width=timediffs,bottom=1.1+i,color=colors[i], edgecolor=colors[i])
@@ -103,9 +103,9 @@ for key,value in timingdict.iteritems():
 
   if value.has_key('readrestarted'):
     n=len(value['readrestarted'])
-    if (len(value['readrestarting'])<n or len(value['readrestarting']) > n+1 ):
-      print i,key,'has unbalanced readrestart phase, skipped.'
-      continue
+    #if (len(value['readrestarting'])<n or len(value['readrestarting']) > n+1 ):
+    #  print i,key,'has unbalanced readrestart phase, skipped.'
+    #  continue
     timediffs=np.array(value['readrestarted'][0:n])-np.array(value['readrestarting'][0:n])
     ax.bar(left=value['readrestarting'][0:n],height=np.multiply(value['readrestarting'][0:n],0.0)+0.8,
            width=timediffs,bottom=1.1+i,color=colors[i], edgecolor=colors[i])
@@ -121,9 +121,9 @@ for key,value in timingdict.iteritems():
 
   if value.has_key('finalized'):
     n=len(value['finalized'])
-    if (len(value['finalizing'])<n or len(value['finalizing']) > n+1 ):
-      print i,key,'has unbalanced finalize phase, skipped.'
-      continue
+    #if (len(value['finalizing'])<n or len(value['finalizing']) > n+1 ):
+    #  print i,key,'has unbalanced finalize phase, skipped.'
+    #  continue
     timediffs=np.array(value['finalized'][0:n])-np.array(value['finalizing'][0:n] )
     ax.bar(left=value['finalizing'][0:n],height=np.multiply(value['finalizing'][0:n],0.0)+0.8,
            width=timediffs,bottom=1.1+i,color=colors[i], edgecolor=colors[i])
@@ -137,9 +137,9 @@ for key,value in timingdict.iteritems():
 
   if value.has_key('ran'):
     n=len(value['ran'])
-    if (len(value['running'])<n or len(value['running']) > n+1 ):
-      print i,key,'has unbalanced run phase, skipped.'
-      continue
+    #if (len(value['running'])<n or len(value['running']) > n+1 ):
+    #  print i,key,'has unbalanced run phase, skipped.'
+    #  continue
 
     timediffs=np.array(value['ran'][0:n])-np.array(value['running'][0:n] )
     #print value['ran'][0:n], value['running'][0:n]

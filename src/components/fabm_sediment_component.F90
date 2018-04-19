@@ -21,8 +21,14 @@
 #define _IRANGE_ 1:_INUM_
 #define _JRANGE_ 1:_JNUM_
 #define _KRANGE_ 1:_KNUM_
+
 #define _RK4_ 1
 #define _ADAPTIVE_EULER_ 2
+
+! #define DEBUG_NAN
+
+#define RANGE2D 1:sed%inum,1:sed%jnum
+#define RANGE3D RANGE2D,1:sed%knum
 
 #define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
 #define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
@@ -394,11 +400,12 @@ module fabm_sediment_component
 #else
         call ESMF_LogWrite('  ignore error above', ESMF_LOGMSG_ERROR)
 #endif
+        call ESMF_GridGetItemBounds(flux_grid, ESMF_GRIDITEM_MASK, exclusiveUBound=ubnd2, exclusiveLBound=lbnd2, rc=localrc)
 
         do i=1,sed%grid%inum
           do j=1,sed%grid%jnum
             do k=1,sed%grid%knum
-              sed%mask(i,j,k) = (gridmask(i,j).le.0)
+              sed%mask(i,j,k) = (gridmask(lbnd2(1)-1+i,lbnd2(2)-1+j).le.0)
             enddo
           enddo
         enddo
@@ -468,7 +475,7 @@ module fabm_sediment_component
       if (trim(varname) == 'dissolved_ammonium')           bdys(:,:,n+1)=pel_NH4
       if (trim(varname) == 'dissolved_phosphate')          bdys(:,:,n+1)=pel_PO4
       if (trim(varname) == 'dissolved_oxygen')             bdys(:,:,n+1)=pel_O2
-      if (trim(varname) == 'dissolved_reduced_substances') bdys(:,:,n+1)=0.0_rk
+      if (trim(varname) == 'dissolved_reduced_substances') bdys(:,:,n+1)=pel_O2 !0.0_rk
       if (trim(varname) == 'detritus_labile_carbon')       fluxes(:,:,n)=pflux_lDetC/86400.0_rk
       if (trim(varname) == 'detritus_semilabile_carbon')   fluxes(:,:,n)=pflux_sDetC/86400.0_rk
       if (trim(varname) == 'detritus_labile_nitrogen')     fluxes(:,:,n)=pflux_lDetN/86400.0_rk
@@ -614,7 +621,6 @@ module fabm_sediment_component
       !! create boundary fields in import State
       field = ESMF_FieldEmptyCreate(name='porosity_at_soil_surface', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
 
       write(message, '(A)') trim(name)//' created for export '
       call MOSSCO_FieldString(field, message, rc=localrc)
@@ -862,6 +868,9 @@ module fabm_sediment_component
       call ESMF_AttributeSet(field,'units','W m-2', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+      call MOSSCO_FieldInitialize(field, value=0.0_rk, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
       write(message, '(A)') trim(name)//' created for import '
       call MOSSCO_FieldString(field, message, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -900,6 +909,9 @@ module fabm_sediment_component
       call ESMF_AttributeSet(field,'units','degreeC', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+      call MOSSCO_FieldInitialize(field, value=pel_Temp, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
       write(message, '(A)') trim(name)//' created for import '
       call MOSSCO_FieldString(field, message, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -921,6 +933,9 @@ module fabm_sediment_component
           call ESMF_AttributeSet(field,'units',trim(sed%export_states(n)%units), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+          call MOSSCO_FieldInitialize(field, value=0.0_rk, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
           write(message, '(A)') trim(name)//' created for export horizontal '
           call MOSSCO_FieldString(field, message, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -940,6 +955,9 @@ module fabm_sediment_component
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
             call ESMF_AttributeSet(field,'units','m/s', rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+            call MOSSCO_FieldInitialize(field, value=0.0_rk, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
             write(message, '(A)') trim(name)//' created for export horizontal '
@@ -1250,11 +1268,11 @@ module fabm_sediment_component
     type(ESMF_Field)  :: field
     real(ESMF_KIND_R8),pointer,dimension(:,:) :: ptr_f2
     real(ESMF_KIND_R8),pointer,dimension(:,:,:) :: ptr_f3
-    integer           :: fieldcount, i
+    integer           :: fieldcount, i, j, k
     character(len=ESMF_MAXSTR)  :: string
     type(ESMF_Alarm)           :: outputAlarm
 
-    character(len=ESMF_MAXSTR) :: timestring, name, message
+    character(len=ESMF_MAXSTR) :: timestring, name, message, varname
     integer(ESMF_KIND_I4)      :: localPet, petCount, itemCount
     type(ESMF_Clock)           :: clock
     type(ESMF_Time)            :: currTime, startTime, stopTime
@@ -1429,21 +1447,28 @@ module fabm_sediment_component
       !write(0,*) 1171,trim(name)
       !> @todo the solver is not stable in example xf with sns topo
 
+      ! integrate rates
       call ode_solver(sed, dt, ode_method)
 
-      !write(0,*) 1173,trim(name)
+      !check for NaN
+      call check_NaN(sed,rc=localrc)
+      if (rc == ESMF_RC_VAL_OUTOFRANGE ) then
+        write(message,'(A)')  '  NaN detected applying ode_solver'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
       ! reset concentrations to mininum_value
       if (_INUM_ > 0 .and. _JNUM_ > 0)  then
-      do n=1,sed%nvar
-        do k=1,sed%grid%knum
+        do n=1,sed%nvar
+          do k=1,sed%grid%knum
 !!@todo This has to be adjusted for inum, jnum longer than 1
-          if (sed%conc(1,1,k,n) .lt. sed%model%state_variables(n)%minimum) then
-            sed%conc(_IRANGE_,_JRANGE_,k,n) = sed%model%state_variables(n)%minimum
-          endif
+            if (sed%conc(1,1,k,n) .lt. sed%model%state_variables(n)%minimum) then
+              sed%conc(_IRANGE_,_JRANGE_,k,n) = sed%model%state_variables(n)%minimum
+            endif
+          enddo
         enddo
-      enddo
-    endif
+      endif
 
       if (sed%do_output) then
         !! Check if the output alarm is ringing, if so, quiet it and
@@ -1676,7 +1701,7 @@ module fabm_sediment_component
 
             ptr_f2(:,1) = fluxmesh_ptr(:)
           else
-            call ESMF_FieldGet(field,farrayPtr=ptr_f2,rc=localrc)
+            call ESMF_FieldGet(field, farrayPtr=ptr_f2, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
             bdys(:,:,n+1) = ptr_f2(:,:)
@@ -1701,7 +1726,7 @@ module fabm_sediment_component
 #endif
         endif !if "particulate"
       endif !if (itemcount==0)
-    enddo
+    enddo !do n=1,sed%nvar
     endif !if (sed%bcup_dissolved_variables .gt. 0)
 
   end subroutine get_boundary_conditions
@@ -2049,4 +2074,53 @@ module fabm_sediment_component
     enddo
   end subroutine set_boundary_flags
 
+#undef ESMF_METHOD
+#define ESMF_METHOD "check_NaN"
+  subroutine check_NaN(sed,rc)
+    type(type_sed)             :: sed
+    integer, intent(out)       :: rc
+    character(len=ESMF_MAXSTR) :: message, varname
+    integer                    :: i, j, k, n
+    logical                    :: found_NaN, list_indices, list_varnames
+
+    found_NaN = .false.
+    list_indices = .false.
+    list_varnames = .false.
+
+    !spacial loop (How about halo zones?)
+    do i=1,sed%inum
+      do j=1,sed%jnum
+        do k=1,sed%knum
+          if ( sed%mask(i,j,k) ) cycle
+          if ( any(sed%conc(i,j,k,:) /= sed%conc(i,j,k,:)) ) then
+#ifdef DEBUG_NAN
+            write(message,'(A,3i4)')  '  NaN detected at indices (i,j,k) ',i,j,k
+            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+#endif
+            do n=1,sed%nvar
+              if ( sed%conc(i,j,k,n) /= sed%conc(i,j,k,n) ) then
+                found_NaN = .true.
+#ifdef DEBUG_NAN
+                varname = trim(sed%export_states(n)%standard_name)
+                write(message,'(A)')  '  NaN detected for '//trim(varname)
+                call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+                if (.not. list_varnames)  exit ! n-loop
+#else
+                rc = ESMF_RC_VAL_OUTOFRANGE
+                return
+#endif
+              endif
+            enddo
+            exit ! k-loop
+          endif
+        enddo
+      enddo
+    enddo
+    if (found_NaN) then
+      rc = ESMF_RC_VAL_OUTOFRANGE
+    endif
+
+  end subroutine check_NaN
+
+#undef ESMF_METHOD
 end module fabm_sediment_component

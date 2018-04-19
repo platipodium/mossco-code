@@ -12,27 +12,28 @@
 %	1			2           3   4   5	6   7	8   9
 %						    5:is depth index in 3D for maps
 var={
-  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';1.;300; 1.0;	1; 1;1;'L1'};
+  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';1.;330; 1.0;	1; 1;1;'L1'};
 %{'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0.;2.3; 1.;	2; 1;1;'L0'};
-  {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0.;3.3; 1.;	1; 2;1;'L1'};
-  {'Chl_chl_in_water';'chl';0.5;60; 1;					1; 3;1;'L1'};
+%  {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0.;3.5; 1.;	1; 2;1;'L1'};
+  {'Chl_chl_in_water';'chl';0.5;60; 1;					2; 1;1;'L1'};
 %  {'Chl_chl_in_water';'chl';0.5;50; 1;					2; 1;1;'L3'};
-%  {'Chl_chl_in_water';'chl';0.5;40; 1;					1; 1;1;'LM'};
-%  {'Chl_chl_in_water';'chl';0.7;40; 1;					2; 1;1;'L0'};
-%  {'Phytplankton_Carbon_phyC_in_water';'PhyC';4;200; 0.3;               1; 1;1;'N'};
-  {'Chl_chl_in_water';'CHL';1.;30;2;                                  1; 1;0;'Mi'};
-  {'Chl_chl_in_water';'CHL';1.;30;2;                                  2; 1;0;'Mi'};
-  {'Chl_chl_in_water';'CHL';1.;30;2;                                  3; 1;0;'Mi'};
-  {'Chl_chl_in_water';'CHL';1.;30;2;                                  4; 1;0;'Mi'};
-  {'Chl_chl_in_water';'CHL';1.;30;2;                                  5; 1;0;'Mi'};
-  {'Chl_chl_in_water';'CHL';1.;30;2;                                  6; 1;0;'Mi'};
-%  {'Chl_chl_in_water';'CHL';1.;30; 2;                                  9; 1;0;'Mi'};
-%  {'Chl_chl_in_water';'CHL';1.;30; 1;                                 10; 1;0;'Mi'};
-%  {'Chl_chl_in_water';'CHL';1.;30; 1;                                 11; 1;0;'Mi'};
- %%  {'Chl_chl_in_water';'CHL';1.;30; 2;					5; 1;0;'Mi'};
+  {'Phytplankton_Carbon_phyC_in_water';'PhyC';4;200; 0.3;               1; 1;1;'N'};
+  {'Chl_chl_in_water';'CHL';1.;30;1;                                  1; 1;0;'Mi'};
+  {'Chl_chl_in_water';'CHL';1.;30;1;                                  2; 1;0;'Mi'};
+  {'Chl_chl_in_water';'CHL';1.;30;1;                                  3; 1;0;'Mi'};
+  {'Chl_chl_in_water';'CHL';1.;30;1;                                  4; 1;0;'Mi'};
+  {'Chl_chl_in_water';'CHL';1.;30;1;                                  5; 1;0;'Mi'};
+  {'Chl_chl_in_water';'CHL';1.;30;1;                                  6; 1;0;'Mi'};
+  {'Chl_chl_in_water';'CHL';1.;30;1;                                  7; 1;0;'Mi'};
+  {'Chl_chl_in_water';'CHL';1.;30;1;                                  8; 1;0;'Mi'};
+  {'Chl_chl_in_water';'CHL';1.;30;1;                                  9; 1;0;'Mi'};
+  {'Chl_chl_in_water';'CHL';1.;30;1;                                  10; 1;0;'Mi'};
 %%  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';1;70; 2;	4; 1;0;'Mi'};
 %%  {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0.;1.; 2.; 6; 1;0;'Mi'};
-%   {'Zooplankton_Carbon_zooC_in_water';'ZooC';0.01;15; 1;		2; 2;1;'L1'};
+  % {'Zooplankton_Carbon_zooC_in_water';'ZooC';0.03;15; 1;		2; 2;1;'L1'};
+%   {'Zooplankton_Carbon_zooC_in_water';'ZooC';0.03;12; 1;		6; 1;0;'Mi'};
+%   {'Zooplankton_Carbon_zooC_in_water';'ZooC';0.03;12; 1;		7; 1;0;'Mi'};
+%   {'Zooplankton_Carbon_zooC_in_water';'ZooC';0.03;12; 1;		8; 1;0;'Mi'};
 %   {'Detritus_Carbon_detC_in_water';'DetC';0;8; 0.001;			1; 2;1;'N'};
 %   {'c log(1E-1+DetC)';'lDetC';0;8; 2;				3; 2;1;'L0'};
 %%   {'Virus_C_density_in_cells_vir_in_water';'VirC';0;2; 1.;		2; 1;1;'N'};
@@ -47,7 +48,7 @@ var={
 %  {'Phytplankton_Phosphorus_phyP_in_water';'PhyP';0;-9; 1.0;		1; 2;3;'N'};
 %  {'c PhyN./(PhyC+1E-2)';'N:C';0;0.4; 1.0;				1; 2;2;'LM'};
 %  {'c PhyP./(PhyC+1E-2)';'P:C';0;0.4; 15;				1; 2;2;'LM'};
-%%  {'fraction_of_Rubisco_Rub_in_water';'Rub';0;-9; 1.0;			1; 1;1;'N'};
+%   {'fraction_of_Rubisco_Rub_in_water';'Rub';0;-9; 1.0;		1; 1;1;'N'};
 %%    {'c Rub./(PhyC+1E-2)';'fRub';0.1;0.5; 1;				10; 1;0;'Mi'};
 %%    {'c chl./(PhyC+1E-2)';'Chl2C';0.1;0.5; 1;				13; 1;0;'Mi'};
 %%    {'c chl./(PhyC+1E-2)';'Chl2C';0.1;0.5; 4;				15; 1;0;'Mi'};
@@ -59,7 +60,7 @@ var={
 %  {'mole_concentration_of_ammonium_upward_flux_at_soil_surface';'NH4 flux';0;1.; 86400.; 1; 2;1;'LM'};
 %  {'dissolved_oxygen_upward_flux_at_soil_surface';'O2flux';-30;0; 1.; 1; 1;1;'N'};
 %  {'dissolved_reduced_substances_upward_flux_at_soil_surface';'ODU flux';-6;0; 1.; 1; 1; 1;'N'};
-% {'c ODUflux-O2flux';'O2 flux';5;40; 86400; 				9; 1;0;'Mi'};
+% {'c ODUflux-O2flux';'O2 flux';5;40; 86400; 				9; 1;0;'Mi'};cd
 % {'c ODUflux-O2flux';'O2 flux';0;50; 86400; 				3; 2;1;'LM'};
 %  {'slow_detritus_C_in_soil';'TOC slow';5E2;5E4; 1.0; 			1; 3;2;'LM'};
 %%  {'detritus-P_in_soil';'POP';5E2;5E4; 1.0; 			1; 1;3;'L1'};

@@ -10,22 +10,22 @@ show_data=1; nice=0; Is1D=0; datf='~/data/DeutscheBucht/stations.nc';
 % locations; at least one site-name (locs) should be given 
 loc =[]; 
 %loc =[[54.18,7.82];[54.96,8.4];[54.1,6.3];[54.2,7.5];]; % 
-locs={'Tsns_13-05_0';}; % 'T1'; 
-
-tags={'';};%_new'_res';'_att';
+locs={'Tsns_sinkp0_02-05_0';}; % 'T1'; 
+tags={'';};%_new'_res';'_att';/RefResults
 ntags=length(tags);
-%spath  ='/data/wirtz/sns/cut/';spath  ='~/sns/cut/trans/';
-%spath  ='/media/archiv/'
-spath= '~/jureca/sns/cut/';%   
+%spath  ='/data/wirtz/sns/cut/';%spath  ='~/sns/cut/trans/';cutTsnsRefResults_01-05_0.nc
+spath  ='/data/wirtz/sns_sinkp0/cut/';
+%spath  ='~/sns/cut/trans/';cutTsnsRefResults_01-05_0.nc%spath  ='/media/archiv/'
+%spath= '~/jureca/sns2/cut/';%   
 setvar_trans;  % defines variables to show - and where/how to do it %setvar  
 %setvar_1D  % defines variables to show - and where/how to do it 
 %% graph settings
-ncol = 6; nrow = 4; 	% number of columns in fig
-%ncol = 1; nrow = 1; 	% number of columns in fig
+%ncol = 6; nrow = 4; 	% number of columns in fig
+ncol = 1; nrow = 1; 	% number of columns in fig
 dxp = 0.83/(ncol+0.05); dyp = 0.83/(nrow +0.05);
 compn ={'water';'soil'};
 fs = 16+nice*4; colp=prism(5);colj=colp([1 4:5 2:3],:); coljj=jet(10); colt='kw';
-i0=10;coljm=ones(256,3); coljm(i0+1:256,:)=jet(256-i0);
+i0=0;coljm=ones(256,3); coljm(i0+1:256,:)=jet(256-i0);
 
 linw=[2 1*ones(1,14)]; lins=['- '; repmat('- ',14,1);]; 
 
@@ -61,8 +61,8 @@ for ns=1:ntags  %% loop over scenarios/stations/layers
 
  read_nc_time_layers
  t0=time(1); t1=time(end);
-% t0 = datenum('2003-07-24','yyyy-mm-dd')-1;
-% t1 = datenum('2003-07-25','yyyy-mm-dd')-1;
+ t0 = datenum('2002-07-06','yyyy-mm-dd')-1;
+ t1 = datenum('2002-07-12','yyyy-mm-dd')-1;
 
  time0=time;
  ind=find(time>= t0 & time<=t1);

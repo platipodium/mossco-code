@@ -1,7 +1,7 @@
 module mossco_dictionary
 private
 
-public type_mossco_dictionary, mossco_create_dictionary
+public type_mossco_dictionary, mossco_dictionary_create
 
 type :: type_key
   integer :: type

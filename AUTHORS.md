@@ -7,5 +7,6 @@ Authors in alphabetical order:
 - Ulrich Körner
 - Carsten Lemmen <carsten.lemmen@hzg.de>
 - Hassan M. Nasermoaddeli <hassan.nasermoaddeli@baw.de>
+- Ryan O'Kuinghttons <ryan.okuinghttons@noaa.gov>
 - Nils Weiher <nils.weiher@gmx.de>
 - Kai W. Wirtz <kai.wirtz@hzg.de>

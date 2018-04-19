@@ -13,17 +13,18 @@ from matplotlib import pyplot
 authorinstitute={'Carsten Lemmen':'HZG','Richard Hofmeister':'HZG',
   u'Ulrich Körner':'HZG','Knut Klingbeil':'IOW','Hassan Nasermoaddeli':'BAW',
   'Markus Kreus':'HZG', 'Onur Kerimoglu':'HZG', 'Kai Wirtz':'HZG',
-  'Nils Weiher':'HZG'}
+  'Nils Weiher':'HZG','Ryan O\'Kuinghttons':'HZG'}
 
 authoralias={'Carsten Lemmen':'Carsten Lemmen', 'Richard Hofmeister':
   'Richard Hofmeister','Richard':'Richard Hofmeister','hofmeist':
-  'Richard Hofmeister','Richard Hofmeister richard.hofmeister@hzg.de':'Richard Hofmeister',
+  'Richard Hofmeister','Richard Hofmeister richard.hofmeister@hzg.de':'Richard Hofmeister','Richard H':'Richard Hofmeister',
   'Ulrich Koerner':'Ulrich Koerner','Ulrich Körner':
-  'Ulrich Koerner','mhnaserm':'Hassan Nasermoaddeli','hnaserm':'Hassan Nasermoaddeli',
+  'Ulrich Koerner','mhnaserm':'Hassan Nasermoaddeli','hnaserm':'Hassan Nasermoaddeli','Markus Kreus markus.kreus@baw.de':'Markus Kreus',
   'Mohammed Hassan Nasermoaddeli':'Hassan Nasermoaddeli','Hassan Nasermoaddeli':
   'Hassan Nasermoaddeli','Knut':'Knut Klingbeil','Kai Wirtz':'Kai Wirtz',
   'Onur Kerimoglu':'Onur Kerimoglu','Markus Kreus':'Markus Kreus','Onur':'Onur Kerimoglu',
-  'Nils Weiher':'Nils Weiher'}
+  'Nils Weiher':'Nils Weiher','Kai Wirtz kai.wirtz@hzg.de':'Kai Wirtz',
+  'Ryan O\'Kuinghttons':'Ryan O\'Kuinghttons'}
 
 # Get committer names from one of the output gnuplot files
 with open('../gitstats/lines_of_code_by_author.plot', 'r') as fid:

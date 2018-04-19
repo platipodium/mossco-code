@@ -1,7 +1,7 @@
 # This Makefile snippet is part of MOSSCO; definition of MOSSCO-wide
 # make rules
 #
-# Copyright (C) 2013, 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
+# Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 # Author Carsten Lemmen
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -218,6 +218,8 @@ ifneq ($(FABM_PREFIX),)
   MOSSCO_FABM=true
 endif
 export MOSSCO_FABM
+
+include $(MOSSCO_DIR/src/schism.mk)
 
 ifeq ($(MOSSCO_FABM),true)
 #!> @todo remove FABMHOST here and move it to makefiles where FABM is remade
@@ -628,11 +630,14 @@ ifeq ($(FORTRAN_COMPILER),GFORTRAN)
 F90FLAGS += -O3 -J$(MOSSCO_MODULE_PATH)
 #F90FLAGS += -ffast-math -march=native -fstack-arrays -fno-protect-parens
 # -flto crashes on darwin
-EXTRA_CPP=
+EXTRA_CPP =
+#EXTRA_CPP += -ffpe-trap=invalid,zero,overflow
+#EXTRA_CPP += -ffpe-trap=invalid
 else
 ifeq ($(FORTRAN_COMPILER),IFORT)
 F90FLAGS += -module $(MOSSCO_MODULE_PATH)
 EXTRA_CPP=-DNO_ISO_FORTRAN_ENV
+#EXTRA_CPP += -fpe0
 else
 ifeq ($(FORTRAN_COMPILER),PGFORTRAN)
 F90FLAGS += -module $(MOSSCO_MODULE_PATH)
@@ -670,7 +675,7 @@ export LIBRARY_PATHS
 
 export LIBS := $(ESMF_F90ESMFLINKLIBS)
 
-CPPFLAGS = $(DEFINES)
+CPPFLAGS = $(MOSSCO_CPPFLAGS) $(DEFINES)
 ifeq ($(FORTRAN_COMPILER),XLF)
 CPPFLAGS += -WF,-DESMF_VERSION_MAJOR=$(ESMF_VERSION_MAJOR) -WF,-DESMF_VERSION_MINOR=$(ESMF_VERSION_MINOR)
 else
@@ -750,6 +755,9 @@ ifeq ($(MOSSCO_GETM),true)
 endif
 ifeq ($(MOSSCO_SQLITE),true)
 	@env | grep ^SQLITE | sort
+endif
+ifeq ($(MOSSCO_SCHISM),true)
+	@env | grep ^SCHISM | sort
 endif
 	@env | grep ^MOSSCO_ | sort
 

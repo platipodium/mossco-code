@@ -1,7 +1,7 @@
 !> @brief Implementation of string utilities
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
 !
@@ -27,10 +27,11 @@ module mossco_strings
   implicit none
 
   private
-  
+
   public intformat, order, MOSSCO_MessageAdd, MOSSCO_MessageAddListPtr, only_var_name, replace_character
   public split_string, MOSSCO_StringMatch, MOSSCO_StringClean
-  public MOSSCO_CheckUnits, MOSSCO_CleanUnit, MOSSCO_StringCopy
+  public MOSSCO_CheckUnits, MOSSCO_CleanUnit, MOSSCO_StringCopy, MOSSCO_CleanGeomFormatString
+  public MOSSCO_StringLower, MOSSCO_StringUpper
 
   !> @brief Returns the order of magnitude of its input argument
   !> @param <integer|real>(kind=4|8)
@@ -377,13 +378,14 @@ contains
     character(len=1), intent(in), optional   :: char
     integer(ESMF_KIND_I4), optional, intent(out)  :: rc
 
-    integer(ESMF_KIND_I4)                    :: localrc, i, n, j
+    integer(ESMF_KIND_I4)                    :: localrc, i, n, j, rc_
     character(len=ESMF_MAXSTR)               :: exclude_, string_
     character(len=1)                         :: char_
 
     string_ = trim(string(1:len(string_)))
-    rc = ESMF_SUCCESS
-    if (present(kwe)) rc = ESMF_SUCCESS
+    rc_ = ESMF_SUCCESS
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
     if (present(char)) then
       char_ = char
     else
@@ -406,6 +408,36 @@ contains
     enddo
 
   end function MOSSCO_StringClean
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_CleanGeomFormatString"
+  subroutine MOSSCO_CleanGeomFormatString(string, kwe, rc)
+
+    character(len=*), intent(inout)               :: string
+    logical, intent(in), optional                 :: kwe
+    integer(ESMF_KIND_I4), optional, intent(out)  :: rc
+
+    integer(ESMF_KIND_I4)                    :: localrc, rc_
+
+    rc_ = ESMF_SUCCESS
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
+
+    if (trim(string) == 'scrip') then
+      string='SCRIP'
+    elseif (trim(string) == 'CF') then
+      string='GRIDSPEC'
+    elseif (trim(string) == 'cf') then
+      string='GRIDSPEC'
+    elseif (trim(string) == 'gridspec') then
+      string='GRIDSPEC'
+    elseif (trim(string) == 'ugrid') then
+      string='UGRID'
+    elseif (trim(string) == 'esmf') then
+      string='ESMF'
+    endif
+
+  end subroutine MOSSCO_CleanGeomFormatString
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_MessageAddListPtr"
@@ -801,6 +833,48 @@ contains
     to(1:toLen) = from(1:toLen)
 
   end subroutine MOSSCO_StringCopy
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_StringLower"
+!> Changes a string to lowercase letters for the
+!> 26 basic characters
+pure function MOSSCO_StringLower(from) result(to)
+
+  character(len=*), intent(in) :: from
+  character(len(from))          :: to
+
+  integer :: i, ind
+  character(len=26), parameter :: majuscules = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  character(len=26), parameter :: minuscules = 'abcdefghijklmnopqrstuvwxyz'
+
+  to = from
+  do i = 1, len_trim(from)
+    ind = index(majuscules, from(i:i))
+    if (ind > 0) to(i:i) = minuscules(ind:ind)
+  enddo
+
+end function MOSSCO_StringLower
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_StringLower"
+
+!> Changes a string to uppercase letters for the
+!> 26 basic characters
+pure function MOSSCO_StringUpper(from) result(to)
+
+  character(len=*), intent(in) :: from
+  character(len(from))          :: to
+
+  integer :: i, ind
+  character(len=26), parameter :: majuscules = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  character(len=26), parameter :: minuscules = 'abcdefghijklmnopqrstuvwxyz'
+
+  to = from
+  do i = 1, len_trim(from)
+    ind = index(minuscules, from(i:i))
+    if (ind > 0) to(i:i) = majuscules(ind:ind)
+  enddo
+
+end function MOSSCO_StringUpper
 
 end module mossco_strings
 

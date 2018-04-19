@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF soil-pelagic coupling
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014, 2015 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister <richard.hofmeister@hzg.de>
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
@@ -223,25 +223,25 @@ module soil_pelagic_connector
     verbose = .true.
     if (advanceCount > 0) verbose = .false.
 
-    !   DIN flux:
+    !> DIN flux: require that the soil component has nitrate and
+    !  ammonium upward fluxes.
     call mossco_state_get(importState, (/'mole_concentration_of_nitrate_upward_flux_at_soil_surface'/), &
       val1_f2, verbose=verbose, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call mossco_state_get(importState, (/'mole_concentration_of_ammonium_upward_flux_at_soil_surface'/), &
       val2_f2, verbose=verbose, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call mossco_state_get(exportState, &
-             (/'nitrate_upward_flux_at_soil_surface'/), &
-             DINflux, ubnd=ubnd, lbnd=lbnd, verbose=verbose, rc=nitrc)
+      (/'nitrate_upward_flux_at_soil_surface'/), &
+      DINflux, ubnd=ubnd, lbnd=lbnd, verbose=verbose, rc=nitrc)
     if (nitrc == 0) DINflux = convertN*val1_f2
+
     call mossco_state_get(exportState, &
-             (/'ammonium_upward_flux_at_soil_surface               ',   &
-               'dissolved_ammonium_nh3_upward_flux_at_soil_surface '/), &
-             DINflux, ubnd=ubnd, lbnd=lbnd, verbose=verbose, rc=ammrc)
+      (/'ammonium_upward_flux_at_soil_surface               ',   &
+        'dissolved_ammonium_nh3_upward_flux_at_soil_surface '/), &
+      DINflux, ubnd=ubnd, lbnd=lbnd, verbose=verbose, rc=ammrc)
     if (ammrc == 0) DINflux = convertN*val2_f2
 
     !RH: weak check, needs to be replaced:
@@ -330,7 +330,7 @@ module soil_pelagic_connector
     call mossco_state_get(exportState,(/ &
       'detP_upward_flux_at_soil_surface                    ', &
       'Detritus_Phosphorus_detP_upward_flux_at_soil_surface'/), DETPflux, &
-      verbose=verbose, rc=rc)
+      verbose=verbose, rc=localrc)
 
     hasPhosphorous = .false.
     if (localrc == ESMF_SUCCESS) then
@@ -356,7 +356,9 @@ module soil_pelagic_connector
 
     !> For omexdia_p, get detritus N from detritus C, could be streamlined with variables
     !> gathered above, but left from old code for now
-    if ( hasCarbon .and. (.not. hasNitrogen) .and. associated(detNFlux) ) then
+    !> if nitrogen did not match so far, use the carbon flux
+    !> as used in the sediment by omexdia for the nitrogen detritus.
+    if ( (.not. hasNitrogen) .and. associated(detNFlux) ) then
 
       call mossco_state_get(importState,(/'detritus_semilabile_carbon_upward_flux_at_soil_surface'/), &
         SDETCflux, verbose=verbose, rc=localrc)
@@ -370,9 +372,9 @@ module soil_pelagic_connector
     endif
 
     !> For models that lack phosphorous, add this according to Redfield
-    if ( hasNitrogen .and. (.not. hasPhosphorous) .and. associated(detPFlux) ) then
+    if ( associated(detNflux) .and. (.not. hasPhosphorous) .and. associated(detPFlux) ) then
       DETPflux(RANGE2D) = DETNflux(RANGE2D) / 16.0
-    elseif ( hasCarbon .and. (.not. hasPhosphorous) .and. associated(detPFlux) ) then
+    elseif ( associated(detCflux) .and. (.not. hasPhosphorous) .and. associated(detPFlux) ) then
       DETPflux(RANGE2D) = DETCflux(RANGE2D) / 106.0
     endif
 

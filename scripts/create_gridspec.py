@@ -3,8 +3,8 @@
 # This script is is part of MOSSCO. It creates from basic grid parameters
 # a GRIDSPEC compliant NetCDF file.
 #
-# @copyright (C) 2014, 2015, 2016 ,2017 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen
+# @copyright (C) 2014, 2015, 2016 ,2017, 2018 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the

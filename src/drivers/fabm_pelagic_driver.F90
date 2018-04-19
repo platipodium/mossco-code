@@ -2,7 +2,7 @@
 !> @brief 3D generic driver for the Framework for Aquatic Biogeochemical Models (FABM)
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2013,2014,2015,2016,2017 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2013,2014,2015,2016,2017, 2018 Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister <richard.hofmeister@hzg.de>
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de
 !
@@ -24,6 +24,7 @@
 
 #define RANGE3D 1:pf%inum,1:pf%jnum,1:pf%knum
 #define RANGE2D 1:pf%inum,1:pf%jnum
+
   use solver_library
   use mossco_strings
   use fabm
@@ -42,7 +43,11 @@
     type(type_model),pointer           :: model
     !type(type_model), target           :: model_state
     type(export_state_type),dimension(:),pointer :: export_states => null()
-    real(rk),dimension(:,:,:),pointer  :: temp,salt,par,dens,current_depth
+    real(rk),dimension(:,:,:),pointer  :: temp => null()
+    real(rk),dimension(:,:,:),pointer  :: salt  => null()
+    real(rk),dimension(:,:,:),pointer  :: par  => null()
+    real(rk),dimension(:,:,:),pointer  :: dens  => null()
+    real(rk),dimension(:,:,:),pointer  :: current_depth  => null()
     real(rk),dimension(:,:,:),pointer  :: layer_height=>null()
     real(rk),dimension(:,:),pointer    :: volume_flux=>null()
     real(rk),dimension(:,:,:),pointer  :: volume_change=>null()
@@ -68,10 +73,10 @@
     real(rk), dimension(:,:,:), pointer  :: horizontal_data => null()
     real(rk), dimension(:,:,:,:), pointer:: time_integrated_bulk_variables => null()
     real(rk), dimension(:,:,:), pointer  :: time_integrated_horizontal_variables => null()
-    integer, dimension(:), pointer       :: int_idx_from_diag_idx
-    integer, dimension(:), pointer       :: int_idx_from_hor_diag_idx
+    integer, dimension(:), pointer       :: int_idx_from_diag_idx  => null()
+    integer, dimension(:), pointer       :: int_idx_from_hor_diag_idx  => null()
     character(len=255), allocatable      :: fabm_modules(:)
-    character(len=255)                   :: fabm_git_sha, fabm_git_branch
+    character(len=255)                   :: fabm_git_sha='', fabm_git_branch=''
     contains
     procedure :: get_rhs
     procedure :: get_dependencies
@@ -762,32 +767,44 @@
 
      class(type_mossco_fabm_pelagic)     :: pf
      integer  :: i,j,k
-     real(rk) :: bioext(1:pf%inum,1:pf%jnum,1:pf%knum),localext
+     real(rk) :: bioext(1:pf%knum)
+     real(rk) :: localpar,localext
 
-     bioext = 0.0_rk
 
      do i=1,pf%inum
        do j=1,pf%jnum
-         do k=pf%knum,2,-1
-           if (.not.pf%mask(i,j,k)) then
-             call fabm_get_light_extinction(pf%model,i,j,k,localext)
+         localpar = pf%I_0(i,j) * (1.0d0-pf%albedo(i,j))
+         bioext = 0.0_rk
+         if (pf%mask(i,j,1)) then
+           pf%par(i,j,:) = localpar
+         else
+           do k=pf%knum,2,-1
+             if (.not.pf%mask(i,j,k)) then
+               call fabm_get_light_extinction(pf%model,i,j,k,localext)
 
-             ! Add the extinction of the first half of the grid box.
-             bioext(i,j,k) = bioext(i,j,k) + &
-               (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,k)
+               ! Add the extinction of the first half of the grid box.
+               bioext(k) = bioext(k) + (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,k)
 
-             ! Add the extinction of the second half of the grid box.
-             bioext(i,j,k-1) = bioext(i,j,k) + &
-               (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,k)
-           end if
-         end do
-         ! Add the extinction of the upper half of the last layer
-         if (.not.pf%mask(i,j,1)) then
+               ! Add the extinction of the second half of the grid box.
+               bioext(k-1) = bioext(k) + (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,k)
+             end if
+           end do
+           ! Add the extinction of the upper half of the last layer
            call fabm_get_light_extinction(pf%model,i,j,1,localext)
-           bioext(i,j,1) = bioext(i,j,1) + &
-             (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,1)
-         end if
-         pf%par(i,j,:) = pf%I_0(i,j) * (1.0d0-pf%albedo(i,j)) * exp(-bioext(i,j,:))
+           bioext(1) = bioext(1) + (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,1)
+           pf%par(i,j,:) = localpar * exp(-bioext(:))
+if ( any(bioext(:) /= bioext(:)) ) write(0,*) 'ERROR: fabm_pelagic_driver#800 bioext = ',i,j,bioext(:)
+         endif
+       end do
+     end do
+
+     do i=1,pf%inum
+       do j=1,pf%jnum
+!         if (.not.pf%mask(i,j,1)) then
+if ( pf%I_0(i,j) /= pf%I_0(i,j) ) write(0,*) 'ERROR: fabm_pelagic_driver#800 pf%I_0 = ',i,j,pf%I_0(i,j)
+if ( pf%albedo(i,j) /= pf%albedo(i,j) ) write(0,*) 'ERROR: fabm_pelagic_driver#809 pf%albedo = ',i,j,pf%albedo(i,j)
+if ( any(pf%par(i,j,:) /= pf%par(i,j,:)) ) write(0,*) 'ERROR: fabm_pelagic_driver#810 pf%par = ',i,j,pf%par(i,j,:)
+!         end if
        end do
      end do
 

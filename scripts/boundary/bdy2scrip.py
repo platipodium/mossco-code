@@ -3,7 +3,7 @@
 # This python script is part of MOSSCO, it produces from GETM 2D boundary 
 # information an ESMF location stream
 #
-# @copyright (C) 2017 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2017, 2018 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -12,11 +12,9 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
 
-#from pylab import *
 import netCDF4
 import re
 import numpy as np
-import ESMF
 import os, sys
 import time
 
@@ -60,7 +58,7 @@ def readtopo(topo):
 
     return lonx,latx
     
-def convertbdy2locstream(info,data,topo,output):
+def convertbdy2locstream(info,topo,output):
 
     boundaryIndices = np.array(readbdyinfo(info))
     lonx, latx = readtopo(topo)
@@ -115,9 +113,9 @@ def writebdyscrip(filename,lon,lat,lonc,latc):
 
     nc=netCDF4.Dataset(filename,'w',format='NETCDF3_CLASSIC')
 
-    nc.createDimension('grid_size',len(lonc))
+    nc.createDimension('grid_size',len(lon))
     nc.createDimension('grid_corners',4)
-    nc.createDimension('grid_rank',2)
+    nc.createDimension('grid_rank',1)
 
     grid_dims = nc.createVariable('grid_dims','i4',('grid_rank'))
     grid_dims.units = 'unitless'
@@ -145,7 +143,7 @@ def writebdyscrip(filename,lon,lat,lonc,latc):
     nc.Conventions = 'SCRIP'
 
 # Values
-    grid_dims[:]=lonc.shape
+    grid_dims[:]=lon.shape
     grid_imask[:]=np.zeros(lon.shape,dtype=int)
 
     grid_center_lat[:]=lat
@@ -158,16 +156,16 @@ def writebdyscrip(filename,lon,lat,lonc,latc):
     nc.close()
 
 
-
 if __name__ == '__main__':
 
-  bdyinfo = '/Users/lemmen/devel/mossco/setups/sns/bdyinfo.dat'
-  bdydata = '/Users/lemmen/devel/mossco/setups/sns/bdy.2d.nc'
-  topo = '/Users/lemmen/devel/mossco/setups/sns/topo.nc'
+  basedir=os.environ['MOSSCO_SETUPDIR']
+  bdyinfo = os.path.join(basedir, 'sns', 'bdyinfo.dat')
+  topo = os.path.join(basedir, 'sns', 'Topo', 'topo.nc')
 
-  locdata = re.sub('.nc','_locstream.nc',bdydata)
+  locdata = re.sub('.dat','_locstream.nc',bdyinfo)
   
-  convertbdy2locstream(bdyinfo,bdydata,topo,locdata)
+  if os.path.exists(topo) and os.path.exists(bdyinfo): 
+      convertbdy2locstream(bdyinfo,topo,locdata)
 
 
 
