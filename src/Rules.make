@@ -646,7 +646,7 @@ ifeq ($(FORTRAN_COMPILER),XLF)
 F90FLAGS += -qmoddir=$(MOSSCO_MODULE_PATH) -qstrict
 EXTRA_CPP=-WF,-DNO_ISO_FORTRAN_ENV
 else
-$(error I don't know where to place modules for FORTRAN_COMPILER=$(FORTRAN_COMPILER))
+$(error I don't know where to place modules for FORTRAN_COMPILER="$(FORTRAN_COMPILER)". You may have to set this variable or the variable ESMFMKFILE)
 endif
 endif
 endif
