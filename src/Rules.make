@@ -860,7 +860,7 @@ install: install-lib
 #	$(MOSSCO_CCOMPILER) -shared -o $(MOSSCO_INSTALL_PREFIX)/libmossco.so -Wl,--whole-archive $(MOSSCO_LIBRARY_PATH)/*.a
 	@cp $(MOSSCO_MODULE_PATH)/*.mod $(MOSSCO_INSTALL_PREFIX)/include
 	@echo "Use executables 'mossco' and 'stitch' in $(MOSSCO_INSTALL_PREFIX)/bin"
-	@echo "Use library with '-L $(MOSSCO_INSTALL_PREFIX)/lib -l'"
+	@echo "Use library with '-L $(MOSSCO_INSTALL_PREFIX)/lib -lmossco'"
 	@echo "Use includes in  '-I $(MOSSCO_INSTALL_PREFIX)/include'"
 
 install-lib:
@@ -869,10 +869,10 @@ install-lib:
 	@echo save >> $(MOSSCO_INSTALL_PREFIX)/lib/libmossco.mri
 	@echo end >> $(MOSSCO_INSTALL_PREFIX)/lib/libmossco.mri
 #	$(AR) -M < $(MOSSCO_INSTALL_PREFIX)/lib/libmossco.mri
-	@for F in $(MOSSCO_LIBRARY_PATH)/*.a; do cp $$F  $(MOSSCO_INSTALL_PREFIX)/lib/; done
-	@(cd $(MOSSCO_INSTALL_PREFIX)/lib ; for F in *.a; do $(AR) x $$F ; done)
-	@(cd $(MOSSCO_INSTALL_PREFIX)/lib; $(RM) -f *.a SORTED __*; $(AR) crus libmossco.a *.o)
-	@$(RM) -f $(MOSSCO_INSTALL_PREFIX)/lib/*.o
+	@(cd $(MOSSCO_LIBRARY_PATH); for F in *.a ; do $(AR) x $$F; done )
+	@(cd $(MOSSCO_LIBRARY_PATH); $(RM) -f SORTED __*; $(AR) crus libmossco.a *.o )
+	@$(RM) -f $(MOSSCO_LIBRARY_PATH)/*.o
+	@mv $(MOSSCO_LIBRARY_PATH)/libmossco.a $(MOSSCO_INSTALL_PREFIX)/lib/;
 
 
 		#	  echo $(AR) x $(MOSSCO_INSTALL_PREFIX)/lib/${$$F##*/}); \
