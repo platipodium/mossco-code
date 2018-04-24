@@ -42,7 +42,7 @@ ifeq ($(shell hostname),KSEZ8002)
   $(warning use changed ARFLAGS=rvU)
 endif
 
-MOSSCO_INSTALL_PREFIX?=$(MOSSCO_DIR)
+export MOSSCO_INSTALL_PREFIX?=$(MOSSCO_DIR)
 
 # Filter out all MAKELEVELS that are not 1 or 0 to avoid unneccessary execution
 # of the preamble section of this Rules.make in repeated calls.  In most circumstances,
@@ -579,8 +579,7 @@ MOSSCO_PREFIX?=$(MOSSCO_DIR)
 export MOSSCO_PREFIX
 
 export MOSSCO_MODULE_PATH=$(MOSSCO_PREFIX)/modules/$(FORTRAN_COMPILER)
-export MOSSCO_LIBRARY_PATH=$(MOSSCO_PREFIX)/lib/$(FORTRAN_COMPILER)
-export MOSSCO_BIN_PATH=$(MOSSCO_INSTALL_PREFIX)/bin
+export MOSSCO_LIBRARY_PATH=$(MOSSCO_PREFIX)/libraries/$(FORTRAN_COMPILER)
 
 # 7. Putting everything together.
 # This is the list of ESMF-supported compilers:
@@ -705,7 +704,7 @@ endif # End of MAKELEVEL 1 preamble
 
 
 # Make targets
-.PHONY: default all doc info prefix libfabm_external libgotm_external libgetm_external libjson_external
+.PHONY: default all doc info prefix libfabm_external libgotm_external libgetm_external libjson_external install
 .PHONY: distclean distupdate
 
 # Following GNU standards, "all" should be the default target in every Makefile.
@@ -723,7 +722,9 @@ distupdate:
 prefix:
 	@mkdir -p $(MOSSCO_LIBRARY_PATH)
 	@mkdir -p $(MOSSCO_MODULE_PATH)
-	@mkdir -p $(MOSSCO_BIN_PATH)
+	@mkdir -p $(MOSSCO_INSTALL_PREFIX)/bin
+	@mkdir -p $(MOSSCO_INSTALL_PREFIX)/include
+	@mkdir -p $(MOSSCO_INSTALL_PREFIX)/lib
 
 info:
 	@echo SHELL = $(SHELL)
@@ -852,10 +853,30 @@ endif
 
 #$(AR) Trus $(MOSSCO_LIBRARY_PATH)/libgetm_external.a $(GETM_LIBRARY_PATH)/lib*_prod.a
 
-install:
-	#mkdir -p $(MOSSCO_DIR)/bin
-	ln -sf $(MOSSCO_DIR)/scripts/mossco.sh  $(MOSSCO_INSTALL_PREFIX)/bin/mossco
-	#install  $(MOSSCO_DIR)/bin/mossco $(MOSSCO_INSTALL_PREFIX)/bin
+install: install-lib
+	@ln -sf $(MOSSCO_DIR)/scripts/mossco.sh  $(MOSSCO_INSTALL_PREFIX)/bin/mossco
+	@ln -sf $(MOSSCO_DIR)/scripts/stitch_tiles.py  $(MOSSCO_INSTALL_PREFIX)/bin/stitch
+#@install  $(MOSSCO_DIR)/bin/mossco $(MOSSCO_INSTALL_PREFIX)/bin
+#	$(MOSSCO_CCOMPILER) -shared -o $(MOSSCO_INSTALL_PREFIX)/libmossco.so -Wl,--whole-archive $(MOSSCO_LIBRARY_PATH)/*.a
+	@cp $(MOSSCO_MODULE_PATH)/*.mod $(MOSSCO_INSTALL_PREFIX)/include
+	@echo "Use executables 'mossco' and 'stitch' in $(MOSSCO_INSTALL_PREFIX)/bin"
+	@echo "Use library with '-L $(MOSSCO_INSTALL_PREFIX)/lib -l'"
+	@echo "Use includes in  '-I $(MOSSCO_INSTALL_PREFIX)/include'"
+
+install-lib:
+	@echo create libmossco.a > $(MOSSCO_INSTALL_PREFIX)/lib/libmossco.mri
+	@for F in $(MOSSCO_LIBRARY_PATH)/*.a; do echo addlib $(basename $F) >> $(MOSSCO_INSTALL_PREFIX)/lib/libmossco.mri; done
+	@echo save >> $(MOSSCO_INSTALL_PREFIX)/lib/libmossco.mri
+	@echo end >> $(MOSSCO_INSTALL_PREFIX)/lib/libmossco.mri
+#	$(AR) -M < $(MOSSCO_INSTALL_PREFIX)/lib/libmossco.mri
+	@for F in $(MOSSCO_LIBRARY_PATH)/*.a; do cp $$F  $(MOSSCO_INSTALL_PREFIX)/lib/; done
+	@(cd $(MOSSCO_INSTALL_PREFIX)/lib ; for F in *.a; do $(AR) x $$F ; done)
+	@(cd $(MOSSCO_INSTALL_PREFIX)/lib; $(RM) -f *.a SORTED __*; $(AR) crus libmossco.a *.o)
+	@$(RM) -f $(MOSSCO_INSTALL_PREFIX)/lib/*.o
+
+
+		#	  echo $(AR) x $(MOSSCO_INSTALL_PREFIX)/lib/${$$F##*/}); \
+
 
 .PHONY: mossco_clean
 
