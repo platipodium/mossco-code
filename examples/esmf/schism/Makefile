@@ -1,37 +1,47 @@
-# Makefile to create a MOSSCO-coupled SCHISM application
+# This Makefile is part of MOSSCO
+#
+# @copyright (C) 2018 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 # @author Richard Hofmeister <richard.hofmeister@hzg.de>
-# @author Carsten Lemmen <carsten.lemmen@hzg.de>
-# @copyright Helmholtz-Zentrum Geesthacht
-# @license Apache License 2.0
+# @license Dual licensed under GPL v3+ and Apache 2.0
+#
+# MOSSCO is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
+#
+# In addition to the main part of MOSSCO, the coupling to  SCHISM is dual-licensed
+# under the Apache 2.0 license, consult the file
 
-# include your ESMF Makefile (esmf.mk)
-ifndef ESMFMKFILE
-	$(error ESMFMKFILE has to be set in environment)
+ifndef MOSSCO_DIR
+export MOSSCO_DIR=$(subst /examples/esmf/schism$,,$(CURDIR))
 endif
-include $(ESMFMKFILE)
 
-# add SCHISM, PARMETIS and MOSSCO directories
+include $(MOSSCO_DIR)/src/Rules.make
+
+# add SCHISM, PARMETIS
 ifndef SCHISM_DIR
 $(error SCHISM_DIR has to be set in environment)
 endif
 ifndef PARMETIS_DIR
 $(error PARMETIS_DIR has to be set in environment)
 endif
-ifndef MOSSCO_DIR
-$(error MOSSCO_DIR has to be set in environment)
+
+ifeq ($(wildcard $(SCHISM_DIR)/lib/libhydro.a),)
+$(error You need to compile schism externally.)
 endif
 
-F90=$(ESMF_F90COMPILER)
-LIBS=$(ESMF_F90ESMFLINKLIBS)
-CPPFLAGS=$(ESMF_F90COMPILEOPTS)
-F90FLAGS=$(ESMF_F90COMPILEPATHS)
-LDFLAGS+=$(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS)
+ifeq ($(wildcard $(SCHISM_DIR)/../esmf/schism_esmf_component.F90),)
+$(error Cannot find schism_esmf_component.)
+endif
 
 LIBS+= -L$(SCHISM_DIR)/lib -lhydro -lcore
 LIBS+= -L$(PARMETIS_DIR) -lparmetis -lmetis
-LIBS+= -L$(MOSSCO_DIR)/lib -lmossco 
+LIBS+= -L$(MOSSCO_DIR)/lib -lmossco
 F90FLAGS+= -I$(SCHISM_DIR)/include
 F90FLAGS+= -I$(MOSSCO_DIR)/include
+LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
+
 
 .PHONY: all clean distclean config
 
@@ -67,10 +77,10 @@ main.F90:
 	ln -sf $(MOSSCO_DIR)/examples/common/main.F90 .
 
 schism_driver_interfaces.F90:
-	ln -sf ../esmf/schism_driver_interfaces.F90 .
+	ln -sf $(SCHISM_DIR)/../esmf/schism_driver_interfaces.F90 .
 
 schism_esmf_component.F90:
-	ln -sf ../esmf/schism_esmf_component.F90 .
+	ln -sf $(SCHISM_DIR)/../esmf/schism_esmf_component.F90 .
 
 wind.nc: wind.cdl
 	ncgen -o $@ $<
