@@ -19,6 +19,14 @@ import numpy as np
 import time
 
 if True:
+
+  ll_lon = 7.8		#lower left of cell corner 4°W
+  ll_lat = 54.49
+  ur_lon = 8.3
+  ur_lat = 54.52
+  delta_lon = 0.05		#delta lon in dezimalgrad
+  delta_lat = 0.003
+if False:
   ll_lon = -15.		#lower left of cell corner 4°W
   ll_lat = 40.
   ur_lon = 25.
