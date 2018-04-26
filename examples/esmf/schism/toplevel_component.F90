@@ -759,8 +759,8 @@ module toplevel_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! ReadRestarting schism with data from wind_input
-    call ESMF_GridCompReadRestart(gridCompList(5), importState=gridExportStateList(4), &
-      exportState=gridExportStateList(5), clock=clock, phase=1, rc=localrc)
+    !call ESMF_GridCompReadRestart(gridCompList(5), importState=gridExportStateList(4), &
+    !  exportState=gridExportStateList(5), clock=clock, phase=1, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
