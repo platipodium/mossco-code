@@ -19,6 +19,7 @@ instances:
   - temperature_output: netcdf
   - regrid_tomesh: regrid_coupler
   - regrid_togrid: regrid_coupler
+  - schism: schism_esmf
 
 coupling:
   - components:
@@ -40,6 +41,6 @@ coupling:
     interval: 30 m
   - components:
     - schism
-    - regrid_togrid
+#   - regrid_togrid
     - temperature_output
     interval: 30 m
