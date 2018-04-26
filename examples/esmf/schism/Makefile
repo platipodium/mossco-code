@@ -45,7 +45,7 @@ LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 
 .PHONY: all clean distclean config
 
-all:  schism_mossco config
+all:  schism_mossco config outputs
 
 schism_mossco:  schism_esmf_component.o toplevel_component.o main.o
 	$(F90) $(CPPFLAGS) $^ -o $@ $(LDFLAGS) $(LIBS)
@@ -54,6 +54,9 @@ toplevel_component.o: schism_esmf_component.o
 
 schism_esmf_component.o: schism_driver_interfaces.mod
 
+outputs:
+	mkdir -p outputs
+	
 # Generic and cleanup rules
 
 %.o: %.F90
@@ -63,13 +66,13 @@ schism_esmf_component.o: schism_driver_interfaces.mod
 	$(F90) $(CPPFLAGS) $(F90FLAGS) -c $<
 
 clean:
-	@$(RM) *.o *.mod PET* fort.* *output.nc
-	@$(RM) -rf *dSYM
+	@$(RM) *.o *.mod PET* fort.* *output.nc  *.dat *.vtk
+	@$(RM) -rf *dSYM *.out
 
 config:  grid_input.cfg wind_input.cfg wind.nc
 
-distclean: clean
-	@$(RM) schism_mossco schism_driver_interfaces.F90 schism_esmf_component.F90 main.F90
+extraclean: clean
+	@$(RM) schism_mossco schism_driver_interfaces.F90 schism_esmf_component.F90 main.F90 wind.nc
 
 # Copy/link files from schism_esmf and mossco systems
 
