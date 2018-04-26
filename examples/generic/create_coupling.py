@@ -1075,9 +1075,25 @@ fid.write('''
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
+
+    !! Establish number of phases for all components
+    !! @> todo this interface will likely change in the future and will
+    !! be integrated with GridCompGet
+
+    if (.not.allocated(gridCompPhaseCountList)) &
+      allocate(gridCompPhaseCountList(numGridComp), stat=localrc)
+
+    do i = 1, numGridComp
+      call ESMF_GridCompGetEPPhaseCount(gridCompList(i), ESMF_METHOD_READRESTART, &
+        phaseCount=phaseCount, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      gridCompPhaseCountList(i)=phaseCount
+    enddo
 ''')
 
-# Go through ReadRestart (assumed only phase 1)
+# Go through ReadRestart only if (1) a netcdf_input is connected
+# and (2) a ReadRestart phase is defined.
 for item in gridCompList:
   ito=gridCompList.index(item)
   for coupling in couplingList:
@@ -1088,10 +1104,12 @@ for item in gridCompList:
     if not instanceDict[jtem] == 'netcdf_input' : continue
     if coupling[1] == 'nudge_connector' : continue
     fid.write('    !! ReadRestarting ' + item + ' with data from ' + jtem + '\n')
-    fid.write('    call ESMF_GridCompReadRestart(gridCompList(' + str(ito+1) + '), importState=gridExportStateList(' + str(ifrom+1) + '), &\n')
-    fid.write('      exportState=gridExportStateList(' + str(ito+1) + '), clock=clock, phase=1, rc=localrc)\n')
-    fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
-    fid.write('      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
+    fid.write('    if (gridCompPhaseCountList(' + str(ito+1) + ') > 0) then\n')
+    fid.write('      call ESMF_GridCompReadRestart(gridCompList(' + str(ito+1) + '), importState=gridExportStateList(' + str(ifrom+1) + '), &\n')
+    fid.write('        exportState=gridExportStateList(' + str(ito+1) + '), clock=clock, phase=1, rc=localrc)\n')
+    fid.write('      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
+    fid.write('        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n')
+    fid.write('    endif\n\n')
 fid.write('    !! End of ReadRestart \n\n')
 
 fid.write('''
