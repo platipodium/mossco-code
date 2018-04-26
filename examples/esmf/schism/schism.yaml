@@ -1,0 +1,45 @@
+# ---
+# author: Carsten Lemmen
+# copyright: 2018 Helmholtz-Zentrum Geesthacht
+# license: CC-by-SA 4.0
+# description: "This test case reads a grid from file, regrids it to an
+# ocean component (such as getm/schism/hamsom) and writes out to netcdf
+# the data that was read in and that is produced by the ocean component."
+# ...
+dependencies:
+  - wind_input:
+    - component: grid_input
+      grid: grid_input
+
+instances:
+  - grid_input: grid
+  - wind_input: netcdf_input
+  - schism_output: netcdf
+  - wind_output: netcdf
+  - temperature_output: netcdf
+  - regrid_tomesh: regrid_coupler
+  - regrid_togrid: regrid_coupler
+
+coupling:
+  - components:
+    - grid_input
+    - wind_input
+    interval: none
+  - components:
+    - wind_input
+    - regrid_tomesh
+    - schism
+    interval: 30 m
+  - components:
+    - wind_input
+    - wind_output
+    interval: 30 m
+  - components:
+    - schism
+    - schism_output
+    interval: 30 m
+  - components:
+    - schism
+    - regrid_togrid
+    - temperature_output
+    interval: 30 m
