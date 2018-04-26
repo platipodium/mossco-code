@@ -840,17 +840,36 @@ module toplevel_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
+
+    !! Establish number of phases for all components
+    !! @> todo this interface will likely change in the future and will
+    !! be integrated with GridCompGet
+
+    if (.not.allocated(gridCompPhaseCountList)) &
+      allocate(gridCompPhaseCountList(numGridComp), stat=localrc)
+
+    do i = 1, numGridComp
+      call ESMF_GridCompGetEPPhaseCount(gridCompList(i), ESMF_METHOD_READRESTART, &
+        phaseCount=phaseCount, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      gridCompPhaseCountList(i)=phaseCount
+    enddo
     !! ReadRestarting wind_output with data from wind_input
-    call ESMF_GridCompReadRestart(gridCompList(3), importState=gridExportStateList(5), &
-      exportState=gridExportStateList(3), clock=clock, phase=1, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (gridCompPhaseCountList(3) > 0) then
+      call ESMF_GridCompReadRestart(gridCompList(3), importState=gridExportStateList(5), &
+        exportState=gridExportStateList(3), clock=clock, phase=1, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
 
     !! ReadRestarting schism with data from wind_input
-    !call ESMF_GridCompReadRestart(gridCompList(6), importState=gridExportStateList(5), &
-    !  exportState=gridExportStateList(6), clock=clock, phase=1, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (gridCompPhaseCountList(6) > 0) then
+      call ESMF_GridCompReadRestart(gridCompList(6), importState=gridExportStateList(5), &
+        exportState=gridExportStateList(6), clock=clock, phase=1, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
 
     !! End of ReadRestart 
 
