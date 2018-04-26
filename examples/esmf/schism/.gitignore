@@ -1,0 +1,11 @@
+*.o
+*.mod
+*.a
+*.dSYM
+schism_driver_interfaces.F90
+schism_esmf_component.F90
+main.F90
+schism_mossco
+PET*
+fort.11
+*.nc
