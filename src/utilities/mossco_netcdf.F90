@@ -202,7 +202,12 @@ module mossco_netcdf
     endif
 
     !> @todo need to consider also non double fields
-    if (typeKind /= ESMF_TYPEKIND_R8) return
+    if (typeKind /= ESMF_TYPEKIND_R8) then
+      write(message,'(A)')  trim(owner_)//' writing non-double fields not yet supported'
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+      !> @todo reconsider the return value here
+      return
+    endif
 
     !> If the variable does not exist, create it
     if (.not.self%variable_present(varname)) then
@@ -377,7 +382,6 @@ module mossco_netcdf
       call  ESMF_FieldGet(field, farrayPtr=farrayPtr4, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      !> @todo We should *not* write into any parts of the pointer, rather make a copy
       if (associated(ncarray4)) deallocate(ncarray4)
       allocate(ncarray4(RANGE4D),stat=localrc)
       ncarray4 = farrayPtr4(RANGE4D)
@@ -776,7 +780,7 @@ module mossco_netcdf
         return
       endif
 
-      if (associated(ncarray2)) deallocate(ncarray2); nullify(ncarray2)
+      if (associated(ncarray2)) deallocate(ncarray2)
 
     elseif (rank==1) then
 
