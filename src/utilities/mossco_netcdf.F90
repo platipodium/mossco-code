@@ -182,9 +182,6 @@ module mossco_netcdf
 
     if (localDeCount == 0) return
 
-    !> @todo need to consider also non double fields
-    if (typeKind /= ESMF_TYPEKIND_R8) return
-
     allocate(lbnd(rank), stat=localrc)
     allocate(ubnd(rank), stat=localrc)
     allocate(exclusiveCount(rank), stat=localrc)
@@ -203,6 +200,9 @@ module mossco_netcdf
       !> @todo reconsider the return value here
       return
     endif
+
+    !> @todo need to consider also non double fields
+    if (typeKind /= ESMF_TYPEKIND_R8) return
 
     !> If the variable does not exist, create it
     if (.not.self%variable_present(varname)) then
@@ -866,13 +866,15 @@ module mossco_netcdf
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_variable_create"
-  subroutine mossco_netcdf_variable_create(self, field, kwe, name, precision, rc)
+  subroutine mossco_netcdf_variable_create(self, field, kwe, &
+    name, precision, owner, rc)
 
     class(type_mossco_netcdf)        :: self
     type(ESMF_Field), intent(inout)  :: field
     type(ESMF_KeyWordEnforcer), optional, intent(in) :: kwe
     character(len=*),intent(in), optional        :: name
     character(len=*),intent(in), optional        :: precision
+    character(len=*),intent(in), optional        :: owner
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     type(ESMF_Grid)                :: grid
@@ -904,6 +906,7 @@ module mossco_netcdf
     integer(ESMF_KIND_I8)          :: missingValueI8=-9999
     integer(ESMF_KIND_I4)          :: localrc
     character(len=11)              :: precision_
+    character(len=ESMF_MAXSTR)     :: owner_
 
     integer :: petCount, localPet, vas, ssiId, peCount
     type(ESMF_Vm)                  :: vm
@@ -913,8 +916,10 @@ module mossco_netcdf
     real(ESMF_KIND_R8),pointer     :: farrayPtr1(:), farrayPtr2(:,:), farrayPtr3(:,:,:)
 
     rc_ = ESMF_SUCCESS
+    owner_ = '--'
     if (present(kwe)) rc_ = ESMF_SUCCESS
     if (present(rc)) rc = ESMF_SUCCESS
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
 
     call ESMF_FieldGet(field, name=fieldName, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -936,7 +941,8 @@ module mossco_netcdf
       call ESMF_GridGet(grid, name=geomName, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      dimids => self%grid_dimensions(grid, staggerloc)
+      dimids => self%grid_dimensions(grid, staggerloc=staggerLoc, rc=localrc)
+      call self%create_grid_coordinate(grid, owner=owner_, rc=localrc)
 
       call ESMF_GridGet(grid, coordSys=coordSys,rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -947,6 +953,7 @@ module mossco_netcdf
 
       write(geomname,'(A)') 'mesh'
       dimids => self%mesh_dimensions(mesh, meshLoc=meshloc, rc=localrc)
+      call self%create_mesh_coordinate(mesh, owner=owner_, rc=rc)
 
       call ESMF_MeshGet(mesh, coordSys=coordSys, rc=localrc)
       dimCount = 1
@@ -1159,22 +1166,31 @@ module mossco_netcdf
     varname='pet_'//trim(geomName)
     if (.not.self%variable_present(varname)) then
 
-      ncStatus = nf90_redef(self%ncid)
-      if (ncStatus /= NF90_NOERR) then
-        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot enter definition mode', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-      endif
-
       if (geomType == ESMF_GEOMTYPE_GRID) then
-        dimids => self%grid_dimensions(grid)
+        dimids => self%grid_dimensions(grid, staggerLoc=staggerLoc, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        call self%create_grid_coordinate(grid, owner=owner_, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       elseif (geomType==ESMF_GEOMTYPE_MESH) then
         dimids => self%mesh_dimensions(mesh, meshLoc=meshloc, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        call self%create_mesh_coordinate(mesh, owner=owner_, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       elseif (geomType==ESMF_GEOMTYPE_LOCSTREAM) then
         !dimids => self%locstream_dimensions(locStream, rc=localrc)
         localrc = ESMF_RC_NOT_IMPL
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       else
         localrc = ESMF_RC_NOT_IMPL
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      endif
+
+      ncStatus = nf90_redef(self%ncid)
+      if (ncStatus /= NF90_NOERR) then
+        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot enter definition mode', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       endif
 
@@ -1271,7 +1287,11 @@ module mossco_netcdf
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       endif
 
-      dimids => self%grid_dimensions(grid)
+      dimids => self%grid_dimensions(grid, staggerLoc=ESMF_STAGGERLOC_CENTER, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call self%create_grid_coordinate(grid, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_FLOAT,dimids(1:ubound(dimids,1)-1),varid)
       if (ncStatus /= NF90_NOERR) then
@@ -2451,11 +2471,12 @@ module mossco_netcdf
 
     return
 
- end function mossco_netcdf_locstream_dimensions
+  end function mossco_netcdf_locstream_dimensions
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_mesh_dimensions"
-  recursive function mossco_netcdf_mesh_dimensions(self, mesh, kwe, meshLoc, rc) result(dimids)
+  function mossco_netcdf_mesh_dimensions(self, mesh, &
+    kwe, owner, meshLoc, rc) result(dimids)
 
     implicit none
 
@@ -2463,6 +2484,7 @@ module mossco_netcdf
     type(ESMF_Mesh), intent(in)   :: mesh
     type(ESMF_KeyWordEnforcer), intent(in), optional :: kwe
     type(ESMF_MeshLoc), intent(in), optional         :: meshLoc
+    character(len=*), intent(in), optional           :: owner
     integer(ESMF_KIND_I4), intent(out), optional     :: rc
 
     integer(ESMF_KIND_I4), pointer, dimension(:)     :: dimids
@@ -2470,51 +2492,58 @@ module mossco_netcdf
     integer(ESMF_KIND_I4)         :: ncStatus, rc_, localrc
     character(len=ESMF_MAXSTR)    :: geomName, name
 
-    integer(ESMF_KIND_I4)         :: dimCount, dimid
-    character(len=ESMF_MAXSTR)    :: message
-    integer(ESMF_KIND_I4)         :: parametricDim, spatialDim
-    integer(ESMF_KIND_I4)         :: numOwnedNodes, numOwnedElements
+    integer(ESMF_KIND_I4)         :: dimid
+    character(len=ESMF_MAXSTR)    :: message, owner_
+    integer(ESMF_KIND_I4)         :: numOwned
     type(ESMF_MeshLoc)            :: meshLoc_
 
     rc_ = ESMF_SUCCESS
     meshLoc_ = ESMF_MESHLOC_NODE
+    owner_ = '--'
     if (present(kwe)) rc_ = ESMF_SUCCESS
     if (present(meshLoc)) meshLoc_ = meshLoc
     if (present(rc)) rc = rc_
-
-    call ESMF_MeshGet(mesh, numOwnedNodes=numOwnedNodes, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-    if (numOwnedNodes < 1) return
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
 
     !!@todo get the name by ESMF_MeshGet once this is implemented by ESMF
     !call ESMF_MeshGet(mesh, name=geomName, rc=localrc)
+    localrc = ESMF_SUCCESS
+    write(geomname,'(A)') 'mesh'
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    write(geomname,'(A)') 'mesh'
-
     allocate(dimids(2))
-    dimids(1)=-1
     dimids(2)=self%timeDimId
-    write(name,'(A,I1,A)') trim(geomName)//'_nodes'
+
+    if (meshLoc_ == ESMF_MESHLOC_NODE) then
+      call ESMF_MeshGet(mesh, numOwnedNodes=numOwned, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    else
+      call ESMF_MeshGet(mesh, numOwnedElements=numOwned, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
+    if (numOwned < 1) return
+
+    if (meshLoc_ == ESMF_MESHLOC_NODE) then
+      write(name,'(A,I1,A)') trim(geomName)//'_node'
+    else
+      write(name,'(A,I1,A)') trim(geomName)//'_element'
+    endif
     ncStatus = nf90_inq_dimid(self%ncid,trim(name),dimids(1))
 
-    ! if the 'mesh_nodes' dimension was not found, then create it
+    ! if dimension was not found, then create it
     if (ncStatus /= NF90_NOERR) then
       ncStatus = nf90_redef(self%ncid)
-      ncStatus = nf90_def_dim(self%ncid, trim(name), numOwnedNodes,dimids(1))
-      if (ncStatus == NF90_ENAMEINUSE) then
-        localrc = MOSSCO_NC_EXISTING
-      elseif  (ncStatus == NF90_NOERR) then
-        localrc = ESMF_SUCCESS
-      else
-        localrc  = ESMF_RC_NOT_SET
-      end if
+      if (ncStatus /= NF90_NOERR) localrc = ESMF_RC_FILE_WRITE
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      ncStatus = nf90_def_dim(self%ncid, trim(name), numOwned,dimids(1))
+      if (ncStatus /= NF90_NOERR) localrc = ESMF_RC_FILE_WRITE
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       ncStatus = nf90_enddef(self%ncid)
-
-      call self%create_mesh_coordinate(mesh)
+      if (ncStatus /= NF90_NOERR) localrc = ESMF_RC_FILE_WRITE
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
 
     call self%update()
@@ -2523,14 +2552,19 @@ module mossco_netcdf
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_grid_dimensions"
-  recursive function mossco_netcdf_grid_dimensions(self, grid, staggerloc) result(dimids)
-    class(type_mossco_netcdf)     :: self
-    type(ESMF_Grid)               :: grid
-    type(ESMF_StaggerLoc),optional :: staggerloc
+  function mossco_netcdf_grid_dimensions(self, grid, kwe, &
+    staggerloc, owner, rc) result(dimids)
+
+    class(type_mossco_netcdf)      :: self
+    type(ESMF_Grid)                :: grid
+    type(ESMF_KeyWordEnforcer), intent(in), optional :: kwe
+    type(ESMF_StaggerLoc),intent(in), optional       :: staggerloc
+    character(len=*), intent(in), optional           :: owner
+    integer(ESMF_KIND_I4), intent(out), optional     :: rc
 
     type(ESMF_StaggerLoc)          :: staggerloc_
-    integer                       :: ncStatus,rc_,esmfrc,dimcheck
-    character(len=ESMF_MAXSTR)    :: geomName, name
+    integer                       :: ncStatus, rc_, esmfrc, dimcheck
+    character(len=ESMF_MAXSTR)    :: geomName, name, owner_
     integer,allocatable           :: ubounds(:),lbounds(:)
     integer,pointer,dimension(:)  :: dimids
 
@@ -2538,11 +2572,17 @@ module mossco_netcdf
     character(len=ESMF_MAXSTR)    :: message,staggerlocsuffix
 
     rc_ = ESMF_SUCCESS
+    owner_ = '--'
+    staggerloc_ = ESMF_STAGGERLOC_CENTER
+
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+    if (present(staggerloc)) staggerLoc_ = staggerLoc
+    if (present(rc)) rc = rc_
 
     dimcheck=0
     call ESMF_GridGet(grid, name=geomName, rank=rank, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call replace_character(geomName, ' ', '_')
     allocate(ubounds(rank))
@@ -2553,15 +2593,8 @@ module mossco_netcdf
     dimids(:)=-1
     dimids(rank+1)=self%timeDimId
 
-    if (present(staggerloc)) then
-      staggerloc_ = staggerloc
-    else
-      staggerloc_ = ESMF_STAGGERLOC_CENTER
-    end if
-
     call ESMF_GridGet(grid, staggerloc_, 0, exclusiveCount=ubounds, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (staggerloc_ .eq. ESMF_STAGGERLOC_CENTER) then
       staggerlocsuffix=''
@@ -2597,12 +2630,7 @@ module mossco_netcdf
 
       ncStatus = nf90_enddef(self%ncid)
     end if
-
-    !! if grid not present, also create the coordinate variables
-    if (dimcheck == -1) call self%create_grid_coordinate(grid)
     call self%update()
-
-    return
 
   end function mossco_netcdf_grid_dimensions
 
@@ -2726,17 +2754,18 @@ module mossco_netcdf
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_mesh_coordinate_create"
-  subroutine mossco_netcdf_mesh_coordinate_create(self, mesh, kwe, rc)
+  subroutine mossco_netcdf_mesh_coordinate_create(self, mesh, kwe, owner, rc)
 
     implicit none
     class(type_mossco_netcdf)               :: self
     type(ESMF_Mesh), intent(in)             :: mesh
     type(ESMF_KeyWordEnforcer), intent(in), optional :: kwe
-    integer(ESMF_KIND_I4), intent(out), optional :: rc
+    character(len=*), intent(in), optional           :: owner
+    integer(ESMF_KIND_I4), intent(out), optional     :: rc
 
     integer                     :: ncStatus, varid, rc_, localrc, rank
     integer                     :: nDims, nAtts, udimid, dimlen, i, dimid, j
-    character(len=ESMF_MAXSTR)  :: varName, geomName, message, dimName
+    character(len=ESMF_MAXSTR)  :: varName, geomName, message, dimName, owner_
 
     character(len=ESMF_MAXSTR), dimension(3) :: coordNames, coordUnits
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)    :: farrayPtr3
@@ -2744,17 +2773,27 @@ module mossco_netcdf
     real(ESMF_KIND_R8), pointer, dimension(:)        :: farrayPtr1
     integer, pointer, dimension(:)     :: dimids
     type(ESMF_CoordSys_Flag)                         :: coordSys
-    integer(ESMF_KIND_I4), dimension(:), allocatable :: exclusiveCount
     real(ESMF_KIND_R8), dimension(:), allocatable    :: ownedNodeCoords
+    real(ESMF_KIND_R8), dimension(:), allocatable    :: ownedElemCoords
     integer(ESMF_KIND_I4)  :: parametricDim, spatialDim, numOwnedNodes
+    integer(ESMF_KIND_I4)  :: numOwnedElements
+
+    rc_ = ESMF_SUCCESS
+    owner_ = '--'
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+    if (present(rc)) rc = rc_
 
     write(geomname,'(A)') 'mesh'
     call ESMF_MeshGet(mesh, coordSys=coordSys, parametricDim=parametricDim, &
-      spatialDim=spatialDim, numownedNodes=numOwnedNodes, rc=localrc)
+      spatialDim=spatialDim, numownedNodes=numOwnedNodes, &
+      numOwnedElements=numOwnedElements, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call replace_character(geomName, ' ', '_')
-    !if (dimCount<1) return
+
+    if (numOwnedNodes < 1 .and. numOwnedElements < 0) return
+
     if (coordSys == ESMF_COORDSYS_SPH_RAD) then
       coordnames=(/'lon   ','lat   ','radius'/)
       coordunits=(/'radian_east ','radian_north','m           '/)
@@ -2766,36 +2805,73 @@ module mossco_netcdf
       coordunits=(/' ',' ','m'/)
     endif
 
-    allocate(ownedNodeCoords(numOwnedNodes*spatialDim))
-    call ESMF_MeshGet(mesh, ownedNodeCoords=ownedNodeCoords, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    do while (numOwnedNodes > 0)
+      allocate(ownedNodeCoords(numOwnedNodes*spatialDim))
 
-    dimids => self%mesh_dimensions(mesh, rc=localrc)
+      call ESMF_MeshGet(mesh, ownedNodeCoords=ownedNodeCoords, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    do i=1, spatialDim
+      dimids => self%mesh_dimensions(mesh, meshLoc=ESMF_MESHLOC_NODE, &
+        owner=trim(owner_), rc=localrc)
 
-      write(varName,'(A)') trim(geomName)//'_'//trim(coordNames(i))
-      if (self%variable_present(varName)) then
-        !write(message,'(A)') 'A variable with this name already exists'
-        !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-        cycle
-      endif
+      do i=1, spatialDim
 
-      ncStatus = nf90_redef(self%ncid)
-      ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_DOUBLE,dimids(2),varid)
-      if (ncStatus /= NF90_NOERR) then
-        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//' cannot define variable '//trim(varname),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
+        write(varName,'(A)') trim(geomName)//'_node_'//trim(coordNames(i))
+        if (self%variable_present(varName)) cycle
 
-      !ncStatus = nf90_put_att(self%ncid,varid,'standard_name',varName)
-      ncStatus = nf90_put_att(self%ncid,varid,'long_name',varName)
-      ncStatus = nf90_enddef(self%ncid)
-      ncStatus = nf90_put_var(self%ncid, varid, &
-        ownedNodeCoords(i:numOwnedNodes:spatialDim))
+        ncStatus = nf90_redef(self%ncid)
+        ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_DOUBLE,dimids(1),varid)
+        if (ncStatus /= NF90_NOERR) then
+          call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//' cannot define variable '//trim(varname),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+          ncStatus = nf90_enddef(self%ncid)
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
 
+        !ncStatus = nf90_put_att(self%ncid,varid,'standard_name',varName)
+        ncStatus = nf90_put_att(self%ncid,varid,'long_name',varName)
+        ncStatus = nf90_enddef(self%ncid)
+
+        ncStatus = nf90_put_var(self%ncid, varid, &
+          ownedNodeCoords(i:numOwnedNodes:spatialDim))
+
+      enddo
+      exit
     enddo
     if (allocated(ownedNodeCoords)) deallocate(ownedNodeCoords)
+
+    do while (numOwnedElements > 0)
+      allocate(ownedElemCoords(numOwnedElements*spatialDim))
+
+      ! The following call fails when coordinates are not defined
+      call ESMF_MeshGet(mesh, ownedElemCoords=ownedElemCoords, rc=localrc)
+      if (localrc /= ESMF_SUCCESS) exit
+
+      dimids => self%mesh_dimensions(mesh, meshLoc=ESMF_MESHLOC_ELEMENT, &
+        owner=trim(owner_), rc=localrc)
+
+      do i=1, spatialDim
+
+        write(varName,'(A)') trim(geomName)//'_element_'//trim(coordNames(i))
+        if (self%variable_present(varName)) cycle
+
+        ncStatus = nf90_redef(self%ncid)
+        ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_DOUBLE,dimids(1),varid)
+        if (ncStatus /= NF90_NOERR) then
+          call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//' cannot define variable '//trim(varname),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+          ncStatus = nf90_enddef(self%ncid)
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
+
+        !ncStatus = nf90_put_att(self%ncid,varid,'standard_name',varName)
+        ncStatus = nf90_put_att(self%ncid,varid,'long_name',varName)
+        ncStatus = nf90_enddef(self%ncid)
+
+        ncStatus = nf90_put_var(self%ncid, varid, &
+          ownedElemCoords(i:numOwnedElements:spatialDim))
+      enddo
+      exit
+    enddo
+    if (allocated(ownedElemCoords)) deallocate(ownedElemCoords)
 
     call self%update_variables()
     call self%update()
@@ -2804,7 +2880,7 @@ module mossco_netcdf
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "create_bounds_variable"
-  recursive subroutine create_bounds_variable(self, varname, kwe, rc)
+  subroutine create_bounds_variable(self, varname, kwe, rc)
 
     !> The bound coordinate variables define the bound or the
     !> corner coordinates of a cell. The bound variable name is specified in
@@ -2842,7 +2918,7 @@ module mossco_netcdf
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_grid_coordinate_create"
-  recursive subroutine mossco_netcdf_grid_coordinate_create(self, grid, kwe, rc)
+  subroutine mossco_netcdf_grid_coordinate_create(self, grid, kwe, owner, rc)
 
     !> CF standard: The cell center coordinate variables are determined by the
     !> value of its attribute units. The longitude variable has the attribute
@@ -2859,6 +2935,7 @@ module mossco_netcdf
     class(type_mossco_netcdf)                         :: self
     type(ESMF_Grid), intent(in)                       :: grid
     type(ESMF_KeyWordEnforcer), intent(in), optional  :: kwe
+    character(len=*), intent(in), optional            :: owner
     integer(ESMF_KIND_I4), intent(out), optional      :: rc
 
     integer                     :: ncStatus, varid, rc_, esmfrc, rank, localrc
@@ -2866,7 +2943,7 @@ module mossco_netcdf
     character(len=ESMF_MAXSTR)  :: varName, geomName, message, dimName
 
     character(len=ESMF_MAXSTR), dimension(3) :: coordNames, coordUnits, axisNameList, standardNameList
-    character(len=ESMF_MAXSTR)               :: attributeName
+    character(len=ESMF_MAXSTR)               :: attributeName, owner_
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)    :: farrayPtr3
     real(ESMF_KIND_R8), pointer, dimension(:,:)      :: farrayPtr2
     real(ESMF_KIND_R8), pointer, dimension(:)        :: farrayPtr1
@@ -2889,6 +2966,12 @@ module mossco_netcdf
     character(len=ESMF_MAXSTR)       :: string
     logical                          :: logvalue
     type(ESMF_Field)                 :: field
+
+    rc_ = ESMF_SUCCESS
+    owner_ = '--'
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+    if (present(rc)) rc = rc_
 
     call ESMF_GridGet(grid, coordSys=coordSys, dimCount=dimCount, &
       name=geomName, staggerLocCount=staggerLocCount, rc=localrc)
@@ -2919,7 +3002,9 @@ module mossco_netcdf
 
     !> from here, it is really assumed that the staggerloc is ESMF_STAGGERLOC_CENTER
     staggerLoc = ESMF_STAGGERLOC_CENTER
-    dimids => self%grid_dimensions(grid)
+
+    dimids => self%grid_dimensions(grid, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     ! Write the auxiliary coordinate variables x, y, z
     ! These are 1-dimensional irrespective of the actual coordinates
