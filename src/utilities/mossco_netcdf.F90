@@ -62,7 +62,6 @@ module mossco_netcdf
     character(len=ESMF_MAXSTR) :: name, timeUnit
     type(type_mossco_netcdf_variable), pointer, dimension(:) :: variables
 
-
     contains
     procedure :: close => mossco_netcdf_close
     procedure :: add_timestep => mossco_netcdf_add_timestep
@@ -75,9 +74,9 @@ module mossco_netcdf
     procedure :: create_variable => mossco_netcdf_variable_create
     procedure :: variable_present => mossco_netcdf_variable_present
     procedure :: put_variable => mossco_netcdf_variable_put
-    procedure :: create_coordinate =>mossco_netcdf_coordinate_create
+    procedure :: create_grid_coordinate =>mossco_netcdf_grid_coordinate_create
     procedure :: create_mesh_coordinate =>mossco_netcdf_mesh_coordinate_create
-    procedure :: create_locstream_coordinates =>mossco_netcdf_locstream_coordinates_create
+    !procedure :: create_locstream_coordinate =>mossco_netcdf_locstream_coordinate_create
     procedure :: ungridded_dimension_id => mossco_netcdf_ungridded_dimension_id
     procedure :: gridget  => mossco_netcdf_grid_get
     procedure :: getvarvar => mossco_netcdf_var_get_var
@@ -133,7 +132,8 @@ module mossco_netcdf
     type(type_mossco_netcdf_variable),pointer :: var=> null()
 
     integer(ESMF_KIND_I4), dimension(:), allocatable :: lbnd, ubnd, exclusiveCount
-    integer(ESMF_KIND_I4)       :: grid2Lbnd(2), grid2Ubnd(2), grid3Lbnd(3), grid3Ubnd(3)
+    integer(ESMF_KIND_I4)       :: grid2Lbnd(2), grid2Ubnd(2)
+    integer(ESMF_KIND_I4)       :: grid3Lbnd(3), grid3Ubnd(3)
     integer(ESMF_KIND_I4)       :: localDeCount, i, j, k
     logical                     :: checkNaN_=.true., checkInf_=.true.
 
@@ -154,14 +154,16 @@ module mossco_netcdf
 
     character(len=11)                 :: precision_
 
-    integer, pointer                  :: gridmask3(:,:,:)=>null(), gridmask2(:,:)=> null()
+    integer(ESMF_KIND_I4), pointer    :: gridmask3(:,:,:)=>null()
+    integer(ESMF_KIND_I4), pointer    :: gridmask2(:,:)=> null()
     type(ESMF_Grid)                   :: grid
     type(ESMF_StaggerLoc)             :: staggerloc
     integer(ESMF_KIND_I4)             :: gridRank
     type(ESMF_Mesh)                   :: mesh
     type(ESMF_MeshLoc)                :: meshLoc
+    type(ESMF_LocStream)              :: locStream
     type(ESMF_GeomType_Flag)          :: geomType
-    logical                           :: isPresent, gridIsPresent
+    logical                           :: isPresent, geomIsPresent
 
     rc_ = ESMF_SUCCESS
     checkNaN_ = .true.
@@ -179,6 +181,8 @@ module mossco_netcdf
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (localDeCount == 0) return
+
+    !> @todo need to consider also non double fields
     if (typeKind /= ESMF_TYPEKIND_R8) return
 
     allocate(lbnd(rank), stat=localrc)
@@ -266,10 +270,10 @@ module mossco_netcdf
 #if ESMF_VERSION_MAJOR > 6
 !! This is only implemented from 7b29
       if (gridRank == 2) then
-        call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, isPresent=gridIsPresent, rc=localrc)
+        call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, isPresent=geomIsPresent, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-        if (gridIsPresent) then
+        if (geomIsPresent) then
           call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, farrayPtr=gridmask2, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
@@ -280,10 +284,10 @@ module mossco_netcdf
           nullify(gridmask2)
         endif
       elseif (gridRank == 3) then
-        call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, isPresent=gridIsPresent, rc=localrc)
+        call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, isPresent=geomIsPresent, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-        if (gridIsPresent) then
+        if (geomIsPresent) then
           call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, farrayPtr=gridmask3, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
@@ -2441,7 +2445,7 @@ module mossco_netcdf
     end if
 
     !if locStream not present, also create the coordinate variables
-    if (dimcheck == -1) call self%create_locstream_coordinates(locStream)
+    !if (dimcheck == -1) call self%create_locstream_coordinate(locStream)
 
     call self%update()
 
@@ -2451,7 +2455,7 @@ module mossco_netcdf
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_mesh_dimensions"
-  function mossco_netcdf_mesh_dimensions(self, mesh, kwe, meshLoc, rc) result(dimids)
+  recursive function mossco_netcdf_mesh_dimensions(self, mesh, kwe, meshLoc, rc) result(dimids)
 
     implicit none
 
@@ -2595,7 +2599,7 @@ module mossco_netcdf
     end if
 
     !! if grid not present, also create the coordinate variables
-    if (dimcheck == -1) call self%create_coordinate(grid)
+    if (dimcheck == -1) call self%create_grid_coordinate(grid)
     call self%update()
 
     return
@@ -2788,7 +2792,7 @@ module mossco_netcdf
       ncStatus = nf90_put_att(self%ncid,varid,'long_name',varName)
       ncStatus = nf90_enddef(self%ncid)
       ncStatus = nf90_put_var(self%ncid, varid, &
-        ownedNodeCoords(i-1:spatialDim:numOwnedNodes))
+        ownedNodeCoords(i:numOwnedNodes:spatialDim))
 
     enddo
     if (allocated(ownedNodeCoords)) deallocate(ownedNodeCoords)
@@ -2837,8 +2841,8 @@ module mossco_netcdf
   end subroutine create_bounds_variable
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "mossco_netcdf_coordinate_create"
-  recursive subroutine mossco_netcdf_coordinate_create(self, grid, kwe, rc)
+#define ESMF_METHOD "mossco_netcdf_grid_coordinate_create"
+  recursive subroutine mossco_netcdf_grid_coordinate_create(self, grid, kwe, rc)
 
     !> CF standard: The cell center coordinate variables are determined by the
     !> value of its attribute units. The longitude variable has the attribute
@@ -3170,7 +3174,7 @@ module mossco_netcdf
 
     return
 
-  end subroutine mossco_netcdf_coordinate_create
+  end subroutine mossco_netcdf_grid_coordinate_create
 
 
 #undef  ESMF_METHOD
@@ -3237,7 +3241,7 @@ module mossco_netcdf
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      ! call self%create_coordinate(grid, rc=localrc)
+      ! call self%create_grid_coordinate(grid, rc=localrc)
       ! if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       !   call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       !
