@@ -41,6 +41,6 @@ coupling:
     interval: 30 m
   - components:
     - schism
-#   - regrid_togrid
+    - regrid_togrid
     - temperature_output
     interval: 30 m

@@ -413,12 +413,13 @@ module toplevel_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Allocate the fields for all coupler components and their names
-    numCplComp = 2
+    numCplComp = 3
     allocate(cplCompList(numCplComp), stat=localrc)
     allocate(cplCompNameList(numCplComp), stat=localrc)
     allocate(cplCompClockList(numCplComp), stat=localrc)
     cplCompNameList(1) = 'link_connector'
-    cplCompNameList(2) = 'regrid_tomesh'
+    cplCompNameList(2) = 'regrid_togrid'
+    cplCompNameList(3) = 'regrid_tomesh'
 
 
     do i = 1, numCplComp
@@ -439,6 +440,9 @@ module toplevel_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_CplCompSetServices(cplCompList(2), regrid_coupler_SetServices, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_CplCompSetServices(cplCompList(3), regrid_coupler_SetServices, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -643,22 +647,6 @@ module toplevel_component
       !! Linking
       !! linking temperature_output and schism
       if (gridCompPhaseCountList( 1)>= phase .or. gridCompPhaseCountList( 6)>= phase) then
-        !! linking schismExport to temperature_outputImport
-        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(6))//"Export to "//trim(gridCompNameList(1))//"Import"
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(6), &
-          exportState=gridImportStateList(1), clock=clock, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        !! linking temperature_outputImport to schismExport
-        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(1))//"Import to "//trim(gridCompNameList(6))//"Export"
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        call ESMF_CplCompInitialize(cplCompList(1), importState=gridImportStateList(1), &
-          exportState=gridExportStateList(6), clock=clock, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
       endif
 
       !! linking schism_output and schism
@@ -725,14 +713,29 @@ module toplevel_component
       if (gridCompPhaseCountList( 5)>= phase .or. gridCompPhaseCountList( 6)>= phase) then
       endif
 
+      !! calling init of regrid_togrid
+      !! connecting schismExport to temperature_outputImport
+      if (gridCompPhaseCountList( 6)>= phase .or. gridCompPhaseCountList( 1)>= phase) then
+      if (cplCompPhaseCountList( 2)>= phase) then
+        write(message,"(A,I1,A)") trim(myName)//" "//trim(gridCompNameList(6))//"Export=>"//trim(cplCompNameList(2))//"(initP",phase,")=>"//trim(gridCompNameList(1))//"Import"
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        !call MOSSCO_StateLog(gridExportStateList(6), rc=localrc)
+        call ESMF_CplCompInitialize(cplCompList(2), importState=gridExportStateList(6), &
+          exportState=gridImportStateList(1), clock=clock, phase=phase, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        !call MOSSCO_Log(gridImportStateList(1), rc=localrc)
+      endif
+      endif
       !! calling init of regrid_tomesh
       !! connecting wind_inputExport to schismImport
       if (gridCompPhaseCountList( 5)>= phase .or. gridCompPhaseCountList( 6)>= phase) then
-      if (cplCompPhaseCountList( 2)>= phase) then
-        write(message,"(A,I1,A)") trim(myName)//" "//trim(gridCompNameList(5))//"Export=>"//trim(cplCompNameList(2))//"(initP",phase,")=>"//trim(gridCompNameList(6))//"Import"
+      if (cplCompPhaseCountList( 3)>= phase) then
+        write(message,"(A,I1,A)") trim(myName)//" "//trim(gridCompNameList(5))//"Export=>"//trim(cplCompNameList(3))//"(initP",phase,")=>"//trim(gridCompNameList(6))//"Import"
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         !call MOSSCO_StateLog(gridExportStateList(5), rc=localrc)
-        call ESMF_CplCompInitialize(cplCompList(2), importState=gridExportStateList(5), &
+        call ESMF_CplCompInitialize(cplCompList(3), importState=gridExportStateList(5), &
           exportState=gridImportStateList(6), clock=clock, phase=phase, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -915,6 +918,7 @@ module toplevel_component
 
     !! For other explicitly given couplings, specify connectors
     cplNames(2)='regrid_tomesh'
+    cplNames(5)='regrid_togrid'
 
     !! Set the coupling alarm starting from start time of local clock
     call ESMF_ClockGet(clock,startTime=startTime, rc=localrc)
@@ -1809,7 +1813,7 @@ module toplevel_component
     enddo
 
     !! Running final netcdf output coupling schism to temperature_output
-    call ESMF_CplCompRun(cplCompList(1), importState=gridImportStateList(6), &
+    call ESMF_CplCompRun(cplCompList(2), importState=gridImportStateList(6), &
       exportState=gridExportStateList(1), clock=controlClock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1938,6 +1942,8 @@ module toplevel_component
     call ESMF_CplCompDestroy(cplCompList(1), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_CplCompDestroy(cplCompList(2), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_CplCompDestroy(cplCompList(3), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (allocated(gridCompClockList)) deallocate(gridCompClockList)

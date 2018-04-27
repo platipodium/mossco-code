@@ -132,7 +132,7 @@
 ! lat/lon in hgrid.ll for beta-plane approximation, and in this case,
 ! the lattitude specified in CPP projection ('cpp_lat') is used.
 !-----------------------------------------------------------------------
-  ncor = 0 !must be 1 if ics=2
+  ncor = 1 !must be 1 if ics=2
   !lattitude = 46 !if ncor=-1
   coriolis = 0 !if ncor=0
 
