@@ -140,10 +140,13 @@ if len(coupling)<1:
   print (coupling)
   sys.exit(1)
 
-# Loop over the list of couuplings.  Each entry in this list is a dictionary
+# Loop over the list of couplings.  Each entry in this list is a dictionary
 # that has at least the key 'components:'
 # todo: we could shortcut this by allowing comp1:comp2 to
-for item in coupling:
+# Set a default coupling alarm interval of 6 minutes
+intervals=['6 m'] * len(coupling)
+
+for i, item in enumerate(coupling):
     if type(item) is dict:
         if 'components' in item.keys():
             gridCompList.extend([item["components"][0], item["components"][-1]])
@@ -156,9 +159,7 @@ for item in coupling:
             for i in range(1,n-1):
                 cplCompList.append(item["components"][i])
             if 'interval' in item.keys():
-                intervals.append(item["interval"])
-            else:
-                intervals.append("6 m")
+                intervals[i] = item["interval"]
             if 'direction' in item.keys():
                 directions.append(item["direction"])
         else:
@@ -177,10 +178,6 @@ cplCompSet=set(cplCompList)
 cplCompList=list(cplCompSet)
 componentSet=gridCompSet.union(cplCompSet)
 componentList=list(componentSet)
-
-# Set a default coupling alarm interval of 6 minutes
-if len(intervals) == 0:
-    intervals=len(cplCompList) * ['6 m']
 
 # if there are any dependencies specified, go through the list of components
 # and sort this list
@@ -341,6 +338,9 @@ print ('Components to process:', componentList)
 print ('Grid components to process:', gridCompList)
 print ('Couple components to process:', cplCompList)
 print ('Base instances to process:', instanceList)
+#print(' '.join('{}:{}'.format(*k) for k in enumerate(gridCompList)))
+#print(' '.join('{}:{}'.format(*k) for k in enumerate(cplCompList)))
+#print(' '.join('{}:{}'.format(*k) for k in enumerate(instanceList)))
 
 # Done parsing the list, now write the new toplevel_component file
 
@@ -1247,7 +1247,7 @@ for i in range(0,len(couplingList)):
     unit = 'h' # default unit is hours
     value = intervals[i]
 
-    if isinstance(value,str):
+    if isinstance(value,str) or isinstance(value,unicode):
       string = value.split()
       number = string[0]
       if len(string)>1: unit = string[1]
