@@ -17,7 +17,7 @@ double lat_bnds(lat, bound) ;
 float wind_x-velocity(lat, lon) ;
 	wind_x-velocity:coordinates = "lon lat" ;
 	wind_x-velocity:units = "m s-1" ;
-	wind_x-velocity:missing_value = -1.0E30" ;
+	wind_x-velocity:missing_value = -1.0E30 ;
 
 // global attributes:
 	:history = "Created Tue Apr 24 18:14:35 2018 by /Users/lemmen/devel/MOSSCO/code/scripts/create_gridspec.py" ;
