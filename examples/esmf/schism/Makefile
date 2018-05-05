@@ -31,9 +31,24 @@ ifeq ($(wildcard $(SCHISM_DIR)/lib/libhydro.a),)
 $(error You need to compile schism externally.)
 endif
 
-ifeq ($(wildcard $(SCHISM_DIR)/../esmf/schism_esmf_component.F90),)
+#ifndef SCHISM_ESMF_DIR
+ifneq ($(wildcard $(SCHISM_DIR)/../esmf/schism_esmf_component.F90),)
+export SCHISM_ESMF_DIR=$(SCHISM_DIR)/../esmf
+else
+ifneq ($(wildcard $(SCHISM_DIR)/../../schism-esmf/schism_esmf_component.F90),)
+export SCHISM_ESMF_DIR=$(SCHISM_DIR)/../../schism-esmf
+else
+$(error Cannot find schism ESMF directory)
+endif
+endif
+#endif
+
+$(info Use as SCHISM ESMF directory $(SCHISM_ESMF_DIR))
+
+ifeq ($(wildcard $(SCHISM_ESMF_DIR)/schism_esmf_component.F90),)
 $(error Cannot find schism_esmf_component.)
 endif
+
 
 LIBS+= -L$(SCHISM_DIR)/lib -lhydro -lcore
 LIBS+= -L$(PARMETIS_DIR) -lparmetis -lmetis
@@ -80,10 +95,10 @@ main.F90:
 	ln -sf $(MOSSCO_DIR)/examples/common/main.F90 .
 
 schism_driver_interfaces.F90:
-	ln -sf $(SCHISM_DIR)/../esmf/schism_driver_interfaces.F90 .
+	ln -sf $(SCHISM_ESMF_DIR)/schism_driver_interfaces.F90 .
 
 schism_esmf_component.F90:
-	ln -sf $(SCHISM_DIR)/../esmf/schism_esmf_component.F90 .
+	ln -sf $(SCHISM_ESMF_DIR)/schism_esmf_component.F90 .
 
 wind.nc: wind.cdl
 	ncgen -o $@ $<
