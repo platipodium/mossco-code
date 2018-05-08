@@ -87,7 +87,7 @@ contains
     call ESMF_ConfigGetAttribute(config, value=value, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    write(message,'(A)') '  found '//trim(label)//':'
+    write(message,'(A)') '-- item '//trim(label)//':'
     write(message,'(A,L)') trim(message)//' ', value
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     if (present(rc)) rc = rc_
@@ -133,7 +133,7 @@ contains
     call ESMF_ConfigGetAttribute(config, value=value, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    write(message,'(A)') '  found '//trim(label)//':'
+    write(message,'(A)') '-- item '//trim(label)//':'
     write(message,'(A,I5)') trim(message)//' ', value
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     if (present(rc)) rc = rc_
@@ -179,7 +179,7 @@ contains
     call ESMF_ConfigGetAttribute(config, value=value, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    write(message,'(A)') '  found '//trim(label)//':'
+    write(message,'(A)') '-- item '//trim(label)//':'
     write(message,'(A,I9)') trim(message)//' ', value
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     if (present(rc)) rc = rc_
@@ -227,7 +227,7 @@ contains
     call ESMF_ConfigGetAttribute(config, value=value, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    write(message,'(A)') '  found '//trim(label)//': '//trim(value)
+    write(message,'(A)') '-- item '//trim(label)//': '//trim(value)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     if (present(rc)) rc = rc_
@@ -274,7 +274,7 @@ contains
     call ESMF_ConfigGetAttribute(config, value=value, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    write(message,'(A)') '  found '//trim(label)//':'
+    write(message,'(A)') '-- item '//trim(label)//':'
     write(message,'(A,ES10.3)') trim(message)//' ', value
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     if (present(rc)) rc = rc_
@@ -321,7 +321,7 @@ contains
     call ESMF_ConfigGetAttribute(config, value=value, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    write(message,'(A)') '  found '//trim(label)//':'
+    write(message,'(A)') '-- item '//trim(label)//':'
     write(message,'(A,ES10.3)') trim(message)//' ', value
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     if (present(rc)) rc = rc_
@@ -1171,7 +1171,7 @@ contains
 
       i = index(string, trim(label)//'::')
       if (i < 1) cycle
-      call ESMF_LogWrite('  found label '//trim(string), ESMF_LOGMSG_INFO)
+      call ESMF_LogWrite('-- item '//trim(string), ESMF_LOGMSG_INFO)
       isPresent_ = .true.
       exit
     enddo
@@ -1201,7 +1201,7 @@ contains
       endif
 
       stringList(rowCount) = trim(string)
-      write(message,'(A,I2,A)') '  found item ',rowCount,' '//trim(stringList(rowCount))
+      write(message,'(A,I2,A)') '-- item ',rowCount,' '//trim(stringList(rowCount))
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     enddo
 
