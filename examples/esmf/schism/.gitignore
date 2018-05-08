@@ -9,3 +9,6 @@ schism_mossco
 PET*
 fort.11
 *.nc
+outputs
+*.dat
+*.out

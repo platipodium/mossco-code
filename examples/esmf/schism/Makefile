@@ -31,9 +31,24 @@ ifeq ($(wildcard $(SCHISM_DIR)/lib/libhydro.a),)
 $(error You need to compile schism externally.)
 endif
 
-ifeq ($(wildcard $(SCHISM_DIR)/../esmf/schism_esmf_component.F90),)
+#ifndef SCHISM_ESMF_DIR
+ifneq ($(wildcard $(SCHISM_DIR)/../esmf/schism_esmf_component.F90),)
+export SCHISM_ESMF_DIR=$(SCHISM_DIR)/../esmf
+else
+ifneq ($(wildcard $(SCHISM_DIR)/../../schism-esmf/schism_esmf_component.F90),)
+export SCHISM_ESMF_DIR=$(SCHISM_DIR)/../../schism-esmf
+else
+$(error Cannot find schism ESMF directory)
+endif
+endif
+#endif
+
+$(info Use as SCHISM ESMF directory $(SCHISM_ESMF_DIR))
+
+ifeq ($(wildcard $(SCHISM_ESMF_DIR)/schism_esmf_component.F90),)
 $(error Cannot find schism_esmf_component.)
 endif
+
 
 LIBS+= -L$(SCHISM_DIR)/lib -lhydro -lcore
 LIBS+= -L$(PARMETIS_DIR) -lparmetis -lmetis
@@ -45,7 +60,7 @@ LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 
 .PHONY: all clean distclean config
 
-all:  schism_mossco config
+all:  schism_mossco config outputs
 
 schism_mossco:  schism_esmf_component.o toplevel_component.o main.o
 	$(F90) $(CPPFLAGS) $^ -o $@ $(LDFLAGS) $(LIBS)
@@ -54,6 +69,9 @@ toplevel_component.o: schism_esmf_component.o
 
 schism_esmf_component.o: schism_driver_interfaces.mod
 
+outputs:
+	mkdir -p outputs
+	
 # Generic and cleanup rules
 
 %.o: %.F90
@@ -63,13 +81,13 @@ schism_esmf_component.o: schism_driver_interfaces.mod
 	$(F90) $(CPPFLAGS) $(F90FLAGS) -c $<
 
 clean:
-	@$(RM) *.o *.mod PET* fort.* *output.nc
-	@$(RM) -rf *dSYM
+	@$(RM) *.o *.mod PET* fort.* *output.nc  *.dat *.vtk
+	@$(RM) -rf *dSYM *.out
 
 config:  grid_input.cfg wind_input.cfg wind.nc
 
-distclean: clean
-	@$(RM) schism_mossco schism_driver_interfaces.F90 schism_esmf_component.F90 main.F90
+extraclean: clean
+	@$(RM) schism_mossco schism_driver_interfaces.F90 schism_esmf_component.F90 main.F90 wind.nc
 
 # Copy/link files from schism_esmf and mossco systems
 
@@ -77,10 +95,10 @@ main.F90:
 	ln -sf $(MOSSCO_DIR)/examples/common/main.F90 .
 
 schism_driver_interfaces.F90:
-	ln -sf $(SCHISM_DIR)/../esmf/schism_driver_interfaces.F90 .
+	ln -sf $(SCHISM_ESMF_DIR)/schism_driver_interfaces.F90 .
 
 schism_esmf_component.F90:
-	ln -sf $(SCHISM_DIR)/../esmf/schism_esmf_component.F90 .
+	ln -sf $(SCHISM_ESMF_DIR)/schism_esmf_component.F90 .
 
 wind.nc: wind.cdl
 	ncgen -o $@ $<

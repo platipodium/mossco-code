@@ -1,0 +1,35 @@
+!-------------------------------------------------------------------------------
+! general mossco setup
+!-------------------------------------------------------------------------------
+! title    [string]
+!            title of simulation
+! start    [string, format = "yyyy-mm-dd hh:mm:ss"]
+!            start time
+! stop     [string, format = "yyyy-mm-dd hh:mm:ss"]
+!            stop time
+! logkind  [string]
+!            an ESMF_LOGKIND
+!            single: one logfile for all PETs
+!            multi: one logfile per PET
+!            none: no logfile
+! loglevel [string]
+!            combinations of ESMF_LOGMSG
+!            none: no log messages
+!            error: only error messages
+!            warning: warning + error messages
+!            info: info + warning + error messages
+!            trace: trace + warning + error messages
+!            all: trace + info + warning + error messages
+! logflush [bool]
+!            whether to flush log stream
+!-------------------------------------------------------------------------------
+
+&mossco_run
+   title = 'schism-1x1-schism',
+   start = '2009-03-01 00:00:00',
+   stop = '2009-03-01 05:00:00',
+   loglevel = 'all',
+   loglevelzero = 'all',
+   logflush = .true.,
+/
+
