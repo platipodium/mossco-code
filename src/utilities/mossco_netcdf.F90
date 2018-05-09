@@ -54,6 +54,7 @@ module mossco_netcdf
 
   type, public :: type_mossco_netcdf
     integer      :: ncid, nvars, natts
+    logical      :: define_mode
     integer      :: timeDimId, ndims
     integer, allocatable  :: dimlens(:)
     character(len=ESMF_MAXSTR), allocatable :: dimNames(:)
@@ -92,6 +93,8 @@ module mossco_netcdf
     procedure :: putattdouble => MOSSCO_NcPutAttDouble
     procedure :: putattfloat => MOSSCO_NcPutAttFloat
     procedure :: create_bounds_variable
+    procedure :: redef
+    procedure :: enddef
 
   end type type_mossco_netcdf
 
@@ -217,6 +220,9 @@ module mossco_netcdf
 
       call self%create_variable(field, name=trim(varname), &
         precision=precision_, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call self%enddef(owner=owner_, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       call self%update_variables()
@@ -986,17 +992,8 @@ module mossco_netcdf
       coordnames=(/'x','y','z'/)
     endif
 
-    !> enter definition mode to use netcdf_write commands
-    ncStatus = nf90_redef(self%ncid)
-    if (ncStatus /= NF90_NOERR) then
-      call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot enter definition mode', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-      if (present(rc)) then
-        rc=ESMF_RC_FILE_WRITE
-        if (ESMF_LogFoundError(rc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT)) return
-      else
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-      endif
-    endif
+    call self%redef(owner=owner_, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     !! add ungridded dimension
     ! ask field for ungridded dimension
@@ -1160,12 +1157,6 @@ module mossco_netcdf
     call MOSSCO_AttributeNetcdfWrite(field, self%ncid, varid=varid, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    ncStatus = nf90_enddef(self%ncid)
-    if (ncStatus /= NF90_NOERR) then
-      call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot end definition mode', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-    endif
-
     !> @todo remove time from dimensions
     varname='pet_'//trim(geomName)
     if (.not.self%variable_present(varname)) then
@@ -1192,11 +1183,8 @@ module mossco_netcdf
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       endif
 
-      ncStatus = nf90_redef(self%ncid)
-      if (ncStatus /= NF90_NOERR) then
-        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot enter definition mode', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-      endif
+      call self%redef(owner=owner_, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       if (geomType == ESMF_GEOMTYPE_GRID) then
         ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_INT,dimids(1:ubound(dimids,1)-1),varid)
@@ -1235,11 +1223,8 @@ module mossco_netcdf
       ncStatus = nf90_put_att(self%ncid,varid,'pet_single_system_image_id',ssiId)
       ncStatus = nf90_put_att(self%ncid,varid,'pet_processing_element_count',peCount)
 
-      ncStatus = nf90_enddef(self%ncid)
-      if (ncStatus /= NF90_NOERR) then
-        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot end definition mode', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-      endif
+      call self%enddef(owner=owner_, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       allocate(dimlen(ubound(dimids,1)-1))
       do i=1,ubound(dimids,1)-1
@@ -1285,16 +1270,13 @@ module mossco_netcdf
     varname='cell_area_'//trim(geomName)
     if (.not.self%variable_present(varname) .and. isPresent) then
 
-      ncStatus = nf90_redef(self%ncid)
-      if (ncStatus /= NF90_NOERR) then
-        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot enter definition mode', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-      endif
-
       dimids => self%grid_dimensions(grid, staggerLoc=ESMF_STAGGERLOC_CENTER, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       call self%create_grid_coordinate(grid, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call self%redef(owner=owner_, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_FLOAT,dimids(1:ubound(dimids,1)-1),varid)
@@ -1310,12 +1292,8 @@ module mossco_netcdf
       ncStatus = nf90_put_att(self%ncid,varid,'missing_value',-1.0E30)
       ncStatus = nf90_put_att(self%ncid,varid,'_FillValue',-1.0E30)
 
-      ncStatus = nf90_enddef(self%ncid)
-      if (ncStatus /= NF90_NOERR) then
-        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot end definition mode', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-        if (ESMF_LogFoundError(ESMF_RC_OBJ_BAD, ESMF_ERR_PASSTHRU, ESMF_CONTEXT)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
+      call self%enddef(owner=owner_, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       allocate(dimlen(ubound(dimids,1)-1))
       do i=1,ubound(dimids,1)-1
@@ -1727,6 +1705,7 @@ module mossco_netcdf
 
     if (mode_ == 'W' .or. mode_ == 'w') then
       localrc = nf90_open(trim(filename), mode=NF90_WRITE, ncid=nc%ncid)
+      nc%define_mode = .false.
 
       if (localrc /= NF90_NOERR) then
         if (present(timeUnit) .and. present(state))  then
@@ -1775,6 +1754,7 @@ module mossco_netcdf
       endif
 
       localrc = nf90_open(trim(filename), mode=NF90_NOWRITE, ncid=nc%ncid)
+      nc%define_mode = .false.
       if (localrc /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot open '//trim(filename), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         if (present(rc)) then
@@ -1827,11 +1807,12 @@ module mossco_netcdf
     type(type_mossco_netcdf)      :: nc
 
     integer                       :: ncStatus
-    character(len=255)            :: string
+    character(len=255)            :: string, owner_
     integer                       :: rc_, localrc
     logical                       :: isPresent
 
     rc_ = ESMF_SUCCESS
+    owner_ = '--'
     if (present(kwe)) rc_ = ESMF_SUCCESS
     if (present(rc)) rc = rc_
 
@@ -1853,6 +1834,8 @@ module mossco_netcdf
       endif
     endif
 
+    nc%name=trim(filename)
+
     if (present(timeUnit)) then
       nc%timeUnit=trim(timeUnit)
       call nc%init_time(rc=localrc)
@@ -1862,16 +1845,8 @@ module mossco_netcdf
       call ESMF_LogWrite('  file '//trim(filename)//' has no time unit', ESMF_LOGMSG_WARNING)
     endif
 
-    ncStatus = nf90_redef(nc%ncid)
-    if (ncStatus /= NF90_NOERR) then
-      call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot enter define mode for '//trim(filename), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-      if (present(rc)) then
-        rc = ESMF_RC_FILE_WRITE
-        return
-      else
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
-    endif
+    call nc%redef(owner=owner_, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     !> @todo write global attributes
     if (present(state)) then
@@ -2001,35 +1976,33 @@ module mossco_netcdf
 !       call ESMF_Finalize(endflag=ESMF_END_ABORT)
 !     endif
 
-    ncStatus = nf90_enddef(nc%ncid)
-    if (ncStatus /= NF90_NOERR) then
-      call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot end definition mode', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-      if (present(rc)) then
-        rc = ESMF_RC_FILE_WRITE
-        return
-      else
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
-    endif
+    call nc%enddef(owner=owner_, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     nc%name=trim(filename)
-
 
   end function mossco_netcdfCreate
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_init_time"
-  subroutine mossco_netcdf_init_time(self, rc)
+  subroutine mossco_netcdf_init_time(self, kwe, owner, rc)
 
-    class(type_mossco_netcdf)      :: self
-    integer, optional, intent(out) :: rc
+    class(type_mossco_netcdf)                        :: self
+    type(ESMF_KeyWordEnforcer), intent(in), optional :: kwe
+    character(len=*), intent(in), optional           :: owner
+    integer, optional, intent(out)                   :: rc
 
-    integer                        :: varid, rc_, localrc, dimId
+    integer                                    :: varid, rc_, localrc, dimId
     type(type_mossco_netcdf_variable), pointer :: var
+    character(len=ESMF_MAXSTR) :: owner_
 
     rc_ = ESMF_SUCCESS
+    owner_ = '--'
+    if (present(kwe))   rc_ = ESMF_SUCCESS
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
 
-    localrc = nf90_redef(self%ncid)
+    call self%redef(owner=owner_, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     localrc = nf90_def_dim(self%ncid, 'time', NF90_UNLIMITED, self%timeDimId)
     if (localrc==NF90_ENAMEINUSE) then
@@ -2268,16 +2241,8 @@ module mossco_netcdf
       endif
     endif
 
-    localrc = nf90_enddef(self%ncid)
-    if (localrc /= NF90_NOERR) then
-      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot end define mode for '//trim(self%name), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-      if (present(rc)) then
-        rc = ESMF_RC_FILE_WRITE
-        return
-      else
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
-    endif
+    call self%enddef(owner=owner_, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call self%update()
     call self%update_variables()
@@ -2414,7 +2379,6 @@ module mossco_netcdf
 
     rc_ = ESMF_SUCCESS
     owner_ = '--'
-
     if (present(kwe)) rc_ = ESMF_SUCCESS
     if (present(rc)) rc = ESMF_SUCCESS
     if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
@@ -2456,7 +2420,9 @@ module mossco_netcdf
 
     !! if dimension not present, create it
     if (dimcheck == -1) then
-      ncStatus = nf90_redef(self%ncid)
+      call self%redef(owner=owner_, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       ncStatus = nf90_def_dim(self%ncid, trim(name), locationCount,dimids(1))
       if (ncStatus==NF90_ENAMEINUSE) then
         rc_ = MOSSCO_NC_EXISTING
@@ -2465,11 +2431,12 @@ module mossco_netcdf
       else
         rc_ = ESMF_SUCCESS
       end if
-      ncStatus = nf90_enddef(self%ncid)
     end if
 
     !if locStream not present, also create the coordinate variables
     !if (dimcheck == -1) call self%create_locstream_coordinate(locStream)
+    call self%enddef(owner=owner_, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call self%update()
 
@@ -2537,18 +2504,17 @@ module mossco_netcdf
 
     ! if dimension was not found, then create it
     if (ncStatus /= NF90_NOERR) then
-      ncStatus = nf90_redef(self%ncid)
-      if (ncStatus /= NF90_NOERR) localrc = ESMF_RC_FILE_WRITE
+      call self%redef(owner=owner_, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       ncStatus = nf90_def_dim(self%ncid, trim(name), numOwned,dimids(1))
       if (ncStatus /= NF90_NOERR) localrc = ESMF_RC_FILE_WRITE
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      ncStatus = nf90_enddef(self%ncid)
-      if (ncStatus /= NF90_NOERR) localrc = ESMF_RC_FILE_WRITE
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
+
+    call self%enddef(owner=owner_, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call self%update()
 
@@ -2618,7 +2584,9 @@ module mossco_netcdf
 
     !! if grid not present, create grid
     if (dimcheck == -1) then
-      ncStatus = nf90_redef(self%ncid)
+      call self%redef(owner=owner_, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       do i=1,rank
         write(name,'(A,I1,A)') trim(geomName)//'_',i,trim(staggerlocsuffix)
         ncStatus = nf90_def_dim(self%ncid, trim(name), &
@@ -2632,8 +2600,10 @@ module mossco_netcdf
         end if
       enddo
 
-      ncStatus = nf90_enddef(self%ncid)
     end if
+
+    call self%enddef(owner=owner_, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     call self%update()
 
   end function mossco_netcdf_grid_dimensions
@@ -2697,7 +2667,8 @@ module mossco_netcdf
       write(dimName,'(A,I1)') trim(geomName)//'_location'
       ncStatus = nf90_inq_dimid(self%ncid,trim(dimName),locationDimid)
 
-      ncStatus = nf90_redef(self%ncid)
+      call self%redef(owner=owner_, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       ncStatus = nf90_def_var(self%ncid,trim(varname), NF90_DOUBLE, (/locationDimid/), varid)
       if (ncStatus /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//' cannot define variable '//trim(varname),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -2708,7 +2679,9 @@ module mossco_netcdf
       if (i==1) ncStatus = nf90_put_att(self%ncid,varid,'standard_name','longitude')
       if (i==2) ncStatus = nf90_put_att(self%ncid,varid,'standard_name','latitude')
       ncStatus = nf90_put_att(self%ncid,varid,'long_name',varName)
-      ncStatus = nf90_enddef(self%ncid)
+
+      call self%enddef(owner=owner_, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       call ESMF_LocStreamGetKey(locStream, keyName=keyNames(i), keyArray=array, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -2823,17 +2796,19 @@ module mossco_netcdf
         write(varName,'(A)') trim(geomName)//'_node_'//trim(coordNames(i))
         if (self%variable_present(varName)) cycle
 
-        ncStatus = nf90_redef(self%ncid)
+        call self%redef(owner=owner_, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
         ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_DOUBLE,dimids(1),varid)
         if (ncStatus /= NF90_NOERR) then
           call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//' cannot define variable '//trim(varname),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-          ncStatus = nf90_enddef(self%ncid)
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
 
         !ncStatus = nf90_put_att(self%ncid,varid,'standard_name',varName)
         ncStatus = nf90_put_att(self%ncid,varid,'long_name',varName)
-        ncStatus = nf90_enddef(self%ncid)
+
+        call self%enddef(owner=owner_, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
         ncStatus = nf90_put_var(self%ncid, varid, &
           ownedNodeCoords(i:numOwnedNodes:spatialDim))
@@ -2858,7 +2833,9 @@ module mossco_netcdf
         write(varName,'(A)') trim(geomName)//'_element_'//trim(coordNames(i))
         if (self%variable_present(varName)) cycle
 
-        ncStatus = nf90_redef(self%ncid)
+        call self%redef(owner=owner_, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
         ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_DOUBLE,dimids(1),varid)
         if (ncStatus /= NF90_NOERR) then
           call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//' cannot define variable '//trim(varname),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -2868,7 +2845,8 @@ module mossco_netcdf
 
         !ncStatus = nf90_put_att(self%ncid,varid,'standard_name',varName)
         ncStatus = nf90_put_att(self%ncid,varid,'long_name',varName)
-        ncStatus = nf90_enddef(self%ncid)
+        call self%enddef(owner=owner_, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
         ncStatus = nf90_put_var(self%ncid, varid, &
           ownedElemCoords(i:numOwnedElements:spatialDim))
@@ -3029,7 +3007,9 @@ module mossco_netcdf
       call self%getAxis(grid, coordDim=i, intPtr1=intPtr1, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      ncStatus = nf90_redef(self%ncid)
+      call self%redef(owner=owner_, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       if (ncStatus /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot enter definition mode',ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -3060,11 +3040,8 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      ncStatus = nf90_enddef(self%ncid)
-      if (ncStatus /= NF90_NOERR) then
-        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot end definition mode',ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-      endif
+      call self%enddef(owner=owner_, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       ncStatus = nf90_put_var(self%ncid, varid, intPtr1(:))
       if (ncStatus /= NF90_NOERR) then
@@ -3100,7 +3077,14 @@ module mossco_netcdf
         ncStatus = nf90_inq_dimid(self%ncid,trim(dimName),coordDimids(1))
       end if
 
-      ncStatus = nf90_redef(self%ncid)
+      call self%redef(owner=owner_, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      if (ncStatus /= NF90_NOERR) then
+        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot enter definition mode',ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
       ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_DOUBLE,coordDimids,varid)
       if (ncStatus /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot define variable '//trim(varname),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -3181,7 +3165,8 @@ module mossco_netcdf
 
     enddo
     !! End definition phase of netcdf
-    ncStatus = nf90_enddef(self%ncid)
+    call self%enddef(owner=owner_, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
 #if 0
     if (rank == 2) then
@@ -3358,7 +3343,8 @@ module mossco_netcdf
       ! if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       !   call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       !
-      ! ncStatus = nf90_redef(self%ncid)
+      !     call self%redef(owner=owner_, rc=localrc)
+      !    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       !@ todo from here, exit with not-implemented rc
       write(message,'(A)') '    Not implemented: mossco_netcdf_coordinate_create_from_field'
@@ -4854,7 +4840,7 @@ module mossco_netcdf
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "create"
-   subroutine create(self, filename, kwe, timeUnit, state, rc)
+   subroutine create(self, filename, kwe, owner, timeUnit, state, rc)
 
     use iso_fortran_env
     implicit none
@@ -4863,17 +4849,26 @@ module mossco_netcdf
     character(len=*), intent(in)          :: filename
     logical, optional, intent(in)         :: kwe ! Keyword-enforcer
     character(len=*),optional, intent(in) :: timeUnit
+    character(len=*),optional, intent(in) :: owner
     type(ESMF_State), optional, intent(in):: state
     integer, intent(out),optional :: rc
 
     integer                       :: ncStatus
-    character(len=255)            :: string
+    character(len=255)            :: string, owner_
     integer                       :: rc_, localrc
     logical                       :: isPresent
+
+    rc_ = ESMF_SUCCESS
+    owner_ = '--'
+
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+    if (present(rc)) rc = rc_
 
     inquire(file=trim(filename), exist=isPresent)
 
     ncStatus = nf90_create(trim(filename), NF90_CLOBBER, self%ncid)
+    self%define_mode = .true.
     if (ncStatus /= NF90_NOERR) then
       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot create file '//trim(filename), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -4894,16 +4889,8 @@ module mossco_netcdf
       call ESMF_LogWrite('  file '//trim(filename)//' has no time unit', ESMF_LOGMSG_WARNING)
     endif
 
-    ncStatus = nf90_redef(self%ncid)
-    if (ncStatus /= NF90_NOERR) then
-      call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot enter define mode for '//trim(filename), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-      if (present(rc)) then
-        rc = ESMF_RC_FILE_WRITE
-        return
-      else
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
-    endif
+    call self%redef(owner=owner_, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (present(state)) then
       !call MOSSCO_AttributeNetcdfWrite(state, self%ncid, varid=NF90_GLOBAL, rc=localrc)
@@ -5032,16 +5019,8 @@ module mossco_netcdf
 !       call ESMF_Finalize(endflag=ESMF_END_ABORT)
 !     endif
 
-    ncStatus = nf90_enddef(self%ncid)
-    if (ncStatus /= NF90_NOERR) then
-      call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot end definition mode', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-      if (present(rc)) then
-        rc = ESMF_RC_FILE_WRITE
-        return
-      else
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
-    endif
+    call self%enddef(owner=owner_, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     self%name=trim(filename)
 
@@ -5286,4 +5265,72 @@ module mossco_netcdf
 
   end subroutine MOSSCO_GridAddMaskFromVariable
 
+#undef ESMF_METHOD
+#define ESMF_METHOD "enddef"
+subroutine enddef(self, kwe, owner, rc)
+
+  class(type_mossco_netcdf)                           :: self
+  type(ESMF_KeyWordEnforcer), optional, intent(in)    :: kwe
+  character(len=*), intent(in), optional              :: owner
+  integer(ESMF_KIND_I4), intent(out), optional        :: rc
+
+  integer(ESMF_KIND_I4)                  :: ncStatus, rc_, localrc
+  character(len=ESMF_MAXSTR)             :: message, owner_
+
+  rc_ = ESMF_SUCCESS
+  owner_ = '--'
+  if (present(kwe)) rc_ = ESMF_SUCCESS
+  if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+  if (present(rc)) rc = rc_
+
+  if (.not.self%define_mode) return
+
+  ncStatus = nf90_enddef(self%ncid)
+  if (ncStatus /= NF90_NOERR) then
+    write(message,'(A)') trim(owner)//' '//trim(nf90_strerror(ncStatus))
+    call ESMF_LogWrite(message, ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+    write(message,'(A)') trim(owner)//' cannot end define mode on file  '//trim(self%name)
+    call ESMF_LogWrite(message, ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+    if (.not.present(rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    rc = ESMF_RC_FILE_WRITE
+  endif
+
+  self%define_mode = .false.
+
+end subroutine enddef
+
+#undef ESMF_METHOD
+#define ESMF_METHOD "redef"
+subroutine redef(self, kwe, owner, rc)
+
+  class(type_mossco_netcdf)                           :: self
+  type(ESMF_KeyWordEnforcer), optional, intent(in)    :: kwe
+  character(len=*), intent(in), optional              :: owner
+  integer(ESMF_KIND_I4), intent(out), optional        :: rc
+
+  integer(ESMF_KIND_I4)                  :: ncStatus, rc_, localrc
+  character(len=ESMF_MAXSTR)             :: message, owner_
+
+  rc_ = ESMF_SUCCESS
+  owner_ = '--'
+  if (present(kwe)) rc_ = ESMF_SUCCESS
+  if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+  if (present(rc)) rc = rc_
+
+  ! return if already in define mode
+  if (self%define_mode) return
+
+  ncStatus = nf90_redef(self%ncid)
+  if (ncStatus /= NF90_NOERR) then
+    write(message,'(A)') trim(owner)//' '//trim(nf90_strerror(ncStatus))
+    call ESMF_LogWrite(message, ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+    write(message,'(A)') trim(owner)//' cannot enter define mode on file  '//trim(self%name)
+    call ESMF_LogWrite(message, ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+    if (.not.present(rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    rc = ESMF_RC_FILE_WRITE
+  endif
+
+  self%define_mode = .true.
+
+end subroutine redef
 end module
