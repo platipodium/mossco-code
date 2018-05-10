@@ -436,6 +436,7 @@ module erosed_component
     allocate ( eropartmp (nfrac),tcrdeptmp(nfrac),tcrerotmp(nfrac),fractmp(nfrac), &
              & depefftmp(nfrac), depfactmp(nfrac),parfluff0tmp(nfrac), &
              & parfluff1tmp(nfrac), tcrflufftmp(nfrac),wstmp(nfrac),spm_const(nfrac), stat =istat)
+
     if (istat /= 0) then
       call ESMF_LogWrite('Allocation of temporal variables in InitializeP1 failed', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1589,28 +1590,37 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
       if (.not. associated (thickness_of_layers)) then
         allocate (thickness_of_layers(RANGE3D), stat=istat)
+      endif
+
+      if (istat /= 0) then
         write(message,'(A)') trim(name)//' cannot allocate memory for thickness_of_layers'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         call MOSSCO_CompExit(gridComp, localrc)
-        localrc = ESMF_RC_MEM_ALLOCATE
+        rc = ESMF_RC_MEM_ALLOCATE
         return
       end if
 
       if (.not. associated (relative_thickness_of_layers)) then
         allocate (relative_thickness_of_layers(RANGE3D), stat=istat)
+      endif
+
+      if (istat /= 0) then
         write(message,'(A)') trim(name)//' cannot allocate memory for relative_thickness_of_layers'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         call MOSSCO_CompExit(gridComp, localrc)
-        localrc = ESMF_RC_MEM_ALLOCATE
+        rc = ESMF_RC_MEM_ALLOCATE
         return
       end if
 
       if (.not. associated (sigma_midlayer)) then
         allocate (sigma_midlayer  (RANGE3D), stat = istat)
+      endif
+
+      if (istat /= 0) then
         write(message,'(A)') trim(name)//' cannot allocate memory for mid_layer'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         call MOSSCO_CompExit(gridComp, localrc)
-        localrc = ESMF_RC_MEM_ALLOCATE
+        rc = ESMF_RC_MEM_ALLOCATE
         return
       end if
 
