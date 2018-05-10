@@ -43,7 +43,7 @@ module mossco_field
   public :: MOSSCO_FieldReduce, MOSSCO_FieldInitialize, MOSSCO_FieldCopyAttributes
   public :: MOSSCO_FieldMatchFields, MOSSCO_FieldWeightField, MOSSCO_FieldGetMissingValue
   public :: MOSSCO_FieldLog, MOSSCO_FieldExponentiate, MOSSCO_FieldMultiply
-  public :: MOSSCO_FieldAdd, MOSSCO_FieldNameCheck
+  public :: MOSSCO_FieldAdd, MOSSCO_FieldNameCheck, MOSSCO_FieldUnitString
 
   interface MOSSCO_FieldGetMissingValue
     module procedure MOSSCO_FieldGetMissingValueR8
@@ -60,6 +60,10 @@ module mossco_field
   interface MOSSCO_FieldExponentiate
     module procedure MOSSCO_FieldExponentiateR8
   end interface MOSSCO_FieldExponentiate
+
+  interface MOSSCO_FieldUnitString
+    module procedure MOSSCO_FieldUnitStringSub
+  end interface MOSSCO_FieldUnitString
 
 contains
 
@@ -249,6 +253,70 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, prefix, rc)
   if (present(rc)) rc=rc_
 
 end subroutine MOSSCO_FieldString
+
+#undef ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_FieldUnitStringSub"
+subroutine MOSSCO_FieldUnitStringSub(field, message, kwe, rc)
+
+  type(ESMF_Field), intent(in)                     :: field
+  character(len=*), intent(inout)                  :: message
+  type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+  integer(ESMF_KIND_I4), intent(out), optional     :: rc
+
+  integer(ESMF_KIND_I4)   :: rc_, localrc
+  logical                 :: isPresent
+  character(ESMF_MAXSTR)  :: unit
+
+  rc_ = ESMF_SUCCESS
+  if (present(kwe)) rc_ = ESMF_SUCCESS
+  if (present(rc)) rc = rc_
+
+  call ESMF_AttributeGet(field, name='units', value=unit, isPresent=isPresent, &
+    defaultValue='', rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  if (.not.isPresent) then
+    call ESMF_AttributeGet(field, name='unit', value=unit,  &
+      defaultValue='', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  endif
+
+  call MOSSCO_MessageAdd(message, ' '//trim(unit))
+
+end subroutine MOSSCO_FieldUnitStringSub
+
+#undef ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_FieldUnitStringFcn"
+function MOSSCO_FieldUnitStringFcn(field, message, kwe, rc) result (unit)
+
+  type(ESMF_Field), intent(in)                     :: field
+  character(len=*), intent(inout), optional        :: message
+  type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+  integer(ESMF_KIND_I4), intent(out), optional     :: rc
+  character(ESMF_MAXSTR)                           :: unit
+
+  integer(ESMF_KIND_I4)   :: rc_, localrc
+  logical                 :: isPresent
+
+  rc_ = ESMF_SUCCESS
+  if (present(kwe)) rc_ = ESMF_SUCCESS
+  if (present(rc)) rc = rc_
+
+  call ESMF_AttributeGet(field, name='units', value=unit, isPresent=isPresent, &
+    defaultValue='', rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  if (.not.isPresent) then
+    call ESMF_AttributeGet(field, name='unit', value=unit,  &
+      defaultValue='', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  endif
+
+  if (present(message)) call MOSSCO_MessageAdd(message, ' '//trim(unit))
+
+  return
+
+end function MOSSCO_FieldUnitStringFcn
 
 #undef ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_FieldCopyAttributes"
