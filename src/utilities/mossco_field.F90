@@ -88,17 +88,13 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, prefix, rc)
   type(ESMF_FieldStatus_Flag) :: fieldStatus
   logical                     :: isPresent
 
-  if (present(kwe)) localrc = ESMF_SUCCESS
-  prefix_ = 'none'
-  !> @todo The following line produced a segmentation fault
-  if (present(prefix)) then
-    if (len(prefix) > len(prefix_)) then
-      prefix_ = trim(prefix(1:len(prefix_)))
-    else
-      prefix_ = trim(prefix)
-    endif
-  endif
   rc_ = ESMF_SUCCESS
+  prefix_ = 'none'
+
+  if (present(kwe)) rc_ = ESMF_SUCCESS
+  if (present(prefix)) call MOSSCO_StringCopy(prefix_, prefix)
+  if (present(rc)) rc = rc_
+
   rank = 0
   gridRank = 0
 
