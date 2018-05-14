@@ -4,7 +4,7 @@
 #        You may want to link this script into directory within your $PATH
 #
 # This computer program is part of MOSSCO.
-# @copyright Copyright (C) 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
+# @copyright Copyright (C) 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -64,7 +64,7 @@ function usage {
   echo "    [-w W] :  wait W seconds for polling batch jobs (only -s J|B)"
   echo "    [-z HH:MM:SS] : set HH:MM:SS as maximum run duration walltime"
   echo "              of a job in the format HH:MM:SS as hours, minutes, seconds. If not"
-  echo "              set, the time is estimated for your system"
+  echo "              set, the time is estimated for your queuing system"
   exit
 }
 
@@ -92,12 +92,20 @@ function predict_time() {
   NP=$1
   START=$(cat ${NML} | grep -v --regexp ' *!'| grep stop | awk -F"'" '{print $2}' | awk -F" " '{print $1}')
   STOP=$(cat ${NML} | grep -v --regexp ' *!'| grep stop | awk -F"'" '{print $2}' | awk -F" " '{print $1}')
-  Y1=$(echo ${START} | cut -d"-" -f1)
-  Y2=$(echo ${STOP}  | cut -d"-" -f1)
-  M1=$(echo ${START} | cut -d"-" -f2)
-  M2=$(echo ${STOP}  | cut -d"-" -f2)
-  D1=$(echo ${START} | cut -d"-" -f3)
-  D2=$(echo ${STOP}  | cut -d"-" -f3)
+
+  # Replace TZ markers with space to separate date from time
+  STOP=${STOP//[A-z]/ }
+  START=${START//[A-z]/ }
+
+  YMD1=$(echo ${START} | cut -d" " -f1)
+  YMD2=$(echo ${STOP} | cut -d" " -f1)
+
+  Y1=$(echo ${YMD1} | cut -d"-" -f1)
+  Y2=$(echo ${YMD2}  | cut -d"-" -f1)
+  M1=$(echo ${YMD1} | cut -d"-" -f2)
+  M2=$(echo ${YMD2}  | cut -d"-" -f2)
+  D1=$(echo ${YMD1} | cut -d"-" -f3)
+  D2=$(echo ${YMD2}  | cut -d"-" -f3)
   if [[ "x$D1" == "x" ]]; then
     echo "Check your input file, make sure it uses apostrophes around dates"
     exit
