@@ -1862,6 +1862,7 @@ module mossco_netcdf
     endif
 
     nc%name=trim(filename)
+    nc%define_mode=.true.
 
     if (present(timeUnit)) then
       nc%timeUnit=trim(timeUnit)
