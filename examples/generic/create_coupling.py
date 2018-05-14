@@ -49,7 +49,7 @@ try:
             return result
 
         else:
-            print "Error:: unrecognised node type in !include statement"
+            print ("Error:: unrecognised node type in !include statement")
             raise yaml.constructor.ConstructorError
 
     def extractFile(self, filename):
