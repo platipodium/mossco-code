@@ -82,7 +82,7 @@ outputs:
 
 clean:
 	@$(RM) *.o *.mod PET* fort.* *output.nc  *.dat *.vtk
-	@$(RM) -rf *dSYM *.out
+	@$(RM) -rf *dSYM *.out core.* *.stderr *.stdout
 
 config:  grid_input.cfg wind_input.cfg wind.nc
 

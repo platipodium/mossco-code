@@ -131,9 +131,7 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, prefix, rc)
       call ESMF_GridGet(grid, name=geomName, rank=gridRank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-
       call MOSSCO_MessageAdd(message,' '//trim(geomName))
-
 
       if (fieldStatus == ESMF_FIELDSTATUS_COMPLETE) then
         call ESMF_FieldGet(field, rank=rank, rc=localrc)
@@ -144,9 +142,11 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, prefix, rc)
         if (len_trim(message) + 7<=len(message)) write(message,'(A,I1)') trim(message)//' rank ',rank
 
         if (rank > 0) then
+          if (allocated(ubnd)) deallocate(ubnd)
           allocate(ubnd(rank), stat=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
+          if (allocated(lbnd)) deallocate(lbnd)
           allocate(lbnd(rank), stat=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
@@ -197,16 +197,18 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, prefix, rc)
     endif
   endif
 
-  if (fieldStatus == ESMF_FIELDSTATUS_COMPLETE) then
+  if (fieldStatus == ESMF_FIELDSTATUS_COMPLETE .and. geomtype == ESMF_GEOMTYPE_GRID) then
     call ESMF_FieldGet(field, rank=rank, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (len_trim(message) + 7<=len(message)) write(message,'(A,I1)') trim(message)//' rank ',rank
 
     if (rank > 0) then
+      if (allocated(ubnd)) deallocate(ubnd)
       allocate(ubnd(rank), stat=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
+      if (allocated(lbnd)) deallocate(lbnd)
       allocate(lbnd(rank), stat=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
