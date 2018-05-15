@@ -3,7 +3,7 @@
 #> MOSSCO/ESMF component
 
 #  This computer program is part of MOSSCO.
-#> @copyright Copyright (C) 2014, 2015, 2016, 2017 Helmholtz Zentrum Geesthacht
+#> @copyright Copyright (C) 2014, 2015, 2016, 2017, 2018 Helmholtz Zentrum Geesthacht
 #> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -27,10 +27,10 @@ else:
     filename = os.environ['MOSSCO_DIR'] + '/src/config/benthic_filtration_component.yaml'
 
 if not os.path.exists(filename):
-    print 'File ' + filename + ' does not exist.'
+    print ('File ' + filename + ' does not exist.')
     sys.exit(1)
 
-print 'Using ' + filename + ' ...'
+print ('Using ' + filename + ' ...')
 
 fid = file(filename,'rU')
 config = yaml.load(fid)
