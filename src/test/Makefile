@@ -21,7 +21,7 @@ TESTS = $(shell cat TESTS)
 LIBS := -lesmf  $(LIBS)
 LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS)
 
-.PHONY: libmossco_technical libmossco_constant libmossco_info libmossco_util libmossco_db
+.PHONY: libmossco_technical libmossco_default libmossco_info libmossco_util libmossco_db
 
 .PHONY: all tests $(TESTS)
 all: tests
@@ -58,8 +58,8 @@ test_mossco_strings: test_mossco_strings.F90 libmossco_util
 test_mossco_config: test_mossco_config.F90 libmossco_util
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_util $(LIBS)
 
-test_Concurrency: libmossco_constant libmossco_info
-	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lconstant -lmossco_info -lmossco_util $(LIBS)
+test_Concurrency: libmossco_default libmossco_info
+	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -ldefault -lmossco_info -lmossco_util $(LIBS)
 
 test_ClockDestroy: libmossco_technical
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_technical -lmossco_util $(LIBS)
@@ -85,7 +85,7 @@ test_ConfigTable: test_ConfigTable.F90
 libsolver libmossco_util libmossco_db:
 	make -C $(MOSSCO_DIR)/src/utilities $@
 
-libmossco_technical libmossco_info libmossco_constant:
+libmossco_technical libmossco_info libmossco_default:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 clean: extraclean
