@@ -320,6 +320,7 @@ contains
         if (present(rc)) rc = ESMF_RC_MEM_ALLOCATE
         return
       endif
+      tempList(:)=''
 
       do i=1,minval((/itemCount, listSize/))
         call stringCopy(tempList(i), stringList(i))
@@ -340,6 +341,7 @@ contains
         if (present(rc)) rc = ESMF_RC_MEM_ALLOCATE
         return
       endif
+      stringList(:)=''
 
       do i=1,minval((/itemCount, listSize/))
         call stringCopy(stringList(i), tempList(i))
@@ -353,6 +355,7 @@ contains
         if (present(rc)) rc = ESMF_RC_MEM_ALLOCATE
         return
       endif
+      stringList(:)=''
     endif
 
     if (allocated(tempList)) deallocate(tempList)
@@ -367,27 +370,30 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_StringList2Reallocate"
-  subroutine MOSSCO_StringList2Reallocate(stringList, itemCount, kwe, keep, owner, rc)
+  subroutine MOSSCO_StringList2Reallocate(stringList, itemCount, kwe, columns, keep, owner, rc)
 
-    character(len=ESMF_MAXSTR), intent(inout), allocatable :: stringList(:,:)
+    character(len=VARLEN), intent(inout), allocatable :: stringList(:,:)
     integer(ESMF_KIND_I4), intent(in)            :: itemCount
     type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
-    logical, intent(in), optional                :: keep
-    integer(ESMF_KIND_I4), intent(out), optional :: rc
+    logical, intent(in), optional                    :: keep
+    integer(ESMF_KIND_I4), intent(out), optional     :: rc
+    integer(ESMF_KIND_I4), intent(in), optional      :: columns
     character(len=*), intent(in), optional           :: owner
 
-    integer(ESMF_KIND_I4)                    :: rc_, localrc, listSize
+    integer(ESMF_KIND_I4)                    :: rc_, localrc, rowSize, colSize, i, j, columns_
     logical                                  :: keep_
     character(len=ESMF_MAXSTR)               :: message
     character(len=ESMF_MAXSTR),  allocatable :: tempList(:,:)
     character(len=ESMF_MAXSTR)               :: owner_
 
+    columns_ = 2
     owner_ = '--'
     rc_ = ESMF_SUCCESS
     keep_ = .true.
     if (present(keep)) keep_ = keep
     if (present(rc)) rc = rc_
     if (present(kwe)) localrc = ESMF_SUCCESS
+    if (present(columns)) columns_ = columns
     localrc = ESMF_SUCCESS
 
     ! Purposely deallocate upon itemCount < 1
@@ -401,46 +407,100 @@ contains
       return
     endif
 
+    ! Deallocate with error upon columns_ < 1
+    if (columns_ < 1) then
+      if (allocated(stringList)) deallocate(stringList, stat=localrc)
+      if (localrc /= 0) then
+        write(message,'(A)') trim(owner_)//' cannot deallocate memory for stringList'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      endif
+      write(message,'(A,I1)') trim(owner_)//' obtained bad column size ', columns_
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      if (present(rc)) rc = ESMF_RC_ARG_BAD
+      return
+    endif
+
     ! Deallocate if not keep
     if (.not.keep_) then
-      if (allocated(stringList)) deallocate(stringList)
+      if (allocated(stringList)) deallocate(stringList, stat=localrc)
+      if (localrc /= 0) then
+        write(message,'(A)') trim(owner_)//' cannot deallocate memory for stringList'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        if (present(rc)) rc = ESMF_RC_MEM_DEALLOCATE
+        return
+      endif
     endif
 
     if (allocated(stringList)) then
+      rowSize=size(stringList, dim=1)
+      colSize=size(stringList, dim=2)
+
       ! Don't do anything if requested size is equal
-      listSize = size(stringList)
-      if (listSize == itemCount) return
-      if (allocated(tempList)) deallocate(tempList)
-      allocate(tempList(listSize, listSize), stat=localrc)
-      tempList(:,:) = stringList(:,:)
-      deallocate(stringList)
-      allocate(stringList(itemCount,itemCount), stat=localrc)
-      if (itemCount < listSize) then
-        stringList(1:itemCount,1:itemCount) = tempList(1:itemCount,1:itemCount)
-      else
-        stringList(1:listSize,1:listSize) = tempList(1:listSize,1:listSize)
+      if ( itemCount == rowSize .and.  colSize == columns_) return
+
+      if (allocated(tempList)) deallocate(tempList, stat=localrc)
+      if (localrc /= 0) then
+        write(message,'(A)') trim(owner_)//' cannot deallocate memory for temporary stringList'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        if (present(rc)) rc = ESMF_RC_MEM_DEALLOCATE
+        return
       endif
+
+      allocate(tempList(rowSize, colSize), stat=localrc)
+      if (localrc /= 0) then
+        write(message,'(A)') trim(owner_)//' cannot allocate memory for temporary stringList'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        if (present(rc)) rc = ESMF_RC_MEM_ALLOCATE
+        return
+      endif
+
+      do i=1,minval((/itemCount, rowSize/))
+        do j=1, minval((/columns_, colSize/))
+          call stringCopy(tempList(i,j), stringList(i,j))
+        enddo
+      enddo
+
+      deallocate(stringList, stat=localrc)
+      if (localrc /= 0) then
+        write(message,'(A)') trim(owner_)//' cannot deallocate memory for stringList'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        if (present(rc)) rc = ESMF_RC_MEM_DEALLOCATE
+        return
+      endif
+
+      allocate(stringList(itemCount,columns_), stat=localrc)
+      do i=1,minval((/itemCount, rowSize/))
+        do j=1, minval((/columns_, colSize/))
+          call stringCopy(stringList(i,j), tempList(i,j))
+        enddo
+      enddo
+
     else
-      allocate(stringList(itemCount,itemCount), stat=localrc)
+      allocate(stringList(itemCount,columns_), stat=localrc)
+      if (localrc /= 0) then
+        write(message,'(A)') trim(owner_)//' cannot allocate memory for stringList'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        if (present(rc)) rc = ESMF_RC_MEM_ALLOCATE
+        return
+      endif
+
     endif
 
-    if (allocated(tempList)) deallocate(tempList)
-
+    if (allocated(tempList)) deallocate(tempList, stat=localrc)
     if (localrc /= 0) then
-      write(message,'(A,I5)') '  failed to allocate memory for stringList size ',itemCount
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      write(message,'(A)') trim(owner_)//' cannot deallocate memory for temporary stringList'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      if (present(rc)) rc = ESMF_RC_MEM_DEALLOCATE
+      return
     endif
-
-    if (present(rc)) rc=rc_
-    return
 
   end subroutine MOSSCO_StringList2Reallocate
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "stringCopy"
 !> The internal subroutine stringCopy is a copy of the publicly available
-!> interface MOSSCOstringCopy.  It resides here to avoid circular use of
+!> interface MOSSCO_StringCopy from the mossco_strings module.
+!> It resides here to avoid circular use of
 !> modules, such that the mossco_memory module has no dependencies
   subroutine stringCopy(to, from, rc)
 
