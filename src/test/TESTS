@@ -27,6 +27,7 @@ test_Ugrid
 test_mossco_db
 test_mossco_netcdf
 test_mossco_strings
+test_mossco_memory
 test_netcdf
 test_pointer
 test_precision

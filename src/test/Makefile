@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2013, 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 # @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
 # @author Knut Klingbeil, Institut für Ostseeforschung Warnemünde
@@ -42,7 +42,7 @@ test_Coupler: test_Coupler.F90 libmossco_mediator
 
 test_MOSSCO_Field: test_MOSSCO_Field.F90 libmossco_technical
 		$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_technical  -lmossco_util $(LIBS)
-		
+
 libmossco_mediator:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
@@ -53,6 +53,9 @@ test_mossco_time: test_mossco_time.F90 libmossco_util
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_util $(LIBS)
 
 test_mossco_strings: test_mossco_strings.F90 libmossco_util
+	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_util $(LIBS)
+
+test_mossco_memory: test_mossco_memory.F90 libmossco_util
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_util $(LIBS)
 
 test_mossco_config: test_mossco_config.F90 libmossco_util
