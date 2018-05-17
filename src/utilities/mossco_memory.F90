@@ -255,7 +255,7 @@ contains
 #define ESMF_METHOD "MOSSCO_StringListReallocate"
   subroutine MOSSCO_StringListReallocate(stringList, itemCount, kwe, keep, owner, rc)
 
-    character(len=*), intent(inout), allocatable :: stringList(:)
+    character(len=ESMF_MAXSTR), intent(inout), allocatable :: stringList(:)
     integer(ESMF_KIND_I4), intent(in)            :: itemCount
     type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
     logical, intent(in), optional                :: keep
@@ -369,7 +369,7 @@ contains
 #define ESMF_METHOD "MOSSCO_StringList2Reallocate"
   subroutine MOSSCO_StringList2Reallocate(stringList, itemCount, kwe, keep, owner, rc)
 
-    character(len=*), intent(inout), allocatable :: stringList(:,:)
+    character(len=ESMF_MAXSTR), intent(inout), allocatable :: stringList(:,:)
     integer(ESMF_KIND_I4), intent(in)            :: itemCount
     type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
     logical, intent(in), optional                :: keep
