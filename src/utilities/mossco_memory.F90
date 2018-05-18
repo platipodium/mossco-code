@@ -66,6 +66,8 @@ contains
     if (present(owner)) call stringCopy(owner_, owner)
     localrc = ESMF_SUCCESS
 
+    listSize = 0
+
     ! Purposely deallocate a field upon fieldCount < 1
     if (fieldCount < 1) then
       if (allocated(fieldList)) deallocate(fieldList, stat=localrc)
