@@ -52,6 +52,7 @@ endif
 
 LIBS+= -L$(SCHISM_DIR)/lib -lhydro -lcore
 LIBS+= -L$(PARMETIS_DIR) -lparmetis -lmetis
+LIBS+= -L$(MOSSCO_DIR)/external/fabm/install/lib -lfabm
 LIBS+= -L$(MOSSCO_DIR)/lib -lmossco
 F90FLAGS+= -I$(SCHISM_DIR)/include
 F90FLAGS+= -I$(MOSSCO_DIR)/include
