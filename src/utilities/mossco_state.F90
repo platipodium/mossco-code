@@ -1485,7 +1485,7 @@ contains
     integer(ESMF_KIND_I4)               :: rc_, localrc, itemCount, i
     character(len=ESMF_MAXPATHLEN)      :: message, creator, name
     logical                             :: isPresent
-    character(len=ESMF_MAXPATHLEN), allocatable :: itemNameList(:)
+    character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
     type(ESMF_Array), allocatable       :: arrayList(:)
 
     rc_ = ESMF_SUCCESS

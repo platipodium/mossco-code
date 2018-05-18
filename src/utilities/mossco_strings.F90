@@ -525,7 +525,7 @@ contains
     integer(ESMF_KIND_I4)            :: rc_, count1, count2, i, localrc, chunk
     integer(ESMF_KIND_I4), parameter :: maxChunk = 10
     character(len=ESMF_MAXSTR)       :: unit_, message
-    character(len=10), allocatable, dimension(:) :: unit1List, unit2List
+    character(len=ESMF_MAXSTR), allocatable, dimension(:) :: unit1List, unit2List
 
     if (present(rc)) rc = ESMF_SUCCESS
     isEqual = .true.

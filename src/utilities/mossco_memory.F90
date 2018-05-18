@@ -54,7 +54,8 @@ contains
     logical                                 :: keep_
     character(len=ESMF_MAXPATHLEN)          :: message
     type(ESMF_Field),  allocatable          :: tempList(:)
-    character(len=len(owner))               :: owner_
+    !character(len=len(owner))               :: owner_  ! illegal with clang
+    character(len=ESMF_MAXSTR)               :: owner_
 
     rc_ = ESMF_SUCCESS
     keep_ = .true.
