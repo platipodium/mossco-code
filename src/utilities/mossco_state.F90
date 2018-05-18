@@ -774,13 +774,6 @@ contains
     call MOSSCO_Reallocate(itemNameList, itemCount, keep=.false., rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    !> @todo Something is wrong in the MOSSCO_Reallocate interface for stringList, that
-    !> makes ESMF_StateGet choke with a segmentation fault on mistral when it
-    !> internally accesses the item names.  We prevent this here by reallocating
-    !> the itemNameList again, but really this should be fixed in mossco_memory.F90
-    if (allocated(itemNameList)) deallocate(itemNameList)
-    allocate(itemNameList(itemCount))
-
     if (itemCount > 0) then
       call ESMF_StateGet(state, itemTypeList=itemTypeList, itemNameList=itemNameList, &
         rc=localRc)
@@ -834,14 +827,6 @@ contains
         call MOSSCO_Reallocate(fieldNameList, fieldCount, keep=.false., rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        !> @todo Something is wrong in the MOSSCO_Reallocate interface for stringList, that
-        !> makes ESMF_StateGet choke with a segmentation fault on mistral when it
-        !> internally accesses the item names.  We prevent this here by reallocating
-        !> the itemNameList again, but really this should be fixed in mossco_memory.F90
-        if (allocated(fieldNameList)) deallocate(fieldNameList)
-        allocate(fieldNameList(fieldCount))
-
 
         call ESMF_FieldBundleGet(fieldBundle, fieldNameList=fieldNameList, &
           fieldList=fieldList, rc=localrc)
@@ -1319,13 +1304,6 @@ contains
       call MOSSCO_Reallocate(itemNameList, itemCount, keep=.false., rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      !> @todo Something is wrong in the MOSSCO_Reallocate interface for stringList, that
-      !> makes ESMF_StateGet choke with a segmentation fault on mistral when it
-      !> internally accesses the item names.  We prevent this here by reallocating
-      !> the itemNameList again, but really this should be fixed in mossco_memory.F90
-      if (allocated(itemNameList)) deallocate(itemNameList)
-      allocate(itemNameList(itemCount))
-
       call ESMF_StateGet(state, itemTypeList=itemTypeList, itemNameList=itemNameList, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
@@ -1388,13 +1366,6 @@ contains
 
       call MOSSCO_Reallocate(itemNameList, itemCount, keep=.false., rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-      !> @todo Something is wrong in the MOSSCO_Reallocate interface for stringList, that
-      !> makes ESMF_StateGet choke with a segmentation fault on mistral when it
-      !> internally accesses the item names.  We prevent this here by reallocating
-      !> the itemNameList again, but really this should be fixed in mossco_memory.F90
-      if (allocated(itemNameList)) deallocate(itemNameList)
-      allocate(itemNameList(itemCount))
 
       call ESMF_StateGet(state, itemTypeList=itemTypeList, itemNameList=itemNameList, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -1467,13 +1438,6 @@ contains
 
       call MOSSCO_Reallocate(fieldList, itemCount, keep=.false., rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-      !> @todo Something is wrong in the MOSSCO_Reallocate interface for stringList, that
-      !> makes ESMF_StateGet choke with a segmentation fault on mistral when it
-      !> internally accesses the item names.  We prevent this here by reallocating
-      !> the itemNameList again, but really this should be fixed in mossco_memory.F90
-      if (allocated(itemNameList)) deallocate(itemNameList)
-      allocate(itemNameList(itemCount))
 
       call ESMF_FieldBundleGet(fieldBundle, fieldList=fieldList, &
         fieldNameList=itemNameList, rc=localrc)

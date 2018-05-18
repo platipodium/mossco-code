@@ -818,13 +818,6 @@ contains
     call MOSSCO_Reallocate(stringList, n, keep=.false., rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    !> @todo Something is wrong in the MOSSCO_Reallocate interface for stringList, that
-    !> makes ESMF_StateGet choke with a segmentation fault on mistral when it
-    !> internally accesses the item names.  We prevent this here by reallocating
-    !> the itemNameList again, but really this should be fixed in mossco_memory.F90
-    if (allocated(stringList)) deallocate(stringList)
-    allocate(stringList(n))
-
     do i=1,n
       j=index(attributeString,',')
       if (j>0) then

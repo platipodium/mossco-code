@@ -1660,13 +1660,6 @@ subroutine MOSSCO_GridCompStateRemoveCreated(gridComp, state, rc)
     call MOSSCO_Reallocate(itemTypeList, itemCount, keep=.false., rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    !> @todo Something is wrong in the MOSSCO_Reallocate interface for stringList, that
-    !> makes ESMF_StateGet choke with a segmentation fault on mistral when it
-    !> internally accesses the item names.  We prevent this here by reallocating
-    !> the itemNameList again, but really this should be fixed in mossco_memory.F90
-    if (allocated(itemNameList)) deallocate(itemNameList)
-    allocate(itemNameList(itemCount))
-
   endif
 
    do i = 1, itemCount
