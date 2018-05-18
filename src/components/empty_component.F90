@@ -81,7 +81,8 @@ module empty_component
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, &
+      currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
