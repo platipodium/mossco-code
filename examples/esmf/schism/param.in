@@ -57,7 +57,9 @@
 !-----------------------------------------------------------------------
   icou_elfe_wwm = 0 
   nstep_wwm = 1 !call WWM every this many time steps
-
+  drampwafo = 1.
+  nrampwafo = 0
+  turbinj = 0.15
 !-----------------------------------------------------------------------
 ! Non-hydrostatic model switch (0: hydrostatic model; 1: non-hydrostatic model)
 ! For non-hydrostatic model, use ihydro_region to indicate if  hydrostatic 
