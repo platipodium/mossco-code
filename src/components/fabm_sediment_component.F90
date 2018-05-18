@@ -607,7 +607,7 @@ module fabm_sediment_component
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         do k=1,sed%grid%knum
-          statemesh_ptr(k,:) = sed%export_states(n)%data(:,1,k)
+          statemesh_ptr(:,k) = sed%export_states(n)%data(:,1,k)
         enddo
 
         write(message, '(A)') trim(name)//' created for export bulk '
@@ -1569,9 +1569,12 @@ module fabm_sediment_component
         call ESMF_FieldGet(field=field, localDe=0, farrayPtr=statemesh_ptr, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+        !write(0,*) 'statemesh ',shape(statemesh_ptr), 'data ',shape(sed%export_states(n)%data)
+
         do k=1,sed%grid%knum
-          statemesh_ptr(k,:) = sed%export_states(n)%data(:,1,k)
+          statemesh_ptr(:,k) = sed%export_states(n)%data(:,1,k)
         enddo
+
         if (sed%export_states(n)%fabm_id /= -1) then
           call ESMF_StateGet(exportState, &
              trim(sed%export_states(n)%standard_name)//'_upward_flux_at_soil_surface', &
