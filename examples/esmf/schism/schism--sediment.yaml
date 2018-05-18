@@ -1,0 +1,58 @@
+# ---
+# author: Carsten Lemmen
+# copyright: 2018 Helmholtz-Zentrum Geesthacht
+# license: CC-by-SA 4.0
+# description: "This test case describes a coupling between the SCHISM ocean
+# component (containing a FABM pelagic ecosystem model) and the FABM component for
+# the sediment (running OMExDia).  Wind input data on the CLM grid is read from 
+# file and regridded to SCHISM.  Ecosystem models are defined on the SCHISM grid
+# and exchange data via the specific soil--pelagic and pelagic--soil connectors.
+# As a fall back, static ecosystem data is provided by the default component. Output
+# occurs on both the mesh as well as the
+# ...
+dependencies:
+  - fabm_sediment:
+    - component: schism
+      grid: temperature_at_soil_surface
+  - wind_input:
+    - component: grid_input
+      grid: grid_input
+
+instances:
+  - grid_input: grid
+  - wind_input: netcdf_input
+  - schism_grid_output: netcdf
+  - schism_grid_output: netcdf
+  - regrid_tomesh: regrid_coupler
+  - regrid_togrid: regrid_coupler
+  - schism: schism_esmf
+
+coupling:
+  - components:
+    - grid_input
+    - wind_input
+    interval: none
+  - components:
+    - wind_input
+    - regrid_tomesh
+    - schism
+    interval: 30 m
+  - components:
+    - schism
+    - schism_mesh_output
+    interval: 30 m
+  - components:
+    - schism
+    - pelagic_soil_connector
+    - fabm_sediment
+    interval: 30 m
+  - components:
+    - fabm_sediment
+    - pelagic_soil_connector
+    - schism
+    interval: 30 m
+  - components:
+    - schism
+    - regrid_togrid
+    - schism_grid_output
+    interval: 30 m
