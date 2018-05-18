@@ -259,11 +259,7 @@ contains
 #define ESMF_METHOD "MOSSCO_StringListReallocate"
   subroutine MOSSCO_StringListReallocate(stringList, itemCount, kwe, keep, owner, rc)
 
-<<<<<<< HEAD
-    character(len=ESMF_MAXSTR), intent(inout), allocatable :: stringList(:)
-=======
     character(len=VARLEN), intent(inout), allocatable :: stringList(:)
->>>>>>> Use macro VARLEN=ESMF_MAXSTR to avoid varchar allocatables not functioning on mistral
     integer(ESMF_KIND_I4), intent(in)            :: itemCount
     type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
     logical, intent(in), optional                :: keep

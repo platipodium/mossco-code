@@ -740,6 +740,7 @@ module regrid_coupler
     character(len=ESMF_MAXSTR), pointer :: includeList(:) => null()
 
     rc = ESMF_SUCCESS
+    rank = 0
 
     call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -1598,7 +1599,6 @@ program test
 
   !! Same name, different rank
   fields(9)=ESMF_FieldCreate(grid565, typekind=ESMF_TYPEKIND_I8, name="field4")
-
 
   coupler=ESMF_CplCompCreate(name="coupler")
   call ESMF_CplCompSetServices(coupler, SetServices, rc=localrc)
