@@ -34,6 +34,7 @@
 #define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "fabm_sediment_component.F90"
+
 #define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 #define _MOSSCO_LOG_ERROR if (ESMF_LogFoundError(ESMF_RC_ARG_BAD, ESMF_ERR_PASSTHRU, ESMF_CONTEXT)) continue
@@ -212,10 +213,12 @@ module fabm_sediment_component
     type(ESMF_TimeInterval)    :: timeStep
     logical                    :: clockIsPresent, isPresent
     integer                    :: numElements,numNodes, exclusiveCount(2), rank
-    character(len=ESMF_MAXSTR) :: foreignGridFieldName
-    integer(ESMF_KIND_I4)      :: localrc
+    character(len=ESMF_MAXSTR) :: foreignGeomFieldName
+    integer(ESMF_KIND_I4)      :: localrc, spatialDim
     integer, dimension(:,:), pointer :: gridmask=>null()
     type(ESMF_StateItem_Flag)  :: itemType
+    type(ESMF_GeomType_Flag)   :: geomType
+    type(ESMF_CoordSys_Flag)   :: coordSys
 
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
@@ -285,10 +288,10 @@ module fabm_sediment_component
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
     else
       call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
-           value=foreignGridFieldName, defaultValue='none',rc=localrc)
+           value=foreignGeomFieldName, defaultValue='none',rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (trim(foreignGridFieldName)=='none') then
+      if (trim(foreignGeomFieldName)=='none') then
         sed%grid%type=LOCAL_GRID
       else
         sed%grid%type=FOREIGN_GRID
@@ -297,64 +300,104 @@ module fabm_sediment_component
 
     if (sed%grid%type==FOREIGN_GRID) then
 
-      call ESMF_StateGet(importState, trim(foreignGridFieldName), itemType, rc=localrc)
+      call ESMF_StateGet(importState, trim(foreignGeomFieldName), itemType, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (itemType /= ESMF_STATEITEM_FIELD) then
         call MOSSCO_StateLog(importState, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        write(message,'(A)') trim(name)//' cannot find specified foreign grid field '//trim(foreignGridFieldName)
+        write(message,'(A)') trim(name)//' cannot find specified foreign grid field '//trim(foreignGeomFieldName)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      call ESMF_StateGet(importState, foreignGridFieldName, field, rc=localrc)
+      call ESMF_StateGet(importState, foreignGeomFieldName, field, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      write(message,'(A)') trim(name)//' uses foreign grid from field'
+      write(message,'(A)') trim(name)//' uses foreign geometry from field'
       call MOSSCO_FieldString(field, message, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
-      call ESMF_FieldGet(field, grid=grid, rc=localrc)
+      call ESMF_FieldGet(field, geomType=geomType, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_GridGet(grid, rank=rank, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      if (geomType /= ESMF_GEOMTYPE_GRID .and. geomType /= ESMF_GEOMTYPE_MESH) then
+        write(message,'(A)') trim(name)//' cannot use geometries other than grid or mesh'
+        rc = ESMF_RC_NOT_IMPL
+        return
+      endif
 
-      if (rank == 3) then
-        flux_grid = MOSSCO_GridCreateFromOtherGrid(grid, rc=localrc)
-        call ESMF_GridGet(grid, staggerloc=ESMF_STAGGERLOC_CENTER_VCENTER, &
-          localDe=0, exclusiveUbound=ubnd3, exclusiveLbound=lbnd3, rc=localrc)
+     if (geomType == ESMF_GEOMTYPE_GRID) then
+        call ESMF_FieldGet(field, grid=grid, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        if (numlayers /= ubnd3(3)-lbnd3(3) + 1) then
+        call ESMF_GridGet(grid, rank=rank, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        if (rank == 3) then
+          flux_grid = MOSSCO_GridCreateFromOtherGrid(grid, rc=localrc)
+          call ESMF_GridGet(grid, staggerloc=ESMF_STAGGERLOC_CENTER_VCENTER, &
+            localDe=0, exclusiveUbound=ubnd3, exclusiveLbound=lbnd3, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-          numlayers = ubnd3(3)-lbnd3(3) + 1
-          write(message,'(A,I3)') trim(name)//' overwrites namelist with 3D-grid numlayers = ',numlayers
-          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+
+          if (numlayers /= ubnd3(3)-lbnd3(3) + 1) then
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+            numlayers = ubnd3(3)-lbnd3(3) + 1
+            write(message,'(A,I3)') trim(name)//' overwrites namelist with 3D-grid numlayers = ',numlayers
+            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+          endif
+        else
+          flux_grid = grid
         endif
-      else
-        flux_grid = grid
-      endif
 
-      call ESMF_GridGet(flux_grid, rank=rank, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        call ESMF_GridGet(flux_grid, rank=rank, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (rank/=2) then
-        write(message,'(A)') trim(name)//' could not create rank 2 grid'
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
-      endif
+        if (rank/=2) then
+          write(message,'(A)') trim(name)//' could not create rank 2 grid'
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+          call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
+        endif
 
-      call ESMF_GridGet(flux_grid, staggerloc=ESMF_STAGGERLOC_CENTER, localDe=0, &
-        exclusiveLBound=lbnd2, exclusiveUBound=ubnd2, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        call ESMF_GridGet(flux_grid, staggerloc=ESMF_STAGGERLOC_CENTER, localDe=0, &
+          exclusiveLBound=lbnd2, exclusiveUBound=ubnd2, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      sed%grid%inum=ubnd2(1)-lbnd2(1)+1
-      sed%grid%jnum=ubnd2(2)-lbnd2(2)+1
+        sed%grid%inum=ubnd2(1)-lbnd2(1)+1
+        sed%grid%jnum=ubnd2(2)-lbnd2(2)+1
+
+      elseif (geomType == ESMF_GEOMTYPE_MESH) then
+
+        call ESMF_FieldGet(field, mesh=surface_mesh, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        call ESMF_MeshGet(surface_mesh, spatialDim=spatialDim, coordSys=coordSys, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        if (spatialDim /= 2) then
+          write(message,'(A)') trim(name)//' cannot use spatial dimension other than 2'
+          rc = ESMF_RC_NOT_IMPL
+          return
+        endif
+
+        if (coordSys /= ESMF_COORDSYS_SPH_DEG .and. coordSys /= ESMF_COORDSYS_SPH_RAD) then
+          write(message,'(A)') trim(name)//' cannot use non-spherical coordinate system'
+          rc = ESMF_RC_NOT_IMPL
+          return
+        endif
+
+        call ESMF_MeshGet(surface_mesh, numOwnedElements=numElements, &
+          numOwnedNodes=numNodes, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        sed%grid%inum=numElements
+        sed%grid%jnum=1
+        write(message,*) trim(name)//' uses unstructured grid, number of local elements:',numElements
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+      endif ! grid or mesh
 
     elseif (sed%grid%type==LOCAL_GRID) then
       write(message,*) '  use local 1x1 horizontal grid'
@@ -383,15 +426,14 @@ module fabm_sediment_component
     sed%mask = .false.
     isPresent = .true.
 
-
 #if ESMF_VERSION_MAJOR > 6
-    if (sed%grid%type==FOREIGN_GRID) then
+    if (sed%grid%type==FOREIGN_GRID .and. geomType==ESMF_GEOMTYPE_GRID) then
       call ESMF_GridGetItem(flux_grid, ESMF_GRIDITEM_MASK, isPresent=isPresent, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
 #endif
 
-    if (sed%grid%type==FOREIGN_GRID .and. isPresent) then
+    if (sed%grid%type==FOREIGN_GRID .and. isPresent .and. geomType==ESMF_GEOMTYPE_GRID) then
 
       call ESMF_GridGetItem(flux_grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
