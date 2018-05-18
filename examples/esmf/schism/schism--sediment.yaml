@@ -21,7 +21,7 @@ dependencies:
 instances:
   - grid_input: grid
   - wind_input: netcdf_input
-  - schism_grid_output: netcdf
+  - schism_mesh_output: netcdf
   - schism_grid_output: netcdf
   - regrid_tomesh: regrid_coupler
   - regrid_togrid: regrid_coupler
