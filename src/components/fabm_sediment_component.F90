@@ -596,7 +596,8 @@ module fabm_sediment_component
                   name=trim(sed%export_states(n)%standard_name)//'_in_soil', &
                   typekind=ESMF_TYPEKIND_R8, meshloc=ESMF_MESHLOC_ELEMENT, &
                   ungriddedLBound=(/1/), ungriddedUBound=(/sed%grid%knum/), &
-                  gridToFieldMap=(/1,2/), rc=localrc)
+                  rc=localrc)
+                  !gridToFieldMap=(/1,2/), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
@@ -800,7 +801,8 @@ module fabm_sediment_component
                          name=trim(sed%export_states(n)%standard_name)//'_in_soil', &
                          staggerloc=ESMF_STAGGERLOC_CENTER, &
                          ungriddedLBound=(/1/), ungriddedUBound=(/sed%grid%knum/), &
-                         gridToFieldMap=(/1,2/), rc=localrc)
+                         rc=localrc)
+                         !gridToFieldMap=(/1,2/), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
@@ -863,7 +865,7 @@ module fabm_sediment_component
                    indexflag=indexflag, &
                    ungriddedLBound=(/1/), &
                    ungriddedUBound=(/sed%grid%knum/), &
-                   gridToFieldMap=(/1,2/), &
+                   !gridToFieldMap=(/1,2/), &
                    name=only_var_name(sed%model%diagnostic_variables(n)%long_name)//'_in_soil', rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
