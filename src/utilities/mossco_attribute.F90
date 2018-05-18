@@ -1,7 +1,7 @@
 !> @brief Implementation of extensions to the ESMF Attribute utilities
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -14,6 +14,12 @@
 #define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "mossco_attribute.F90"
+
+#define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+#ifndef VARLEN
+#define VARLEN ESMF_MAXSTR
+#endif
 
 module mossco_attribute
 
@@ -147,7 +153,7 @@ contains
 
     type(ESMF_State), intent(inout)  :: state
     character(len=*), intent(in)  :: label
-    character(len=*), intent(in), pointer :: stringList(:)
+    character(len=VARLEN), intent(in), pointer :: stringList(:)
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)                :: localrc, rc_, i
@@ -174,7 +180,7 @@ contains
 
     type(ESMF_State), intent(inout)  :: state
     character(len=*), intent(in)  :: label
-    character(len=*), intent(in), allocatable :: stringList(:)
+    character(len=VARLEN), intent(in), allocatable :: stringList(:)
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)                :: localrc, rc_, i
@@ -260,7 +266,7 @@ contains
 
     type(ESMF_State), intent(inout)  :: state
     character(len=*), intent(in)  :: label
-    character(len=*), intent(in), allocatable :: stringList(:,:)
+    character(len=VARLEN), intent(in), allocatable :: stringList(:,:)
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)                :: localrc, rc_, i
@@ -507,7 +513,7 @@ contains
 
     type(ESMF_cplComp), intent(inout)  :: cplComp
     character(len=*), intent(in)  :: label
-    character(len=*), intent(in), pointer :: stringList(:)
+    character(len=VARLEN), intent(in), pointer :: stringList(:)
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)                :: localrc, rc_, i
@@ -534,7 +540,7 @@ contains
 
     type(ESMF_cplComp), intent(inout)  :: cplComp
     character(len=*), intent(in)  :: label
-    character(len=*), intent(in), allocatable :: stringList(:)
+    character(len=VARLEN), intent(in), allocatable :: stringList(:)
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)                :: localrc, rc_, i
@@ -561,7 +567,7 @@ contains
 
     type(ESMF_cplComp), intent(inout)  :: cplComp
     character(len=*), intent(in)  :: label
-    character(len=*), intent(in), allocatable :: stringList(:,:)
+    character(len=VARLEN), intent(in), allocatable :: stringList(:,:)
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)                :: localrc, rc_, i
@@ -724,7 +730,7 @@ contains
 
     type(ESMF_gridComp), intent(inout)  :: gridComp
     character(len=*), intent(in)  :: label
-    character(len=*), intent(in), allocatable :: stringList(:)
+    character(len=VARLEN), intent(in), allocatable :: stringList(:)
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)                :: localrc, rc_, i
@@ -751,7 +757,7 @@ contains
 
     type(ESMF_gridComp), intent(inout)  :: gridComp
     character(len=*), intent(in)  :: label
-    character(len=*), intent(in), allocatable :: stringList(:,:)
+    character(len=VARLEN), intent(in), allocatable :: stringList(:,:)
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)                :: localrc, rc_, i
@@ -810,8 +816,14 @@ contains
     enddo
 
     call MOSSCO_Reallocate(stringList, n, keep=.false., rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    !> @todo Something is wrong in the MOSSCO_Reallocate interface for stringList, that
+    !> makes ESMF_StateGet choke with a segmentation fault on mistral when it
+    !> internally accesses the item names.  We prevent this here by reallocating
+    !> the itemNameList again, but really this should be fixed in mossco_memory.F90
+    if (allocated(stringList)) deallocate(stringList)
+    allocate(stringList(n))
 
     do i=1,n
       j=index(attributeString,',')

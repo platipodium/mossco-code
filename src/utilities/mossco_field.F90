@@ -26,6 +26,10 @@
 #define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 #define _MOSSCO_LOG_ALLOC_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundAllocError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+#ifndef VARLEN
+#define VARLEN ESMF_MAXSTR
+#endif
+
 module mossco_field
 
   use mossco_memory
@@ -1078,7 +1082,7 @@ end subroutine MOSSCO_FieldCopyContent
     type(ESMF_Field), intent(in)                 :: importField, exportField
     type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
     character(len=*), dimension(*), optional     :: exclude(:)
-    character(len=*), allocatable, optional, intent(out)   :: differList(:)
+    character(len=ESMF_MAXSTR), allocatable, optional, intent(out)   :: differList(:)
     character(len=*), optional, intent(in)       :: owner
     integer(ESMF_KIND_I4), intent(out), optional :: rc
     integer(ESMF_KIND_I4)                        :: differCount
@@ -1105,10 +1109,17 @@ end subroutine MOSSCO_FieldCopyContent
     if (present(kwe)) rc_ = ESMF_SUCCESS
     if (present(rc)) rc = rc_
     if (present(exclude)) then
-      call MOSSCO_Reallocate(excludeList, ubound(exclude,1)-lbound(exclude,1)+1, rc=localrc)
-      excludeList(:) = exclude(:)
+      count = ubound(exclude,1)-lbound(exclude,1)+1
+      if (count>0) then
+        call MOSSCO_Reallocate(excludeList, count, keep=.false., rc=localrc)
+        !if (allocated(excludeList)) deallocate(excludeList, stat=localrc)
+        !allocate(excludeList(count))
+        excludeList(1:count) = exclude(:)
+      endif
     else
-      call MOSSCO_Reallocate(excludeList, 1, rc=localrc)
+      call MOSSCO_Reallocate(excludeList, 1, keep=.false., rc=localrc)
+      !if (allocated(excludeList)) deallocate(excludeList, stat=localrc)
+      !allocate(excludeList(1))
       excludeList(1) = 'creator'
     endif
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -1127,8 +1138,10 @@ end subroutine MOSSCO_FieldCopyContent
     if (exportCount == 0) return
 
     if (present(differList)) then
-      call MOSSCO_Reallocate(differList, importCount, rc=localrc)
+      call MOSSCO_Reallocate(differList, importCount, keep=.false.,  rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      !if (allocated(differList)) deallocate(differList, stat=localrc)
+      !allocate(differList(importCount))
 
       call ESMF_FieldGet(importField, name=fieldName, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)

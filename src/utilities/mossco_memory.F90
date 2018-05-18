@@ -17,6 +17,10 @@
 
 #define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+#ifndef VARLEN
+#define VARLEN ESMF_MAXSTR
+#endif
+
 module mossco_memory
 
   use esmf
@@ -255,7 +259,11 @@ contains
 #define ESMF_METHOD "MOSSCO_StringListReallocate"
   subroutine MOSSCO_StringListReallocate(stringList, itemCount, kwe, keep, owner, rc)
 
+<<<<<<< HEAD
     character(len=ESMF_MAXSTR), intent(inout), allocatable :: stringList(:)
+=======
+    character(len=VARLEN), intent(inout), allocatable :: stringList(:)
+>>>>>>> Use macro VARLEN=ESMF_MAXSTR to avoid varchar allocatables not functioning on mistral
     integer(ESMF_KIND_I4), intent(in)            :: itemCount
     type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
     logical, intent(in), optional                :: keep
@@ -372,8 +380,8 @@ contains
 #define ESMF_METHOD "MOSSCO_StringList2Reallocate"
   subroutine MOSSCO_StringList2Reallocate(stringList, itemCount, kwe, columns, keep, owner, rc)
 
-    character(len=VARLEN), intent(inout), allocatable :: stringList(:,:)
-    integer(ESMF_KIND_I4), intent(in)            :: itemCount
+    character(len=VARLEN), intent(inout), allocatable     :: stringList(:,:)
+    integer(ESMF_KIND_I4), intent(in)                :: itemCount
     type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
     logical, intent(in), optional                    :: keep
     integer(ESMF_KIND_I4), intent(out), optional     :: rc

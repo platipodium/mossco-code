@@ -14,7 +14,12 @@
 #define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "mossco_config.F90"
+
 #define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+#ifndef VARLEN
+#define VARLEN ESMF_MAXSTR
+#endif
 
 module mossco_config
 
@@ -558,7 +563,7 @@ contains
 
     type(ESMF_Config), intent(inout)  :: config
     character(len=*), intent(in)  :: label
-    character(len=*), intent(inout), allocatable :: value(:)
+    character(len=VARLEN), intent(inout), allocatable :: value(:)
     type(ESMF_KeywordEnforcer), optional, intent(in)  :: kwe
     logical, optional, intent(out)              :: isPresent
     integer(ESMF_KIND_I4), intent(out), optional      :: rc
@@ -606,7 +611,7 @@ contains
 
     type(ESMF_Config), intent(inout)  :: config
     character(len=*), intent(in)  :: label
-    character(len=*), intent(inout), pointer :: value(:)
+    character(len=VARLEN), intent(inout), pointer :: value(:)
     type(ESMF_KeywordEnforcer), optional, intent(in)  :: kwe
     logical, optional, intent(out)              :: isPresent
     integer(ESMF_KIND_I4), intent(out), optional      :: rc
@@ -654,7 +659,7 @@ contains
 
     type(ESMF_Config), intent(inout)  :: config
     character(len=*), intent(in)  :: label
-    character(len=*), intent(inout), allocatable :: value(:)
+    character(len=VARLEN), intent(inout), allocatable :: value(:)
     type(ESMF_KeywordEnforcer), optional, intent(in)  :: kwe
     logical, optional, intent(out)              :: isPresent
     integer(ESMF_KIND_I4), intent(out), optional :: rc
@@ -722,7 +727,7 @@ contains
 
     type(ESMF_Config), intent(inout)  :: config
     character(len=*), intent(in)  :: label
-    character(len=*), intent(inout), pointer :: value(:)
+    character(len=VARLEN), intent(inout), pointer :: value(:)
     type(ESMF_KeywordEnforcer), optional, intent(in)  :: kwe
     logical, optional, intent(out)              :: isPresent
     integer(ESMF_KIND_I4), intent(out), optional :: rc
@@ -787,7 +792,7 @@ contains
 
     type(ESMF_Config), intent(inout)  :: config
     character(len=*), intent(in)  :: label
-    character(len=*), intent(inout), allocatable :: value(:)
+    character(len=VARLEN), intent(inout), allocatable :: value(:)
     type(ESMF_KeywordEnforcer), optional, intent(in)  :: kwe
     logical, optional, intent(out)              :: isPresent
     integer(ESMF_KIND_I4), intent(out), optional      :: rc
@@ -831,7 +836,7 @@ contains
 
     type(ESMF_Config), intent(inout)  :: config
     character(len=*), intent(in)  :: label
-    character(len=*), intent(inout), pointer :: value(:)
+    character(len=VARLEN), intent(inout), pointer :: value(:)
     type(ESMF_KeywordEnforcer), optional, intent(in)  :: kwe
     logical, optional, intent(out)              :: isPresent
     integer(ESMF_KIND_I4), intent(out), optional      :: rc
@@ -875,7 +880,7 @@ contains
 
     type(ESMF_Config), intent(inout)                       :: config
     character(len=*), intent(in)                           :: label
-    character(len=ESMF_MAXSTR), intent(inout), allocatable :: value(:,:)
+    character(len=VARLEN), intent(inout), allocatable :: value(:,:)
     type(ESMF_KeywordEnforcer), optional                   :: kwe
     logical, optional                                      :: isPresent
     character(len=*), intent(in), optional                 :: sep
@@ -1019,7 +1024,7 @@ contains
 
     type(ESMF_Config), intent(inout)                       :: config
     character(len=*), intent(in)                           :: label
-    character(len=ESMF_MAXSTR), intent(inout), allocatable :: value(:,:)
+    character(len=VARLEN), intent(inout), allocatable :: value(:,:)
     logical, optional                                      :: isPresent
     type(ESMF_KeywordEnforcer), optional                   :: kwe
     character(len=*), intent(in), optional                 :: sep
@@ -1140,7 +1145,7 @@ contains
 
     character(len=*), intent(in)   :: fileName
     character(len=*), intent(in)   :: label
-    character(len=*), intent(inout), allocatable :: value(:,:)
+    character(len=VARLEN), intent(inout), allocatable :: value(:,:)
     type(ESMF_KeywordEnforcer), intent(in), optional   :: kwe
     logical, intent(out), optional                     :: isPresent
     integer(ESMF_KIND_I4), intent(out), optional       :: rc
@@ -1149,7 +1154,7 @@ contains
     integer(ESMF_KIND_I4)                :: lun, bufferSize = 10
     logical                              :: isPresent_, isTableEnd
     character(len=ESMF_MAXSTR)           :: message, string
-    character(len=ESMF_MAXSTR), allocatable :: stringList(:)
+    character(len=ESMF_MAXSTR), allocatable :: stringList(:), tempList(:)
 
     if (present(rc)) rc=ESMF_SUCCESS
     if (allocated(value)) deallocate(value)
@@ -1184,7 +1189,9 @@ contains
     endif
 
     ! Read into a string Buffer
-    call MOSSCO_Reallocate(stringList, bufferSize, keep=.false., rc=localrc)
+    ! call MOSSCO_Reallocate(stringList, bufferSize, keep=.false., rc=localrc)
+    if (allocated(stringList)) deallocate(stringList, stat=localrc)
+    allocate(stringList(bufferSize), stat=localrc)
 
     rowCount = 0
     do while (localrc == ESMF_SUCCESS)
@@ -1196,8 +1203,19 @@ contains
       rowCount = rowCount + 1
 
       if (rowCount > bufferSize) then
+
+        if (allocated(tempList)) deallocate(tempList, stat=localrc)
+        allocate(tempList(bufferSize), stat=localrc)
+
+        tempList(1:bufferSize) = stringList(1:bufferSize)
+
+        if (allocated(stringList)) deallocate(stringList, stat=localrc)
+        allocate(stringList(2*bufferSize), stat=localrc)
+
+        stringList(1:bufferSize) = tempList(1:bufferSize)
         bufferSize = 2 * bufferSize
-        call MOSSCO_Reallocate(stringList, buffersize, keep=.true., rc=localrc)
+
+        !call MOSSCO_Reallocate(stringList, buffersize, keep=.true., rc=localrc)
       endif
 
       stringList(rowCount) = trim(string)
