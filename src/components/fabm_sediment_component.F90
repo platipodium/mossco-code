@@ -392,9 +392,10 @@ module fabm_sediment_component
           numOwnedNodes=numNodes, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+        sed%grid%use_ugrid=.true.
         sed%grid%inum=numElements
         sed%grid%jnum=1
-        write(message,*) trim(name)//' uses unstructured grid, number of local elements:',numElements
+        write(message,*) trim(name)//' uses unstructured grid, number of local elements:', numElements
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
       endif ! grid or mesh
@@ -442,20 +443,20 @@ module fabm_sediment_component
 #else
         call ESMF_LogWrite('  ignore error above', ESMF_LOGMSG_ERROR)
 #endif
-        call ESMF_GridGetItemBounds(flux_grid, ESMF_GRIDITEM_MASK, exclusiveUBound=ubnd2, exclusiveLBound=lbnd2, rc=localrc)
+      call ESMF_GridGetItemBounds(flux_grid, ESMF_GRIDITEM_MASK, exclusiveUBound=ubnd2, exclusiveLBound=lbnd2, rc=localrc)
 
-        do i=1,sed%grid%inum
-          do j=1,sed%grid%jnum
-            do k=1,sed%grid%knum
-              sed%mask(i,j,k) = (gridmask(lbnd2(1)-1+i,lbnd2(2)-1+j).le.0)
-            enddo
+      do i=1,sed%grid%inum
+        do j=1,sed%grid%jnum
+          do k=1,sed%grid%knum
+            sed%mask(i,j,k) = (gridmask(lbnd2(1)-1+i,lbnd2(2)-1+j).le.0)
           enddo
         enddo
-      endif
+      enddo
+    endif
 
     if (.not.isPresent .or. localrc /= ESMF_SUCCESS) then
-        write(message,'(A)') trim(name)//' found no mask in foreign grid, compute every sediment column'
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+      write(message,'(A)') trim(name)//' found no mask in foreign grid, compute every sediment column'
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
     endif
 
     call sed%grid%init_grid()
@@ -482,6 +483,12 @@ module fabm_sediment_component
 
     !> run for some years into quasi-steady-state
     open(33,file='run_sed.nml',action='read',status='old')
+
+    !> Convert from deprecated namelist items detP, fDet, sDet
+    if (pflux_sDet /= pflux_sDetC) pflux_sDetC = pflux_sDet
+    if (pflux_fDet /= pflux_lDetC) pflux_lDetC = pflux_fDet
+    if (pflux_detP /= pflux_lDetP) pflux_lDetP = pflux_detP
+
     call sed1d%grid%init_grid()
     call sed1d%initialize()
     close(33)
@@ -575,7 +582,7 @@ module fabm_sediment_component
       write(funit,*)
     endif
 
-    if (sed%grid%type==UGRID) then
+    if (sed%grid%use_ugrid) then
       !! create state mesh
 #if 0
       state_mesh = ESMF_MeshCreate(surface_mesh,rc=localrc)
