@@ -37,10 +37,10 @@ coupling:
     - regrid_tomesh
     - schism
     interval: 30 m
-  - components:
-    - fabm_sediment
-    - schism_mesh_output
-    interval: 30 m
+  #- components:
+  #  - fabm_sediment
+  #  - schism_mesh_output
+  #  interval: 30 m
   - components:
     - schism
     - schism_mesh_output
