@@ -10,5 +10,6 @@ PET*
 fort.11
 *.nc
 outputs
-*.dat
+total*.dat
+flux.dat
 *.out

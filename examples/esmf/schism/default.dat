@@ -1,0 +1,4 @@
+dissolved_oxygen_at_soil_surface       280.0
+dissolved_phosphate_at_soil_surface    1.0
+porosity_at_soil_surface 0.7
+radiation_in_water  100.0  'W m**-2'

@@ -4,7 +4,7 @@
 # license: CC-by-SA 4.0
 # description: "This test case describes a coupling between the SCHISM ocean
 # component (containing a FABM pelagic ecosystem model) and the FABM component for
-# the sediment (running OMExDia).  Wind input data on the CLM grid is read from 
+# the sediment (running OMExDia).  Wind input data on the CLM grid is read from
 # file and regridded to SCHISM.  Ecosystem models are defined on the SCHISM grid
 # and exchange data via the specific soil--pelagic and pelagic--soil connectors.
 # As a fall back, static ecosystem data is provided by the default component. Output
@@ -37,6 +37,10 @@ coupling:
     - regrid_tomesh
     - schism
     interval: 30 m
+  - components:
+    - default
+    - fabm_sediment
+    interval: none
   - components:
     - fabm_sediment
     - schism_mesh_output
