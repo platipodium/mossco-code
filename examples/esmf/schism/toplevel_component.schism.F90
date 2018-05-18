@@ -324,7 +324,7 @@ module toplevel_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 
-    !! Initialize all components, both cpl and grid components, do this
+    !! Initialize all grid components, do this
     !! in the order specified by dependencies/couplings
     !! Also, try to find coupling/dependency specific export/import states in
     !! the initialization
@@ -461,8 +461,6 @@ module toplevel_component
     !  call MOSSCO_StateLog(gridImportStateList(i))
     !  call MOSSCO_StateLog(gridExportStateList(i))
     !enddo
-
-    !! The default coupler for all cplAlarms is the 'link' connector
 
     !! For other explicitly given couplings, specify connectors
 
@@ -1150,7 +1148,7 @@ module toplevel_component
     integer, intent(out) :: rc
 
     integer(ESMF_KIND_I8)   :: i
-    integer(ESMF_KIND_I4)   :: numGridComp, numCplComp, localrc
+    integer(ESMF_KIND_I4)   :: numGridComp, localrc
     character(ESMF_MAXSTR)  :: myName
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
@@ -1189,9 +1187,6 @@ module toplevel_component
       gridCompPhaseCountList(i)=phaseCount
       GridCompHasPhaseZeroList(i)=hasPhaseZero
     enddo
-
-    allocate(CplCompPhaseCountList(numCplComp))
-    !> @todo reenable if implemented in ESMF versions
 
     do i=1,ubound(gridCompList,1)
       do phase=1,gridCompPhaseCountList(i)
