@@ -1,0 +1,19 @@
+!-------------
+! sinking_factor - relative amount of detritus at the soil surface that sinks into the soil
+! NC_fdet - N:C ratio of fast remineralizing detritus in soil [molN/molC]
+! NC_sdet - N:C ratio of slow remineralizing detritus in soil [molN/molC]
+! sinking_factor_min - minimal sinking_factor
+! half_sedimentation_depth - critical depth for wave erosion [m]  0:no effect
+! half_sedimentation_tke - critical tke for wave erosion [m2/s2]  0:no effect
+! critical_detritus - detN above which minimum sinking [mmolN/m3] not used  half_sedimentation_tke = 1E3
+!-------------
+
+&pelagic_soil_connector
+  sinking_factor = 0.25
+  sinking_factor_min = 0.012
+  NC_ldet = 0.2
+  NC_sdet = 0.005
+  half_sedimentation_depth = -15
+  half_sedimentation_tke = 1E-4
+  critical_detritus = 500
+/
