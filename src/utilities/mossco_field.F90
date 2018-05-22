@@ -36,6 +36,7 @@ module mossco_field
   use mossco_strings
   use mossco_attribute
   use mossco_grid
+  use mossco_geom
   use mossco_strings
   use esmf
 
@@ -88,6 +89,7 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, prefix, rc)
   character(len=ESMF_MAXSTR)  :: geomName, stringValue, name, form
   character(len=ESMF_MAXSTR)  :: prefix_
   type(ESMF_Grid)             :: grid
+  type(ESMF_Mesh)             :: mesh
   type(ESMF_GeomType_Flag)    :: geomType
   type(ESMF_FieldStatus_Flag) :: fieldStatus
   logical                     :: isPresent
@@ -189,7 +191,11 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, prefix, rc)
       endif
 
     elseif (geomtype==ESMF_GEOMTYPE_MESH) then
-      call MOSSCO_MessageAdd(message,' mesh')
+      call ESMF_FieldGet(field, mesh=mesh, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      call MOSSCO_GeomString(mesh, message, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      !call MOSSCO_MessageAdd(message,' mesh')
     elseif (geomtype==ESMF_GEOMTYPE_LOCSTREAM) then
       call MOSSCO_MessageAdd(message,' locstream')
     elseif (geomtype==ESMF_GEOMTYPE_XGRID) then
