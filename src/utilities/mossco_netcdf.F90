@@ -2847,7 +2847,7 @@ module mossco_netcdf
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
         ncStatus = nf90_put_var(self%ncid, varid, &
-          ownedNodeCoords(i:numOwnedNodes:spatialDim))
+          ownedNodeCoords(i:spatialDim*numOwnedNodes:spatialDim))
 
       enddo
       exit
@@ -2885,7 +2885,7 @@ module mossco_netcdf
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
         ncStatus = nf90_put_var(self%ncid, varid, &
-          ownedElemCoords(i:numOwnedElements:spatialDim))
+          ownedElemCoords(i:spatialDim*numOwnedElements:spatialDim))
       enddo
       exit
     enddo
