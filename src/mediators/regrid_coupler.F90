@@ -37,6 +37,7 @@ module regrid_coupler
   use mossco_attribute
   use mossco_grid
   use mossco_strings
+  use mossco_geom
 
   implicit none
 
@@ -275,7 +276,9 @@ module regrid_coupler
         call ESMF_MeshWrite(externalMesh, trim(geomBaseFileName), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        write(message, '(A)') trim(name)//' created mesh from UGRID '//trim(geomFileName)
+        write(message, '(A)') trim(name)//' created from UGRID '//trim(geomFileName)
+        call MOSSCO_GeomString(externalMesh, message)
+        
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       elseif (trim(geomFileFormatString) == 'ESMF'  .and. geomTypeString == 'MESH') then
@@ -286,7 +289,8 @@ module regrid_coupler
         call ESMF_MeshWrite(externalMesh, trim(geomBaseFileName), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        write(message, '(A)') trim(name)//' created mesh from ESMF '//trim(geomFileName)
+        write(message, '(A)') trim(name)//' created ESMF '//trim(geomFileName)
+        call MOSSCO_GeomString(externalMesh, message)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       elseif (trim(geomFileFormatString) == 'SCRIP'  .and. geomTypeString == 'MESH') then
@@ -297,7 +301,8 @@ module regrid_coupler
         call ESMF_MeshWrite(externalMesh, trim(geomBaseFileName), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        write(message, '(A)') trim(name)//' created mesh from SCRIP '//trim(geomFileName)
+        write(message, '(A)') trim(name)//' created from SCRIP '//trim(geomFileName)
+        call MOSSCO_GeomString(externalMesh, message)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       elseif (geomTypeString == 'LOCSTREAM') then
@@ -482,22 +487,16 @@ module regrid_coupler
           call ESMF_FieldGet(importField, mesh=importMesh, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          call ESMF_MeshGet(importMesh, numOwnedNodes=numOwnedNodes, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-          write(message,'(A,I5,A)') trim(name)//' mesh with ',numOwnedNodes,' nodes'
-          importGeomName='anonymousMesh'
+          importGeomName='mesh'
+          call MOSSCO_GeomString(importMesh, message)
 
       elseif (importGeomType == ESMF_GEOMTYPE_LOCSTREAM) then
 
           call ESMF_FieldGet(importField, locstream=importLocstream, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          call ESMF_LocStreamGet(importLocstream, keycount=keycount, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-          write(message,'(A,I5,A)') trim(name)//' locstream with ',keycount,' keycount'
-          importGeomName='anonymousLocStream'
+          importGeomName='locStream'
+          call MOSSCO_GeomString(importMesh, message)
 
       else
 
@@ -509,39 +508,35 @@ module regrid_coupler
         geomType=exportGeomType, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+      call MOSSCO_MessageAdd(message,' --> ', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
       if (exportGeomType == ESMF_GEOMTYPE_GRID) then
+
         call ESMF_FieldGet(exportField, grid=exportGrid, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        call ESMF_GridGet(exportGrid, dimCount=dimCount, rank=rank, name=exportGeomName, rc=localrc)
+        call MOSSCO_GeomString(exportGrid, message, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-        write(message,'(A,I1,A,I1,A,I1)') trim(message)//' --> grid '//trim(exportGeomName)//' rank ',rank,' dimensions ',dimCount
 
       elseif (exportGeomType == ESMF_GEOMTYPE_MESH) then
 
         call ESMF_FieldGet(exportField, mesh=exportMesh, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        call ESMF_MeshGet(exportMesh, numOwnedNodes=numOwnedNodes, rc=localrc)
+        call MOSSCO_GeomString(exportMesh, message, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-        importGeomName='anonymousMesh'
-        write(message,'(A,I5,A)') trim(message)//' --> mesh with ',numOwnedNodes,' nodes.'
 
       elseif (exportGeomType == ESMF_GEOMTYPE_LOCSTREAM) then
 
           call ESMF_FieldGet(exportField, locstream=exportLocstream, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          call ESMF_LocStreamGet(exportLocstream, keycount=keycount, rc=localrc)
+          call MOSSCO_GeomString(exportGrid, message, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          importGeomName='anonymousLocStream'
-          write(message,'(A,I5,A)') trim(name)//' locstream with ',keycount,' keys'
-
       else
-        write(message,'(A)') trim(name)//' --> other geomtype skipped'
+        call MOSSCO_MessageAdd(message,' other geomtype skipped')
         cycle
       endif
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
@@ -553,15 +548,7 @@ module regrid_coupler
       endif
 
       fieldRoute=>Routes
-
-      ! do m = 1,2
-      ! do m = 1
-
-        ! if ( m==1 ) currentMethod = edgeMethod
-        ! if ( m==2 ) then
-          currentMethod = regridMethod
-        !   if (regridMethod == edgeMethod) exit ! no need to do this twice
-        ! endif
+      currentMethod = regridMethod
 
       !> Field pair / Method matching
       do while (associated(fieldRoute%next))
@@ -866,14 +853,40 @@ module regrid_coupler
 
           write(message,'(A,I2.2)') trim(name)//' uses route ',k
           call MOSSCO_RouteString(currentRoute, message)
-          call MOSSCO_MessageAdd(message,' for ')
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          write(message,'(A)') trim(name)//' for '
           call MOSSCO_FieldString(importFieldList(i), message)
+          call MOSSCO_MessageAdd(message,' to ')
+          call MOSSCO_FieldString(exportFieldList(j), message)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
           call ESMF_FieldRegrid(srcField=importFieldList(i), dstField=exportFieldList(j),&
             routeHandle=currentRoute%routehandle, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+          !> The remainder of this loop is only necessary for debugging and a
+          !> later edgeMethod call
+
+          call ESMF_FieldGet(importFieldList(i), rank=rank, rc=localrc)
+          if (allocated(ubnd)) deallocate(ubnd)
+          if (allocated(lbnd)) deallocate(lbnd)
+          allocate(ubnd(rank))
+          allocate(lbnd(rank))
+
+          if (rank == 1) then
+            call ESMF_FieldGet(importFieldList(i), farrayPtr=farrayPtr1, &
+              exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
+            write(*,*) 'farrayPtr=',farrayPtr1(RANGE1D)
+          elseif (rank == 2) then
+            call ESMF_FieldGet(exportFieldList(i), farrayPtr=farrayPtr2, &
+              exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
+
+          elseif (rank == 3) then
+            call ESMF_FieldGet(exportFieldList(i), farrayPtr=farrayPtr3, &
+              exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
+          endif
+
+          ! Since we have found a route, we can exit from this loop over
           call ESMF_FieldGet(exportFieldList(j), rank=rank, rc=localrc)
           if (allocated(ubnd)) deallocate(ubnd)
           if (allocated(lbnd)) deallocate(lbnd)
@@ -886,13 +899,22 @@ module regrid_coupler
           elseif (rank == 2) then
             call ESMF_FieldGet(exportFieldList(j), farrayPtr=farrayPtr2, &
               exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
+
+            write(*,*) 'farrayPtr=',farrayPtr2(RANGE2D)
           elseif (rank == 3) then
             call ESMF_FieldGet(exportFieldList(j), farrayPtr=farrayPtr3, &
               exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
           endif
 
+          ! Since we have found a route, we can exit from this loop over
+          ! existing routes
+          exit
+
         enddo
 
+        ! Cycle anyway, as the edgeMethod is deprecated (but cleanup carefully)
+        cycle
+        
         if (regridMethod == edgeMethod) cycle ! don't do this twice
         currentRoute => Routes
         k=-1
@@ -1461,23 +1483,30 @@ module regrid_coupler
   end subroutine MOSSCO_GeomPairInRoutes
 
 #undef ESMF_METHOD
-#define ESMF_METHOD MOSSCO_RoutePrint
+#define ESMF_METHOD MOSSCO_RouteString
 
 subroutine MOSSCO_RouteString(route, string)
 
   type(type_mossco_routes), pointer, intent(in) :: route
   character(len=*), intent(inout) :: string
 
+  integer(ESMF_KIND_I4)           :: localrc, rc_
+
   if (route%srcGeomType == ESMF_GEOMTYPE_GRID) then
-    call MOSSCO_GridString(route%srcGrid, string)
+    call MOSSCO_GeomString(route%srcGrid, string, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
   elseif (route%srcGeomType == ESMF_GEOMTYPE_XGRID) then
-    call MOSSCO_MessageAdd(string,' (xgrid) ')
+    call MOSSCO_MessageAdd(string,' (xgrid) ', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
   elseif (route%srcGeomType == ESMF_GEOMTYPE_MESH) then
-    call MOSSCO_MessageAdd(string,' (mesh) ')
+    call MOSSCO_GeomString(route%srcMesh, string, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
   elseif (route%srcGeomType == ESMF_GEOMTYPE_LOCSTREAM) then
-    call MOSSCO_LocStreamString(route%srcLocStream, string)
+    call MOSSCO_GeomString(route%srcLocStream, string, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
   else
-    call MOSSCO_MessageAdd(string,' (unknown) ')
+    call MOSSCO_MessageAdd(string,' (unknown) ', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
   endif
 
   call MOSSCO_MessageAdd(string,' --')
@@ -1491,17 +1520,19 @@ subroutine MOSSCO_RouteString(route, string)
     call MOSSCO_MessageAdd(string,'PATCH--> ')
   elseif (route%regridMethod == ESMF_REGRIDMETHOD_CONSERVE) then
     call MOSSCO_MessageAdd(string,'CONSV--> ')
+  else 
+    call MOSSCO_MessageAdd(string,'OTHER--> ')
   endif
   if (route%dstGeomType == ESMF_GEOMTYPE_GRID) then
-    call MOSSCO_GridString(route%dstGrid, string)
+    call MOSSCO_GeomString(route%dstGrid, string, rc=localrc)
   elseif (route%dstGeomType == ESMF_GEOMTYPE_XGRID) then
-    call MOSSCO_MessageAdd(string,' (xgrid) ')
+    call MOSSCO_MessageAdd(string,' (xgrid) ', rc=localrc)
   elseif (route%dstGeomType == ESMF_GEOMTYPE_MESH) then
-    call MOSSCO_MessageAdd(string,' (mesh) ')
+    call MOSSCO_GeomString(route%dstMesh, string, rc=localrc)
   elseif (route%dstGeomType == ESMF_GEOMTYPE_LOCSTREAM) then
-    call MOSSCO_LocStreamString(route%dstLocStream, string)
+    call MOSSCO_GeomString(route%dstLocStream, string)
   else
-    call MOSSCO_MessageAdd(string,' (unknown) ')
+    call MOSSCO_MessageAdd(string,' (unknown) ', rc=localrc)
   endif
 
 end subroutine MOSSCO_RouteString
