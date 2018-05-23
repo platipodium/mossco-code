@@ -475,6 +475,14 @@ module regrid_coupler
       if (isPresent) then
         write(message,'(A)') trim(name)//' reuses route '
         call MOSSCO_RouteString(fieldRoute, message, rc=localrc)
+        call MOSSCO_MessageAdd(message, ' for fields')
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        write(message,'(A)') trim(name)//' regridding from '
+        call MOSSCO_FieldString(importFieldList(i), message, rc=localrc)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        write(message,'(A)') trim(name)//' regridding to '
+        call MOSSCO_FieldString(exportField, message, rc=localrc)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         cycle
       endif
 
