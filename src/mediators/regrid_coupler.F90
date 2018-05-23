@@ -464,18 +464,18 @@ module regrid_coupler
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       if (associated(fieldRoute)) then
-        write(*,*) __LINE__
+
         call MOSSCO_RouteFindFieldPair(fieldRoute, regridMethod, &
           srcField=importFieldList(i), dstField=exportField, &
           isPresent=isPresent, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        if (isPresent) then
-          write(message,'(A)') trim(name)//' reuses '
-          call MOSSCO_RouteString(fieldRoute, message, rc=localrc)
+      endif
 
-          !cycle
-        endif
+      if (isPresent) then
+        write(message,'(A)') trim(name)//' reuses route '
+        call MOSSCO_RouteString(fieldRoute, message, rc=localrc)
+        cycle
       endif
 
       !>@todo Handle identical fields and fields on identical grids
@@ -483,58 +483,11 @@ module regrid_coupler
       call ESMF_FieldGet(exportField, name=exportFieldName, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_FieldGet(importField, localDeCount=localDeCount, rank=rank, &
-        geomType=importGeomType, rc=localrc)
+      call ESMF_FieldGet(importField, geomType=importGeomType, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (importGeomType == ESMF_GEOMTYPE_GRID) then
-
-          call ESMF_FieldGet(importField, grid=importGrid, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-          call ESMF_GridGet(importGrid, dimCount=dimCount, rank=rank, name=importGeomName, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      elseif (importGeomType == ESMF_GEOMTYPE_MESH) then
-
-          call ESMF_FieldGet(importField, mesh=importMesh, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-          importGeomName='mesh'
-          call MOSSCO_GeomString(importMesh, message)
-
-      elseif (importGeomType == ESMF_GEOMTYPE_LOCSTREAM) then
-
-          call ESMF_FieldGet(importField, locstream=importLocstream, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-          importGeomName='locStream'
-          call MOSSCO_GeomString(importMesh, message)
-
-      endif
-
-      call ESMF_FieldGet(exportField, status=status, localDeCount=localDeCount, rank=rank, &
-        geomType=exportGeomType, rc=localrc)
+      call ESMF_FieldGet(exportField, geomType=exportGeomType, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      if (exportGeomType == ESMF_GEOMTYPE_GRID) then
-
-        call ESMF_FieldGet(exportField, grid=exportGrid, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-
-      elseif (exportGeomType == ESMF_GEOMTYPE_MESH) then
-
-        call ESMF_FieldGet(exportField, mesh=exportMesh, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-
-      elseif (exportGeomType == ESMF_GEOMTYPE_LOCSTREAM) then
-
-          call ESMF_FieldGet(exportField, locstream=exportLocstream, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      endif
-
 
       !> Advance to the end of the route to create a new one
       if (.not.isPresent) fieldRoute => Routes
@@ -617,17 +570,10 @@ module regrid_coupler
         fieldRoute%dstXGrid=xgrid
       endif
 
-      if (exportGeomType == ESMF_GEOMTYPE_GRID) fieldRoute%dstGrid=exportGrid
-      if (importGeomType == ESMF_GEOMTYPE_MESH) fieldRoute%srcMesh=importMesh
-      if (exportGeomType == ESMF_GEOMTYPE_MESH) fieldRoute%dstMesh=exportMesh
-      if (importGeomType == ESMF_GEOMTYPE_LOCSTREAM) fieldRoute%srcLocStream=importLocStream
-      if (exportGeomType == ESMF_GEOMTYPE_LOCSTREAM) fieldRoute%dstLocStream=exportLocStream
-      !fieldRoute%srcField=importField
-      !fieldRoute%dstField=exportField
-      fieldRoute%routeHandle=routeHandle
-      fieldRoute%regridMethod=regridMethod
-      fieldRoute%srcGeomType = importGeomType
-      fieldRoute%dstGeomType = exportGeomType
+      fieldRoute%routeHandle  = routeHandle
+      fieldRoute%regridMethod = regridMethod
+      fieldRoute%srcGeomType  = importGeomType
+      fieldRoute%dstGeomType  = exportGeomType
       write(fieldRoute%creator,'(A)') trim(name)
       fieldRoute%id = j
 
@@ -793,7 +739,7 @@ module regrid_coupler
           elseif (rank == 2) then
             call ESMF_FieldGet(importFieldList(i), farrayPtr=farrayPtr2, &
               exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
-            write(*,*) 'srcPtr=',farrayPtr2(RANGE2D)
+            !write(*,*) 'srcPtr=',farrayPtr2(RANGE2D)
           elseif (rank == 3) then
             call ESMF_FieldGet(importFieldList(i), farrayPtr=farrayPtr3, &
               exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
@@ -808,7 +754,7 @@ module regrid_coupler
           if (rank == 1) then
             call ESMF_FieldGet(exportFieldList(j), farrayPtr=farrayPtr1, &
               exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
-            write(*,*) 'dstPtr=',farrayPtr1(RANGE1D)
+            !write(*,*) 'dstPtr=',farrayPtr1(RANGE1D)
           elseif (rank == 2) then
             call ESMF_FieldGet(exportFieldList(j), farrayPtr=farrayPtr2, &
               exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
