@@ -46,7 +46,10 @@ module regrid_coupler
   public SetServices
 
   type type_mossco_routes
-    type(ESMF_RouteHandle)        :: routehandle
+    integer(ESMF_KIND_I4)         :: id=-1
+    character(len=ESMF_MAXSTR)    :: creator=''
+    character(len=ESMF_MAXSTR)    :: name=''
+    type(ESMF_RouteHandle)        :: routeHandle
     type(ESMF_RegridMethod_Flag)  :: regridMethod
     type(ESMF_Field)              :: srcField, dstField
     type(ESMF_Grid)               :: srcGrid, dstGrid
@@ -98,7 +101,7 @@ module regrid_coupler
     integer, intent(out) :: rc
 
     type(ESMF_Time)             :: currTime
-    integer(ESMF_KIND_I4)       :: petCount, localPet, i, itemCount, m
+    integer(ESMF_KIND_I4)       :: petCount, localPet, i, j=0, itemCount, m
     character(len=ESMF_MAXSTR)  :: message, name, timeString, exportName, importName
     character(len=ESMF_MAXSTR)  :: exportFieldName, importFieldName
     type(ESMF_RouteHandle)      :: routeHandle
@@ -545,6 +548,7 @@ module regrid_coupler
       !! search for the correct routeHandle
       if (.not.associated(fieldRoute)) then
         allocate(Routes)
+        j=-1
       endif
 
       fieldRoute=>Routes
@@ -577,9 +581,10 @@ module regrid_coupler
             .or. (exportGeomType == ESMF_GEOMTYPE_LOCSTREAM .and. geomRoute%srcLocstream==exportLocstream) &
           )) then
 
-            write(message,'(A)') trim(name)//' field '//trim(importFieldName) &
-              //' has route '//trim(importGeomName)//' --> '//trim(exportGeomName)
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+            write(message,'(A)') trim(name)//' '//trim(importFieldName) &
+              //' has route '
+            call MOSSCO_RouteString(geomRoute, message, rc=localrc)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
             exit
           endif
@@ -652,6 +657,7 @@ module regrid_coupler
 
         allocate (fieldRoute%next)
         fieldRoute=>fieldRoute%next
+        j=j+1
 
         if (importGeomType == ESMF_GEOMTYPE_GRID) fieldRoute%srcGrid=importGrid
         if (exportGeomType == ESMF_GEOMTYPE_GRID) fieldRoute%dstGrid=exportGrid
@@ -665,6 +671,8 @@ module regrid_coupler
         fieldRoute%regridMethod=currentMethod
         fieldRoute%srcGeomType = importGeomType
         fieldRoute%dstGeomType = exportGeomType
+        write(fieldRoute%creator,'(A)') trim(name)
+        fieldRoute%id = j
 
         !@todo RouteHandlePrint creates a SIGILL Illegal instruction error
         !call ESMF_RouteHandlePrint(routehandle, rc=localrc)
@@ -759,7 +767,7 @@ module regrid_coupler
       currentRoute => Routes
       do while(associated(currentRoute%next))
         currentRoute => currentRoute%next
-        write(message,'(A,I2.2)') trim(name)//' has route ',i
+        write(message,'(A)') trim(name)//' has route'
         call MOSSCO_RouteString(currentRoute, message, rc=localrc)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         i = i + 1
@@ -786,7 +794,9 @@ module regrid_coupler
 
     if (importFieldCount < 1) return
 
+    if (associated(includeList)) deallocate(includeList)
     allocate(includeList(1)) ! to hold field name for exportState matching
+
     do i=1, importFieldCount
 
       call ESMF_FieldGet(importFieldList(i), geomType=importGeomType, &
@@ -798,6 +808,7 @@ module regrid_coupler
       call MOSSCO_StateGet(exportState, exportFieldList, include=includeList, &
         fieldcount=exportFieldCount, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
       if (exportFieldCount < 1) cycle
 
       do j=1, exportFieldCount
@@ -811,8 +822,12 @@ module regrid_coupler
 
           currentRoute => currentRoute%next
 
+          !write(message,'(A)') trim(name)//' tries route '
+          !call MOSSCO_RouteString(currentRoute, message, rc=localrc)
+          !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
           k = k+1
-          if (currentRoute%regridMethod /= edgeMethod) cycle
+          if (currentRoute%regridMethod /= regridMethod) cycle
           if (currentRoute%srcGeomType /= importGeomType) cycle
           if (currentRoute%dstGeomType /= exportGeomType) cycle
 
@@ -822,7 +837,7 @@ module regrid_coupler
           elseif (importGeomType == ESMF_GEOMTYPE_MESH) then
             call ESMF_FieldGet(importFieldList(i), mesh=mesh, rc=localrc)
             if (currentRoute%srcMesh /= mesh) cycle
-          elseif (importGeomType == ESMF_GEOMTYPE_MESH) then
+          elseif (importGeomType == ESMF_GEOMTYPE_LOCSTREAM) then
             call ESMF_FieldGet(importFieldList(i), locStream=locStream, rc=localrc)
             if (currentRoute%srcLocStream /= locStream) cycle
           elseif (importGeomType == ESMF_GEOMTYPE_XGRID) then
@@ -851,7 +866,7 @@ module regrid_coupler
           !> At this point we have found in at least one route and for the specified
           !> regridMethod with geoms matching an import and export field.
 
-          write(message,'(A,I2.2)') trim(name)//' uses route ',k
+          write(message,'(A)') trim(name)//' uses route '
           call MOSSCO_RouteString(currentRoute, message, rc=localrc)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
           write(message,'(A)') trim(name)//' for '
@@ -961,7 +976,7 @@ module regrid_coupler
           !> At this point we have found in at least one route and for the specified
           !> regridMethod with geoms matching an import and export field.
 
-          write(message,'(A,I2.2)') trim(name)//' uses route ',k
+          write(message,'(A)') trim(name)//' uses route'
           call MOSSCO_RouteString(currentRoute, message, rc=localrc)
           call MOSSCO_MessageAdd(message,' for ')
           call MOSSCO_FieldString(importFieldList(i), message)
@@ -1488,15 +1503,23 @@ module regrid_coupler
 recursive subroutine MOSSCO_RouteString(route, string, kwe, rc)
 
   type(type_mossco_routes), pointer, intent(in) :: route
-  character(len=*), intent(inout) :: string
+  character(len=*), intent(inout)               :: string
   type(ESMF_KeyWordEnforcer), intent(in), optional :: kwe
   integer(ESMF_KIND_I4), intent(out), optional     :: rc
 
   integer(ESMF_KIND_I4)           :: localrc, rc_
+  character(len=ESMF_MAXSTR)      :: formatString
 
   rc_ = ESMF_SUCCESS
   if (present(kwe)) rc_ = ESMF_SUCCESS
   if (present(rc))  rc = rc_
+
+  write(formatString,'(A)') '(A,'//trim(intformat(route%id))//')'
+  write(string,formatString) trim(string)//' ',route%id
+
+  if (len_trim(route%creator)>0) then
+    call MOSSCO_MessageAdd(string,' ['//trim(route%creator)//']')
+  endif
 
   if (route%srcGeomType == ESMF_GEOMTYPE_GRID) then
     call MOSSCO_GeomString(route%srcGrid, string, rc=localrc)
