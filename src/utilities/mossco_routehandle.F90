@@ -67,7 +67,7 @@ subroutine MOSSCO_RouteHandleString(routeHandle, message, kwe, length, rc)
       call MOSSCO_MessageAdd(message,' '//name)
 !    endif
   else
-    call MOSSCO_MessageAdd(message, ' anonymous non-created routeHandle ')
+    call MOSSCO_MessageAdd(message, ' routeHandle ')
   endif
 
   length_=len_trim(message)

@@ -70,7 +70,7 @@ libmossco_util:  prefix sha $(LIBMOSSCO_UTIL_OBJS)
 libmossco_db: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_db.a(mossco_db.o)
 mossco_state.o : mossco_field.o mossco_state.F90
 mossco_logging.o : mossco_strings.o mossco_field.o mossco_state.o mossco_logging.F90
-mossco_field.o : mossco_strings.o mossco_field.F90 mossco_memory.o mossco_attribute.o mossco_grid.o
+mossco_field.o : mossco_strings.o mossco_field.F90 mossco_memory.o mossco_attribute.o mossco_grid.o mossco_geom.o
 mossco_gridspec.o : mossco_strings.o mossco_gridspec.F90
 mossco_geom.o : mossco_strings.o ESMF_GridCreate3D.o mossco_mesh.o mossco_grid.o mossco_locstream.o
 mossco_grid.o : mossco_strings.o mossco_grid.F90
