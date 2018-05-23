@@ -59,11 +59,15 @@ coupling:
     - pelagic_soil_connector
     - schism
     interval: 30 m
-  #- components:
-  #  - fabm_sediment
-  #  - regrid_togrid
-  #  - schism_grid_output
-  #  interval: 30 m
+  - components:
+    - fabm_sediment
+    - regrid_togrid
+    - schism_grid_output
+    interval: 30 m
+  - components:
+    - wind_input
+    - schism_grid_output
+    interval: 30
   - components:
     - schism
     - regrid_togrid

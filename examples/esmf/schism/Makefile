@@ -72,7 +72,7 @@ schism_esmf_component.o: schism_driver_interfaces.mod
 
 outputs:
 	mkdir -p outputs
-	
+
 # Generic and cleanup rules
 
 %.o: %.F90
@@ -82,7 +82,7 @@ outputs:
 	$(F90) $(CPPFLAGS) $(F90FLAGS) -c $<
 
 clean:
-	@$(RM) *.o *.mod PET* fort.* *output.nc  *.dat *.vtk
+	@$(RM) *.o *.mod PET* fort.* *output.nc *.vtk total*.dat flux.dat
 	@$(RM) -rf *dSYM *.out core.* *.stderr *.stdout
 
 config:  grid_input.cfg wind_input.cfg wind.nc
