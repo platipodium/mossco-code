@@ -681,8 +681,8 @@ subroutine MOSSCO_GridString(grid, message, kwe, length, rc)
   integer(ESMF_KIND_I4), intent(inout), optional :: length
   integer(ESMF_KIND_I4), intent(out), optional   :: rc
 
-  integer(ESMF_KIND_I4)   :: rc_, length_, rank, localrc
-  character(ESMF_MAXSTR)  :: stringValue, name
+  integer(ESMF_KIND_I4)   :: rc_, length_, rank, localrc, i
+  character(ESMF_MAXSTR)  :: string, name, formatString
 
   logical                            :: isPresent
   integer(ESMF_KIND_I4), allocatable :: ubnd(:), lbnd(:)
@@ -697,18 +697,21 @@ subroutine MOSSCO_GridString(grid, message, kwe, length, rc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   if (isPresent) then
-    call ESMF_AttributeGet(grid, name='creator', value=stringValue, rc=localrc)
+    call ESMF_AttributeGet(grid, name='creator', value=string, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-    call MOSSCO_MessageAdd(message, ' ['//stringValue)
+    call MOSSCO_MessageAdd(message, ' ['//string)
     call MOSSCO_MessageAdd(message, ']'//name)
   else
-    call MOSSCO_MessageAdd(message,' '//name)
+    call MOSSCO_MessageAdd(message,name)
   endif
 
   call ESMF_GridGet(grid, rank=rank, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-  if (len_trim(message) + 7 <=len(message)) write(message,'(A,X,I1)') trim(message)//' rank',rank
+  write(formatString,'(A)') '(A,'//intformat(rank)//')'
+  write(string, formatString) '(r=',rank
+
+  call MOSSCO_MessageAdd(message, string)
 
   allocate(ubnd(rank), stat=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -719,11 +722,13 @@ subroutine MOSSCO_GridString(grid, message, kwe, length, rc)
         totalLBound=lbnd, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-  if (rank>0 .and. (len_trim(message) + 5 <=len(message))) write(message,'(A,I3)') trim(message)//' (', ubnd(1)-lbnd(1)+1
-  if (rank>1 .and. (len_trim(message) + 4 <=len(message))) write(message,'(A,X,I3)') trim(message), ubnd(2)-lbnd(2)+1
-  if (rank>2 .and. (len_trim(message) + 4 <=len(message))) write(message,'(A,X,I3)') trim(message), ubnd(3)-lbnd(3)+1
-  if (rank>3 .and. (len_trim(message) + 4 <=len(message))) write(message,'(A,X,I3)') trim(message), ubnd(4)-lbnd(4)+1
-  if (len_trim(message) + 1 <=len(message)) write(message,'(A)') trim(message)//')'
+  write(formatString,'(A)') '(X,'//intformat(ubnd(1)-lbnd(1)+1)//')'
+  write(string,formatString) ubnd(1)-lbnd(1)+1
+  do i=2, rank
+    write(formatString,'(A)') '(A,'//intformat(ubnd(i)-lbnd(i)+1)//')'
+    write(string,formatString) trim(string)//'x',ubnd(i)-lbnd(i)+1
+  enddo
+  call MOSSCO_MessageAdd(message, trim(string)//')', rc=localrc)
 
   deallocate(ubnd, stat=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
