@@ -45,11 +45,6 @@ module regrid_coupler
 
   public SetServices
 
-  type type_mossco_fieldroutes
-    type(ESMF_Field)              :: srcField, dstField
-    type(type_mossco_routes), pointer :: route => null()
-  end type
-
   type type_mossco_routes
     integer(ESMF_KIND_I4)         :: id=-1
     character(len=ESMF_MAXSTR)    :: creator=''
@@ -69,8 +64,6 @@ module regrid_coupler
   ! routehandles can be shared across instances
 
   type(type_mossco_routes), allocatable, target :: Routes
-  type(type_mossco_fieldroutes), allocatable, target :: fieldRoutes
-
 
   contains
 
@@ -109,7 +102,7 @@ module regrid_coupler
     integer, intent(out) :: rc
 
     type(ESMF_Time)             :: currTime
-    integer(ESMF_KIND_I4)       :: petCount, localPet, i, j=0, itemCount, m
+    integer(ESMF_KIND_I4)       :: petCount, localPet, i, j=0, itemCount, m, k
     character(len=ESMF_MAXSTR)  :: message, name, timeString, exportName, importName
     character(len=ESMF_MAXSTR)  :: exportFieldName, importFieldName
     type(ESMF_RouteHandle)      :: routeHandle
@@ -144,6 +137,7 @@ module regrid_coupler
     type(ESMF_Grid)               :: grid
     type(ESMF_LocStream)          :: locStream
     type(ESMF_XGrid)              :: xgrid
+    real(ESMF_KIND_R8), pointer   :: factorList(:)
 
     rc = ESMF_SUCCESS
 
@@ -398,18 +392,32 @@ module regrid_coupler
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         endif
 
-        call ESMF_StateAddReplace(exportState, (/exportField/), rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
+        !> Copy all attributes from the importField  and complete
+        !> the new field with same typeKind
         call MOSSCO_FieldCopy(exportField, importField, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call ESMF_AttributeSet(exportField, 'creator', trim(name), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        write(message, '(A)') trim(name)//' created '
-        call MOSSCO_FieldString(exportField, message)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        call ESMF_StateGet(exportState, itemSearch=trim(importFieldName), &
+          itemCount=itemCount, rc=localrc)
+
+        if (itemCount == 0) then
+          write(message, '(A)') trim(name)//' created '
+          call MOSSCO_FieldString(exportField, message)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        else
+          !write(message, '(A)') trim(name)//' replaced '
+          !call MOSSCO_FieldString(importField, message)
+          !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          write(message, '(A)') trim(name)//' replace created '
+          call MOSSCO_FieldString(exportField, message)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        endif
+
+        call ESMF_StateAddReplace(exportState, (/exportField/), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         exportFieldList(i) = exportField
       enddo
@@ -421,11 +429,11 @@ module regrid_coupler
 
     if (allocated(exportFieldList)) exportFieldCount = ubound(exportFieldList,1)
 
-    !do i=1,exportFieldCount
-    !  write(message, '(A)') trim(name)//' export item  '
-    !  call MOSSCO_FieldString(exportFieldList(i), message)
-    !  call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-    !enddo
+    do i=1,exportFieldCount
+      write(message, '(A)') trim(name)//' export item  '
+      call MOSSCO_FieldString(exportFieldList(i), message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    enddo
 
     call ESMF_StateGet(exportState, name=exportName, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -489,6 +497,7 @@ module regrid_coupler
         write(message,'(A)') trim(name)//' regridding to '
         call MOSSCO_FieldString(exportField, message, rc=localrc)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
         cycle
       endif
 
@@ -504,9 +513,7 @@ module regrid_coupler
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       !> Advance to the end of the route to create a new one
-      if (.not.isPresent) geomRoute => Routes
-
-      !> Field pair / Method matching
+      geomRoute => Routes
       do while (associated(geomRoute%next))
         geomRoute=>geomRoute%next
       enddo
@@ -521,7 +528,7 @@ module regrid_coupler
             !filename="weights.nc", &!routeHandle=routehandle, &
             srcMaskValues=(/0/), dstMaskValues=(/0/), &
             routeHandle=routehandle, &
-            regridmethod=regridMethod, &
+            regridmethod=regridMethod, factorList=factorList, &
             extrapMethod=ESMF_EXTRAPMETHOD_NEAREST_IDAVG, &
             unmappedaction=ESMF_UNMAPPEDACTION_IGNORE, &
             ! unmappedDstList=unmappedDstList, & ! ESMF internal error
@@ -544,6 +551,15 @@ module regrid_coupler
         write(message,*) trim(message), unmappedDstList(:)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
         nullify(unmappedDstList)
+      endif
+
+      if (associated(factorList)) then
+        if (ubound(factorList,1) < 1) then
+          write(message,'(A)') trim(name)//' could not find weights'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+          cycle
+        endif
+        !write(*,'(A,20(X,F4.2))') 'factorList=',factorList(1:20)
       endif
 
       !call ESMF_FieldSMMStore(srcField=importField, dstField=exportField, &
@@ -691,12 +707,16 @@ module regrid_coupler
       fieldCount=importFieldCount, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+    if (allocated(importFieldList)) importFieldcount=ubound(importFieldList,1)
+
     call get_FieldList(cplComp, exportState, exportFieldList, verbose=.false., &
       fieldCount=exportFieldCount, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+    if (allocated(exportFieldList)) exportFieldcount=ubound(exportFieldList,1)
+
     if (importFieldCount < 1) then
-      write(*,*) __LINE__
+      !write(*,*) trim(name)//' no import fields at ',__LINE__
       return
     endif
 
@@ -716,7 +736,9 @@ module regrid_coupler
         write(message,'(A)') trim(name)//' failed to find match for'
         call MOSSCO_FieldString(importFieldList(i), message)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
-        write(*,*) __LINE__
+        !write(*,*) trim(name)//' match fail at ',__LINE__
+        !write(*,*) exportFieldList(1:exportFieldCount)
+        call MOSSCO_StateLog(exportState)
         cycle
       endif
 
@@ -739,7 +761,7 @@ module regrid_coupler
           call MOSSCO_FieldString(exportField, message, rc=localrc)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
 
-          write(*,*) __LINE__
+          !write(*,*) __LINE__
           cycle
       else
           write(message,'(A)') trim(name)//' uses route '
