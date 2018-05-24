@@ -45,13 +45,17 @@ module regrid_coupler
 
   public SetServices
 
+  type type_mossco_fieldroutes
+    type(ESMF_Field)              :: srcField, dstField
+    type(type_mossco_routes), pointer :: route => null()
+  end type
+
   type type_mossco_routes
     integer(ESMF_KIND_I4)         :: id=-1
     character(len=ESMF_MAXSTR)    :: creator=''
     character(len=ESMF_MAXSTR)    :: name=''
     type(ESMF_RouteHandle)        :: routeHandle
     type(ESMF_RegridMethod_Flag)  :: regridMethod
-    type(ESMF_Field)              :: srcField, dstField
     type(ESMF_Grid)               :: srcGrid, dstGrid
     type(ESMF_Locstream)          :: srcLocstream, dstLocstream
     type(ESMF_Mesh)               :: srcMesh, dstMesh
@@ -63,7 +67,10 @@ module regrid_coupler
   ! This is a module-globale variable that is accessible
   ! across all instances of this coupler.  This way, existing
   ! routehandles can be shared across instances
+
   type(type_mossco_routes), allocatable, target :: Routes
+  type(type_mossco_fieldroutes), allocatable, target :: fieldRoutes
+
 
   contains
 
@@ -106,7 +113,6 @@ module regrid_coupler
     character(len=ESMF_MAXSTR)  :: message, name, timeString, exportName, importName
     character(len=ESMF_MAXSTR)  :: exportFieldName, importFieldName
     type(ESMF_RouteHandle)      :: routeHandle
-    type(type_mossco_routes), pointer :: fieldRoute=>null()
     type(type_mossco_routes), pointer :: geomRoute=>null()
     type(ESMF_Field)            :: importField, exportField
     integer                     :: localrc
@@ -439,7 +445,7 @@ module regrid_coupler
         j=-1
       endif
 
-      fieldRoute=>Routes
+      geomRoute=>Routes
 
       importField = importFieldList(i)
       call ESMF_FieldGet(importField, name=importFieldName, rc=localrc)
@@ -463,9 +469,9 @@ module regrid_coupler
       call MOSSCO_FieldString(exportField, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      if (associated(fieldRoute)) then
+      if (associated(geomRoute)) then
 
-        call MOSSCO_RouteFindFieldPair(fieldRoute, regridMethod, &
+        call MOSSCO_RouteFindFieldPair(geomRoute, regridMethod, &
           srcField=importFieldList(i), dstField=exportField, &
           isPresent=isPresent, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -474,7 +480,7 @@ module regrid_coupler
 
       if (isPresent) then
         write(message,'(A)') trim(name)//' reuses route '
-        call MOSSCO_RouteString(fieldRoute, message, rc=localrc)
+        call MOSSCO_RouteString(geomRoute, message, rc=localrc)
         call MOSSCO_MessageAdd(message, ' for fields')
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         write(message,'(A)') trim(name)//' regridding from '
@@ -498,11 +504,11 @@ module regrid_coupler
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       !> Advance to the end of the route to create a new one
-      if (.not.isPresent) fieldRoute => Routes
+      if (.not.isPresent) geomRoute => Routes
 
       !> Field pair / Method matching
-      do while (associated(fieldRoute%next))
-        fieldRoute=>fieldRoute%next
+      do while (associated(geomRoute%next))
+        geomRoute=>geomRoute%next
       enddo
 
       write(message,'(A)') trim(name)//' field '//trim(importFieldName) &
@@ -546,47 +552,47 @@ module regrid_coupler
       !! ESMF_FieldRegrid.F90:2018 ESMF_FieldRegridGetIwts Invalid argument
       !! - - can't currently regrid a grid       that contains a DE of width less than 2
 
-      allocate (fieldRoute%next)
-      fieldRoute=>fieldRoute%next
+      allocate (geomRoute%next)
+      geomRoute=>geomRoute%next
       j=j+1
 
       if (importGeomType == ESMF_GEOMTYPE_GRID) then
         call ESMF_FieldGet(importField, grid=grid, rc=localrc)
-        fieldRoute%srcGrid=grid
+        geomRoute%srcGrid=grid
       elseif (importGeomType == ESMF_GEOMTYPE_MESH) then
         call ESMF_FieldGet(importField, mesh=mesh, rc=localrc)
-        fieldRoute%srcMesh=mesh
+        geomRoute%srcMesh=mesh
       elseif (importGeomType == ESMF_GEOMTYPE_LOCSTREAM) then
         call ESMF_FieldGet(importField, locstream=locStream, rc=localrc)
-        fieldRoute%srcLocStream=locStream
+        geomRoute%srcLocStream=locStream
       elseif (importGeomType == ESMF_GEOMTYPE_XGRID) then
         call ESMF_FieldGet(importField, xgrid=xgrid, rc=localrc)
-        fieldRoute%srcXGrid=xgrid
+        geomRoute%srcXGrid=xgrid
       endif
 
       if (exportGeomType == ESMF_GEOMTYPE_GRID) then
         call ESMF_FieldGet(exportField, grid=grid, rc=localrc)
-        fieldRoute%dstGrid=grid
+        geomRoute%dstGrid=grid
       elseif (exportGeomType == ESMF_GEOMTYPE_MESH) then
         call ESMF_FieldGet(exportField, mesh=mesh, rc=localrc)
-        fieldRoute%dstMesh=mesh
+        geomRoute%dstMesh=mesh
       elseif (exportGeomType == ESMF_GEOMTYPE_LOCSTREAM) then
         call ESMF_FieldGet(exportField, locstream=locStream, rc=localrc)
-        fieldRoute%dstLocStream=locStream
+        geomRoute%dstLocStream=locStream
       elseif (exportGeomType == ESMF_GEOMTYPE_XGRID) then
         call ESMF_FieldGet(exportField, xgrid=xgrid, rc=localrc)
-        fieldRoute%dstXGrid=xgrid
+        geomRoute%dstXGrid=xgrid
       endif
 
-      fieldRoute%routeHandle  = routeHandle
-      fieldRoute%regridMethod = regridMethod
-      fieldRoute%srcGeomType  = importGeomType
-      fieldRoute%dstGeomType  = exportGeomType
-      write(fieldRoute%creator,'(A)') trim(name)
-      fieldRoute%id = j
+      geomRoute%routeHandle  = routeHandle
+      geomRoute%regridMethod = regridMethod
+      geomRoute%srcGeomType  = importGeomType
+      geomRoute%dstGeomType  = exportGeomType
+      write(geomRoute%creator,'(A)') trim(name)
+      geomRoute%id = j
 
       write(message,'(A)') trim(name)//' created route '
-      call MOSSCO_RouteString(fieldRoute, message, rc=localrc)
+      call MOSSCO_RouteString(geomRoute, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
 
@@ -610,7 +616,7 @@ module regrid_coupler
     type(ESMF_Time)             :: currTime, startTime
     integer(ESMF_KIND_I4)       :: petCount, localPet, i, m, j, k, matchIndex
     integer(ESMF_KIND_I4)       :: fieldCount, importFieldCount, exportFieldCount
-    character(len=ESMF_MAXSTR)  :: message, name, fieldName
+    character(len=ESMF_MAXSTR)  :: message, name
     character(len=ESMF_MAXSTR)  :: regridMethodString
     type(type_mossco_routes), pointer :: currentRoute=>null()
     integer                       :: localrc, rank
@@ -685,24 +691,34 @@ module regrid_coupler
       fieldCount=importFieldCount, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    if (importFieldCount < 1) return
+    call get_FieldList(cplComp, exportState, exportFieldList, verbose=.false., &
+      fieldCount=exportFieldCount, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (importFieldCount < 1) then
+      write(*,*) __LINE__
+      return
+    endif
 
     if (associated(includeList)) deallocate(includeList)
     allocate(includeList(1)) ! to hold field name for exportState matching
 
     do i=1, importFieldCount
 
-      call ESMF_FieldGet(importFieldList(i), geomType=importGeomType, &
-        name=fieldName, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
       !> look for matching field in exportState, this matching is performed
       !> on the field name and a maximum of the attributes
+      !> @todo exclude creator and coordinates attributes
       call MOSSCO_FieldMatchFields(importFieldList(i), exportFieldList, &
         index=matchIndex, owner=trim(name), verbose=.true., rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (matchIndex<1) cycle
+      if (matchIndex<1) then
+        write(message,'(A)') trim(name)//' failed to find match for'
+        call MOSSCO_FieldString(importFieldList(i), message)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+        write(*,*) __LINE__
+        cycle
+      endif
 
       exportField = exportFieldList(matchIndex)
 
@@ -714,7 +730,17 @@ module regrid_coupler
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (.not.associated(currentRoute)) then
-          write(message,'(A)') trim(name)//' cannot find route '
+          write(message,'(A)') trim(name)//' cannot find route for fields'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+          write(message,'(A)') trim(name)//' regridding from '
+          call MOSSCO_FieldString(importFieldList(i), message, rc=localrc)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+          write(message,'(A)') trim(name)//' regridding to '
+          call MOSSCO_FieldString(exportField, message, rc=localrc)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+
+          write(*,*) __LINE__
+          cycle
       else
           write(message,'(A)') trim(name)//' uses route '
           call MOSSCO_RouteString(currentRoute, message, rc=localrc)
@@ -733,58 +759,60 @@ module regrid_coupler
           routeHandle=currentRoute%routehandle, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (.false.) then
+      if (.true.) then
 
-          call ESMF_FieldGet(importFieldList(i), rank=rank, rc=localrc)
-          if (allocated(ubnd)) deallocate(ubnd)
-          if (allocated(lbnd)) deallocate(lbnd)
-          allocate(ubnd(rank))
-          allocate(lbnd(rank))
+        call ESMF_FieldGet(importFieldList(i), rank=rank, rc=localrc)
+        if (allocated(ubnd)) deallocate(ubnd)
+        if (allocated(lbnd)) deallocate(lbnd)
+        allocate(ubnd(rank))
+        allocate(lbnd(rank))
 
-          if (rank == 1) then
+        if (rank == 1) then
             call ESMF_FieldGet(importFieldList(i), farrayPtr=farrayPtr1, &
               exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
-            !write(*,*) 'srcPtr=',farrayPtr1(RANGE1D)
-          elseif (rank == 2) then
+              !write(*,'(A,10(X,F4.2))') 'srcPtr1=',farrayPtr1(1:10)
+        elseif (rank == 2) then
             call ESMF_FieldGet(importFieldList(i), farrayPtr=farrayPtr2, &
               exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
-            !write(*,*) 'srcPtr=',farrayPtr2(RANGE2D)
-          elseif (rank == 3) then
+            write(*,'(A,10(X,F4.2))') 'srcPtr2=',farrayPtr2(3:4,4:8)
+        elseif (rank == 3) then
             call ESMF_FieldGet(importFieldList(i), farrayPtr=farrayPtr3, &
               exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
-          endif
-
-          call ESMF_FieldGet(exportField, rank=rank, rc=localrc)
-          if (allocated(ubnd)) deallocate(ubnd)
-          if (allocated(lbnd)) deallocate(lbnd)
-          allocate(ubnd(rank))
-          allocate(lbnd(rank))
-
-          if (rank == 1) then
-            call ESMF_FieldGet(exportField, farrayPtr=farrayPtr1, &
-              exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
-            !write(*,*) 'dstPtr=',farrayPtr1(RANGE1D)
-          elseif (rank == 2) then
-            call ESMF_FieldGet(exportField, farrayPtr=farrayPtr2, &
-              exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
-            !write(*,*) 'farrayPtr=',farrayPtr2(RANGE2D)
-          elseif (rank == 3) then
-            call ESMF_FieldGet(exportField, farrayPtr=farrayPtr3, &
-              exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
-          endif
-
+              !write(*,'(A,12(X,F4.2))') 'srcPtr3=',farrayPtr3(3:4,4:5,3:5)
         endif
 
-        !> edgeMethod is  deprecated.  If we consider to reintroduce
-        !> this, we should test for (regridMethod == edgeMethod) and cycle
-        !> then apply edgeMethod wutg   ! don't do this twice
-        !> call ESMF_FieldRegrid(srcField=importFieldList(i), dstField=exportField,&
-        !>  routeHandle=currentRoute%routehandle, zeroregion=ESMF_REGION_SELECT, rc=localrc)
-        !> and merge the prior and later fields.
-        !>   where ( farrayPtr1(RANGE1D) /= farrayPtr1(RANGE1D) .and. &
-        !>      farrayPtr1near(RANGE1D) == farrayPtr1near(RANGE1D))
-        !>      farrayPtr1(RANGE1D) = farrayPtr1near(RANGE1D)
-        !>    endwhere
+        call ESMF_FieldGet(exportField, rank=rank, rc=localrc)
+        if (allocated(ubnd)) deallocate(ubnd)
+        if (allocated(lbnd)) deallocate(lbnd)
+        allocate(ubnd(rank))
+        allocate(lbnd(rank))
+
+        if (rank == 1) then
+            call ESMF_FieldGet(exportField, farrayPtr=farrayPtr1, &
+              exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
+            write(*,'(A,10(X,F4.2))') 'dstPtr1=',farrayPtr1(1:10)
+        elseif (rank == 2) then
+            call ESMF_FieldGet(exportField, farrayPtr=farrayPtr2, &
+              exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
+              !write(*,'(A,10(X,F4.2))') 'dstPtr2=',farrayPtr2(3:4,4:8)
+        elseif (rank == 3) then
+            call ESMF_FieldGet(exportField, farrayPtr=farrayPtr3, &
+              exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
+            !write(*,'(A,12(X,F4.2))') 'dstPtr3=',farrayPtr3(3:4,4:5,3:5)
+        endif
+
+      endif
+
+      !> edgeMethod is  deprecated.  If we consider to reintroduce
+      !> this, we should test for (regridMethod == edgeMethod) and cycle
+      !> then apply edgeMethod with
+      !> call ESMF_FieldRegrid(srcField=importFieldList(i), dstField=exportField,&
+      !>  routeHandle=currentRoute%routehandle, zeroregion=ESMF_REGION_SELECT, rc=localrc)
+      !> and merge the prior and later fields.
+      !>   where ( farrayPtr1(RANGE1D) /= farrayPtr1(RANGE1D) .and. &
+      !>      farrayPtr1near(RANGE1D) == farrayPtr1near(RANGE1D))
+      !>      farrayPtr1(RANGE1D) = farrayPtr1near(RANGE1D)
+      !>    endwhere
 
     enddo ! i=1, importFieldCount
 
@@ -1113,57 +1141,6 @@ module regrid_coupler
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
   end subroutine read_config
-
-#undef ESMF_METHOD
-#define ESMF_METHOD "MOSSCO_FieldInRoutes"
-  subroutine MOSSCO_FieldInRoutes(Routes, srcField, regridMethod, kwe, isPresent, &
-    routeHandle, dstField, rc)
-
-    type(type_mossco_routes), target                  :: Routes
-    type(ESMF_RegridMethod_Flag), intent(in)          :: regridMethod
-    type(ESMF_Field), intent(in)                      :: srcField
-    type(ESMF_Field), intent(out), optional           :: dstField
-    type(ESMF_RouteHandle), intent(out), optional     :: routeHandle
-    type(ESMF_KeyWordEnforcer), intent(in), optional  :: kwe
-    logical, intent(out), optional                    :: isPresent
-    integer(ESMF_KIND_I4), intent(out), optional      :: rc
-
-    integer(ESMF_KIND_I4)             :: rc_, localrc
-    logical                           :: isPresent_
-    type(type_mossco_routes), pointer :: currentRoute=>null()
-    character(len=ESMF_MAXSTR)               :: message
-
-    rc_ = ESMF_SUCCESS
-    if (present(kwe)) rc_ = ESMF_SUCCESS
-    if (present(rc)) rc = rc_
-
-    currentRoute => Routes
-
-    do while (associated(currentRoute%next))
-
-      currentRoute => currentRoute%next
-      message=''
-      call MOSSCO_FieldString(currentRoute%srcField, message)
-      !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
-
-      if (currentRoute%srcField == srcField .and. regridMethod==currentRoute%regridMethod) then
-        if (present(isPresent)) isPresent = .true.
-        if (present(routeHandle)) routeHandle=currentRoute%routeHandle
-        if (present(dstField)) dstField=currentRoute%dstField
-        return
-      endif
-    enddo
-
-    if (present(isPresent)) then
-      isPresent = .false.
-    elseif (present(rc)) then
-      rc = ESMF_RC_NOT_FOUND
-    else
-      localrc = ESMF_RC_NOT_FOUND
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-    endif
-
-  end subroutine  MOSSCO_FieldInRoutes
 
 #undef ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_RouteFindFieldPair"
