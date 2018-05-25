@@ -137,7 +137,7 @@ module regrid_coupler
     type(ESMF_Grid)               :: grid
     type(ESMF_LocStream)          :: locStream
     type(ESMF_XGrid)              :: xgrid
-    real(ESMF_KIND_R8), pointer   :: factorList(:)
+    real(ESMF_KIND_R8), pointer   :: factorList(:) => null()
 
     rc = ESMF_SUCCESS
 
@@ -397,6 +397,9 @@ module regrid_coupler
         call MOSSCO_FieldCopy(exportField, importField, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+        call MOSSCO_FieldInitialize(exportField, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
         call ESMF_AttributeSet(exportField, 'creator', trim(name), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -421,7 +424,7 @@ module regrid_coupler
 
         exportFieldList(i) = exportField
       enddo
-    else
+    else ! if geomIsPresent
       call get_FieldList(cplComp, exportState, exportFieldList, verbose=.true., &
         fieldCount=exportFieldCount, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -526,7 +529,7 @@ module regrid_coupler
       !> @todo this needs to consider masks!
       call ESMF_FieldRegridStore(srcField=importField, dstField=exportField, &
             !filename="weights.nc", &!routeHandle=routehandle, &
-            srcMaskValues=(/0/), dstMaskValues=(/0/), &
+            !srcMaskValues=(/0/), dstMaskValues=(/0/), &
             routeHandle=routehandle, &
             regridmethod=regridMethod, factorList=factorList, &
             extrapMethod=ESMF_EXTRAPMETHOD_NEAREST_IDAVG, &
@@ -537,7 +540,7 @@ module regrid_coupler
 #else
       !> @todo this needs to consider masks!
       call ESMF_FieldRegridStore(srcField=importField, dstField=exportField, &
-            srcMaskValues=(/0/), dstMaskValues=(/0/), &
+            !srcMaskValues=(/0/), !dstMaskValues=(/0/), &
             routeHandle=routehandle, &
             regridmethod=regridMethod, &
             unmappedaction=ESMF_UNMAPPEDACTION_IGNORE, &
@@ -792,15 +795,15 @@ module regrid_coupler
         if (rank == 1) then
             call ESMF_FieldGet(importFieldList(i), farrayPtr=farrayPtr1, &
               exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
-              !write(*,'(A,10(X,F4.2))') 'srcPtr1=',farrayPtr1(1:10)
+            !write(*,'(A,10(X,F4.2))') 'srcPtr1=',farrayPtr1(1:10)
         elseif (rank == 2) then
             call ESMF_FieldGet(importFieldList(i), farrayPtr=farrayPtr2, &
               exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
-            write(*,'(A,10(X,F4.2))') 'srcPtr2=',farrayPtr2(3:4,4:8)
+            !write(*,'(A,10(X,F4.2))') 'srcPtr2=',farrayPtr2(3:4,4:8)
         elseif (rank == 3) then
             call ESMF_FieldGet(importFieldList(i), farrayPtr=farrayPtr3, &
               exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
-              !write(*,'(A,12(X,F4.2))') 'srcPtr3=',farrayPtr3(3:4,4:5,3:5)
+            !write(*,'(A,12(X,F4.2))') 'srcPtr3=',farrayPtr3(3:4,4:5,3:5)
         endif
 
         call ESMF_FieldGet(exportField, rank=rank, rc=localrc)
@@ -812,11 +815,11 @@ module regrid_coupler
         if (rank == 1) then
             call ESMF_FieldGet(exportField, farrayPtr=farrayPtr1, &
               exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
-            write(*,'(A,10(X,F4.2))') 'dstPtr1=',farrayPtr1(1:10)
+            !write(*,'(A,10(X,F4.2))') 'dstPtr1=',farrayPtr1(1:10)
         elseif (rank == 2) then
             call ESMF_FieldGet(exportField, farrayPtr=farrayPtr2, &
               exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
-              !write(*,'(A,10(X,F4.2))') 'dstPtr2=',farrayPtr2(3:4,4:8)
+            !write(*,'(A,10(X,F4.2))') 'dstPtr2=',farrayPtr2(3:4,4:8)
         elseif (rank == 3) then
             call ESMF_FieldGet(exportField, farrayPtr=farrayPtr3, &
               exclusiveLbound=lbnd, exclusiveUbound=ubnd, rc=localrc)
