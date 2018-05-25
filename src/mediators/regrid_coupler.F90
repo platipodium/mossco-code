@@ -138,6 +138,7 @@ module regrid_coupler
     type(ESMF_LocStream)          :: locStream
     type(ESMF_XGrid)              :: xgrid
     real(ESMF_KIND_R8), pointer   :: factorList(:) => null()
+    integer(ESMF_KIND_I4), allocatable :: dstMaskValues(:), srcMaskValues(:)
 
     rc = ESMF_SUCCESS
 
@@ -364,6 +365,22 @@ module regrid_coupler
       endif
     endif
 
+    call MOSSCO_AttributeGet(cplComp, 'src_mask', srcMaskValues, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (.not.allocated(srcMaskValues)) then
+      allocate(srcMaskValues(1))
+      srcMaskValues=(/-4/)
+    endif
+    write(*,*) 'srcMask=', srcMaskValues
+
+    call MOSSCO_AttributeGet(cplComp, 'dst_mask', dstMaskValues, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (.not.allocated(dstMaskValues)) then
+      allocate(dstMaskValues(1))
+      dstMaskValues=(/-6/)
+    endif
+    write(*,*) 'dstMask=', dstMaskValues
+
     if (geomIsPresent) then
 
       allocate(exportFieldList(importFieldCount))
@@ -443,6 +460,7 @@ module regrid_coupler
 
     call ESMF_StateGet(importState, name=importName, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
 
     !> Search for all fields that are present in both import and export state,
     !! for each combination of fields
@@ -525,28 +543,27 @@ module regrid_coupler
         //' creates new route'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-#ifdef ESMF_UNRELEASED
+#if ESMF_VERSION_MAJOR > 6 && ESMF_VERSION_MINOR > 0
       !> @todo this needs to consider masks!
       call ESMF_FieldRegridStore(srcField=importField, dstField=exportField, &
-            !filename="weights.nc", &!routeHandle=routehandle, &
-            !srcMaskValues=(/0/), dstMaskValues=(/0/), &
-            routeHandle=routehandle, &
-            regridmethod=regridMethod, factorList=factorList, &
-            extrapMethod=ESMF_EXTRAPMETHOD_NEAREST_IDAVG, &
-            unmappedaction=ESMF_UNMAPPEDACTION_IGNORE, &
-            ! unmappedDstList=unmappedDstList, & ! ESMF internal error
+        srcMaskValues=srcMaskValues, dstMaskValues=dstMaskValues, &
+        routeHandle=routehandle, &
+        regridmethod=regridMethod, factorList=factorList, &
+        extrapMethod=ESMF_EXTRAPMETHOD_NEAREST_IDAVG, &
+        unmappedaction=ESMF_UNMAPPEDACTION_IGNORE, &
+        ! unmappedDstList=unmappedDstList, & ! ESMF internal error
             rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 #else
       !> @todo this needs to consider masks!
       call ESMF_FieldRegridStore(srcField=importField, dstField=exportField, &
-            !srcMaskValues=(/0/), !dstMaskValues=(/0/), &
-            routeHandle=routehandle, &
-            regridmethod=regridMethod, &
-            unmappedaction=ESMF_UNMAPPEDACTION_IGNORE, &
-            ! unmappedDstList=unmappedDstList, & ! ESMF internal error
-            rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        srcMaskValues=srcMaskValues, dstMaskValues=dstMaskValues, &
+        routeHandle=routehandle, &
+        regridmethod=regridMethod, &
+        unmappedaction=ESMF_UNMAPPEDACTION_IGNORE, &
+        ! unmappedDstList=unmappedDstList, & ! ESMF internal error
+        rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 #endif
 
       if (associated(unmappedDstList) .and. ubound(unmappedDstList,1) > 0) then
@@ -559,6 +576,8 @@ module regrid_coupler
       if (associated(factorList)) then
         if (ubound(factorList,1) < 1) then
           write(message,'(A)') trim(name)//' could not find weights'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+          write(message,'(A)') trim(name)//' hint: try to specify src_mask or dst_mask in configuration file'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
           cycle
         endif
@@ -616,6 +635,9 @@ module regrid_coupler
 
 
     enddo  ! loop over fields
+
+    if (allocated(srcMaskValues)) deallocate(srcMaskValues)
+    if (allocated(dstMaskValues)) deallocate(dstMaskValues)
 
     call MOSSCO_CompExit(cplComp, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -974,6 +996,8 @@ module regrid_coupler
     character(len=ESMF_MAXSTR)        :: geomTypeString = 'GRID'
     character(len=ESMF_MAXSTR)        :: mask_variable
     logical                           :: extrapolate = .true.
+    !integer(ESMF_KIND_I4), allocatable :: srcMaskValues, dstMaskValues
+    integer(ESMF_KIND_I4)             :: srcMaskValue, dstMaskValue
 
     rc_ = ESMF_SUCCESS
     if (present(kwe)) rc_ = ESMF_SUCCESS
@@ -1015,7 +1039,6 @@ module regrid_coupler
 
     call ESMF_ConfigLoadFile(config, trim(configfilename), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
 
     call MOSSCO_ConfigGet(config, label='format', value=geomFileFormatString, &
       defaultValue='SCRIP', isPresent=labelIsPresent, rc = localrc)
@@ -1164,6 +1187,30 @@ module regrid_coupler
     call MOSSCO_MessageAddListPtr(message, filterIncludeList, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    call MOSSCO_ConfigGet(config, label='srcMask', value=srcMaskValue, &
+      defaultValue=0, isPresent=labelIsPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (labelIsPresent) then
+      write(message,'(A)') trim(cplCompName)// ' found config item srcMask '
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      call ESMF_AttributeSet(cplComp, 'src_mask', valueList=(/srcMaskValue/), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
+    call MOSSCO_ConfigGet(config, label='dstMask', value=dstMaskValue, &
+      defaultValue=0, isPresent=labelIsPresent, rc = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (labelIsPresent) then
+      write(message,'(A)') trim(cplCompName)// ' found config item dstMask '
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      call ESMF_AttributeSet(cplComp, 'dst_mask', valueList=(/srcMaskValue/), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
 
   end subroutine read_config
 
