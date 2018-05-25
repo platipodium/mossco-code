@@ -118,8 +118,10 @@ contains
 
     rc_ = ESMF_SUCCESS
     if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
 
-    call ESMF_ConfigFindLabel(config, label=trim(label)//':', isPresent=isPresent_, rc=localrc)
+    call ESMF_ConfigFindLabel(config, label=trim(label)//':', &
+      isPresent=isPresent_, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (present(isPresent)) isPresent=isPresent_
