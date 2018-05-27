@@ -1261,4 +1261,51 @@ contains
 
   end subroutine MOSSCO_FieldAttributeGetString
 
+#undef ESMF_METHOD
+#define ESMF_METHOD "String2Int4List"
+subroutine String2Int4List(string, list, kwe, rc)
+
+  character(len=*), intent(in)                     :: string
+  integer(ESMF_KIND_I4), intent(out), allocatable  :: list(:)
+  type(ESMF_KeyWordEnforcer), intent(in), optional :: kwe
+  integer(ESMF_KIND_I4), intent(out), optional     :: rc
+
+  integer(ESMF_KIND_I4)          :: rc_, i, n, j
+  character(len=ESMF_MAXPATHLEN) :: string_
+
+  rc_ = ESMF_SUCCESS
+  if (present(kwe)) rc_ = ESMF_SUCCESS
+  if (present(rc)) rc = rc_
+  if (allocated(list)) deallocate(list)
+
+  !> Count separator tokens
+  n=1
+  do i=1,len_trim(string)
+    if (string(i:i)==',') n=n+1
+  enddo
+
+  if (n<1) return
+
+  call MOSSCO_StringCopy(string_, string)
+  allocate(list(n))
+  i = 1
+
+  do while (i <= n)
+    j=index(string_,',')
+    if (j>1) then
+      read(string_(1:j-1),*) list(i)
+      write(string_,'(A)') string_(j+1:len_trim(string_))
+      i = i+ 1
+    elseif (j==1) then
+      write(string_,'(A)') string_(j+1:len_trim(string_))
+    elseif (len_trim(string_)>0) then
+      read(string_,*) list(i)
+      i=i+1
+    else
+      exit
+    endif
+  enddo
+
+  end subroutine String2Int4List
+
 end module mossco_attribute
