@@ -25,6 +25,7 @@ module mossco_attribute
 
 use esmf
 use mossco_memory
+use mossco_strings
 
 implicit none
 
@@ -416,37 +417,22 @@ contains
     integer(ESMF_KIND_I4), intent(out), allocatable :: list(:)
     integer(ESMF_KIND_I4), intent(out), optional    :: rc
 
-    integer(ESMF_KIND_I4)                :: localrc, rc_, i, n, j
+    integer(ESMF_KIND_I4)                :: localrc, rc_
     logical                              :: isPresent
     character(len=ESMF_MAXSTR)           :: attributeString
 
     if (present(rc)) rc=ESMF_SUCCESS
 
     call ESMF_AttributeGet(state, name=trim(label), isPresent=isPresent, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (.not.isPresent) return
 
     call ESMF_AttributeGet(state, trim(label), value=attributeString, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    n=1
-    do i=1,len_trim(attributeString)
-      if (attributeString(i:i)==',') n=n+1
-    enddo
-
-    if (n>0) allocate(list(n))
-    do i=1,n
-      j=index(attributeString,',')
-      if (j>0) then
-        read(attributeString(1:j-1),*) list(i)
-      else
-        read(attributeString,*) list(i)
-      endif
-      write(attributeString,'(A)') attributeString(j+1:len_trim(attributeString))
-    enddo
+    !> Expect this routine to exit with an error on formatted read
+    call String2Int4List(attributeString, list, rc=localrc)
+    if (present(rc)) rc = localrc
 
   end subroutine MOSSCO_StateAttributeGetInt4List1
 
@@ -466,30 +452,17 @@ contains
     if (present(rc)) rc=ESMF_SUCCESS
 
     call ESMF_AttributeGet(gridComp, name=trim(label), isPresent=isPresent, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (.not.isPresent) return
 
     call ESMF_AttributeGet(gridComp, trim(label), value=attributeString, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    n=1
-    do i=1,len_trim(attributeString)
-      if (attributeString(i:i)==',') n=n+1
-    enddo
+    !> Expect this routine to exit with an error on formatted read
+    call String2Int4List(attributeString, list, rc=localrc)
+    if (present(rc)) rc = localrc
 
-    if (n>0) allocate(list(n))
-    do i=1,n
-      j=index(attributeString,',')
-      if (j>0) then
-        read(attributeString(1:j-1),*) list(i)
-      else
-        read(attributeString,*) list(i)
-      endif
-      write(attributeString,'(A)') attributeString(j+1:len_trim(attributeString))
-    enddo
 
   end subroutine MOSSCO_GridCompAttributeGetInt4List1
 
@@ -513,34 +486,16 @@ contains
     if (allocated(list)) deallocate(list)
 
     call ESMF_AttributeGet(cplComp, name=trim(label), isPresent=isPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (.not.isPresent) return
 
     call ESMF_AttributeGet(cplComp, trim(label), value=attributeString, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    n=1
-    do i=1,len_trim(attributeString)
-      if (attributeString(i:i)==',') n=n+1
-    enddo
-    
-    if (n>0) allocate(list(n))
-    i=1
-    do while (i <= n)
-      j=index(attributeString,',')
-      if (j>1) then
-        read(attributeString(1:j-1),*) list(i)
-        write(attributeString,'(A)') attributeString(j+1:len_trim(attributeString))
-        i = i+ 1
-      elseif (j==1) then 
-        write(attributeString,'(A)') attributeString(j+1:len_trim(attributeString))
-      elseif(len_trim(attributeString)>0) then 
-        read(attributeString,*) list(i)
-        i=i+1
-      else 
-        exit
-      endif
-    enddo
+    !> Expect this routine to exit with an error on formatted read
+    call String2Int4List(attributeString, list, rc=localrc)
+    if (present(rc)) rc = localrc
      !> @todo clear unused allocated space
 
   end subroutine MOSSCO_cplCompAttributeGetInt4List1
@@ -1270,7 +1225,7 @@ subroutine String2Int4List(string, list, kwe, rc)
   type(ESMF_KeyWordEnforcer), intent(in), optional :: kwe
   integer(ESMF_KIND_I4), intent(out), optional     :: rc
 
-  integer(ESMF_KIND_I4)          :: rc_, i, n, j
+  integer(ESMF_KIND_I4)          :: rc_, i, n, j, localrc
   character(len=ESMF_MAXPATHLEN) :: string_
 
   rc_ = ESMF_SUCCESS
@@ -1286,25 +1241,34 @@ subroutine String2Int4List(string, list, kwe, rc)
 
   if (n<1) return
 
-  call MOSSCO_StringCopy(string_, string)
-  allocate(list(n))
+  call MOSSCO_StringCopy(string_, string, rc=localrc)
+  !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  allocate(list(n), stat=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
   i = 1
 
   do while (i <= n)
     j=index(string_,',')
     if (j>1) then
-      read(string_(1:j-1),*) list(i)
+      read(string_(1:j-1), *, iostat=rc_) list(i)
       write(string_,'(A)') string_(j+1:len_trim(string_))
-      i = i+ 1
+      i = i + 1
     elseif (j==1) then
       write(string_,'(A)') string_(j+1:len_trim(string_))
     elseif (len_trim(string_)>0) then
-      read(string_,*) list(i)
+      read(string_, *, iostat=rc_) list(i)
       i=i+1
     else
       exit
     endif
+    if (rc_ /= ESMF_SUCCESS) exit
   enddo
+
+  if (rc_ /= ESMF_SUCCESS) then
+    if (present(rc)) rc=ESMF_RC_FILE_READ
+  endif
 
   end subroutine String2Int4List
 

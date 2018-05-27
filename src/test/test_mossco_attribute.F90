@@ -21,6 +21,7 @@ program test_mossco_attribute
 
   use esmf
   use mossco_attribute
+  use mossco_strings
 
   implicit none
 
@@ -69,6 +70,7 @@ program test_mossco_attribute
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_AttributeGet(state, 'test', int4List)
+    !write(message,'(A)') MOSSCO_String(int4List)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !call MOSSCO_AttributeGet(state, 'test', int8)
