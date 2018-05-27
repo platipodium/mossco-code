@@ -365,20 +365,14 @@ module regrid_coupler
       endif
     endif
 
-    call MOSSCO_AttributeGet(cplComp, 'src_mask', srcMaskValues, rc=localrc)
+    call MOSSCO_AttributeGet(cplComp, label='src_mask', &
+      list=srcMaskValues, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-    if (.not.allocated(srcMaskValues)) then
-      allocate(srcMaskValues(1))
-      srcMaskValues=(/-4/)
-    endif
     write(*,*) 'srcMask=', srcMaskValues
 
-    call MOSSCO_AttributeGet(cplComp, 'dst_mask', dstMaskValues, rc=localrc)
+    call MOSSCO_AttributeGet(cplComp, label='dst_mask', &
+      list=dstMaskValues, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-    if (.not.allocated(dstMaskValues)) then
-      allocate(dstMaskValues(1))
-      dstMaskValues=(/-6/)
-    endif
     write(*,*) 'dstMask=', dstMaskValues
 
     if (geomIsPresent) then
@@ -992,12 +986,11 @@ module regrid_coupler
     character(len=ESMF_MAXSTR), pointer :: filterIncludeList(:) => null()
     character(len=ESMF_MAXSTR)        :: edgeMethodString, regridMethodString
 
-    character(len=ESMF_MAXSTR)        :: geomFileFormatString = 'SCRIP'
-    character(len=ESMF_MAXSTR)        :: geomTypeString = 'GRID'
-    character(len=ESMF_MAXSTR)        :: mask_variable
-    logical                           :: extrapolate = .true.
-    !integer(ESMF_KIND_I4), allocatable :: srcMaskValues, dstMaskValues
-    integer(ESMF_KIND_I4)             :: srcMaskValue, dstMaskValue
+    character(len=ESMF_MAXSTR)         :: geomFileFormatString = 'SCRIP'
+    character(len=ESMF_MAXSTR)         :: geomTypeString = 'GRID'
+    character(len=ESMF_MAXSTR)         :: mask_variable
+    logical                            :: extrapolate = .true.
+    integer(ESMF_KIND_I4), allocatable :: maskValues(:)
 
     rc_ = ESMF_SUCCESS
     if (present(kwe)) rc_ = ESMF_SUCCESS
@@ -1188,29 +1181,29 @@ module regrid_coupler
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-    call MOSSCO_ConfigGet(config, label='srcMask', value=srcMaskValue, &
-      defaultValue=0, isPresent=labelIsPresent, rc=localrc)
+    call MOSSCO_ConfigGet(config, label='srcMask', value=maskValues, &
+      isPresent=labelIsPresent, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (labelIsPresent) then
-      write(message,'(A)') trim(cplCompName)// ' found config item srcMask '
+      !write(message,'(A,I2)') trim(cplCompName)// ' found config item srcMask= !',maskValues
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-      call ESMF_AttributeSet(cplComp, 'src_mask', valueList=(/srcMaskValue/), rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
 
-    call MOSSCO_ConfigGet(config, label='dstMask', value=dstMaskValue, &
-      defaultValue=0, isPresent=labelIsPresent, rc = localrc)
+    call MOSSCO_AttributeSet(cplComp, label='src_mask', list=maskValues, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call MOSSCO_ConfigGet(config, label='dstMask', value=maskValues, &
+      isPresent=labelIsPresent, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (labelIsPresent) then
-      write(message,'(A)') trim(cplCompName)// ' found config item dstMask '
+      !write(message,'(A,I2)') trim(cplCompName)// ' found config item dstMask= ',maskValues
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-      call ESMF_AttributeSet(cplComp, 'dst_mask', valueList=(/srcMaskValue/), rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
+
+    call MOSSCO_AttributeSet(cplComp, label='dst_mask', list=maskValues, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   end subroutine read_config
 
