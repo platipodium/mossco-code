@@ -55,6 +55,9 @@ test_mossco_time: test_mossco_time.F90 libmossco_util
 test_mossco_strings: test_mossco_strings.F90 libmossco_util
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_util $(LIBS)
 
+test_mossco_attribute: test_mossco_attribute.F90 libmossco_util
+	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_util $(LIBS)
+
 test_mossco_memory: test_mossco_memory.F90 libmossco_util
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_util $(LIBS)
 
