@@ -26,6 +26,7 @@ instances:
   - regrid_tomesh: regrid_coupler
   - regrid_togrid: regrid_coupler
   - schism: schism_esmf
+  - wind_output: netcdf
 
 coupling:
   - components:
@@ -35,8 +36,13 @@ coupling:
   - components:
     - wind_input
     - regrid_tomesh
+    - wind_output
+    interval: 1 h
+  - components:
+    - wind_input
+    - regrid_tomesh
     - schism
-    interval: 30 m
+    interval: 1 h
   - components:
     - default
     - fabm_sediment
@@ -44,32 +50,32 @@ coupling:
   - components:
     - fabm_sediment
     - schism_mesh_output
-    interval: 30 m
+    interval: 1 h
   - components:
     - schism
     - schism_mesh_output
-    interval: 30 m
+    interval: 1 h
   - components:
     - schism
     - pelagic_soil_connector
     - fabm_sediment
-    interval: 30 m
+    interval: 1 h
   - components:
     - fabm_sediment
     - pelagic_soil_connector
     - schism
-    interval: 30 m
+    interval: 1 h
   - components:
     - fabm_sediment
     - regrid_togrid
     - schism_grid_output
-    interval: 30 m
+    interval: 1 h
   - components:
     - wind_input
     - schism_grid_output
-    interval: 30
+    interval: 1 h
   - components:
     - schism
     - regrid_togrid
     - schism_grid_output
-    interval: 30 m
+    interval: 1 h
