@@ -327,7 +327,7 @@
 ! For 2D model, the only outputs available are: elev.61, dahv.62,wind.62, wist.62 and hvel.64
 !-----------------------------------------------------------------------
   iwrite = 0 !not used
-  nspool = 864 !288 !24!output step spool
+  nspool = 24 !864 !288 !24!output step spool
   ihfskip = 207360 !stack spool; every ihfskip steps will be put into 1_*, 2_*, etc...
 
   elev = 1 !0: off; 1: on
@@ -469,3 +469,14 @@
   nstep_ice = 1  
 
   shorewafo = 0
+  nrampwafo = 0
+  turbinj = 0
+!---------------------------
+! FABM parameters
+!---------------------------
+
+   inu_FBM = 0 ! nudging for fabm_tracers
+   ic_FBM = 0 ! initial condition
+   inu_fab = 0 ! nudging for fabm_tracers
+   ic_fab = 0 ! initial condition
+
