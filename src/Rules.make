@@ -870,6 +870,7 @@ install-lib:
 	@echo end >> $(MOSSCO_INSTALL_PREFIX)/lib/libmossco.mri
 #	$(AR) -M < $(MOSSCO_INSTALL_PREFIX)/lib/libmossco.mri
 	@(cd $(MOSSCO_LIBRARY_PATH); for F in *.a ; do $(AR) x $$F; done )
+	@(cd $(MOSSCO_LIBRARY_PATH); $(AR) x $(MOSSCO_DIR)/external/fabm/install/lib/libfabm.a )
 	@(cd $(MOSSCO_LIBRARY_PATH); $(RM) -f SORTED __*; $(AR) crus libmossco.a *.o )
 	@$(RM) -f $(MOSSCO_LIBRARY_PATH)/*.o
 	@mv $(MOSSCO_LIBRARY_PATH)/libmossco.a $(MOSSCO_INSTALL_PREFIX)/lib/;

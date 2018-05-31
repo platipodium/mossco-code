@@ -47,7 +47,7 @@ endif
 
 ifeq ($(MOSSCO_FABM),true)
 TARGETS +=  libsediment libmossco_fabmpelagic
-TARGETS +=  libmossco_fabmbenthic libmossco_fabm0d
+TARGETS +=  libmossco_fabmbenthic
 ifeq ($(MOSSCO_GOTM),true)
   #TARGETS += libmossco_fabm0d
 endif
