@@ -20,3 +20,6 @@ f1/f.o: f1/f.F90
 
 f2/f.o: f2/f.F90
 	gfortran -c -o $@ $<
+
+clean: 
+	rm -rf f?/*o f?/*a *.o *.mod f?/*.mod main
