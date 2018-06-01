@@ -21,3 +21,5 @@ Desired outcome
 
   I am first
   I am second
+
+If you find a solution, please respond on stackoverflow https://stackoverflow.com/questions/50626651/gcc-ld-combine-libraries-wich-use-different-versions-of-the-same-linked-sub-libr
