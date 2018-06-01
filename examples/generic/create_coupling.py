@@ -1447,7 +1447,7 @@ fid.write('''
 
     character(len=ESMF_MAXSTR) :: timestring, cplName, myName, childName
     type(ESMF_Time)            :: stopTime, currTime, ringTime, time
-    type(ESMF_TimeInterval)    :: timeInterval, ringInterval
+    type(ESMF_TimeInterval)    :: timeInterval, ringInterval, zeroInterval
     integer(ESMF_KIND_I8)      :: i, j, k, l, advanceCount
     integer(ESMF_KIND_I4)      :: alarmCount
     integer(ESMF_KIND_I4)      :: numGridComp, numCplComp, numComp
@@ -1488,6 +1488,9 @@ fid.write('''
     if (allocated(wallTimeStop)) deallocate(wallTimeStop)
     allocate(wallTimeStart(numComp))
     allocate(wallTimeStop(numComp))
+
+    call ESMF_TimeIntervalSet(zeroInterval, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     do i = 1, numComp
       call ESMF_TimeSet(wallTimeStart(i), rc=localrc)
@@ -1910,6 +1913,7 @@ fid.write('''
           call ESMF_TimeIntervalGet(timeInterval, s=seconds, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+          !if (seconds > 0. and. timeInterval > zeroInterval .and. wallTimeStop(i) > wallTimeStart(i)) then
           if (seconds > 0) then
             seconds = int(timeInterval / (wallTimeStop(i) - wallTimeStart(i)))
             write(formatString,'(A)') '(A,X,'//intformat(seconds)//')'

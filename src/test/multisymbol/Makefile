@@ -14,7 +14,7 @@ endif
 
 
 all: main.F90 m2.o m1.o
-	gfortran -o main $^ -L f2 -lf
+	gfortran -o main main.F90 -L f2 -lf m2.o -L f1 -lf m1.o
 
 main: m2.o m1.o
 
