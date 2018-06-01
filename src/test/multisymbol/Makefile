@@ -1,14 +1,18 @@
-export AWK:=$(shell which gawk)
-export AWK?=$(shell which awk)
+export AWK:=$(shell which gawk 2> /dev/null)
+ifeq ($(strip $(AWK)),)
+export AWK:=$(shell which awk 2> /dev/null)
+endif
 
-ifeq ($(wildcard $(AWK)),)
+ifeq ($(strip $(AWK)),)
 $(error Could not find awk utility in path)
 endif
 
-export OBC:=$(shell which gobjcopy)
-export OBC?=$(shell which objcopy)
+export OBC:=$(shell which gobjcopy 2> /dev/null)
+ifeq ($(strip $(OBC)),)
+export OBC:=$(shell which objcopy 2> /dev/null)
+endif
 
-ifeq ($(wildcard $(OBC)),)
+ifeq ($(strip $(OBC)),)
 $(error Could not find objcopy utility in path)
 endif
 
