@@ -23,6 +23,25 @@ ifeq ($(shell make --version | grep -c GNU),0)
   $(error GNU make is required)
 endif
 
+AWK:=$(shell which gawk 2> /dev/null)
+ifeq ($(strip $(AWK)),)
+AWK:=$(shell which awk 2> /dev/null)
+endif
+ifneq ($(strip $(AWK)),)
+export AWK:=$(basename $(AWK))
+endif
+
+export MOSSCO_OBJC=false
+OBJC=$(shell which objconv 2> /dev/null)
+ifeq ($(strip $(OBJC)),)
+OBJC=$(shell which gobjcopy 2> /dev/null)
+endif
+ifeq ($(strip $(OBJC)),)
+OBJC=$(shell which objcopy 2> /dev/null)
+endif
+ifneq ($(strip $(OBJC)),)
+MOSSCO_OBJC=$(shell basename $(OBJC))
+endif
 
 export MOSSCO_GIT=false
 ifneq ($(wildcard $(shell which git)),)
@@ -885,8 +904,9 @@ endif
 # be portable
 ifeq ($(MOSSCO_FABM),true)
 	@cp $(MOSSCO_DIR)/external/fabm/install/lib/libfabm.a $(MOSSCO_INSTALL_PREFIX)/lib/libmossco_fabm.a
+ifeq ($(MOSSCO_OBJC),objconv)
 	@(cd $(MOSSCO_INSTALL_PREFIX)/lib ; for F in libmossco.a; do \
-	  objconv -np:___fabm_MOD:___mossco_fabm_MOD \
+	  $(OBJC) -np:___fabm_MOD:___mossco_fabm_MOD \
 	  -np:___fabm_types_MOD:___mossco_fabm_types_MOD \
 	  -np:___fabm_properties_MOD:___mossco_fabm_properties_MOD \
 	  -np:___fabm_expressions_MOD:___mossco_fabm_expressions_MOD \
@@ -896,8 +916,9 @@ ifeq ($(MOSSCO_FABM),true)
 	  $$F $$F.tmp > /dev/null && mv $$F.tmp $$F; done  \
 	)
 	(cd $(MOSSCO_INSTALL_PREFIX)/lib ; for F in libmossco_fabm.a; do \
-	  objconv -np:___:___mossco_ $$F $$F.tmp  > /dev/null && mv $$F.tmp $$F; done  \
+	  $(OBJC) -np:___:___mossco_ $$F $$F.tmp  > /dev/null && mv $$F.tmp $$F; done  \
 	)
+endif
 endif
 
 .PHONY: mossco_clean
