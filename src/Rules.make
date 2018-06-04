@@ -23,6 +23,7 @@ ifeq ($(shell make --version | grep -c GNU),0)
   $(error GNU make is required)
 endif
 
+
 export MOSSCO_GIT=false
 ifneq ($(wildcard $(shell which git)),)
 MOSSCO_GIT=true
@@ -860,7 +861,7 @@ install: install-lib
 #	$(MOSSCO_CCOMPILER) -shared -o $(MOSSCO_INSTALL_PREFIX)/libmossco.so -Wl,--whole-archive $(MOSSCO_LIBRARY_PATH)/*.a
 	@cp $(MOSSCO_MODULE_PATH)/*.mod $(MOSSCO_INSTALL_PREFIX)/include
 	@echo "Use executables 'mossco' and 'stitch' in $(MOSSCO_INSTALL_PREFIX)/bin"
-	@echo "Use library with '-L $(MOSSCO_INSTALL_PREFIX)/lib -lmossco'"
+	@echo "Use library with '-L $(MOSSCO_INSTALL_PREFIX)/lib -lmossco -lmossco_fabm'"
 	@echo "Use includes in  '-I $(MOSSCO_INSTALL_PREFIX)/include'"
 
 install-lib:
@@ -870,14 +871,34 @@ install-lib:
 	@echo end >> $(MOSSCO_INSTALL_PREFIX)/lib/libmossco.mri
 #	$(AR) -M < $(MOSSCO_INSTALL_PREFIX)/lib/libmossco.mri
 	@(cd $(MOSSCO_LIBRARY_PATH); for F in *.a ; do $(AR) x $$F; done )
-	@(cd $(MOSSCO_LIBRARY_PATH); $(AR) x $(MOSSCO_DIR)/external/fabm/install/lib/libfabm.a )
+ifeq ($(MOSSCO_FABM),true)
+#	@(cd $(MOSSCO_LIBRARY_PATH); $(AR) x $(MOSSCO_DIR)/external/fabm/install/lib/libfabm.a )
+endif
 	@(cd $(MOSSCO_LIBRARY_PATH); $(RM) -f SORTED __*; $(AR) crus libmossco.a *.o )
 	@$(RM) -f $(MOSSCO_LIBRARY_PATH)/*.o
 	@mv $(MOSSCO_LIBRARY_PATH)/libmossco.a $(MOSSCO_INSTALL_PREFIX)/lib/;
 
-
-		#	  echo $(AR) x $(MOSSCO_INSTALL_PREFIX)/lib/${$$F##*/}); \
-
+# The following renames all fabm symbols in the mossco library and prefixes
+# them with ___mossco_fabm instead of ___fabm.  Also, all internal fabm
+# symbols within libfabm (renamed to libmossco_fabm) are changed by replacing
+# the ___ prefix with ___mossco_.  The implementation below is likely to not
+# be portable
+ifeq ($(MOSSCO_FABM),true)
+	@cp $(MOSSCO_DIR)/external/fabm/install/lib/libfabm.a $(MOSSCO_INSTALL_PREFIX)/lib/libmossco_fabm.a
+	@(cd $(MOSSCO_INSTALL_PREFIX)/lib ; for F in libmossco.a; do \
+	  objconv -np:___fabm_MOD:___mossco_fabm_MOD \
+	  -np:___fabm_types_MOD:___mossco_fabm_types_MOD \
+	  -np:___fabm_properties_MOD:___mossco_fabm_properties_MOD \
+	  -np:___fabm_expressions_MOD:___mossco_fabm_expressions_MOD \
+	  -np:___fabm_config_MOD:___mossco_fabm_config_MOD \
+	  -np:___fabm_driver_MOD:___mossco_fabm_driver_MOD \
+	  -np:___fabm_standard_variables_MOD:___mossco_fabm_standard_variables_MOD \
+	  $$F $$F.tmp > /dev/null && mv $$F.tmp $$F; done  \
+	)
+	(cd $(MOSSCO_INSTALL_PREFIX)/lib ; for F in libmossco_fabm.a; do \
+	  objconv -np:___:___mossco_ $$F $$F.tmp  > /dev/null && mv $$F.tmp $$F; done  \
+	)
+endif
 
 .PHONY: mossco_clean
 
