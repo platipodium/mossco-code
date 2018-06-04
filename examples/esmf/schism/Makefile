@@ -50,10 +50,9 @@ $(error Cannot find schism_esmf_component.)
 endif
 
 
-LIBS+= -L$(SCHISM_DIR)/lib -lhydro -lcore
+LIBS+= -L$(SCHISM_DIR)/lib -lhydro -lcore -lfabm_schism -lfabm
 LIBS+= -L$(PARMETIS_DIR) -lparmetis -lmetis
-LIBS+= -L$(MOSSCO_DIR)/external/fabm/install/lib -lfabm
-LIBS+= -L$(MOSSCO_DIR)/lib -lmossco
+LIBS+= -L$(MOSSCO_DIR)/lib -lmossco -lmossco_fabm
 F90FLAGS+= -I$(SCHISM_DIR)/include
 F90FLAGS+= -I$(MOSSCO_DIR)/include
 LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
