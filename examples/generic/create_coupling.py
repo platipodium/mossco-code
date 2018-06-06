@@ -1452,6 +1452,7 @@ fid.write('''
     integer(ESMF_KIND_I4)      :: alarmCount
     integer(ESMF_KIND_I4)      :: numGridComp, numCplComp, numComp
     integer(ESMF_KIND_I4)      :: hours, minutes, seconds, localPet
+    real(ESMF_KIND_R8)         :: s_r8
     type(ESMF_Log)             :: stateLog
 
     type(ESMF_Alarm), dimension(:), allocatable :: alarmList
@@ -1691,11 +1692,16 @@ fid.write('''
           write(message,'(A)') trim(myName)//' executed ' &
             //trim(cplCompNameList(l))//' in '
           call ESMF_TimeIntervalGet(wallTimeStop(numgridComp + l) - &
-            wallTimeStart(numgridComp + l), s=seconds, rc=localrc)
+            wallTimeStart(numgridComp + l), s_r8=s_r8, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          write(formatString,'(A)') '(A,X,'//intformat(seconds)//',X,A)'
-          write(message, formatString) trim(message), seconds, 'seconds'
+          if (s_r8 < 1) then 
+            write(formatString,'(A)') '(A,X,'//intformat(int(s_r8*1000.0))//',X,A)'
+            write(message, formatString) trim(message), int(s_r8), 'mseconds'
+          else
+            write(formatString,'(A)') '(A,X,'//intformat(int(s_r8))//',X,A)'
+            write(message, formatString) trim(message), int(s_r8), 'seconds'
+          endif
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
           call ESMF_LogFlush()
@@ -1904,20 +1910,25 @@ fid.write('''
 
           write(message,'(A)') trim(myName)//' executed '//trim(gridCompNameList(i))//' in '
           call ESMF_TimeIntervalGet(wallTimeStop(i) - wallTimeStart(i), &
-            s=seconds, rc=localrc)
+            s_r8=s_r8, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          write(formatString,'(A)') '(A,X,'//intformat(seconds)//',X,A)'
-          write(message, formatString) trim(message), seconds, 'seconds'
+          if (s_r8 < 1) then
+            write(formatString,'(A)') '(A,X,'//intformat(int(s_r8*1000.0))//',X,A)'
+            write(message, formatString) trim(message), int(s_r8), 'mseconds'
+          else 
+            write(formatString,'(A)') '(A,X,'//intformat(int(s_r8))//',X,A)'
+            write(message, formatString) trim(message), int(s_r8), 'seconds'
+          endif
 
-          call ESMF_TimeIntervalGet(timeInterval, s=seconds, rc=localrc)
+          call ESMF_TimeIntervalGet(timeInterval, s_r8=s_r8, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          !if (seconds > 0. and. timeInterval > zeroInterval .and. wallTimeStop(i) > wallTimeStart(i)) then
-          if (seconds > 0) then
-            seconds = int(timeInterval / (wallTimeStop(i) - wallTimeStart(i)))
-            write(formatString,'(A)') '(A,X,'//intformat(seconds)//')'
-            write(message, formatString) trim(message)//' with speedup ', seconds
+          if ((s_r8 > 0.0) .and. (wallTimeStop(i) > wallTimeStart(i))) then
+          !if (s_r8 > 0) then
+            s_r8 = timeInterval / (wallTimeStop(i) - wallTimeStart(i))
+            write(formatString,'(A)') '(A,X,'//intformat(int(s_r8))//')'
+            write(message, formatString) trim(message)//' with speedup ', int(s_r8)
           endif
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
