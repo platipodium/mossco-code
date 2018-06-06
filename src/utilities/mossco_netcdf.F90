@@ -871,9 +871,10 @@ module mossco_netcdf
 
     integer                            :: ncStatus,varid
 
+    if (present(rc)) rc = ESMF_SUCCESS
     isPresent = .false.
 
-    ncStatus = nf90_inq_varid(self%ncid,name,varid)
+    ncStatus = nf90_inq_varid(self%ncid, name, varid)
     if (ncStatus == NF90_NOERR) isPresent=.true.
 
   end function mossco_netcdf_variable_present
@@ -1703,7 +1704,7 @@ module mossco_netcdf
     type(ESMF_State), optional, intent(inout)  :: state
     character(len=1), optional, intent(in)     :: mode
     logical, optional, intent(in)              :: checkVersion
-    integer, intent(out), optional             :: rc
+    integer(ESMF_KIND_I4), intent(out), optional             :: rc
     type(type_mossco_netcdf)                   :: nc
     character(len=*), intent(in), optional     :: owner
 
@@ -2294,6 +2295,8 @@ module mossco_netcdf
     type(type_mossco_netcdf_variable), pointer :: var
     character(ESMF_MAXSTR)         :: message
 
+    if (present(rc)) rc = ESMF_SUCCESS 
+
     localrc = nf90_inquire(self%ncid, nVariables=nvars, nAttributes=natts)
     if (localrc /= NF90_NOERR) then
       call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot inquire file '//trim(self%name), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -2352,7 +2355,8 @@ module mossco_netcdf
 
     integer                        :: localrc, i, nvars, natts, ndims, udimid
     character(ESMF_MAXSTR)         :: message
-
+    
+    if (present(rc)) rc = ESMF_SUCCESS
     localrc = nf90_inquire(self%ncid, nVariables=nvars, nAttributes=natts)
     if (localrc /= NF90_NOERR) then
       call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot inquire file '//trim(self%name), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -3408,6 +3412,7 @@ module mossco_netcdf
     integer                     :: dimid
     character(len=ESMF_MAXSTR)  :: message, dimName
 
+    if (present(rc)) rc = ESMF_SUCCESS
     dimid = -1
     write(dimName,'(A9,I5.5)')  'ungridded',length
     ncStatus = nf90_inq_dimid(self%ncid,trim(dimName),dimid)
