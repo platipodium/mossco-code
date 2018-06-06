@@ -1618,6 +1618,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
          first_entry = .false.
       end if
 
+      istat = 0
       if (.not. associated (thickness_of_layers)) then
         allocate (thickness_of_layers(RANGE3D), stat=istat)
       endif
