@@ -1487,13 +1487,13 @@ fid.write('''
 
     if (allocated(wallTimeStart)) deallocate(wallTimeStart)
     if (allocated(wallTimeStop)) deallocate(wallTimeStop)
-    allocate(wallTimeStart(numComp))
-    allocate(wallTimeStop(numComp))
+    allocate(wallTimeStart(0:numComp))
+    allocate(wallTimeStop(0:numComp))
 
     call ESMF_TimeIntervalSet(zeroInterval, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    do i = 1, numComp
+    do i = 0, numComp
       call ESMF_TimeSet(wallTimeStart(i), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -1531,6 +1531,9 @@ fid.write('''
 
     call ESMF_ClockGetAlarmList(myClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
       alarmCount=alarmCount, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_TimeSyncToRealTime(wallTimeStart(0), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !! Run until the clock's stoptime is reached
@@ -2040,6 +2043,11 @@ fid.write('''
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     enddo
+
+    call ESMF_TimeSyncToRealTime(wallTimeStop(0), rc=localrc)
+     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+
 ''')
 
 for coupling in couplingList:
