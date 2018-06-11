@@ -77,7 +77,9 @@ module getm_component
      character(len=ESMF_MAXSTR)                  :: fieldname
   end type ptrarray3D
   type(ptrarray3D),dimension(:),allocatable :: transport_ws,transport_conc
+#ifdef _TEST_TRACERFLUXES_
   type(ptrarray3D),dimension(:),allocatable :: transport_xflux,transport_yflux
+#endif
 
   contains
 
@@ -453,7 +455,7 @@ module getm_component
       type(ESMF_FieldStatus_Flag)                         :: status
       type(ESMF_TimeInterval)                             :: timeInterval
       character(len=ESMF_MAXSTR),dimension(:),allocatable :: itemNameList
-      character(len=ESMF_MAXSTR)                          :: itemName,units
+      character(len=ESMF_MAXSTR)                          :: itemName,units, name, message
       integer                   ,dimension(:),allocatable :: namelenList,concFlags
       integer                                             :: concFieldCount,transportFieldCount,FieldCount
       integer(ESMF_KIND_I8)                               :: conc_id,ws_id
@@ -466,6 +468,7 @@ module getm_component
       rc=ESMF_SUCCESS
 
       call MOSSCO_CompEntry(gridComp, clock)
+      call ESMF_gridCompGet(gridComp, name=name, rc=localrc)
 
       call ESMF_GridCompGetEPPhaseCount(getmComp,ESMF_METHOD_INITIALIZE,  &
                                         phaseCount)
@@ -589,8 +592,11 @@ module getm_component
                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
                call ESMF_AttributeSet(field,'units','m3/s*'//trim(units), rc=localrc)
                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-               call MOSSCO_StateAdd(exportState,field,verbose=.true.,rc=localrc)
+               call ESMF_StateAddReplace(exportState, (/field/), rc=localrc)
                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+                
+               write(message,'(A)') trim(name)//' created flux field '//trim(itemname)
+               call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
                itemName = itemNameList(i)(:namelenList(i)-len_trim(conc_suffix))//'_y_flux_in_water'
                allocate(transport_yflux(n)%ptr(I3DFIELD))
@@ -606,8 +612,11 @@ module getm_component
                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
                call ESMF_AttributeSet(field,'units','m3/s*'//trim(units), rc=localrc)
                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-               call MOSSCO_StateAdd(exportState,field,verbose=.true.,rc=localrc)
+               call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+               write(message,'(A)') trim(name)//' created flux field '//trim(itemname)
+               call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
 #endif
 
 !              search for corresponding z_velocity
