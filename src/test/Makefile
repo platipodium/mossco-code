@@ -82,6 +82,9 @@ test_Solver: libsolver
 test_FabmDependencies:
 	$(F90) $(CPPFLAGS) $(FABM_CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) $(FABM_LDFLAGS) $(LIBS)
 
+test_time_accuracy: test_time_accuracy.F90
+	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) $(LIBS)
+
 test_pointer: test_pointer.F90
 	$(F90) $< -o $@
 
@@ -99,3 +102,4 @@ clean: extraclean
 extraclean:
 	@- rm -f $(TESTS) PET*
 	@- rm -rf *.dSYM test_netcdf.nc
+
