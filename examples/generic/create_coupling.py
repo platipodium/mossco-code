@@ -1452,7 +1452,7 @@ fid.write('''
     integer(ESMF_KIND_I4)      :: alarmCount
     integer(ESMF_KIND_I4)      :: numGridComp, numCplComp, numComp
     integer(ESMF_KIND_I4)      :: hours, minutes, seconds, localPet
-    real(ESMF_KIND_R8)         :: s_r8
+    real(ESMF_KIND_R8)         :: ms_r8, realValue
     type(ESMF_Log)             :: stateLog
 
     type(ESMF_Alarm), dimension(:), allocatable :: alarmList
@@ -1533,11 +1533,12 @@ fid.write('''
       alarmCount=alarmCount, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_TimeSyncToRealTime(wallTimeStart(0), rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !! Run until the clock's stoptime is reached
     do
+
+      call ESMF_TimeSyncToRealTime(wallTimeStart(0), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_ClockGet(myClock,currTime=currTime, stopTime=stopTime, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -1695,15 +1696,15 @@ fid.write('''
           write(message,'(A)') trim(myName)//' executed ' &
             //trim(cplCompNameList(l))//' in '
           call ESMF_TimeIntervalGet(wallTimeStop(numgridComp + l) - &
-            wallTimeStart(numgridComp + l), s_r8=s_r8, rc=localrc)
+            wallTimeStart(numgridComp + l), ms_r8=ms_r8, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          if (s_r8 < 1) then 
-            write(formatString,'(A)') '(A,X,'//intformat(int(s_r8*1000.0))//',X,A)'
-            write(message, formatString) trim(message), int(s_r8), 'mseconds'
+          if (ms_r8 < 9999.0d0) then
+            write(formatString,'(A)') '(A,X,'//intformat(int(ms_r8))//',X,A)'
+            write(message, formatString) trim(message), int(ms_r8), 'mseconds'
           else
-            write(formatString,'(A)') '(A,X,'//intformat(int(s_r8))//',X,A)'
-            write(message, formatString) trim(message), int(s_r8), 'seconds'
+            write(formatString,'(A)') '(A,X,'//intformat(int(ms_r8/1000.0d0))//',X,A)'
+            write(message, formatString) trim(message), int(ms_r8/1000.0d0), 'seconds'
           endif
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
@@ -1913,25 +1914,24 @@ fid.write('''
 
           write(message,'(A)') trim(myName)//' executed '//trim(gridCompNameList(i))//' in '
           call ESMF_TimeIntervalGet(wallTimeStop(i) - wallTimeStart(i), &
-            s_r8=s_r8, rc=localrc)
+            ms_r8=ms_r8, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          if (s_r8 < 1) then
-            write(formatString,'(A)') '(A,X,'//intformat(int(s_r8*1000.0))//',X,A)'
-            write(message, formatString) trim(message), int(s_r8), 'mseconds'
-          else 
-            write(formatString,'(A)') '(A,X,'//intformat(int(s_r8))//',X,A)'
-            write(message, formatString) trim(message), int(s_r8), 'seconds'
+          if (ms_r8 < 9999.0d0) then
+            write(formatString,'(A)') '(A,X,'//intformat(int(ms_r8))//',X,A)'
+            write(message, formatString) trim(message), int(ms_r8), 'mseconds'
+          else
+            write(formatString,'(A)') '(A,X,'//intformat(int(ms_r8/1000.0d0))//',X,A)'
+            write(message, formatString) trim(message), int(ms_r8/1000.0d0), 'seconds'
           endif
 
-          call ESMF_TimeIntervalGet(timeInterval, s_r8=s_r8, rc=localrc)
+          call ESMF_TimeIntervalGet(timeInterval, ms_r8=realValue, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          if ((s_r8 > 0.0) .and. (wallTimeStop(i) > wallTimeStart(i))) then
-          !if (s_r8 > 0) then
-            s_r8 = timeInterval / (wallTimeStop(i) - wallTimeStart(i))
-            write(formatString,'(A)') '(A,X,'//intformat(int(s_r8))//')'
-            write(message, formatString) trim(message)//' with speedup ', int(s_r8)
+          if (ms_r8>0.0d0) then
+            realValue = realValue / ms_r8
+            write(formatString,'(A)') '(A,X,'//intformat(int(realValue))//')'
+            write(message, formatString) trim(message)//' with speedup ', int(realValue)
           endif
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
@@ -2039,14 +2039,36 @@ fid.write('''
       call ESMF_ClockAdvance(myClock, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+      call ESMF_TimeSyncToRealTime(wallTimeStop(0), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message,'(A)') trim(myName)//' executed in '
+      call ESMF_TimeIntervalGet(wallTimeStop(0) - wallTimeStart(0), &
+        ms_r8=ms_r8, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (ms_r8 < 9999.0d0) then
+        write(formatString,'(A)') '(A,X,'//intformat(int(ms_r8))//',X,A)'
+        write(message, formatString) trim(message), int(ms_r8), 'mseconds'
+      else
+        write(formatString,'(A)') '(A,X,'//intformat(int(ms_r8/1000.0d0))//',X,A)'
+        write(message, formatString) trim(message), int(ms_r8/1000.0d0), 'seconds'
+      endif
+
+      call ESMF_TimeIntervalGet(timeInterval, ms_r8=realValue, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (ms_r8>0.0d0) then
+        realValue = realValue / ms_r8
+        write(formatString,'(A)') '(A,X,'//intformat(int(realValue))//')'
+        write(message, formatString) trim(message)//' with speedup ', int(realValue)
+      endif
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
       if (ESMF_ClockIsStopTime(myClock, rc=localrc)) exit
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     enddo
-
-    call ESMF_TimeSyncToRealTime(wallTimeStop(0), rc=localrc)
-     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
 
 ''')
 
