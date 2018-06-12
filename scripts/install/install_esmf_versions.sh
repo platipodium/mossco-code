@@ -95,6 +95,7 @@ for C in $COMMS ; do
     ESMF_COMPILER=$G
     ESMF_NETCDF=split
     ESMF_NETCDF_INCLUDE=/usr/include
+    ESMF_NETCDFF_INCLUDE=$(ESMF_NETCDF_INCLUDE)
 
     if ! [ -z $(which nc-config) ]; then
       ESMF_NETCDF_INCLUDE=$(bash nc-config --includedir)
@@ -104,12 +105,14 @@ for C in $COMMS ; do
     if test -d ${ESMF_NETCDF_INCLUDE} ; then
       echo "  $0 uses netcdf include ${ESMF_NETCDF_INCLUDE}"
     else
+      echo "Could not find netcdf include, skipped installation"
       continue
     fi
 
     if test -d ${ESMF_NETCDF_LIBPATH} ; then
       echo "  $0 uses netcdf libdir ${ESMF_NETCDF_LIBPATH}"
     else
+      echo "Could not find netcdf library path, skipped installation"
       continue
     fi
 
@@ -122,6 +125,7 @@ for C in $COMMS ; do
       echo "  $0 uses netcdf-fortran include ${ESMF_NETCDFF_INCLUDE}"
       ESMF_NETCDF_INCLUDE=\"${ESMF_NETCDF_INCLUDE}" -I"${ESMF_NETCDFF_INCLUDE}\"
     else
+      echo "Could not find netcdf-fortran include, skipped installation"
       continue
     fi
 
@@ -129,6 +133,7 @@ for C in $COMMS ; do
       echo "  $0 uses netcdf-fortran libdir ${ESMF_NETCDFF_LIBPATH}"
       ESMF_NETCDF_LIBPATH=\"${ESMF_NETCDF_LIBPATH}" -L"${ESMF_NETCDFF_LIBPATH}\"
     else
+      echo "Could not find netcdf-fortran library path, skipped installation"
       continue
     fi
 
@@ -164,7 +169,7 @@ for C in $COMMS ; do
        echo "  $0 uses esmf.mk ${ESMFMKFILE}"
 
        if test -r ${ESMFMKFILE}; then
-         echo "  $0 found esmf.mk at location ${ESMFMKFILE}"
+         echo "  $0 found esmf.mk at location ${ESMFMKFILE}. Skipped."
          continue
        fi
 
