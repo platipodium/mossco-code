@@ -95,7 +95,7 @@ for C in $COMMS ; do
     ESMF_COMPILER=$G
     ESMF_NETCDF=split
     ESMF_NETCDF_INCLUDE=/usr/include
-    ESMF_NETCDFF_INCLUDE=$(ESMF_NETCDF_INCLUDE)
+    ESMF_NETCDFF_INCLUDE=${ESMF_NETCDF_INCLUDE}
 
     if ! [ -z $(which nc-config) ]; then
       ESMF_NETCDF_INCLUDE=$(bash nc-config --includedir)
