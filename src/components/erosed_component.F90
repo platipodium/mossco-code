@@ -776,7 +776,7 @@ module erosed_component
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
 
-    character(ESMF_MAXSTR)  :: name,message
+    character(ESMF_MAXSTR)  :: name, message, format
     type(ESMF_Time)         :: currTime
 
     type(ESMF_Field), target     :: field
@@ -936,14 +936,16 @@ module erosed_component
       write(message,'(A)') trim(name)//' cannot map 1 fraction to multiple SPM fractions, yet.'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    elseif (nfrac/= 0 .and. fieldCount ==0) then
+    elseif (nfrac /= 0 .and. fieldCount ==0) then
       write(message,'(A)') trim(name)//'initial values from sedparams.txt will be used for sediment parameters.'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       do i = 1, nfrac
         external_idx_by_nfrac(i)=i
       end do
     elseif (nfrac /= fieldCount) then
-      write(message,'(A)') trim(name)//' cannot map unequal size and SPM fractions'
+      write(format, '(A)') '(A,'//intformat(fieldCount)//',A,'//intformat(nfrac)//',A)'
+      write(message, format) trim(name)//' cannot map ', fieldCount, &
+        ' fields to ', nfrac,' SPM fractions'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     else
