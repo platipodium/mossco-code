@@ -82,6 +82,10 @@ env:
     - ESMF_DIR=${MOSSCO_DIR}/../esmf-code
     - ESMF_INSTALL_PREFIX=${MOSSCO_DIR}/../esmf
     - NETCDF_VERSION=NETCDF4
+    - NETCDF=NETCDF4
+    - NETCDFHOME=$(nc-config --prefix)
+    - NETCDFINC=$(nc-config --includedir)
+    - NETCDFLIBDIR=$(nc-config --libdir)
     - COMMS="openmpi"       # @todo make this a matrix with mpich
     - COMPS="gfortranclang" # @todo make this a matrix with gfortran
     - TAGS="ESMF_7_1_0r"
@@ -92,8 +96,7 @@ env:
 #    - make all
 
 install:
-  - nc-config --all
-  - rm -rf ${ESMF_DIR}
+#  - rm -rf ${ESMF_DIR}
 #  - test -d ${ESMF_DIR} || bash ${MOSSCO_DIR}/scripts/installation/install_esmf_versions.sh
 #  - source ${HOME}/.esmf_Linux.gfortranclang.64.openmpi.ESMF_7_1_0r
   - bash -v ${MOSSCO_DIR}/scripts/install/install_esmf_versions.sh
