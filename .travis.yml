@@ -48,6 +48,7 @@ addons:
       - libnetcdff5
       - libnetcdf-dev
       - libnetcdfc7
+      - netcdf-bin
       - cvsutils
       #- doxygen
       - libxerces-c-dev
