@@ -75,9 +75,11 @@ notifications:
   email: true
 
 env:
-  global:
+  - MATRIX_TARGET=install
+  - MATRIX_TARGET=doc
+  - global:
     - MAKEFLAGS="--silent" # "-j 2"
-    - MOSSCO_FFLAGS="-w -fprofile-arcs -ftest-coverage -O0"
+    - MOSSCO_FFLAGS="-w   -fprofile-arcs -ftest-coverage -O0"
     - EXTRA_FFLAGS="-D_TEST_TRACERFLUXES_"
     - FFLAGS="-DESMF_UNRELEASED"
     - MOSSCO_DIR=${TRAVIS_BUILD_DIR}
@@ -91,10 +93,6 @@ env:
     - COMPS="gfortranclang" # @todo make this a matrix with gfortran
     - TAGS="ESMF_7_1_0r"
     - ESMFMKFILE=${ESMF_INSTALL_PREFIX}/lib/libg/Linux.gfortranclang.64.openmpi.ESMF_7_1_0r/esmf.mk
-
-matrix:
-  - MATRIX_TARGET=install
-  - MATRIX_TARGET=doc
 
 install:
   - bash  ${MOSSCO_DIR}/scripts/install/install_esmf_versions.sh
