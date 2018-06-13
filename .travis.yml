@@ -81,11 +81,10 @@ env:
     - MOSSCO_DIR=${TRAVIS_BUILD_DIR}
     - ESMF_DIR=${MOSSCO_DIR}/../esmf-code
     - ESMF_INSTALL_PREFIX=${MOSSCO_DIR}/../esmf
-    - NETCDF_VERSION=NETCDF4
-    - NETCDF=NETCDF4
-    - NETCDFHOME=$(nc-config --prefix)
     - NETCDFINC=$(nc-config --includedir)
-    - NETCDFLIBDIR=$(nc-config --libdir)
+    - NETCDFLIBDIR=$(nc-config --prefix)/lib
+    - NETCDFLIBNAME=$(nc-config --flibs)
+    - NETCDF_VERSION=NETCDF4
     - COMMS="openmpi"       # @todo make this a matrix with mpich
     - COMPS="gfortranclang" # @todo make this a matrix with gfortran
     - TAGS="ESMF_7_1_0r"
@@ -102,6 +101,8 @@ install:
   - bash -v ${MOSSCO_DIR}/scripts/install/install_esmf_versions.sh
   - mkdir -p ${MOSSCO_DIR}/external/fabm/
   - git clone -b master --depth 1 https://github.com/platipodium/mossco-fabm.git ${MOSSCO_DIR}/external/fabm/code
+  - mkdir -p ${MOSSCO_DIR}/external/gotm/
+  - git clone -b master --depth 1 https://github.com/gotm-model/code.git ${MOSSCO_DIR}/external/gotm/code
   - mkdir -p ${MOSSCO_DIR}/external/getm/
   - git clone -b iow --depth 1 https://github.com/platipodium/mossco-getm.git ${MOSSCO_DIR}/external/getm/code
   - make external
