@@ -61,15 +61,9 @@ addons:
 
 os:
   - linux
-#  - osx
+  - osx
 
-#osx_image: xcode9.3beta
-
-before_install:
-  # - brew update
-  # - brew install netcdf
-  # - brew install json-fortran
-  # - brew install doxygen
+osx_image: xcode9.3
 
 notifications:
   email: true
@@ -77,9 +71,7 @@ notifications:
 env:
   - global:
     - MAKEFLAGS="--silent" # "-j 2"
-    - MOSSCO_FFLAGS="-w   -fprofile-arcs -ftest-coverage -O0"
-    - EXTRA_FFLAGS="-D_TEST_TRACERFLUXES_"
-    - FFLAGS="-DESMF_UNRELEASED"
+    - MOSSCO_FFLAGS="-w -DESMF_UNRELEASED -fprofile-arcs -ftest-coverage -O0 -D_TEST_TRACERFLUXES_"
     - MOSSCO_DIR=${TRAVIS_BUILD_DIR}
     - ESMF_DIR=${MOSSCO_DIR}/../esmf-code
     - ESMF_INSTALL_PREFIX=${MOSSCO_DIR}/../esmf
@@ -87,10 +79,21 @@ env:
     - NETCDFLIBDIR=$(nc-config --prefix)/lib
     - NETCDFLIBNAME=$(nc-config --flibs)
     - NETCDF_VERSION=NETCDF4
-    - COMMS="openmpi"       # @todo make this a matrix with mpich
-    - COMPS="gfortranclang" # @todo make this a matrix with gfortran
-    - TAGS="ESMF_7_1_0r"
-    - ESMFMKFILE=${ESMF_INSTALL_PREFIX}/lib/libg/Linux.gfortranclang.64.openmpi.ESMF_7_1_0r/esmf.mk
+    - COMMS=openmpi       # @todo make this a matrix with mpich
+    - COMPS=gfortranclang # @todo make this a matrix with gfortran
+    - TAGS=ESMF_7_1_0r
+    - |
+      if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+        ESMFMKFILE=${ESMF_INSTALL_PREFIX}/lib/libg/Darwin.gfortranclang.64.openmpi.ESMF_7_1_0r/esmf.mk
+      else
+        ESMFMKFILE=${ESMF_INSTALL_PREFIX}/lib/libg/Linux.gfortranclang.64.openmpi.ESMF_7_1_0r/esmf.mk
+      fi
+
+before_install:
+    - |
+      if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+        brew update && brew install netcdf json-fortran doxygen open-mpi xerces-c
+      fi
 
 install:
   - rm -rf ${ESMF_DIR}
