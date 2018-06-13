@@ -75,6 +75,7 @@ notifications:
 
 env:
   global:
+#    - MAKEFLAGS="-j 2"
     - MOSSCO_FFLAGS="-g -Wall -fprofile-arcs -ftest-coverage -O0"
     - EXTRA_FFLAGS="-D_TEST_TRACERFLUXES_"
     - FFLAGS="-DESMF_UNRELEASED"
@@ -95,16 +96,16 @@ env:
 #    - make all
 
 install:
-  - rm -rf ${ESMF_DIR} # Todo: find out how to avoid building ESMF again and again
+#  - rm -rf ${ESMF_DIR} # Todo: find out how to avoid building ESMF again and again
 #  - test -d ${ESMF_DIR} || bash ${MOSSCO_DIR}/scripts/installation/install_esmf_versions.sh
 #  - source ${HOME}/.esmf_Linux.gfortranclang.64.openmpi.ESMF_7_1_0r
   - bash  ${MOSSCO_DIR}/scripts/install/install_esmf_versions.sh
-  - mkdir -p ${MOSSCO_DIR}/external/fabm/
-  - git clone -b master --depth 1 https://github.com/platipodium/mossco-fabm.git ${MOSSCO_DIR}/external/fabm/code
-  - mkdir -p ${MOSSCO_DIR}/external/gotm/
-  - git clone -b master --depth 1 https://github.com/gotm-model/code.git ${MOSSCO_DIR}/external/gotm/code
-  - mkdir -p ${MOSSCO_DIR}/external/getm/
-  - git clone -b iow --depth 1 https://github.com/platipodium/mossco-getm.git ${MOSSCO_DIR}/external/getm/code
+  # - mkdir -p ${MOSSCO_DIR}/external/fabm/
+  # - git clone -b master --depth 1 https://github.com/platipodium/mossco-fabm.git ${MOSSCO_DIR}/external/fabm/code
+  # - mkdir -p ${MOSSCO_DIR}/external/gotm/
+  # - git clone -b master --depth 1 https://github.com/gotm-model/code.git ${MOSSCO_DIR}/external/gotm/code
+  # - mkdir -p ${MOSSCO_DIR}/external/getm/
+  # - git clone -b iow --depth 1 https://github.com/platipodium/mossco-getm.git ${MOSSCO_DIR}/external/getm/code
   - make external
   - make libfabm_external
   - make libgotm_external
