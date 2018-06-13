@@ -75,8 +75,6 @@ notifications:
   email: true
 
 env:
-  - MATRIX_TARGET=install
-  - MATRIX_TARGET=doc
   - global:
     - MAKEFLAGS="--silent" # "-j 2"
     - MOSSCO_FFLAGS="-w   -fprofile-arcs -ftest-coverage -O0"
@@ -110,7 +108,8 @@ install:
 before_script:
 
 script:
-  - make -s ${MATRIX_TARGET}
+  - make -s install
+  - make -s doc
 
 after_success:
   - cd $TRAVIS_BUILD_DIR
