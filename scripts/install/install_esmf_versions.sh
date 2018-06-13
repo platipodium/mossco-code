@@ -215,7 +215,7 @@ EOT
       cat $CONFIG_DIR/.esmf_${ESMF_STRING}
 
       #test -f $ESMFMKFILE || (make distclean && make -j12 lib && make install)
-      (make distclean && make -j12 lib && make install)
+      (make -s distclean && make -s -j12 lib && make -s install)
 
       echo   cp $CONFIG_DIR/.esmf_${ESMF_STRING} $ESMF_INSTALL_PREFIX/etc/${ESMF_STRING}
       cp $CONFIG_DIR/.esmf_${ESMF_STRING} $ESMF_INSTALL_PREFIX/etc/${ESMF_STRING}
