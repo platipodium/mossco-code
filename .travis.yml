@@ -50,7 +50,7 @@ addons:
       - libnetcdfc7
       - netcdf-bin
       - cvsutils
-      #- doxygen
+      - doxygen
       - libxerces-c-dev
       - gnutls-bin
       - libgnutls-dev
@@ -116,8 +116,7 @@ install:
   - make -C ${MOSSCO_DIR}/src/mediators
   - make -C ${MOSSCO_DIR}/src/components
   - make all
-  - make install
 
-#deploy:
-#  - mkdir -p ${HOME}/opt/bin
-#  - ln -sf ${MOSSCO_DIR}/scripts/mossco.sh ${HOME}/opt/bin/mossco
+scripts:
+  - make install
+  - make doc
