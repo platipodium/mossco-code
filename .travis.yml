@@ -97,26 +97,25 @@ env:
 
 install:
 #  - rm -rf ${ESMF_DIR} # Todo: find out how to avoid building ESMF again and again
-#  - test -d ${ESMF_DIR} || bash ${MOSSCO_DIR}/scripts/installation/install_esmf_versions.sh
-#  - source ${HOME}/.esmf_Linux.gfortranclang.64.openmpi.ESMF_7_1_0r
   - bash  ${MOSSCO_DIR}/scripts/install/install_esmf_versions.sh
-  # - mkdir -p ${MOSSCO_DIR}/external/fabm/
-  # - git clone -b master --depth 1 https://github.com/platipodium/mossco-fabm.git ${MOSSCO_DIR}/external/fabm/code
-  # - mkdir -p ${MOSSCO_DIR}/external/gotm/
-  # - git clone -b master --depth 1 https://github.com/gotm-model/code.git ${MOSSCO_DIR}/external/gotm/code
-  # - mkdir -p ${MOSSCO_DIR}/external/getm/
-  # - git clone -b iow --depth 1 https://github.com/platipodium/mossco-getm.git ${MOSSCO_DIR}/external/getm/code
-  - make external
-  - make libfabm_external
-  - make libgotm_external
-  - make libgetm_external
-  - make -C ${MOSSCO_DIR}/src/utilities
-  - make -C ${MOSSCO_DIR}/src/drivers
-  - make -C ${MOSSCO_DIR}/src/connectors
-  - make -C ${MOSSCO_DIR}/src/mediators
-  - make -C ${MOSSCO_DIR}/src/components
-  - make all
+  - make -s external
+  - make -s libfabm_external
+  - make -s libgotm_external
+  - make -s libgetm_external
+  - make -s -C ${MOSSCO_DIR}/src/utilities
+  - make -s -C ${MOSSCO_DIR}/src/drivers
+  - make -s -C ${MOSSCO_DIR}/src/connectors
+  - make -s -C ${MOSSCO_DIR}/src/mediators
+  - make -s -C ${MOSSCO_DIR}/src/components
+  - make -s all
 
-scripts:
-  - make install
-  - make doc
+before_script:
+
+script:
+  - make -s install
+  - make -s doc
+
+after_success:
+  - cd $TRAVIS_BUILD_DIR
+  - git config --global user.name "TRAVIS-CI-for-$(git --no-pager show -s --format='%cn' $TRAVIS_COMMIT)"
+  - git config --global user.email "$(git --no-pager show -s --format='%ce' $TRAVIS_COMMIT)"
