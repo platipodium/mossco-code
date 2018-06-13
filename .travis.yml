@@ -93,25 +93,18 @@ env:
     - ESMFMKFILE=${ESMF_INSTALL_PREFIX}/lib/libg/Linux.gfortranclang.64.openmpi.ESMF_7_1_0r/esmf.mk
 
 install:
+  - rm -rf ${ESMF_DIR}
   - bash  ${MOSSCO_DIR}/scripts/install/install_esmf_versions.sh
   - make -s external
-  # - make -s libfabm_external
-  # - make -s libgotm_external
-  # - make -s libgetm_external
-  # - make -s -C ${MOSSCO_DIR}/src/utilities
-  # - make -s -C ${MOSSCO_DIR}/src/drivers
-  # - make -s -C ${MOSSCO_DIR}/src/connectors
-  # - make -s -C ${MOSSCO_DIR}/src/mediators
-  # - make -s -C ${MOSSCO_DIR}/src/components
-  - make -s all
 
 before_script:
 
 script:
+  - make -s all
   - make -s install
   - make -s doc
 
 after_success:
-  - cd $TRAVIS_BUILD_DIR
-  - git config --global user.name "TRAVIS-CI-for-$(git --no-pager show -s --format='%cn' $TRAVIS_COMMIT)"
-  - git config --global user.email "$(git --no-pager show -s --format='%ce' $TRAVIS_COMMIT)"
+  # - cd $TRAVIS_BUILD_DIR
+  # - git config --global user.name "TRAVIS-CI-for-$(git --no-pager show -s --format='%cn' $TRAVIS_COMMIT)"
+  # - git config --global user.email "$(git --no-pager show -s --format='%ce' $TRAVIS_COMMIT)"
