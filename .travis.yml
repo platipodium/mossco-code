@@ -77,7 +77,7 @@ notifications:
 env:
   global:
     - MAKEFLAGS="--silent" # "-j 2"
-    - MOSSCO_FFLAGS="-g -Wall -fprofile-arcs -ftest-coverage -O0"
+    - MOSSCO_FFLAGS="-g -Wnone -fprofile-arcs -ftest-coverage -O0"
     - EXTRA_FFLAGS="-D_TEST_TRACERFLUXES_"
     - FFLAGS="-DESMF_UNRELEASED"
     - MOSSCO_DIR=${TRAVIS_BUILD_DIR}
@@ -100,20 +100,20 @@ install:
 #  - rm -rf ${ESMF_DIR} # Todo: find out how to avoid building ESMF again and again
   - bash  ${MOSSCO_DIR}/scripts/install/install_esmf_versions.sh
   - make -s external
-  - make -s libfabm_external
-  - make -s libgotm_external
-  - make -s libgetm_external
-  - make -s -C ${MOSSCO_DIR}/src/utilities
-  - make -s -C ${MOSSCO_DIR}/src/drivers
-  - make -s -C ${MOSSCO_DIR}/src/connectors
-  - make -s -C ${MOSSCO_DIR}/src/mediators
-  - make -s -C ${MOSSCO_DIR}/src/components
+  # - make -s libfabm_external
+  # - make -s libgotm_external
+  # - make -s libgetm_external
+  # - make -s -C ${MOSSCO_DIR}/src/utilities
+  # - make -s -C ${MOSSCO_DIR}/src/drivers
+  # - make -s -C ${MOSSCO_DIR}/src/connectors
+  # - make -s -C ${MOSSCO_DIR}/src/mediators
+  # - make -s -C ${MOSSCO_DIR}/src/components
   - make -s all
 
 before_script:
 
 script:
-  - make ${MATRIX_TARGET}
+  - make -s ${MATRIX_TARGET}
 
 after_success:
   - cd $TRAVIS_BUILD_DIR
