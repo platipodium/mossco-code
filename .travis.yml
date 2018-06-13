@@ -77,7 +77,7 @@ notifications:
 env:
   global:
     - MAKEFLAGS="--silent" # "-j 2"
-    - MOSSCO_FFLAGS="-g -Wnone -fprofile-arcs -ftest-coverage -O0"
+    - MOSSCO_FFLAGS="-w -fprofile-arcs -ftest-coverage -O0"
     - EXTRA_FFLAGS="-D_TEST_TRACERFLUXES_"
     - FFLAGS="-DESMF_UNRELEASED"
     - MOSSCO_DIR=${TRAVIS_BUILD_DIR}
@@ -97,7 +97,6 @@ matrix:
   - MATRIX_TARGET=doc
 
 install:
-#  - rm -rf ${ESMF_DIR} # Todo: find out how to avoid building ESMF again and again
   - bash  ${MOSSCO_DIR}/scripts/install/install_esmf_versions.sh
   - make -s external
   # - make -s libfabm_external
