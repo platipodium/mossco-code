@@ -1,4 +1,5 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.597629.svg)](https://doi.org/10.5281/zenodo.597629)
+[![Build Status](https://travis-ci.org/platipodium/mossco-code.svg?branch=master)](https://travis-ci.org/platipodium/mossco-code)
 
 This is the main directory of MOSSCO, also called `$MOSSCO_DIR`
 
