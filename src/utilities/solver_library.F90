@@ -1,14 +1,14 @@
-!> @brief Implementation of a generic 3D solver library 
+!> @brief Implementation of a generic 3D solver library
 !! @file solver_library.F90, this file is part of MOSSCO.
-!! 
+!!
 !! @author Richard Hofmeister
 !! @author Carsten Lemmen
-!! @copyright (C) 2013 Helmholtz-Zentrum Geesthacht
+!! @copyright (C) 2013--2018 Helmholtz-Zentrum Geesthacht
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
-! terms of the GNU General Public License v3+.  MOSSCO is distributed in the 
-! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file 
-! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
+! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 !
 !> @description The solver library contains the multi-method ode-solver
 !! and the base class for model drivers
@@ -18,6 +18,9 @@
 !! are expected to provide a vector with the right-hand sides
 !! (tendencies). Each driver has to inherit the base driver class
 !! called rhs_driver in this module.
+
+#define AVOID_DIVISION
+#define _SHAPE3D_ 1:rhs_driver%inum,1:rhs_driver%jnum,1:rhs_driver%knum
 
 module solver_library
 
@@ -81,14 +84,14 @@ integer,parameter                     :: rk = selected_real_kind(13)
 real(rk)           ,intent(in)        :: dt
 class(type_rhs_driver)  ,intent(inout):: rhs_driver
 
-logical  :: first
 real(rk),dimension(:,:,:,:),pointer :: rhs
-#define _SHAPE3D_ 1:rhs_driver%inum,1:rhs_driver%jnum,1:rhs_driver%knum
 real(rk),dimension(_SHAPE3D_,1:rhs_driver%nvar),target :: rhs0,rhs1,rhs2,rhs3
 real(rk),target :: c1(_SHAPE3D_,1:rhs_driver%nvar)
 real(rk),dimension(:,:,:,:),pointer :: c_pointer
-integer  :: i,ci
-real(rk) :: dt_red,dt_int,relative_change
+real(rk) :: dt_red, dt_int
+#ifndef AVOID_DIVISION
+real(rk) ::   relative_change
+#endif
 real(rk),parameter :: third=1.0_rk/3.0_rk
 
 select case (method)
@@ -113,7 +116,6 @@ case(ADAPTIVE_EULER)
 ! relative_change_min is a negative number, that gives the lower limit
 !   for allowed relative changes (e.g. -0.9 for 90% loss of concentration
 !   per timestep.
-#define AVOID_DIVISION
 #ifdef AVOID_DIVISION
       if (any((c1-(1.0_rk+rhs_driver%relative_change_min)*c_pointer(_SHAPE3D_,:))<0.0_rk) &
 #else
