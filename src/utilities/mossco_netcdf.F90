@@ -111,14 +111,6 @@ module mossco_netcdf
     module procedure MOSSCO_NcPutAttR4
   end interface
 
-  interface putatt
-    module procedure MOSSCO_NcPutAttString
-    module procedure MOSSCO_NcPutAttI4
-    module procedure MOSSCO_NcPutAttI8
-    module procedure MOSSCO_NcPutAttR8
-    module procedure MOSSCO_NcPutAttR4
-  end interface
-
   interface MOSSCO_AttributeNetcdfWrite
     module procedure MOSSCO_AttributeNetcdfWriteField
     module procedure MOSSCO_AttributeNetcdfWriteState
@@ -2220,10 +2212,10 @@ endif
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
     endif
 
-    call self%putattstring(varid, 'units', '1', rc=localrc)
-    call self%putattstring(varid, 'mossco_name', 'speedup', rc=localrc)
-    call self%putattr4(varid, 'valid_min', 0.0, rc=localrc)
-    call self%putattr4(varid, 'missing_value', -1E30, rc=localrc)
+    !call self%putattstring(varid, 'units', '1', rc=localrc)
+    !call self%putattstring(varid, 'mossco_name', 'speedup', rc=localrc)
+    !call self%putattr4(varid, 'valid_min', 0.0, rc=localrc)
+    !call self%putattr4(varid, 'missing_value', -1E30, rc=localrc)
 
     localrc = nf90_def_var(self%ncid, 'elapsed_wallclock_time', NF90_DOUBLE, (/self%timeDimId/), varid)
     if (localrc==NF90_ENAMEINUSE) then
@@ -2344,15 +2336,19 @@ endif
 
     implicit none
 
-    class(type_mossco_netcdf)      :: self
+    class(type_mossco_netcdf)                        :: self
     type(ESMF_KeyWordEnforcer), intent(in), optional :: kwe
     character(len=*), intent(in), optional           :: owner
     integer(ESMF_KIND_I4), intent(out), optional     :: rc
 
-    integer                        :: localrc, i, nvars, natts, ndims, udimid
-    character(ESMF_MAXSTR)         :: message
+    integer(ESMF_KIND_I4)          :: localrc, i, nvars, natts
+    integer(ESMF_KIND_I4)          :: ndims, udimid, rc_
+    character(ESMF_MAXSTR)         :: message, owner_
 
+    rc_ = ESMF_SUCCESS
     if (present(rc)) rc = ESMF_SUCCESS
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+
     localrc = nf90_inquire(self%ncid, nVariables=nvars, nAttributes=natts)
     if (localrc /= NF90_NOERR) then
       call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot inquire file '//trim(self%name), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -5191,9 +5187,12 @@ endif
     integer(ESMF_KIND_I4), intent(out), optional     :: rc
 
     integer(ESMF_KIND_I4)                  :: localrc, rc_
-    character(len=ESMF_MAXSTR)             :: message
+    character(len=ESMF_MAXSTR)             :: message, owner_
 
+    owner_ = '--'
     rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
 
     localrc = nf90_put_att(self%ncid, varid, trim(key), value)
     if (localrc /= NF90_NOERR) then
