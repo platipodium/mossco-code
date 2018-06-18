@@ -88,10 +88,11 @@ module mossco_netcdf
     procedure :: timeIndex => mossco_netcdf_find_time_index
     procedure :: timeGet => MOSSCO_NcGetTime
     procedure :: getatt => mossco_netcdf_var_get_att
-    procedure :: putattstring => MOSSCO_NcPutAttString
-    procedure :: putattint => MOSSCO_NcPutAttInt
-    procedure :: putattdouble => MOSSCO_NcPutAttDouble
-    procedure :: putattfloat => MOSSCO_NcPutAttFloat
+    procedure :: putattstring => MOSSCO_NCPUtAttString
+    procedure :: putattr8 => MOSSCO_NCPUtAttR8
+    procedure :: putattr4 => MOSSCO_NCPUtAttR4
+    procedure :: putatti4 => MOSSCO_NCPUtAttI4
+    procedure :: putatti8 => MOSSCO_NCPUtAttI8
     procedure :: create_bounds_variable
     procedure :: redef
     procedure :: enddef
@@ -101,6 +102,22 @@ module mossco_netcdf
   integer, parameter :: MOSSCO_NC_ERROR=-1
   integer, parameter :: MOSSCO_NC_NOERR=ESMF_SUCCESS
   integer, parameter :: MOSSCO_NC_EXISTING=1
+
+  interface MOSSCO_NcPutAtt
+    module procedure MOSSCO_NcPutAttString
+    module procedure MOSSCO_NcPutAttI4
+    module procedure MOSSCO_NcPutAttI8
+    module procedure MOSSCO_NcPutAttR8
+    module procedure MOSSCO_NcPutAttR4
+  end interface
+
+  interface putatt
+    module procedure MOSSCO_NcPutAttString
+    module procedure MOSSCO_NcPutAttI4
+    module procedure MOSSCO_NcPutAttI8
+    module procedure MOSSCO_NcPutAttR8
+    module procedure MOSSCO_NcPutAttR4
+  end interface
 
   interface MOSSCO_AttributeNetcdfWrite
     module procedure MOSSCO_AttributeNetcdfWriteField
@@ -1822,20 +1839,20 @@ module mossco_netcdf
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdfCreate"
-  function mossco_netcdfCreate(filename, kwe, timeUnit, state, rc) result(nc)
+  function mossco_netcdfCreate(filename, kwe, timeUnit, state, owner, rc) result(nc)
 
     use iso_fortran_env
     implicit none
 
     character(len=*), intent(in)          :: filename
     logical, optional, intent(in)         :: kwe ! Keyword-enforcer
-    character(len=*),optional, intent(in) :: timeUnit
+    character(len=*),optional, intent(in) :: timeUnit, owner
     type(ESMF_State), optional, intent(in):: state
     integer, intent(out),optional :: rc
     type(type_mossco_netcdf)      :: nc
 
     integer                       :: ncStatus
-    character(len=255)            :: string, owner_
+    character(len=ESMF_MAXSTR)    :: string, owner_, message
     integer                       :: rc_, localrc
     logical                       :: isPresent
 
@@ -1843,17 +1860,25 @@ module mossco_netcdf
     owner_ = '--'
     if (present(kwe)) rc_ = ESMF_SUCCESS
     if (present(rc)) rc = rc_
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
 
     inquire(file=trim(filename), exist=isPresent)
     if (ispresent) then
-      call ESMF_LogWrite('  overwriting file '//trim(filename), ESMF_LOGMSG_INFO)
+      write(message,'(A)') trim(owner_)//' overwrites'
     else
-      call ESMF_LogWrite('  created new file '//trim(filename), ESMF_LOGMSG_INFO)
+      write(message,'(A)') trim(owner_)//' creates new'
     endif
+    call MOSSCO_MessageAdd(message,' file '//trim(filename))
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     ncStatus = nf90_create(trim(filename), NF90_CLOBBER, nc%ncid)
     if (ncStatus /= NF90_NOERR) then
-      call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot create file '//trim(filename), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+
+      write(message,'(A)') trim(owner_)//' '//trim(nf90_strerror(ncStatus))
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      write(message,'(A)') trim(owner_)//' cannot create file '//trim(filename)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+
       if (present(rc)) then
         rc = ESMF_RC_FILE_WRITE
         return
@@ -1868,11 +1893,12 @@ module mossco_netcdf
     if (present(timeUnit)) then
       nc%timeUnit=trim(timeUnit)
       call nc%init_time(rc=localrc)
-      call ESMF_LogWrite('  file '//trim(filename)//' has time unit '//trim(timeUnit), ESMF_LOGMSG_INFO)
+      write(message,'(A)') trim(owner_)//' file '//trim(filename)//' has time unit '//trim(timeUnit)
     else
       nc%timeUnit=''
-      call ESMF_LogWrite('  file '//trim(filename)//' has no time unit', ESMF_LOGMSG_WARNING)
+      write(message,'(A)') trim(owner_)//' file '//trim(filename)//' has no time unit'
     endif
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     call nc%redef(owner=owner_, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -2226,8 +2252,8 @@ module mossco_netcdf
 
     call self%putattstring(varid, 'units', '1', rc=localrc)
     call self%putattstring(varid, 'mossco_name', 'speedup', rc=localrc)
-    call self%putattfloat(varid, 'valid_min', 0.0, rc=localrc)
-    call self%putattfloat(varid, 'missing_value', -1E30, rc=localrc)
+    call self%putattr4(varid, 'valid_min', 0.0, rc=localrc)
+    call self%putattr4(varid, 'missing_value', -1E30, rc=localrc)
 
     localrc = nf90_def_var(self%ncid, 'elapsed_wallclock_time', NF90_DOUBLE, (/self%timeDimId/), varid)
     if (localrc==NF90_ENAMEINUSE) then
@@ -2295,7 +2321,7 @@ module mossco_netcdf
     type(type_mossco_netcdf_variable), pointer :: var
     character(ESMF_MAXSTR)         :: message
 
-    if (present(rc)) rc = ESMF_SUCCESS 
+    if (present(rc)) rc = ESMF_SUCCESS
 
     localrc = nf90_inquire(self%ncid, nVariables=nvars, nAttributes=natts)
     if (localrc /= NF90_NOERR) then
@@ -2355,7 +2381,7 @@ module mossco_netcdf
 
     integer                        :: localrc, i, nvars, natts, ndims, udimid
     character(ESMF_MAXSTR)         :: message
-    
+
     if (present(rc)) rc = ESMF_SUCCESS
     localrc = nf90_inquire(self%ncid, nVariables=nvars, nAttributes=natts)
     if (localrc /= NF90_NOERR) then
@@ -5128,8 +5154,8 @@ module mossco_netcdf
   end subroutine MOSSCO_NcPutAttString
 
 #undef ESMF_METHOD
-#define ESMF_METHOD "MOSSCO_NcPutAttInt"
-  subroutine MOSSCO_NcPutAttInt(self, varid, key, value, kwe, owner, rc)
+#define ESMF_METHOD "MOSSCO_NcPutAttI4"
+  subroutine MOSSCO_NcPutAttI4(self, varid, key, value, kwe, owner, rc)
 
     class(type_mossco_netcdf)                           :: self
     integer, intent(in)                                 :: varid
@@ -5154,11 +5180,40 @@ module mossco_netcdf
     endif
 
     if (present(rc)) rc = rc_
-  end subroutine MOSSCO_NcPutAttInt
+  end subroutine MOSSCO_NcPutAttI4
 
 #undef ESMF_METHOD
-#define ESMF_METHOD "MOSSCO_NcPutAttDouble"
-    subroutine MOSSCO_NcPutAttDouble(self, varid, key, value, kwe, owner, rc)
+#define ESMF_METHOD "MOSSCO_NcPutAttI8"
+  subroutine MOSSCO_NcPutAttI8(self, varid, key, value, kwe, owner, rc)
+
+    class(type_mossco_netcdf)                           :: self
+    integer, intent(in)                                 :: varid
+    character(len=*), intent(in)                        :: key
+    integer(ESMF_KIND_I8)                               :: value
+    type(ESMF_KeyWordEnforcer), intent(in), optional :: kwe
+    character(len=*), intent(in), optional           :: owner
+    integer(ESMF_KIND_I4), intent(out), optional     :: rc
+
+    integer(ESMF_KIND_I4)                  :: localrc, rc_
+    character(len=ESMF_MAXSTR)             :: message
+
+    rc_ = ESMF_SUCCESS
+
+    localrc = nf90_put_att(self%ncid, varid, trim(key), value)
+    if (localrc /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc)), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      write(message,'(A,ES10.3,A)') '   cannot write attribute "'//trim(key)//'"="', &
+        value,'" to file "'//trim(self%name)//'"'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      rc_ = ESMF_RC_FILE_WRITE
+    endif
+
+    if (present(rc)) rc = rc_
+  end subroutine MOSSCO_NcPutAttI8
+
+#undef ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_NcPutAttR8"
+    subroutine MOSSCO_NcPutAttR8(self, varid, key, value, kwe, owner, rc)
 
       class(type_mossco_netcdf)                           :: self
       integer, intent(in)                                 :: varid
@@ -5183,11 +5238,11 @@ module mossco_netcdf
       endif
 
       if (present(rc)) rc = rc_
-    end subroutine MOSSCO_NcPutAttDouble
+    end subroutine MOSSCO_NcPutAttR8
 
 #undef ESMF_METHOD
-#define ESMF_METHOD "MOSSCO_NcPutAttFloat"
-  subroutine MOSSCO_NcPutAttFloat(self, varid, key, value, kwe, owner, rc)
+#define ESMF_METHOD "MOSSCO_NcPutAttR4"
+  subroutine MOSSCO_NcPutAttR4(self, varid, key, value, kwe, owner, rc)
 
     class(type_mossco_netcdf)                           :: self
     integer, intent(in)                                 :: varid
@@ -5212,7 +5267,7 @@ module mossco_netcdf
     endif
 
     if (present(rc)) rc = rc_
-  end subroutine MOSSCO_NcPutAttFloat
+  end subroutine MOSSCO_NcPutAttR4
 
 #undef ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_GridAddMaskFromVariable"
