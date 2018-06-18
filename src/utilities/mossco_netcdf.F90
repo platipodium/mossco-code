@@ -1908,90 +1908,88 @@ module mossco_netcdf
       endif
     endif
 
-! #ifndef NO_ISO_FORTRAN_ENV
-!     call nc%putattstring(NF90_GLOBAL, 'compile_compiler_version', compiler_version(), rc=localrc)
-!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+#ifndef NO_ISO_FORTRAN_ENV
+    call nc%putattstring(NF90_GLOBAL, 'compile_compiler_version', compiler_version(), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattstring(NF90_GLOBAL, 'compile_compiler_version', compiler_version(), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+#endif
+
+    call get_command(string)
+    call nc%putattstring(NF90_GLOBAL, 'run_command_line', string, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call getcwd(string)
+    call nc%putattstring(NF90_GLOBAL, 'run_working_directory', string, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    !> @todo check cross-platform compatibility of these gnu extensions
+#ifdef __GNUC__
+    call nc%putatti4(NF90_GLOBAL, 'run_process_id', getpid(), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call getlog(string)
+    write(string,'(A,I5,A,I5,A)') trim(string)// '(id=',getuid(),', gid=',getgid(),')'
+    call nc%putattstring(NF90_GLOBAL, 'originator', string, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call hostnm(string)
+    call nc%putattstring(NF90_GLOBAL, 'run_hostname', string, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ctime(time8(), string)
+    call nc%putattstring(NF90_GLOBAL,'creation_date',string, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+#endif
+
 !
-!     call nc%putattstring(NF90_GLOBAL, 'compile_compiler_version', compiler_version(), rc=localrc)
-!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-! #endif
+!     !>@todo move this to a place where it reads attributes of a state/gridComp (toplevel/main), such that information
+!     !> from the coupling specification is represented here
+!     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'title','MOSSCO coupled simulation')
+!     if (ncStatus /= NF90_NOERR) then
+!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute title', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
+!     endif
 !
-!     call get_command(string)
-!     call nc%putattstring(NF90_GLOBAL, 'run_command_line', string, rc=localrc)
-!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-!
-!     call getcwd(string)
-!     call nc%putattstring(NF90_GLOBAL, 'run_working_directory', string, rc=localrc)
-!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-!
-!     !> @todo check cross-platform compatibility of these gnu extensions
-! #ifdef __GNUC__
-!     call nc%putatti4(NF90_GLOBAL, 'run_process_id', getpid(), rc=localrc)
-!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-!
-!     call getlog(string)
-!     write(string,'(A,I5,A,I5,A)') trim(string)// '(id=',getuid(),', gid=',getgid(),')'
-!     call nc%putattstring(NF90_GLOBAL, 'originator', string, rc=localrc)
-!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-!
-!     call hostnm(string)
-!     call nc%putattstring(NF90_GLOBAL, 'run_hostname', string, rc=localrc)
-!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-!
-!     call ctime(time8(), string)
-!     call nc%putattstring(NF90_GLOBAL,'creation_date',string, rc=localrc)
-!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-!
-! #endif
-!
-! !
-! !     !>@todo move this to a place where it reads attributes of a state/gridComp (toplevel/main), such that information
-! !     !> from the coupling specification is represented here
-! !     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'title','MOSSCO coupled simulation')
-! !     if (ncStatus /= NF90_NOERR) then
-! !       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute title', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-! !       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-! !     endif
-! !
-!
-!     call nc%putattstring(NF90_GLOBAL, 'institution', 'MOSSCO partners (HZG, IOW, and BAW)', rc=localrc)
-!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-!
-!     call nc%putattstring(NF90_GLOBAL, 'institution_hzg', 'Helmholtz-Zentrum Geesthacht', rc=localrc)
-!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-!
-!     call nc%putattstring(NF90_GLOBAL, 'institution_iow', 'Institut für Ostseeforschung Warnemünde', rc=localrc)
-!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-!
-!     call nc%putattstring(NF90_GLOBAL, 'institution_baw', 'Bundesanstalt für Wasserbau', rc=localrc)
-!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-!
-!     call nc%putattstring(NF90_GLOBAL,'history','Created by MOSSCO', rc=localrc)
-!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-!
-!     call nc%putattstring(NF90_GLOBAL,'source','model_mossco', rc=localrc)
-!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-!
-!     call nc%putattstring(NF90_GLOBAL,'references','', rc=localrc)
-!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-!
-!     call nc%putattstring(NF90_GLOBAL,'documentation','http://www.mossco.de/doc', rc=localrc)
-!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-!
-!     call nc%putattstring(NF90_GLOBAL,'contact','carsten.lemmen@hzg.de', rc=localrc)
-!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-!
-!     call nc%putattstring(NF90_GLOBAL,'crs','EPSG:4326', rc=localrc)
-!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattstring(NF90_GLOBAL, 'institution', 'MOSSCO partners (HZG, IOW, and BAW)', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattstring(NF90_GLOBAL, 'institution_hzg', 'Helmholtz-Zentrum Geesthacht', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattstring(NF90_GLOBAL, 'institution_iow', 'Institut für Ostseeforschung Warnemünde', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattstring(NF90_GLOBAL, 'institution_baw', 'Bundesanstalt für Wasserbau', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattstring(NF90_GLOBAL,'history','Created by MOSSCO', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattstring(NF90_GLOBAL,'source','model_mossco', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattstring(NF90_GLOBAL,'references','', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattstring(NF90_GLOBAL,'documentation','http://www.mossco.de/doc', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattstring(NF90_GLOBAL,'contact','carsten.lemmen@hzg.de', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattstring(NF90_GLOBAL,'crs','EPSG:4326', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
 !> @todo write global attributes
-  if (present(state)) then
-  !call MOSSCO_AttributeNetcdfWrite(state, nc%ncid, varid=NF90_GLOBAL, rc=localrc)
-  !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-  !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-else
-  call ESMF_LogWrite('  '//' obtained no information for global attributes in '//trim(filename), ESMF_LOGMSG_WARNING)
-endif
+    if (present(state)) then
+    !call MOSSCO_AttributeNetcdfWrite(state, nc%ncid, varid=NF90_GLOBAL, rc=localrc)
+    else
+      call ESMF_LogWrite('  '//' obtained no information for global attributes in '//trim(filename), ESMF_LOGMSG_WARNING)
+    endif
 
     call nc%enddef(owner=owner_, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
