@@ -22,8 +22,8 @@ EXTRA_DIST=README
 
 SUBDIRS=gotm remtc
 
-TARGETS=libmossco_technical libdefault
-TARGETS=libmossco_aggregation libmossco_grid
+TARGETS=libmossco_technical libmossco_default
+TARGETS+=libmossco_aggregation libmossco_grid
 TARGETS+=libmossco_simplewave libmossco_info libmossco_filtration
 
 ifeq ($(MOSSCO_CMAQ),true)

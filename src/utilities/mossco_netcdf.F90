@@ -103,22 +103,6 @@ module mossco_netcdf
   integer, parameter :: MOSSCO_NC_NOERR=ESMF_SUCCESS
   integer, parameter :: MOSSCO_NC_EXISTING=1
 
-  interface MOSSCO_NcPutAtt
-    module procedure MOSSCO_NcPutAttString
-    module procedure MOSSCO_NcPutAttI4
-    module procedure MOSSCO_NcPutAttI8
-    module procedure MOSSCO_NcPutAttR8
-    module procedure MOSSCO_NcPutAttR4
-  end interface
-
-  interface putatt
-    module procedure MOSSCO_NcPutAttString
-    module procedure MOSSCO_NcPutAttI4
-    module procedure MOSSCO_NcPutAttI8
-    module procedure MOSSCO_NcPutAttR8
-    module procedure MOSSCO_NcPutAttR4
-  end interface
-
   interface MOSSCO_AttributeNetcdfWrite
     module procedure MOSSCO_AttributeNetcdfWriteField
     module procedure MOSSCO_AttributeNetcdfWriteState
@@ -1839,14 +1823,19 @@ module mossco_netcdf
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdfCreate"
-  function mossco_netcdfCreate(filename, kwe, timeUnit, state, owner, rc) result(nc)
+  function mossco_netcdfCreate(filename, kwe, timeUnit, state, rc) result(nc)
 
+    !> @todo adding an optional keyword "owner" to this routine
+    !> results in a segfault only on macOS clang5/gfortran7
+#ifndef NO_ISO_FORTRAN_ENV
     use iso_fortran_env
+#endif
     implicit none
 
     character(len=*), intent(in)          :: filename
     logical, optional, intent(in)         :: kwe ! Keyword-enforcer
-    character(len=*),optional, intent(in) :: timeUnit, owner
+    character(len=*),optional, intent(in) :: timeUnit
+    !character(len=*),optional, intent(in) :: timeUnit, owner
     type(ESMF_State), optional, intent(in):: state
     integer, intent(out),optional :: rc
     type(type_mossco_netcdf)      :: nc
@@ -1860,7 +1849,7 @@ module mossco_netcdf
     owner_ = '--'
     if (present(kwe)) rc_ = ESMF_SUCCESS
     if (present(rc)) rc = rc_
-    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+    !if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
 
     inquire(file=trim(filename), exist=isPresent)
     if (ispresent) then
@@ -1903,15 +1892,6 @@ module mossco_netcdf
     call nc%redef(owner=owner_, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    !> @todo write global attributes
-    if (present(state)) then
-      !call MOSSCO_AttributeNetcdfWrite(state, nc%ncid, varid=NF90_GLOBAL, rc=localrc)
-      !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    else
-      call ESMF_LogWrite('  '//' obtained no information for global attributes in '//trim(filename), ESMF_LOGMSG_WARNING)
-    endif
-
     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'mossco_sha_key',MOSSCO_GIT_SHA_KEY)
     if (ncStatus /= NF90_NOERR) then
       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute mossco_sha_key', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -1923,113 +1903,88 @@ module mossco_netcdf
       endif
     endif
 
-! #ifndef NO_ISO_FORTRAN_ENV
-!     !> @todo check cross-platform compatibility of the iso_fortran_env calls
-!     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'compile_compiler_version',compiler_version())
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute compile_compiler_version', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
-!     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'compile_compiler_options',compiler_options())
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute compile_compiler_options', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
-! #endif
-!
-!     call get_command(string)
-!     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'run_command_line',trim(string))
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute run_command_line', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
-!
-!     call getcwd(string)
-!     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'run_working_directory',trim(string))
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute run_working_directory', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
-! #ifndef NO_ISO_FORTRAN_ENV
-!     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'run_process_id',getpid())
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute run_process_id', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
-! #endif
-!     !> @todo check cross-platform compatibility of these gnu extensions
-!     call getlog(string)
-! #ifndef NO_ISO_FORTRAN_ENV
-!     write(string,'(A,I5,A,I5,A)') trim(string)// '(id=',getuid(),', gid=',getgid(),')'
-! #endif
-!     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'run_user',trim(string))
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute run_user', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
-!
-!     call hostnm(string)
-!     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'run_hostname',trim(string))
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute run_hostname', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
+#ifndef NO_ISO_FORTRAN_ENV
+    call nc%putattstring(NF90_GLOBAL, 'compile_compiler_version', compiler_version(), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattstring(NF90_GLOBAL, 'compile_compiler_version', compiler_version(), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+#endif
+
+    call get_command(string)
+    call nc%putattstring(NF90_GLOBAL, 'run_command_line', string, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call getcwd(string)
+    call nc%putattstring(NF90_GLOBAL, 'run_working_directory', string, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    !> @todo check cross-platform compatibility of these gnu extensions
+#ifdef __GNUC__
+    call nc%putatti4(NF90_GLOBAL, 'run_process_id', getpid(), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call getlog(string)
+    write(string,'(A,I5,A,I5,A)') trim(string)// '(id=',getuid(),', gid=',getgid(),')'
+    call nc%putattstring(NF90_GLOBAL, 'originator', string, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call hostnm(string)
+    call nc%putattstring(NF90_GLOBAL, 'run_hostname', string, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ctime(time8(), string)
+    call nc%putattstring(NF90_GLOBAL,'creation_date',string, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+#endif
+
 !
 !     !>@todo move this to a place where it reads attributes of a state/gridComp (toplevel/main), such that information
-!     !> from the copuling specification is represented here
+!     !> from the coupling specification is represented here
 !     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'title','MOSSCO coupled simulation')
 !     if (ncStatus /= NF90_NOERR) then
 !       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute title', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
 !       call ESMF_Finalize(endflag=ESMF_END_ABORT)
 !     endif
 !
-!     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'institution','MOSSCO partners (HZG, IOW, and BAW)')
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute institution', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
-!
-!     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'institution_hzg','Helmholtz-Zentrum Geesthacht')
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute institution_hzg', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
-!
-!     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'institution_iow','Institut für Ostseeforschung Warnemünde')
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute institution_iow', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
-!
-!     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'institution_baw','Bundesanstalt für Wasserbau')
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute institution_baw', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
-!
-!     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'history','Created by MOSSCO')
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute history', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
-!
-!     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'source','model_mossco')
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute source', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
-!
-!     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'references','http://www.mossco.de/doc')
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute references', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
-!
-!     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'comment','')
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute comment', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
+
+    call nc%putattstring(NF90_GLOBAL, 'institution', 'MOSSCO partners (HZG, IOW, and BAW)', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattstring(NF90_GLOBAL, 'institution_hzg', 'Helmholtz-Zentrum Geesthacht', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattstring(NF90_GLOBAL, 'institution_iow', 'Institut für Ostseeforschung Warnemünde', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattstring(NF90_GLOBAL, 'institution_baw', 'Bundesanstalt für Wasserbau', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattstring(NF90_GLOBAL,'history','Created by MOSSCO', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattstring(NF90_GLOBAL,'source','model_mossco', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattstring(NF90_GLOBAL,'references','', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattstring(NF90_GLOBAL,'documentation','http://www.mossco.de/doc', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattstring(NF90_GLOBAL,'contact','carsten.lemmen@hzg.de', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattstring(NF90_GLOBAL,'crs','EPSG:4326', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+!> @todo write global attributes
+    if (present(state)) then
+    !call MOSSCO_AttributeNetcdfWrite(state, nc%ncid, varid=NF90_GLOBAL, rc=localrc)
+    else
+      call ESMF_LogWrite('  '//' obtained no information for global attributes in '//trim(filename), ESMF_LOGMSG_WARNING)
+    endif
 
     call nc%enddef(owner=owner_, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -2374,15 +2329,19 @@ module mossco_netcdf
 
     implicit none
 
-    class(type_mossco_netcdf)      :: self
+    class(type_mossco_netcdf)                        :: self
     type(ESMF_KeyWordEnforcer), intent(in), optional :: kwe
     character(len=*), intent(in), optional           :: owner
     integer(ESMF_KIND_I4), intent(out), optional     :: rc
 
-    integer                        :: localrc, i, nvars, natts, ndims, udimid
-    character(ESMF_MAXSTR)         :: message
+    integer(ESMF_KIND_I4)          :: localrc, i, nvars, natts
+    integer(ESMF_KIND_I4)          :: ndims, udimid, rc_
+    character(ESMF_MAXSTR)         :: message, owner_
 
+    rc_ = ESMF_SUCCESS
     if (present(rc)) rc = ESMF_SUCCESS
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+
     localrc = nf90_inquire(self%ncid, nVariables=nvars, nAttributes=natts)
     if (localrc /= NF90_NOERR) then
       call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot inquire file '//trim(self%name), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -5011,114 +4970,82 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
     endif
-
+!
 ! #ifndef NO_ISO_FORTRAN_ENV
-!     !> @todo check cross-platform compatibility of the iso_fortran_env calls
-!     ncStatus = nf90_put_att(self%ncid,NF90_GLOBAL,'compile_compiler_version',compiler_version())
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute compile_compiler_version', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
-!     ncStatus = nf90_put_att(self%ncid,NF90_GLOBAL,'compile_compiler_options',compiler_options())
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute compile_compiler_options', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
+!     call self%putattstring(NF90_GLOBAL, 'compile_compiler_version', compiler_version(), rc=localrc)
+!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+!
+!     call self%putattstring(NF90_GLOBAL, 'compile_compiler_version', compiler_version(), rc=localrc)
+!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 ! #endif
 !
 !     call get_command(string)
-!     ncStatus = nf90_put_att(self%ncid,NF90_GLOBAL,'run_command_line',trim(string))
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute run_command_line', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
+!     call self%putattstring(NF90_GLOBAL, 'run_command_line', string, rc=localrc)
+!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 !
 !     call getcwd(string)
-!     ncStatus = nf90_put_att(self%ncid,NF90_GLOBAL,'run_working_directory',trim(string))
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute run_working_directory', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
-! #ifndef NO_ISO_FORTRAN_ENV
-!     ncStatus = nf90_put_att(self%ncid,NF90_GLOBAL,'run_process_id',getpid())
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute run_process_id', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
-! #endif
+!     call self%putattstring(NF90_GLOBAL, 'run_working_directory', string, rc=localrc)
+!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+!
 !     !> @todo check cross-platform compatibility of these gnu extensions
+! #ifdef __GNUC__
+!     call self%putatti4(NF90_GLOBAL, 'run_process_id', getpid(), rc=localrc)
+!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+!
 !     call getlog(string)
-! #ifndef NO_ISO_FORTRAN_ENV
 !     write(string,'(A,I5,A,I5,A)') trim(string)// '(id=',getuid(),', gid=',getgid(),')'
-! #endif
-!     ncStatus = nf90_put_att(self%ncid,NF90_GLOBAL,'run_user',trim(string))
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute run_user', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
+!     call self%putattstring(NF90_GLOBAL, 'originator', string, rc=localrc)
+!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 !
 !     call hostnm(string)
-!     ncStatus = nf90_put_att(self%ncid,NF90_GLOBAL,'run_hostname',trim(string))
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute run_hostname', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
+!     call self%putattstring(NF90_GLOBAL, 'run_hostname', string, rc=localrc)
+!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 !
-!     !>@todo move this to a place where it reads attributes of a state/gridComp (toplevel/main), such that information
-!     !> from the copuling specification is represented here
-!     ncStatus = nf90_put_att(self%ncid,NF90_GLOBAL,'title','MOSSCO coupled simulation')
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute title', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
+!     call ctime(time8(), string)
+!     call self%putattstring(NF90_GLOBAL,'creation_date',string, rc=localrc)
+!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 !
-!     ncStatus = nf90_put_att(self%ncid,NF90_GLOBAL,'institution','MOSSCO partners (HZG, IOW, and BAW)')
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute institution', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
+! #endif
 !
-!     ncStatus = nf90_put_att(self%ncid,NF90_GLOBAL,'institution_hzg','Helmholtz-Zentrum Geesthacht')
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute institution_hzg', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
+!     !
+!     !     !>@todo move this to a place where it reads attributes of a state/gridComp (toplevel/main), such that information
+!     !     !> from the coupling specification is represented here
+!     !     ncStatus = nf90_put_att(self%ncid,NF90_GLOBAL,'title','MOSSCO coupled simulation')
+!     !     if (ncStatus /= NF90_NOERR) then
+!     !       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute title', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+!     !       call ESMF_Finalize(endflag=ESMF_END_ABORT)
+!     !     endif
+!     !
 !
-!     ncStatus = nf90_put_att(self%ncid,NF90_GLOBAL,'institution_iow','Institut für Ostseeforschung Warnemünde')
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute institution_iow', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
+!     call self%putattstring(NF90_GLOBAL, 'institution', 'MOSSCO partners (HZG, IOW, and BAW)', rc=localrc)
+!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 !
-!     ncStatus = nf90_put_att(self%ncid,NF90_GLOBAL,'institution_baw','Bundesanstalt für Wasserbau')
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute institution_baw', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
+!     call self%putattstring(NF90_GLOBAL, 'institution_hzg', 'Helmholtz-Zentrum Geesthacht', rc=localrc)
+!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 !
-!     ncStatus = nf90_put_att(self%ncid,NF90_GLOBAL,'history','Created by MOSSCO')
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute history', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
+!     call self%putattstring(NF90_GLOBAL, 'institution_iow', 'Institut für Ostseeforschung Warnemünde', rc=localrc)
+!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 !
-!     ncStatus = nf90_put_att(self%ncid,NF90_GLOBAL,'source','model_mossco')
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute source', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
+!     call self%putattstring(NF90_GLOBAL, 'institution_baw', 'Bundesanstalt für Wasserbau', rc=localrc)
+!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 !
-!     ncStatus = nf90_put_att(self%ncid,NF90_GLOBAL,'references','http://www.mossco.de/doc')
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute references', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
+!     call self%putattstring(NF90_GLOBAL,'history','Created by MOSSCO', rc=localrc)
+!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 !
-!     ncStatus = nf90_put_att(self%ncid,NF90_GLOBAL,'comment','')
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute comment', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
+!     call self%putattstring(NF90_GLOBAL,'source','model_mossco', rc=localrc)
+!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+!
+!     call self%putattstring(NF90_GLOBAL,'references','', rc=localrc)
+!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+!
+!     call self%putattstring(NF90_GLOBAL,'documentation','http://www.mossco.de/doc', rc=localrc)
+!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+!
+!     call self%putattstring(NF90_GLOBAL,'contact','carsten.lemmen@hzg.de', rc=localrc)
+!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+!
+!     call self%putattstring(NF90_GLOBAL,'crs','EPSG:4326', rc=localrc)
+!     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call self%enddef(owner=owner_, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -5253,9 +5180,12 @@ module mossco_netcdf
     integer(ESMF_KIND_I4), intent(out), optional     :: rc
 
     integer(ESMF_KIND_I4)                  :: localrc, rc_
-    character(len=ESMF_MAXSTR)             :: message
+    character(len=ESMF_MAXSTR)             :: message, owner_
 
+    owner_ = '--'
     rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
 
     localrc = nf90_put_att(self%ncid, varid, trim(key), value)
     if (localrc /= NF90_NOERR) then

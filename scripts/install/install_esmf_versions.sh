@@ -54,7 +54,7 @@ if [ -z "${ESMF_COMMUNICATORS}" ]; then
 else
   COMMS="${ESMF_COMMUNICATORS}"
 fi
-echo "  $0 installs ESMF for communicators ${COMPS}"
+echo "  $0 installs ESMF for communicators ${COMMS}"
 
 # Determine what ESMF installation directory
 if [ -z "${ESMF_INSTALL_PREFIX}" ]; then
