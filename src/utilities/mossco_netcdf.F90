@@ -1831,8 +1831,10 @@ module mossco_netcdf
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdfCreate"
-  function mossco_netcdfCreate(filename, kwe, timeUnit, state, owner, rc) result(nc)
+  function mossco_netcdfCreate(filename, kwe, timeUnit, state, rc) result(nc)
 
+    !> @todo adding an optional keyword "owner" to this routine
+    !> results in a segfault only on macOS clang5/gfortran7
 #ifndef NO_ISO_FORTRAN_ENV
     use iso_fortran_env
 #endif
@@ -1840,7 +1842,8 @@ module mossco_netcdf
 
     character(len=*), intent(in)          :: filename
     logical, optional, intent(in)         :: kwe ! Keyword-enforcer
-    character(len=*),optional, intent(in) :: timeUnit, owner
+    character(len=*),optional, intent(in) :: timeUnit
+    !character(len=*),optional, intent(in) :: timeUnit, owner
     type(ESMF_State), optional, intent(in):: state
     integer, intent(out),optional :: rc
     type(type_mossco_netcdf)      :: nc
@@ -1854,7 +1857,7 @@ module mossco_netcdf
     owner_ = '--'
     if (present(kwe)) rc_ = ESMF_SUCCESS
     if (present(rc)) rc = rc_
-    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+    !if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
 
     inquire(file=trim(filename), exist=isPresent)
     if (ispresent) then
