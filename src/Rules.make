@@ -873,52 +873,30 @@ endif
 
 #$(AR) Trus $(MOSSCO_LIBRARY_PATH)/libgetm_external.a $(GETM_LIBRARY_PATH)/lib*_prod.a
 
-install: install-lib
+install-mossco-bin:
 	@ln -sf $(MOSSCO_DIR)/scripts/mossco.sh  $(MOSSCO_INSTALL_PREFIX)/bin/mossco
 	@ln -sf $(MOSSCO_DIR)/scripts/stitch_tiles.py  $(MOSSCO_INSTALL_PREFIX)/bin/stitch
-#@install  $(MOSSCO_DIR)/bin/mossco $(MOSSCO_INSTALL_PREFIX)/bin
-#	$(MOSSCO_CCOMPILER) -shared -o $(MOSSCO_INSTALL_PREFIX)/libmossco.so -Wl,--whole-archive $(MOSSCO_LIBRARY_PATH)/*.a
-	@cp $(MOSSCO_MODULE_PATH)/*.mod $(MOSSCO_INSTALL_PREFIX)/include
-	@echo "Use executables 'mossco' and 'stitch' in $(MOSSCO_INSTALL_PREFIX)/bin"
-	@echo "Use library with '-L $(MOSSCO_INSTALL_PREFIX)/lib -lmossco -lmossco_fabm'"
-	@echo "Use includes in  '-I $(MOSSCO_INSTALL_PREFIX)/include'"
+	@echo "Executables 'mossco' and 'stitch' have been installed to $(MOSSCO_INSTALL_PREFIX)/bin. "
+	@echo "Consider to add this directory to your PATH"
 
-install-lib:
-	@echo create libmossco.a > $(MOSSCO_INSTALL_PREFIX)/lib/libmossco.mri
-	@for F in $(MOSSCO_LIBRARY_PATH)/*.a; do echo addlib $(basename $F) >> $(MOSSCO_INSTALL_PREFIX)/lib/libmossco.mri; done
-	@echo save >> $(MOSSCO_INSTALL_PREFIX)/lib/libmossco.mri
-	@echo end >> $(MOSSCO_INSTALL_PREFIX)/lib/libmossco.mri
-#	$(AR) -M < $(MOSSCO_INSTALL_PREFIX)/lib/libmossco.mri
+install-mossco-include:
+	@cp $(MOSSCO_MODULE_PATH)/*.mod $(MOSSCO_INSTALL_PREFIX)/include
+	@echo "Use includes with  '-I $(MOSSCO_INSTALL_PREFIX)/include'"
+
+install: install-mossco-bin install-mossco-include install-mossco-lib
+
+install-mossco-lib:
 	@(cd $(MOSSCO_LIBRARY_PATH); for F in *.a ; do $(AR) x $$F; done )
-ifeq ($(MOSSCO_FABM),true)
-#	@(cd $(MOSSCO_LIBRARY_PATH); $(AR) x $(MOSSCO_DIR)/external/fabm/install/lib/libfabm.a )
-endif
 	@(cd $(MOSSCO_LIBRARY_PATH); $(RM) -f SORTED __*; $(AR) crus libmossco.a *.o )
 	@$(RM) -f $(MOSSCO_LIBRARY_PATH)/*.o
 	@mv $(MOSSCO_LIBRARY_PATH)/libmossco.a $(MOSSCO_INSTALL_PREFIX)/lib/;
-
-# The following renames all fabm symbols in the mossco library and prefixes
-# them with ___mossco_fabm instead of ___fabm.  Also, all internal fabm
-# symbols within libfabm (renamed to libmossco_fabm) are changed by replacing
-# the ___ prefix with ___mossco_.  The implementation below is likely to not
-# be portable
 ifeq ($(MOSSCO_FABM),true)
 	@cp $(MOSSCO_DIR)/external/fabm/install/lib/libfabm.a $(MOSSCO_INSTALL_PREFIX)/lib/libmossco_fabm.a
-ifeq ($(MOSSCO_OBJC),objconv)
-	@(cd $(MOSSCO_INSTALL_PREFIX)/lib ; for F in libmossco.a; do \
-	  $(OBJC) -np:___fabm_MOD:___mossco_fabm_MOD \
-	  -np:___fabm_types_MOD:___mossco_fabm_types_MOD \
-	  -np:___fabm_properties_MOD:___mossco_fabm_properties_MOD \
-	  -np:___fabm_expressions_MOD:___mossco_fabm_expressions_MOD \
-	  -np:___fabm_config_MOD:___mossco_fabm_config_MOD \
-	  -np:___fabm_driver_MOD:___mossco_fabm_driver_MOD \
-	  -np:___fabm_standard_variables_MOD:___mossco_fabm_standard_variables_MOD \
-	  $$F $$F.tmp > /dev/null && mv $$F.tmp $$F; done  \
-	)
-	(cd $(MOSSCO_INSTALL_PREFIX)/lib ; for F in libmossco_fabm.a; do \
-	  $(OBJC) -np:___:___mossco_ $$F $$F.tmp  > /dev/null && mv $$F.tmp $$F; done  \
-	)
-endif
+	@(cd $(MOSSCO_INSTALL_PREFIX)/lib; python $(MOSSCO_DIR)/scripts/rename_fabm_symbols.py)
+	@echo "Renamed symbols in fabm library __fabm_* => ___mossco_fabm_*"
+	@echo "Use library with '-L $(MOSSCO_INSTALL_PREFIX)/lib -lmossco -lmossco_fabm'"
+else
+	@echo "Use library with '-L $(MOSSCO_INSTALL_PREFIX)/lib -lmossco'"
 endif
 
 .PHONY: mossco_clean

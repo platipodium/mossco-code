@@ -24,7 +24,8 @@ def replace_fabm_symbols_objcopy(MOSSCO_INSTALL_PREFIX, OBJC):
     items = re.split("\s+", items)
     symbols.extend(items)
 
-    items = ['fabm','fabm_types','fabm_properties','fabm_config','fabm_driver','fabm_standard_variables']
+    items = ['fabm','fabm_types','fabm_properties','fabm_config','fabm_driver',
+             'fabm_standard_variables','fabm_expressions', 'fabm_builtin_models', 'fabm_particle','fabm_coupling','fabm_library']
 
     itemsymbols=[]
     for item in items:
@@ -44,7 +45,7 @@ def replace_fabm_symbols_objcopy(MOSSCO_INSTALL_PREFIX, OBJC):
         cmd = OBJC + ' --redefine-syms=objcopy_replace_symbols.tsv ' + library
         subprocess.call([cmd], shell=True)
 
-def replace_fabm_symbols_objconv(MOSSCO_INSTALL_PREFIX, OBC):
+def replace_fabm_symbols_objconv(MOSSCO_INSTALL_PREFIX, OBJC):
 
     cmd=OBJC + ' -ds ' + os.path.join(MOSSCO_INSTALL_PREFIX,'lib','libmossco.a')
     symbols=subprocess.check_output([cmd], shell=True).decode("utf-8")
