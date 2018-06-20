@@ -6,41 +6,45 @@
 # ocean component (such as getm/schism/hamsom) and writes out to netcdf
 # the data that was read in and that is produced by the ocean component."
 # ...
-dependencies:
-  - wind_input:
-    - component: grid_input
-      grid: grid_input
-
 instances:
-  - grid_input: grid
-  - wind_input: netcdf_input
-  - schism_output: netcdf
-  - wind_output: netcdf
-  - temperature_output: netcdf
+  - coastdat_grid: grid
+  - coastdat: netcdf_input
+  - schism_mesh_output: netcdf
+  - schism_grid_output: netcdf
   - regrid_tomesh: regrid_coupler
   - regrid_togrid: regrid_coupler
   - schism: schism_esmf
+  - atmos_default: default
+
+dependencies:
+  - coastdat:
+    - component: coastdat_grid
+      grid: coastdat_grid
 
 coupling:
   - components:
-    - grid_input
-    - wind_input
+    - coastdat_grid
+    - coastdat
     interval: none
   - components:
-    - wind_input
+    - coastdat
     - regrid_tomesh
     - schism
     interval: 30 m
   - components:
-    - wind_input
-    - wind_output
+    - atmos_default
+    - schism
+    interval: none
+  - components:
+    - coastdat
+    - schism_grid_output
     interval: 30 m
   - components:
     - schism
-    - schism_output
+    - schism_mesh_output
     interval: 30 m
   - components:
     - schism
     - regrid_togrid
-    - temperature_output
+    - schism_grid_output
     interval: 30 m

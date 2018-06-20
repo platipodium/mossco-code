@@ -1,4 +1,7 @@
-dissolved_oxygen_at_soil_surface       280.0
-dissolved_phosphate_at_soil_surface    1.0
-porosity_at_soil_surface 0.7
-radiation_in_water  100.0  'W m**-2'
+dissolved_oxygen_at_soil_surface      280.0   'mmol O m-2'
+dissolved_phosphate_at_soil_surface   1.0     'mmol P m-3'
+porosity_at_soil_surface              0.7     '1'
+radiation_in_water                    100.0   'W m-2'
+downwelling_short_wave_radiation_at_water_surface 150.0 'W m-2'
+evaporation_flux_at_water_surface                 0.0   'W m-2'
+precipitation_flux_at_water_surface               0.0   'W m-2'
