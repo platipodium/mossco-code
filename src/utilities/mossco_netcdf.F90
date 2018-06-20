@@ -26,6 +26,10 @@
 
 #define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+#define _MOSSCO_LOG_AND_FINALIZE_ON_NC_ERROR_(X) if (ESMF_LogFoundNetCDFError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+#define _MOSSCO_NC_ERROR_(X) if (ESMF_LogFoundNetCDFError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) then ; if (present(rc)) then;  rc=ESMF_RC_NOT_FOUND; return; else ; call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT); endif; endif
+
 module mossco_netcdf
 
   use mossco_variable_types, only: mossco_variableInfo
@@ -132,7 +136,7 @@ module mossco_netcdf
 
     integer                     :: ncStatus, varid, rc_, rank=0, localrc
     integer                     :: nDims=0, nAtts, udimid, dimlen
-    character(len=ESMF_MAXSTR)  :: varname, message, owner_
+    character(len=ESMF_MAXSTR)  :: varname, message, owner_, format
     type(type_mossco_netcdf_variable),pointer :: var=> null()
 
     integer(ESMF_KIND_I4), dimension(:), allocatable :: lbnd, ubnd, exclusiveCount
@@ -246,7 +250,8 @@ module mossco_netcdf
       return
     endif
 
-    ncStatus=nf90_inq_varid(self%ncid, var%name, varid)
+    ncStatus = nf90_inq_varid(self%ncid, var%name, varid)
+    !_MOSSCO_NC_ERROR_(rc_)
     if (ncStatus /= NF90_NOERR) then
       call ESMF_LogWrite(trim(owner_)//' could not find variable '//trim(varname), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       if (present(rc)) rc=ESMF_RC_NOT_FOUND
@@ -256,7 +261,9 @@ module mossco_netcdf
     if (any(var%dimids==self%timeDimId)) ndims=size(var%dimids)-1
 
     if (rank /= nDims) then
-       write(message,'(A)') trim(owner_)//' field rank and netcdf dimension count do not match'
+       write(format,'(A)') '(A'//intformat(rank)//',A,'//intformat(nDims)//'A)'
+       write(message, format) trim(owner_)//' field rank ',rank, &
+         ' and netcdf dimension count ',nDims,' do not match'
        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
        if (present(rc)) rc=ESMF_RC_NOT_FOUND
        return
@@ -972,7 +979,6 @@ module mossco_netcdf
       call self%create_mesh_coordinate(mesh, owner=owner_, rc=rc)
 
       call ESMF_MeshGet(mesh, coordSys=coordSys, rc=localrc)
-      dimCount = 1
 
     elseif (geomType==ESMF_GEOMTYPE_LOCSTREAM) then
       call ESMF_FieldGet(field, locStream=locStream, rc=localrc)
@@ -985,7 +991,7 @@ module mossco_netcdf
       dimCount = 1
 
     elseif (geomType==ESMF_GEOMTYPE_XGRID) then
-      write(message,'(A)')  '  geometry type XGRID cannot be handled yet'
+      write(message,'(A)')  trim(owner_)//' geometry type XGRID cannot be handled yet'
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
       return
     endif
