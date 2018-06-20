@@ -49,10 +49,10 @@ ifeq ($(wildcard $(SCHISM_ESMF_DIR)/schism_esmf_component.F90),)
 $(error Cannot find schism_esmf_component.)
 endif
 
-
 LIBS+= -L$(SCHISM_DIR)/lib -lhydro -lcore -lfabm_schism -lfabm
 LIBS+= -L$(PARMETIS_DIR) -lparmetis -lmetis
 LIBS+= -L$(MOSSCO_DIR)/lib -lmossco -lmossco_fabm
+F90FLAGS+= -DUSE_FABM
 F90FLAGS+= -I$(SCHISM_DIR)/include
 F90FLAGS+= -I$(MOSSCO_DIR)/include
 LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
@@ -82,7 +82,7 @@ outputs:
 
 clean:
 	@$(RM) *.o *.mod PET* fort.* *output.nc *.vtk total*.dat flux.dat
-	@$(RM) -rf *dSYM *.out core.* *.stderr *.stdout fort.* mirror.out 
+	@$(RM) -rf *dSYM *.out core.* *.stderr *.stdout fort.* mirror.out
 	@$(RM) -f *.xml
 
 config:  grid_input.cfg wind_input.cfg wind.nc
