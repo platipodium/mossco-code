@@ -59,11 +59,14 @@ def replace_fabm_symbols_objconv(MOSSCO_INSTALL_PREFIX, OBJC):
     infix = symbols[0]
     postfix = symbols[1]
 
+    items = ['fabm','fabm_types','fabm_properties','fabm_config','fabm_driver',
+             'fabm_standard_variables','fabm_expressions', 'fabm_builtin_models', 'fabm_particle','fabm_coupling','fabm_library']
+
     for lib in ['libmossco.a', 'libmossco_fabm.a']:
 
         library = os.path.join(MOSSCO_INSTALL_PREFIX,'lib',lib)
         cmd = OBJC
-        for item in ['fabm','fabm_types','fabm_properties','fabm_config','fabm_driver','fabm_standard_variables']:
+        for item in items:
             cmd += ' -np:' + prefix + item + infix + ':' + prefix + 'mossco_' + item + infix
 
         cmd += ' ' + library
@@ -79,7 +82,7 @@ if __name__ == '__main__':
     else:
         MOSSCO_INSTALL_PREFIX=os.environ['MOSSCO_DIR']
 
-    OBJCs = ['objcopy','gobjcopy','objconv']
+    OBJCs = ['objcopy','objconv', 'gobjcopy']
 
     if (len(sys.argv) > 2):
         OBJC=sys.argv[2]
