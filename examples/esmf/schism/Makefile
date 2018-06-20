@@ -82,7 +82,8 @@ outputs:
 
 clean:
 	@$(RM) *.o *.mod PET* fort.* *output.nc *.vtk total*.dat flux.dat
-	@$(RM) -rf *dSYM *.out core.* *.stderr *.stdout
+	@$(RM) -rf *dSYM *.out core.* *.stderr *.stdout fort.* mirror.out 
+	@$(RM) -f *.xml
 
 config:  grid_input.cfg wind_input.cfg wind.nc
 

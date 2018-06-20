@@ -13,3 +13,6 @@ outputs
 total*.dat
 flux.dat
 *.out
+fort.*
+*.xml
+mirror.out
