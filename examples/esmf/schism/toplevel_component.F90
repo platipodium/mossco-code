@@ -1712,7 +1712,7 @@ module toplevel_component
           if (ms_r8>0.0d0 .and. realValue>0.0d0) then
             realValue = realValue / ms_r8
             write(formatString,'(A)') '(A,X,'//intformat(int(realValue))//')'
-            write(message, formatString) trim(message)//' with speedup ', int(realValue)
+            !write(message, formatString) trim(message)//' with speedup ', int(realValue)
           endif
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
