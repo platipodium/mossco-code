@@ -56,6 +56,12 @@ else
 endif
 
 # System-dependent flags
+ifeq ($(shell hostname),rznp0023)
+  export ARFLAGS=rv
+  export AR=ar
+  $(warning use changed ARFLAGS=rvU)
+endif
+
 ifeq ($(shell hostname),KSEZ8002)
   export ARFLAGS=rvU
   export AR=ar
