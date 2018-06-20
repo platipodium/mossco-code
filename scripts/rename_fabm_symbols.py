@@ -15,6 +15,7 @@ def replace_fabm_symbols_objcopy(MOSSCO_INSTALL_PREFIX, OBJC):
     symbols = re.split('mossco_stringcopy',symbols[1])
     infix = symbols[0]
     postfix = symbols[1]
+    print ('Symbol post/in/prefixes ' + '/'.join([prefix,infix,postfix]))
 
     cmd = 'nm libmossco.a'
     symbols = subprocess.check_output([cmd], shell=True).decode("utf-8")
@@ -38,6 +39,9 @@ def replace_fabm_symbols_objcopy(MOSSCO_INSTALL_PREFIX, OBJC):
         for item in list(itemsymbols):
             replace = prefix + 'mossco_' + item[len(prefix):]
             f.write(' '.join([item,replace,'\n']))
+	for item in items:
+            replace = prefix + 'mossco_' + item + '.' + postfix
+            f.write(' '.join([prefix + item + '.' + postfix,replace,'\n']))
 
     for lib in ['libmossco.a', 'libmossco_fabm.a']:
 
