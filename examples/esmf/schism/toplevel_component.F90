@@ -18,6 +18,9 @@
 #define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "toplevel_component.F90"
+
+#define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
 module toplevel_component
 
   use esmf
@@ -26,13 +29,11 @@ module toplevel_component
   use mossco_component
 
   use link_connector, only : link_connector_SetServices => SetServices 
-  use regrid_coupler, only : regrid_coupler_SetServices => SetServices 
   use default_component, only : default_SetServices => SetServices 
   use netcdf_input_component, only : netcdf_input_SetServices => SetServices 
   use fabm_sediment_component, only : fabm_sediment_SetServices => SetServices 
   use netcdf_component, only : netcdf_SetServices => SetServices 
   use schism_esmf_component, only : schism_esmf_SetServices => SetServices 
-  use grid_component, only : grid_SetServices => SetServices 
   use pelagic_soil_connector, only : pelagic_soil_connector_SetServices => SetServices 
 
   implicit none
@@ -279,21 +280,18 @@ module toplevel_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Allocate the fields for all gridded components and their names
-    numGridComp = 8
+    numGridComp = 5
     allocate(gridCompList(numGridComp), stat=localrc)
     allocate(gridCompClockList(numGridComp), stat=localrc)
     allocate(gridCompNameList(numGridComp), stat=localrc)
     allocate(gridImportStateList(numGridComp), stat=localrc)
     allocate(gridExportStateList(numGridComp), stat=localrc)
 
-    gridCompNameList(1) = 'schism_grid_output'
-    gridCompNameList(2) = 'schism_mesh_output'
-    gridCompNameList(3) = 'wind_output'
-    gridCompNameList(4) = 'default'
-    gridCompNameList(5) = 'schism'
-    gridCompNameList(6) = 'fabm_sediment'
-    gridCompNameList(7) = 'grid_input'
-    gridCompNameList(8) = 'wind_input'
+    gridCompNameList(1) = 'schism_mesh_output'
+    gridCompNameList(2) = 'default'
+    gridCompNameList(3) = 'schism'
+    gridCompNameList(4) = 'restart_sediment'
+    gridCompNameList(5) = 'fabm_sediment'
 
     !! Create all gridded components, and create import and export states for these
 
@@ -331,18 +329,6 @@ module toplevel_component
       petList=petList, clock=gridCompClockList(5), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    gridCompList(6) = ESMF_GridCompCreate(name=trim(gridCompNameList(6)),  &
-      petList=petList, clock=gridCompClockList(6), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    gridCompList(7) = ESMF_GridCompCreate(name=trim(gridCompNameList(7)),  &
-      petList=petList, clock=gridCompClockList(7), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    gridCompList(8) = ESMF_GridCompCreate(name=trim(gridCompNameList(8)),  &
-      petList=petList, clock=gridCompClockList(8), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     do i=1, numGridComp
       gridExportStateList(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED, &
@@ -362,7 +348,7 @@ module toplevel_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
-    !! Adding meta information to output component schism_grid_output
+    !! Adding meta information to output component schism_mesh_output
 
     !>@todo find out why attributeSet does not work
 
@@ -376,70 +362,31 @@ module toplevel_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
-    !! Adding meta information to output component schism_mesh_output
-
-    !>@todo find out why attributeSet does not work
-
-    do i=1, numGridComp
-      if (i<10) then
-        write(message,'(A,I1)') 'gridded_component_', i
-      else
-        write(message,'(A,I2)') 'gridded_component_', i
-      endif
-        !call ESMF_AttributeSet(importState(2), trim(message), trim(gridCompNameList(i)), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    enddo
-    !! Adding meta information to output component wind_output
-
-    !>@todo find out why attributeSet does not work
-
-    do i=1, numGridComp
-      if (i<10) then
-        write(message,'(A,I1)') 'gridded_component_', i
-      else
-        write(message,'(A,I2)') 'gridded_component_', i
-      endif
-        !call ESMF_AttributeSet(importState(3), trim(message), trim(gridCompNameList(i)), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    enddo
 
     !! Now register all setServices routines for the gridded components
     call ESMF_GridCompSetServices(gridCompList(1), netcdf_SetServices, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_GridCompSetServices(gridCompList(2), netcdf_SetServices, rc=localrc)
+    call ESMF_GridCompSetServices(gridCompList(2), default_SetServices, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_GridCompSetServices(gridCompList(3), netcdf_SetServices, rc=localrc)
+    call ESMF_GridCompSetServices(gridCompList(3), schism_esmf_SetServices, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_GridCompSetServices(gridCompList(4), default_SetServices, rc=localrc)
+    call ESMF_GridCompSetServices(gridCompList(4), netcdf_input_SetServices, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_GridCompSetServices(gridCompList(5), schism_esmf_SetServices, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_GridCompSetServices(gridCompList(6), fabm_sediment_SetServices, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_GridCompSetServices(gridCompList(7), grid_SetServices, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_GridCompSetServices(gridCompList(8), netcdf_input_SetServices, rc=localrc)
+    call ESMF_GridCompSetServices(gridCompList(5), fabm_sediment_SetServices, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Allocate the fields for all coupler components and their names
-    numCplComp = 4
+    numCplComp = 2
     allocate(cplCompList(numCplComp), stat=localrc)
     allocate(cplCompNameList(numCplComp), stat=localrc)
     allocate(cplCompClockList(numCplComp), stat=localrc)
     cplCompNameList(1) = 'link_connector'
-    cplCompNameList(2) = 'regrid_togrid'
-    cplCompNameList(3) = 'pelagic_soil_connector'
-    cplCompNameList(4) = 'regrid_tomesh'
+    cplCompNameList(2) = 'pelagic_soil_connector'
 
 
     do i = 1, numCplComp
@@ -459,13 +406,7 @@ module toplevel_component
     call ESMF_CplCompSetServices(cplCompList(1), link_connector_SetServices, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_CplCompSetServices(cplCompList(2), regrid_coupler_SetServices, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_CplCompSetServices(cplCompList(3), pelagic_soil_connector_SetServices, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_CplCompSetServices(cplCompList(4), regrid_coupler_SetServices, rc=localrc)
+    call ESMF_CplCompSetServices(cplCompList(2), pelagic_soil_connector_SetServices, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -519,35 +460,35 @@ module toplevel_component
     !end do
 
     !! Declare all dependencies
-    call ESMF_AttributeSet(gridImportStateList(6), name="foreign_grid_field_name", value="temperature_at_soil_surface", rc=localrc)
+    call ESMF_AttributeSet(gridImportStateList(4), name="foreign_grid_field_name", value="temperature_at_soil_surface", rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     allocate(charValueList(1), intValueList(1))
     charValueList(1) = 'schism'
-    intValueList (1) = 5
-    call ESMF_AttributeSet(gridImportStateList(6), name="depends_on", valueList=charValueList, rc=localrc)
+    intValueList (1) = 4
+    call ESMF_AttributeSet(gridImportStateList(4), name="depends_on", valueList=charValueList, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_AttributeSet(gridImportStateList(6), name="depends_on_id", valueList=intValueList, rc=localrc)
+    call ESMF_AttributeSet(gridImportStateList(4), name="depends_on_id", valueList=intValueList, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     deallocate(charValueList)
     deallocate(intValueList)
-    call ESMF_AttributeSet(gridImportStateList(8), name="foreign_grid_field_name", value="grid_input", rc=localrc)
+    call ESMF_AttributeSet(gridImportStateList(5), name="foreign_grid_field_name", value="temperature_at_soil_surface", rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     allocate(charValueList(1), intValueList(1))
-    charValueList(1) = 'grid_input'
-    intValueList (1) = 7
-    call ESMF_AttributeSet(gridImportStateList(8), name="depends_on", valueList=charValueList, rc=localrc)
+    charValueList(1) = 'schism'
+    intValueList (1) = 3
+    call ESMF_AttributeSet(gridImportStateList(5), name="depends_on", valueList=charValueList, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_AttributeSet(gridImportStateList(8), name="depends_on_id", valueList=intValueList, rc=localrc)
+    call ESMF_AttributeSet(gridImportStateList(5), name="depends_on_id", valueList=intValueList, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -561,7 +502,7 @@ module toplevel_component
 
     do phase = 1,2
 
-      !! Initializing schism_grid_output
+      !! Initializing schism_mesh_output
       if (gridCompPhaseCountList( 1)>= phase) then
         call ESMF_GridCompInitialize(gridCompList(1), importState=gridImportStateList(1), &
           exportState=gridExportStateList(1), clock=clock, phase=phase, rc=localrc)
@@ -580,7 +521,7 @@ module toplevel_component
 
       endif
 
-      !! Initializing schism_mesh_output
+      !! Initializing default
       if (gridCompPhaseCountList( 2)>= phase) then
         call ESMF_GridCompInitialize(gridCompList(2), importState=gridImportStateList(2), &
           exportState=gridExportStateList(2), clock=clock, phase=phase, rc=localrc)
@@ -599,7 +540,7 @@ module toplevel_component
 
       endif
 
-      !! Initializing wind_output
+      !! Initializing schism
       if (gridCompPhaseCountList( 3)>= phase) then
         call ESMF_GridCompInitialize(gridCompList(3), importState=gridImportStateList(3), &
           exportState=gridExportStateList(3), clock=clock, phase=phase, rc=localrc)
@@ -618,7 +559,16 @@ module toplevel_component
 
       endif
 
-      !! Initializing default
+      !! Initializing restart_sediment
+      !! linking schismExport to restart_sedimentImport
+      write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(3))//"Export to "//trim(gridCompNameList(4))//"Import"
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(3), &
+        exportState=gridImportStateList(4), clock=clock, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_LogFlush()
       if (gridCompPhaseCountList( 4)>= phase) then
         call ESMF_GridCompInitialize(gridCompList(4), importState=gridImportStateList(4), &
           exportState=gridExportStateList(4), clock=clock, phase=phase, rc=localrc)
@@ -637,7 +587,16 @@ module toplevel_component
 
       endif
 
-      !! Initializing schism
+      !! Initializing fabm_sediment
+      !! linking schismExport to fabm_sedimentImport
+      write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(3))//"Export to "//trim(gridCompNameList(5))//"Import"
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(3), &
+        exportState=gridImportStateList(5), clock=clock, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_LogFlush()
       if (gridCompPhaseCountList( 5)>= phase) then
         call ESMF_GridCompInitialize(gridCompList(5), importState=gridImportStateList(5), &
           exportState=gridExportStateList(5), clock=clock, phase=phase, rc=localrc)
@@ -656,285 +615,131 @@ module toplevel_component
 
       endif
 
-      !! Initializing fabm_sediment
-      !! linking schismExport to fabm_sedimentImport
-      write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(5))//"Export to "//trim(gridCompNameList(6))//"Import"
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(5), &
-        exportState=gridImportStateList(6), clock=clock, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_LogFlush()
-      if (gridCompPhaseCountList( 6)>= phase) then
-        call ESMF_GridCompInitialize(gridCompList(6), importState=gridImportStateList(6), &
-          exportState=gridExportStateList(6), clock=clock, phase=phase, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        !call ESMF_CplCompInitialize(cplCompList(2), importState=gridImportStateList(6), &
-        !   clock=clock, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        !call ESMF_CplCompInitialize(cplCompList(2), importState=gridExportStateList(6), &
-        !   clock=clock, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      endif
-
-      !! Initializing grid_input
-      if (gridCompPhaseCountList( 7)>= phase) then
-        call ESMF_GridCompInitialize(gridCompList(7), importState=gridImportStateList(7), &
-          exportState=gridExportStateList(7), clock=clock, phase=phase, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        !call ESMF_CplCompInitialize(cplCompList(2), importState=gridImportStateList(7), &
-        !   clock=clock, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        !call ESMF_CplCompInitialize(cplCompList(2), importState=gridExportStateList(7), &
-        !   clock=clock, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      endif
-
-      !! Initializing wind_input
-      !! linking grid_inputExport to wind_inputImport
-      write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(7))//"Export to "//trim(gridCompNameList(8))//"Import"
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(7), &
-        exportState=gridImportStateList(8), clock=clock, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_LogFlush()
-      if (gridCompPhaseCountList( 8)>= phase) then
-        call ESMF_GridCompInitialize(gridCompList(8), importState=gridImportStateList(8), &
-          exportState=gridExportStateList(8), clock=clock, phase=phase, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        !call ESMF_CplCompInitialize(cplCompList(2), importState=gridImportStateList(8), &
-        !   clock=clock, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        !call ESMF_CplCompInitialize(cplCompList(2), importState=gridExportStateList(8), &
-        !   clock=clock, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      endif
-
       !! Linking
-      !! linking schism_grid_output and schism
-      if (gridCompPhaseCountList( 1)>= phase .or. gridCompPhaseCountList( 5)>= phase) then
-      endif
-
-      !! linking schism_grid_output and fabm_sediment
-      if (gridCompPhaseCountList( 1)>= phase .or. gridCompPhaseCountList( 6)>= phase) then
-      endif
-
-      !! linking schism_grid_output and wind_input
-      if (gridCompPhaseCountList( 1)>= phase .or. gridCompPhaseCountList( 8)>= phase) then
-        !! linking wind_inputExport to schism_grid_outputImport
-        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(8))//"Export to "//trim(gridCompNameList(1))//"Import"
+      !! linking schism_mesh_output and schism
+      if (gridCompPhaseCountList( 1)>= phase .or. gridCompPhaseCountList( 3)>= phase) then
+        !! linking schismExport to schism_mesh_outputImport
+        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(3))//"Export to "//trim(gridCompNameList(1))//"Import"
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(8), &
+        call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(3), &
           exportState=gridImportStateList(1), clock=clock, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        !! linking schism_grid_outputImport to wind_inputExport
-        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(1))//"Import to "//trim(gridCompNameList(8))//"Export"
+        !! linking schism_mesh_outputImport to schismExport
+        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(1))//"Import to "//trim(gridCompNameList(3))//"Export"
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         call ESMF_CplCompInitialize(cplCompList(1), importState=gridImportStateList(1), &
-          exportState=gridExportStateList(8), clock=clock, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      endif
-
-      !! linking schism_mesh_output and schism
-      if (gridCompPhaseCountList( 2)>= phase .or. gridCompPhaseCountList( 5)>= phase) then
-        !! linking schismExport to schism_mesh_outputImport
-        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(5))//"Export to "//trim(gridCompNameList(2))//"Import"
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(5), &
-          exportState=gridImportStateList(2), clock=clock, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        !! linking schism_mesh_outputImport to schismExport
-        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(2))//"Import to "//trim(gridCompNameList(5))//"Export"
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        call ESMF_CplCompInitialize(cplCompList(1), importState=gridImportStateList(2), &
-          exportState=gridExportStateList(5), clock=clock, rc=localrc)
+          exportState=gridExportStateList(3), clock=clock, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       endif
 
       !! linking schism_mesh_output and fabm_sediment
-      if (gridCompPhaseCountList( 2)>= phase .or. gridCompPhaseCountList( 6)>= phase) then
+      if (gridCompPhaseCountList( 1)>= phase .or. gridCompPhaseCountList( 5)>= phase) then
         !! linking fabm_sedimentExport to schism_mesh_outputImport
-        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(6))//"Export to "//trim(gridCompNameList(2))//"Import"
+        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(5))//"Export to "//trim(gridCompNameList(1))//"Import"
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(6), &
-          exportState=gridImportStateList(2), clock=clock, rc=localrc)
+        call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(5), &
+          exportState=gridImportStateList(1), clock=clock, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         !! linking schism_mesh_outputImport to fabm_sedimentExport
-        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(2))//"Import to "//trim(gridCompNameList(6))//"Export"
+        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(1))//"Import to "//trim(gridCompNameList(5))//"Export"
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        call ESMF_CplCompInitialize(cplCompList(1), importState=gridImportStateList(2), &
-          exportState=gridExportStateList(6), clock=clock, rc=localrc)
+        call ESMF_CplCompInitialize(cplCompList(1), importState=gridImportStateList(1), &
+          exportState=gridExportStateList(5), clock=clock, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       endif
 
-      !! linking wind_output and wind_input
-      if (gridCompPhaseCountList( 3)>= phase .or. gridCompPhaseCountList( 8)>= phase) then
-      endif
-
       !! linking default and fabm_sediment
-      if (gridCompPhaseCountList( 4)>= phase .or. gridCompPhaseCountList( 6)>= phase) then
+      if (gridCompPhaseCountList( 2)>= phase .or. gridCompPhaseCountList( 5)>= phase) then
         !! linking defaultExport to fabm_sedimentImport
-        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(4))//"Export to "//trim(gridCompNameList(6))//"Import"
+        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(2))//"Export to "//trim(gridCompNameList(5))//"Import"
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(4), &
-          exportState=gridImportStateList(6), clock=clock, rc=localrc)
+        call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(2), &
+          exportState=gridImportStateList(5), clock=clock, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         !! linking fabm_sedimentImport to defaultExport
-        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(6))//"Import to "//trim(gridCompNameList(4))//"Export"
+        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(5))//"Import to "//trim(gridCompNameList(2))//"Export"
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        call ESMF_CplCompInitialize(cplCompList(1), importState=gridImportStateList(6), &
-          exportState=gridExportStateList(4), clock=clock, rc=localrc)
+        call ESMF_CplCompInitialize(cplCompList(1), importState=gridImportStateList(5), &
+          exportState=gridExportStateList(2), clock=clock, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       endif
 
       !! linking schism and fabm_sediment
-      if (gridCompPhaseCountList( 5)>= phase .or. gridCompPhaseCountList( 6)>= phase) then
+      if (gridCompPhaseCountList( 3)>= phase .or. gridCompPhaseCountList( 5)>= phase) then
         !! linking schismExport to fabm_sedimentImport
-        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(5))//"Export to "//trim(gridCompNameList(6))//"Import"
+        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(3))//"Export to "//trim(gridCompNameList(5))//"Import"
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(5), &
-          exportState=gridImportStateList(6), clock=clock, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        !! linking fabm_sedimentImport to schismExport
-        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(6))//"Import to "//trim(gridCompNameList(5))//"Export"
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        call ESMF_CplCompInitialize(cplCompList(1), importState=gridImportStateList(6), &
-          exportState=gridExportStateList(5), clock=clock, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        !! linking fabm_sedimentExport to schismImport
-        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(6))//"Export to "//trim(gridCompNameList(5))//"Import"
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(6), &
+        call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(3), &
           exportState=gridImportStateList(5), clock=clock, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        !! linking schismImport to fabm_sedimentExport
-        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(5))//"Import to "//trim(gridCompNameList(6))//"Export"
+        !! linking fabm_sedimentImport to schismExport
+        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(5))//"Import to "//trim(gridCompNameList(3))//"Export"
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         call ESMF_CplCompInitialize(cplCompList(1), importState=gridImportStateList(5), &
-          exportState=gridExportStateList(6), clock=clock, rc=localrc)
+          exportState=gridExportStateList(3), clock=clock, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      endif
-
-      !! linking schism and wind_input
-      if (gridCompPhaseCountList( 5)>= phase .or. gridCompPhaseCountList( 8)>= phase) then
-      endif
-
-      !! linking grid_input and wind_input
-      if (gridCompPhaseCountList( 7)>= phase .or. gridCompPhaseCountList( 8)>= phase) then
-        !! linking grid_inputExport to wind_inputImport
-        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(7))//"Export to "//trim(gridCompNameList(8))//"Import"
+        !! linking fabm_sedimentExport to schismImport
+        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(5))//"Export to "//trim(gridCompNameList(3))//"Import"
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(7), &
-          exportState=gridImportStateList(8), clock=clock, rc=localrc)
+        call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(5), &
+          exportState=gridImportStateList(3), clock=clock, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        !! linking wind_inputImport to grid_inputExport
-        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(8))//"Import to "//trim(gridCompNameList(7))//"Export"
+        !! linking schismImport to fabm_sedimentExport
+        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(3))//"Import to "//trim(gridCompNameList(5))//"Export"
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        call ESMF_CplCompInitialize(cplCompList(1), importState=gridImportStateList(8), &
-          exportState=gridExportStateList(7), clock=clock, rc=localrc)
+        call ESMF_CplCompInitialize(cplCompList(1), importState=gridImportStateList(3), &
+          exportState=gridExportStateList(5), clock=clock, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       endif
 
-      !! calling init of regrid_togrid
-      !! connecting fabm_sedimentExport to schism_grid_outputImport
-      if (gridCompPhaseCountList( 6)>= phase .or. gridCompPhaseCountList( 1)>= phase) then
-      if (cplCompPhaseCountList( 2)>= phase) then
-        write(message,"(A,I1,A)") trim(myName)//" "//trim(gridCompNameList(6))//"Export=>"//trim(cplCompNameList(2))//"(initP",phase,")=>"//trim(gridCompNameList(1))//"Import"
+      !! linking restart_sediment and fabm_sediment
+      if (gridCompPhaseCountList( 4)>= phase .or. gridCompPhaseCountList( 5)>= phase) then
+        !! linking restart_sedimentExport to fabm_sedimentImport
+        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(4))//"Export to "//trim(gridCompNameList(5))//"Import"
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        !call MOSSCO_StateLog(gridExportStateList(6), rc=localrc)
-        call ESMF_CplCompInitialize(cplCompList(2), importState=gridExportStateList(6), &
-          exportState=gridImportStateList(1), clock=clock, phase=phase, rc=localrc)
+        call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(4), &
+          exportState=gridImportStateList(5), clock=clock, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        !call MOSSCO_Log(gridImportStateList(1), rc=localrc)
-      endif
-      endif
-      !! connecting schismExport to schism_grid_outputImport
-      if (gridCompPhaseCountList( 5)>= phase .or. gridCompPhaseCountList( 1)>= phase) then
-      if (cplCompPhaseCountList( 2)>= phase) then
-        write(message,"(A,I1,A)") trim(myName)//" "//trim(gridCompNameList(5))//"Export=>"//trim(cplCompNameList(2))//"(initP",phase,")=>"//trim(gridCompNameList(1))//"Import"
+        !! linking fabm_sedimentImport to restart_sedimentExport
+        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(5))//"Import to "//trim(gridCompNameList(4))//"Export"
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        !call MOSSCO_StateLog(gridExportStateList(5), rc=localrc)
-        call ESMF_CplCompInitialize(cplCompList(2), importState=gridExportStateList(5), &
-          exportState=gridImportStateList(1), clock=clock, phase=phase, rc=localrc)
+        call ESMF_CplCompInitialize(cplCompList(1), importState=gridImportStateList(5), &
+          exportState=gridExportStateList(4), clock=clock, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        !call MOSSCO_Log(gridImportStateList(1), rc=localrc)
       endif
-      endif
+
       !! calling init of pelagic_soil_connector
       !! connecting schismExport to fabm_sedimentImport
-      if (gridCompPhaseCountList( 5)>= phase .or. gridCompPhaseCountList( 6)>= phase) then
-      if (cplCompPhaseCountList( 3)>= phase) then
-        write(message,"(A,I1,A)") trim(myName)//" "//trim(gridCompNameList(5))//"Export=>"//trim(cplCompNameList(3))//"(initP",phase,")=>"//trim(gridCompNameList(6))//"Import"
+      if (gridCompPhaseCountList( 3)>= phase .or. gridCompPhaseCountList( 5)>= phase) then
+      if (cplCompPhaseCountList( 2)>= phase) then
+        write(message,"(A,I1,A)") trim(myName)//" "//trim(gridCompNameList(3))//"Export=>"//trim(cplCompNameList(2))//"(initP",phase,")=>"//trim(gridCompNameList(5))//"Import"
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        !call MOSSCO_StateLog(gridExportStateList(5), rc=localrc)
-        call ESMF_CplCompInitialize(cplCompList(3), importState=gridExportStateList(5), &
-          exportState=gridImportStateList(6), clock=clock, phase=phase, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        !call MOSSCO_Log(gridImportStateList(6), rc=localrc)
-      endif
-      endif
-      !! connecting fabm_sedimentExport to schismImport
-      if (gridCompPhaseCountList( 6)>= phase .or. gridCompPhaseCountList( 5)>= phase) then
-      if (cplCompPhaseCountList( 3)>= phase) then
-        write(message,"(A,I1,A)") trim(myName)//" "//trim(gridCompNameList(6))//"Export=>"//trim(cplCompNameList(3))//"(initP",phase,")=>"//trim(gridCompNameList(5))//"Import"
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        !call MOSSCO_StateLog(gridExportStateList(6), rc=localrc)
-        call ESMF_CplCompInitialize(cplCompList(3), importState=gridExportStateList(6), &
+        !call MOSSCO_StateLog(gridExportStateList(3), rc=localrc)
+        call ESMF_CplCompInitialize(cplCompList(2), importState=gridExportStateList(3), &
           exportState=gridImportStateList(5), clock=clock, phase=phase, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -942,33 +747,18 @@ module toplevel_component
         !call MOSSCO_Log(gridImportStateList(5), rc=localrc)
       endif
       endif
-      !! calling init of regrid_tomesh
-      !! connecting wind_inputExport to wind_outputImport
-      if (gridCompPhaseCountList( 8)>= phase .or. gridCompPhaseCountList( 3)>= phase) then
-      if (cplCompPhaseCountList( 4)>= phase) then
-        write(message,"(A,I1,A)") trim(myName)//" "//trim(gridCompNameList(8))//"Export=>"//trim(cplCompNameList(4))//"(initP",phase,")=>"//trim(gridCompNameList(3))//"Import"
+      !! connecting fabm_sedimentExport to schismImport
+      if (gridCompPhaseCountList( 5)>= phase .or. gridCompPhaseCountList( 3)>= phase) then
+      if (cplCompPhaseCountList( 2)>= phase) then
+        write(message,"(A,I1,A)") trim(myName)//" "//trim(gridCompNameList(5))//"Export=>"//trim(cplCompNameList(2))//"(initP",phase,")=>"//trim(gridCompNameList(3))//"Import"
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        !call MOSSCO_StateLog(gridExportStateList(8), rc=localrc)
-        call ESMF_CplCompInitialize(cplCompList(4), importState=gridExportStateList(8), &
+        !call MOSSCO_StateLog(gridExportStateList(5), rc=localrc)
+        call ESMF_CplCompInitialize(cplCompList(2), importState=gridExportStateList(5), &
           exportState=gridImportStateList(3), clock=clock, phase=phase, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         !call MOSSCO_Log(gridImportStateList(3), rc=localrc)
-      endif
-      endif
-      !! connecting wind_inputExport to schismImport
-      if (gridCompPhaseCountList( 8)>= phase .or. gridCompPhaseCountList( 5)>= phase) then
-      if (cplCompPhaseCountList( 4)>= phase) then
-        write(message,"(A,I1,A)") trim(myName)//" "//trim(gridCompNameList(8))//"Export=>"//trim(cplCompNameList(4))//"(initP",phase,")=>"//trim(gridCompNameList(5))//"Import"
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        !call MOSSCO_StateLog(gridExportStateList(8), rc=localrc)
-        call ESMF_CplCompInitialize(cplCompList(4), importState=gridExportStateList(8), &
-          exportState=gridImportStateList(5), clock=clock, phase=phase, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        !call MOSSCO_Log(gridImportStateList(5), rc=localrc)
       endif
       endif
     enddo  ! of loop over Initialize phases
@@ -990,42 +780,6 @@ module toplevel_component
 
     call MOSSCO_StateLog(exportState, rc=localrc)
     call MOSSCO_StateLog(gridImportStateList(1), rc=localrc)
-    call MOSSCO_CompLog(gridComp, rc=localrc)
-    !> Link attributes of exportState of the topLevel component (which contains metadata)
-    !> to the netcdf component's import state
-    call ESMF_AttributeLink(importState, gridImportStateList(2), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_AttributeLink(gridComp, gridImportStateList(2), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_CplCompInitialize(cplCompList(1), importState=importState, &
-      exportState=gridImportStateList(2), clock=clock, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call MOSSCO_StateLog(exportState, rc=localrc)
-    call MOSSCO_StateLog(gridImportStateList(2), rc=localrc)
-    call MOSSCO_CompLog(gridComp, rc=localrc)
-    !> Link attributes of exportState of the topLevel component (which contains metadata)
-    !> to the netcdf component's import state
-    call ESMF_AttributeLink(importState, gridImportStateList(3), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_AttributeLink(gridComp, gridImportStateList(3), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_CplCompInitialize(cplCompList(1), importState=importState, &
-      exportState=gridImportStateList(3), clock=clock, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call MOSSCO_StateLog(exportState, rc=localrc)
-    call MOSSCO_StateLog(gridImportStateList(3), rc=localrc)
     call MOSSCO_CompLog(gridComp, rc=localrc)
 
     !> Go through all components and log their import and export states
@@ -1086,25 +840,9 @@ module toplevel_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       gridCompPhaseCountList(i)=phaseCount
     enddo
-    !! ReadRestarting schism_grid_output with data from wind_input
-    if (gridCompPhaseCountList(1) > 0) then
-      call ESMF_GridCompReadRestart(gridCompList(1), importState=gridExportStateList(8), &
-        exportState=gridExportStateList(1), clock=clock, phase=1, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    endif
-
-    !! ReadRestarting wind_output with data from wind_input
-    if (gridCompPhaseCountList(3) > 0) then
-      call ESMF_GridCompReadRestart(gridCompList(3), importState=gridExportStateList(8), &
-        exportState=gridExportStateList(3), clock=clock, phase=1, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    endif
-
-    !! ReadRestarting schism with data from wind_input
+    !! ReadRestarting fabm_sediment with data from restart_sediment
     if (gridCompPhaseCountList(5) > 0) then
-      call ESMF_GridCompReadRestart(gridCompList(5), importState=gridExportStateList(8), &
+      call ESMF_GridCompReadRestart(gridCompList(5), importState=gridExportStateList(4), &
         exportState=gridExportStateList(5), clock=clock, phase=1, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1143,7 +881,7 @@ module toplevel_component
     !  call MOSSCO_StateLog(gridImportStateList(i))
     !  call MOSSCO_StateLog(gridExportStateList(i))
     !enddo
-    numCplAlarm = 11
+    numCplAlarm = 6
     if (allocated(cplAlarmList)) deallocate(cplAlarmList)
     if (allocated(cplNames)) deallocate(cplNames)
     allocate(cplAlarmList(numCplAlarm))
@@ -1153,12 +891,8 @@ module toplevel_component
     cplNames(:) = 'link'
 
     !! For other explicitly given couplings, specify connectors
-    cplNames(2)='regrid_tomesh'
-    cplNames(3)='regrid_tomesh'
-    cplNames(7)='pelagic_soil'
-    cplNames(8)='pelagic_soil'
-    cplNames(9)='regrid_togrid'
-    cplNames(11)='regrid_togrid'
+    cplNames(5)='pelagic_soil'
+    cplNames(6)='pelagic_soil'
 
     !! Set the coupling alarm starting from start time of local clock
     call ESMF_ClockGet(clock,startTime=startTime, rc=localrc)
@@ -1169,7 +903,7 @@ module toplevel_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     cplAlarmList(1)=ESMF_AlarmCreate(clock=clock,ringTime=startTime+alarmInterval, &
-      ringInterval=alarmInterval, name='grid_input--wind_input--cplAlarm', rc=localrc)
+      ringInterval=alarmInterval, name='restart_sediment--fabm_sediment--cplAlarm', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Copy this alarm to all children as well
@@ -1177,7 +911,7 @@ module toplevel_component
       call ESMF_GridCompGet(gridCompList(i),name=childName, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (trim(childName)=='grid_input' .or. trim(childName)=='wind_input') then
+      if (trim(childName)=='restart_sediment' .or. trim(childName)=='fabm_sediment') then
         call ESMF_GridCompGet(gridCompList(i), clockIsPresent=clockIsPresent, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1201,82 +935,10 @@ module toplevel_component
 
       endif
     enddo
-        call ESMF_TimeIntervalSet(alarmInterval, startTime, h=1 ,rc=localrc)
+        call ESMF_TimeIntervalSet(alarmInterval, startTime, m=30 ,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     cplAlarmList(2)=ESMF_AlarmCreate(clock=clock,ringTime=startTime+alarmInterval, &
-      ringInterval=alarmInterval, name='wind_input--wind_output--cplAlarm', rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    !! Copy this alarm to all children as well
-    do i=1,numGridComp
-      call ESMF_GridCompGet(gridCompList(i),name=childName, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (trim(childName)=='wind_input' .or. trim(childName)=='wind_output') then
-        call ESMF_GridCompGet(gridCompList(i), clockIsPresent=clockIsPresent, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        if (clockIsPresent) then
-          call ESMF_GridCompGet(gridCompList(i), clock=childClock, rc=localrc)
-        else
-          call ESMF_LOGWRITE(trim(myName)//' creates clock for '//trim(childName)//', this should have been done by the component.', &
-            ESMF_LOGMSG_WARNING)
-
-          childClock=ESMF_ClockCreate(clock=clock, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-          call ESMF_GridCompSet(gridCompList(i),clock=childClock, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        endif
-        childAlarm=ESMF_AlarmCreate(cplAlarmList(2), rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        call ESMF_AlarmSet(childAlarm, clock=childClock)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      endif
-    enddo
-        call ESMF_TimeIntervalSet(alarmInterval, startTime, m=6 ,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    cplAlarmList(3)=ESMF_AlarmCreate(clock=clock,ringTime=startTime+alarmInterval, &
-      ringInterval=alarmInterval, name='wind_input--schism--cplAlarm', rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    !! Copy this alarm to all children as well
-    do i=1,numGridComp
-      call ESMF_GridCompGet(gridCompList(i),name=childName, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (trim(childName)=='wind_input' .or. trim(childName)=='schism') then
-        call ESMF_GridCompGet(gridCompList(i), clockIsPresent=clockIsPresent, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        if (clockIsPresent) then
-          call ESMF_GridCompGet(gridCompList(i), clock=childClock, rc=localrc)
-        else
-          call ESMF_LOGWRITE(trim(myName)//' creates clock for '//trim(childName)//', this should have been done by the component.', &
-            ESMF_LOGMSG_WARNING)
-
-          childClock=ESMF_ClockCreate(clock=clock, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-          call ESMF_GridCompSet(gridCompList(i),clock=childClock, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        endif
-        childAlarm=ESMF_AlarmCreate(cplAlarmList(3), rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        call ESMF_AlarmSet(childAlarm, clock=childClock)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      endif
-    enddo
-        call ESMF_TimeIntervalSet(alarmInterval, startTime, yy=99999 ,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    cplAlarmList(4)=ESMF_AlarmCreate(clock=clock,ringTime=startTime+alarmInterval, &
       ringInterval=alarmInterval, name='default--fabm_sediment--cplAlarm', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1301,7 +963,7 @@ module toplevel_component
           call ESMF_GridCompSet(gridCompList(i),clock=childClock, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
-        childAlarm=ESMF_AlarmCreate(cplAlarmList(4), rc=localrc)
+        childAlarm=ESMF_AlarmCreate(cplAlarmList(2), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         call ESMF_AlarmSet(childAlarm, clock=childClock)
@@ -1312,7 +974,7 @@ module toplevel_component
         call ESMF_TimeIntervalSet(alarmInterval, startTime, h=1 ,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    cplAlarmList(5)=ESMF_AlarmCreate(clock=clock,ringTime=startTime+alarmInterval, &
+    cplAlarmList(3)=ESMF_AlarmCreate(clock=clock,ringTime=startTime+alarmInterval, &
       ringInterval=alarmInterval, name='fabm_sediment--schism_mesh_output--cplAlarm', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1337,7 +999,7 @@ module toplevel_component
           call ESMF_GridCompSet(gridCompList(i),clock=childClock, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
-        childAlarm=ESMF_AlarmCreate(cplAlarmList(5), rc=localrc)
+        childAlarm=ESMF_AlarmCreate(cplAlarmList(3), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         call ESMF_AlarmSet(childAlarm, clock=childClock)
@@ -1348,7 +1010,7 @@ module toplevel_component
         call ESMF_TimeIntervalSet(alarmInterval, startTime, h=1 ,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    cplAlarmList(6)=ESMF_AlarmCreate(clock=clock,ringTime=startTime+alarmInterval, &
+    cplAlarmList(4)=ESMF_AlarmCreate(clock=clock,ringTime=startTime+alarmInterval, &
       ringInterval=alarmInterval, name='schism--schism_mesh_output--cplAlarm', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1373,7 +1035,7 @@ module toplevel_component
           call ESMF_GridCompSet(gridCompList(i),clock=childClock, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
-        childAlarm=ESMF_AlarmCreate(cplAlarmList(6), rc=localrc)
+        childAlarm=ESMF_AlarmCreate(cplAlarmList(4), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         call ESMF_AlarmSet(childAlarm, clock=childClock)
@@ -1384,7 +1046,7 @@ module toplevel_component
         call ESMF_TimeIntervalSet(alarmInterval, startTime, m=6 ,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    cplAlarmList(7)=ESMF_AlarmCreate(clock=clock,ringTime=startTime+alarmInterval, &
+    cplAlarmList(5)=ESMF_AlarmCreate(clock=clock,ringTime=startTime+alarmInterval, &
       ringInterval=alarmInterval, name='schism--fabm_sediment--cplAlarm', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1409,7 +1071,7 @@ module toplevel_component
           call ESMF_GridCompSet(gridCompList(i),clock=childClock, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
-        childAlarm=ESMF_AlarmCreate(cplAlarmList(7), rc=localrc)
+        childAlarm=ESMF_AlarmCreate(cplAlarmList(5), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         call ESMF_AlarmSet(childAlarm, clock=childClock)
@@ -1420,7 +1082,7 @@ module toplevel_component
         call ESMF_TimeIntervalSet(alarmInterval, startTime, m=6 ,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    cplAlarmList(8)=ESMF_AlarmCreate(clock=clock,ringTime=startTime+alarmInterval, &
+    cplAlarmList(6)=ESMF_AlarmCreate(clock=clock,ringTime=startTime+alarmInterval, &
       ringInterval=alarmInterval, name='fabm_sediment--schism--cplAlarm', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1445,115 +1107,7 @@ module toplevel_component
           call ESMF_GridCompSet(gridCompList(i),clock=childClock, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
-        childAlarm=ESMF_AlarmCreate(cplAlarmList(8), rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        call ESMF_AlarmSet(childAlarm, clock=childClock)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      endif
-    enddo
-        call ESMF_TimeIntervalSet(alarmInterval, startTime, m=6 ,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    cplAlarmList(9)=ESMF_AlarmCreate(clock=clock,ringTime=startTime+alarmInterval, &
-      ringInterval=alarmInterval, name='fabm_sediment--schism_grid_output--cplAlarm', rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    !! Copy this alarm to all children as well
-    do i=1,numGridComp
-      call ESMF_GridCompGet(gridCompList(i),name=childName, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (trim(childName)=='fabm_sediment' .or. trim(childName)=='schism_grid_output') then
-        call ESMF_GridCompGet(gridCompList(i), clockIsPresent=clockIsPresent, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        if (clockIsPresent) then
-          call ESMF_GridCompGet(gridCompList(i), clock=childClock, rc=localrc)
-        else
-          call ESMF_LOGWRITE(trim(myName)//' creates clock for '//trim(childName)//', this should have been done by the component.', &
-            ESMF_LOGMSG_WARNING)
-
-          childClock=ESMF_ClockCreate(clock=clock, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-          call ESMF_GridCompSet(gridCompList(i),clock=childClock, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        endif
-        childAlarm=ESMF_AlarmCreate(cplAlarmList(9), rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        call ESMF_AlarmSet(childAlarm, clock=childClock)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      endif
-    enddo
-        call ESMF_TimeIntervalSet(alarmInterval, startTime, h=1 ,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    cplAlarmList(10)=ESMF_AlarmCreate(clock=clock,ringTime=startTime+alarmInterval, &
-      ringInterval=alarmInterval, name='wind_input--schism_grid_output--cplAlarm', rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    !! Copy this alarm to all children as well
-    do i=1,numGridComp
-      call ESMF_GridCompGet(gridCompList(i),name=childName, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (trim(childName)=='wind_input' .or. trim(childName)=='schism_grid_output') then
-        call ESMF_GridCompGet(gridCompList(i), clockIsPresent=clockIsPresent, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        if (clockIsPresent) then
-          call ESMF_GridCompGet(gridCompList(i), clock=childClock, rc=localrc)
-        else
-          call ESMF_LOGWRITE(trim(myName)//' creates clock for '//trim(childName)//', this should have been done by the component.', &
-            ESMF_LOGMSG_WARNING)
-
-          childClock=ESMF_ClockCreate(clock=clock, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-          call ESMF_GridCompSet(gridCompList(i),clock=childClock, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        endif
-        childAlarm=ESMF_AlarmCreate(cplAlarmList(10), rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        call ESMF_AlarmSet(childAlarm, clock=childClock)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      endif
-    enddo
-        call ESMF_TimeIntervalSet(alarmInterval, startTime, m=6 ,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    cplAlarmList(11)=ESMF_AlarmCreate(clock=clock,ringTime=startTime+alarmInterval, &
-      ringInterval=alarmInterval, name='schism--schism_grid_output--cplAlarm', rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    !! Copy this alarm to all children as well
-    do i=1,numGridComp
-      call ESMF_GridCompGet(gridCompList(i),name=childName, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (trim(childName)=='schism' .or. trim(childName)=='schism_grid_output') then
-        call ESMF_GridCompGet(gridCompList(i), clockIsPresent=clockIsPresent, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        if (clockIsPresent) then
-          call ESMF_GridCompGet(gridCompList(i), clock=childClock, rc=localrc)
-        else
-          call ESMF_LOGWRITE(trim(myName)//' creates clock for '//trim(childName)//', this should have been done by the component.', &
-            ESMF_LOGMSG_WARNING)
-
-          childClock=ESMF_ClockCreate(clock=clock, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-          call ESMF_GridCompSet(gridCompList(i),clock=childClock, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        endif
-        childAlarm=ESMF_AlarmCreate(cplAlarmList(11), rc=localrc)
+        childAlarm=ESMF_AlarmCreate(cplAlarmList(6), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         call ESMF_AlarmSet(childAlarm, clock=childClock)
@@ -1699,8 +1253,9 @@ module toplevel_component
     type(ESMF_TimeInterval)    :: timeInterval, ringInterval
     integer(ESMF_KIND_I8)      :: i, j, k, l, advanceCount
     integer(ESMF_KIND_I4)      :: alarmCount
-    integer(ESMF_KIND_I4)      :: numGridComp, numCplComp
+    integer(ESMF_KIND_I4)      :: numGridComp, numCplComp, numComp
     integer(ESMF_KIND_I4)      :: hours, minutes, seconds, localPet
+    real(ESMF_KIND_R8)         :: ms_r8, realValue
     type(ESMF_Log)             :: stateLog
 
     type(ESMF_Alarm), dimension(:), allocatable :: alarmList
@@ -1709,7 +1264,10 @@ module toplevel_component
     type(ESMF_State)        :: impState, expState
     integer(ESMF_KIND_I4)   :: localrc
 
+    real(ESMF_KIND_R8), allocatable, dimension(:) :: wallTimeStart, wallTimeStop
+
     character(len=ESMF_MAXSTR) :: message, compName, alarmName, name1, name2
+    character(len=ESMF_MAXSTR) :: formatString
 
     integer(ESMF_KIND_I4)  :: phase, phaseCount
     integer(ESMF_KIND_I4), dimension(:), allocatable :: gridCompPhaseCountList,CplCompPhaseCountList
@@ -1721,15 +1279,19 @@ module toplevel_component
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=myName, currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_GridCompGet(gridComp, clock=myClock, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    numGridComp=ubound(gridCompList,1)-lbound(gridCompList,1)+1
-    numCplComp =ubound(cplCompList ,1)-lbound(cplCompList ,1)+1
+    numGridComp = ubound(gridCompList,1)-lbound(gridCompList,1)+1
+    numCplComp  = ubound(cplCompList ,1)-lbound(cplCompList ,1)+1
+    numComp = numGridComp + numCplComp
+
+    if (allocated(wallTimeStart)) deallocate(wallTimeStart)
+    if (allocated(wallTimeStop)) deallocate(wallTimeStop)
+    allocate(wallTimeStart(0:numComp))
+    allocate(wallTimeStop(0:numComp))
 
     !! Establish number of phases and zero phase for all components
     !! @> todo this interface will likely change in the future and will
@@ -1741,7 +1303,8 @@ module toplevel_component
     do i = 1, numGridComp
       call ESMF_GridCompGetEPPhaseCount(gridCompList(i), ESMF_METHOD_RUN, &
         phaseCount=phaseCount, phaseZeroFlag=hasPhaseZero, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
       gridCompPhaseCountList(i)=phaseCount
       GridCompHasPhaseZeroList(i)=hasPhaseZero
     enddo
@@ -1760,15 +1323,16 @@ module toplevel_component
 
     call ESMF_ClockGetAlarmList(myClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
       alarmCount=alarmCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
 
     !! Run until the clock's stoptime is reached
     do
 
+      call cpu_time(wallTimeStart(0))
+
       call ESMF_ClockGet(myClock,currTime=currTime, stopTime=stopTime, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (currTime>stopTime) then
         call ESMF_LogWrite(trim(myName)//' clock out of scope', ESMF_LOGMSG_ERROR)
@@ -1780,8 +1344,7 @@ module toplevel_component
       do i=1,numGridComp
         !! Determine for each child the clock
         call ESMF_GridCompGet(gridCompList(i),name=compName, clockIsPresent=clockIsPresent, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         if (.not.clockIsPresent) then
           call ESMF_LogWrite(trim(myName)//' required clock not found in '//trim(compName), ESMF_LOGMSG_ERROR)
@@ -1789,12 +1352,10 @@ module toplevel_component
         endif
 
         call ESMF_GridCompGet(gridCompList(i), clock=childClock, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        call ESMF_ClockGet(childClock,currTime=time, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc))  &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_ClockGet(childClock, currTime=time, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         ! write(message,'(A)') trim(myName)//' '//trim(compName)//' now at '//trim(timestring)
         !  call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
@@ -1806,8 +1367,7 @@ module toplevel_component
 
         call ESMF_ClockGetAlarmList(childClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
           alarmCount=alarmCount, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         if (alarmCount==0) then
           timeInterval=stopTime-currTime
@@ -1819,12 +1379,11 @@ module toplevel_component
 
         call ESMF_ClockGetAlarmList(childClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
            alarmList=alarmList, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         do j=1,alarmCount
           call ESMF_AlarmGet(alarmList(j), name=alarmName, ringTime=ringTime, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           !! Skip this alarm if it is not a cplAlarm
           if (index(trim(alarmName),'cplAlarm') < 1) cycle
@@ -1835,9 +1394,8 @@ module toplevel_component
           !! Skip this alarm if it is not ringing now
           !if (ringTime > currTime) cycle
 
-          call ESMF_TimeGet(ringTime,timeStringISOFrac=timeString)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call ESMF_TimeGet(ringTime, timeStringISOFrac=timeString)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           !write(message,'(A)') trim(myName)//' '//trim(compName)//' '//trim(alarmName)//' rings at '//trim(timeString)
           !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
@@ -1870,12 +1428,13 @@ module toplevel_component
 
           !call ESMF_GridCompGet(gridCompList(i), exportState=impState, rc=localrc)
           impState=gridExportStateList(i)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           !! Search the gridCompList for other's name
           do k=1, ubound(gridCompList,1)
               call ESMF_GridCompGet(gridCompList(k), name=childName, rc=localrc)
-              if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+              _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
               if (trim(childName)==trim(name2)) exit
           enddo
 
@@ -1902,6 +1461,7 @@ module toplevel_component
 
           !call ESMF_GridCompGet(gridCompList(k), importState=expState, rc=localrc)
           expState=gridImportStateList(k)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
           !> @todo the following is a hack and makes the nudge_connector special by
           !> receiving two export States (the latter to manipulate)
           if (trim(cplCompNameList(l)) == 'nudge_connector') expState=gridExportStateList(k)
@@ -1914,10 +1474,26 @@ module toplevel_component
 
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
+          call cpu_time(wallTimeStart(numgridComp + l))
+
           call ESMF_CplCompRun(cplCompList(l), importState=impState, &
             exportState=expState, clock=controlClock, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          call ESMF_LogFlush()
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          call cpu_time(wallTimeStop(numgridComp + l))
+
+          write(message,'(A)') trim(myName)//' executed ' &
+            //trim(cplCompNameList(l))//' in '
+          ms_r8 = 1000.0d0 * (wallTimeStop(numgridComp + l) - wallTimeStart(numgridComp + l))
+
+          if (ms_r8 < 9999.0d0) then
+            write(formatString,'(A)') '(A,X,'//intformat(int(ms_r8))//',X,A)'
+            write(message, formatString) trim(message), int(ms_r8), 'mseconds'
+          else
+            write(formatString,'(A)') '(A,X,'//intformat(int(ms_r8/1000.0d0))//',X,A)'
+            write(message, formatString) trim(message), int(ms_r8/1000.0d0), 'seconds'
+          endif
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
         enddo
       enddo
@@ -1929,40 +1505,38 @@ module toplevel_component
 
       call ESMF_ClockGetAlarmList(myClock, alarmListFlag=ESMF_ALARMLIST_RINGING, &
         alarmCount=alarmCount, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (alarmCount>0) then
         if (allocated(alarmList)) deallocate(alarmList)
         allocate(alarmList(alarmCount))
         call ESMF_ClockGetAlarmList(myClock, alarmListFlag=ESMF_ALARMLIST_RINGING, &
           alarmList=alarmList, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
         call ESMF_TimeGet(time,timeStringISOFrac=timeString)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
         write(message,'(A,I2,A)') trim(myName)//'  '//trim(timeString)//' has',alarmCount,' ringing alarms'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
       endif
 
       do j=1,alarmCount
         call ESMF_AlarmGet(alarmList(j), name=alarmName, ringTime=time, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
         if (index(trim(alarmName),'cplAlarm')<1) cycle
 
         call ESMF_TimeGet(time,timeStringISOFrac=timeString)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
         write(message,'(A)') trim(myName)//'  '//trim(alarmName)//' is ringing now at '//trim(timestring)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
       enddo
 
       call ESMF_ClockGetAlarmList(myClock, alarmListFlag=ESMF_ALARMLIST_NEXTRINGING, &
         alarmCount=alarmCount, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (alarmCount>0) then
         if (allocated(alarmList)) deallocate(alarmList)
@@ -1976,7 +1550,7 @@ module toplevel_component
       do i=1,numGridComp
         !! Determine for each child the clock
         call ESMF_GridCompGet(gridCompList(i),name=compName, clockIsPresent=clockIsPresent, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         if (.not.clockIsPresent) then
           call ESMF_LogWrite(trim(myName)//' required clock not found in '//trim(compName), ESMF_LOGMSG_ERROR)
@@ -1984,24 +1558,23 @@ module toplevel_component
         endif
 
         call ESMF_GridCompGet(gridCompList(i), clock=childClock, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call ESMF_ClockGet(childClock,currTime=time, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
         call ESMF_TimeGet(time,timeStringISOFrac=timeString)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         if (time>currTime) then
           call ESMF_TimeGet(time,timeStringISOFrac=timeString)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           !write(message,'(A)') trim(myName)//' '//trim(compName)//' now at '//trim(timestring)//', but'
           !call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
 
           call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           !write(message,'(A)') trim(myName)//' now at '//trim(timestring)//', cycling ...'
           !call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
@@ -2014,8 +1587,7 @@ module toplevel_component
 
         call ESMF_ClockGetAlarmList(childClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
           alarmCount=alarmCount, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         if (alarmCount==0) then
           !! This case seems problematic and causing the non-monotonic time warning in netcdf
@@ -2026,8 +1598,7 @@ module toplevel_component
           allocate(alarmList(alarmCount))
           call ESMF_ClockGetAlarmList(childClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
              alarmList=alarmList, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         endif
 
         !! Set the default ringTime to the stopTime of local clock, then get all Alarms
@@ -2035,18 +1606,18 @@ module toplevel_component
         !! and look for the earliest ringtime in all coupling alarms.  Save that in the
         !! ringTime
         call ESMF_ClockGet(myClock, stopTime=ringTime, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
 
         do j=1,alarmCount
           call ESMF_AlarmGet(alarmList(j), name=alarmName, ringTime=time, &
             ringInterval=ringInterval, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
           if (index(trim(alarmName),'cplAlarm')<1) cycle
 
           call ESMF_TimeGet(time,timeStringISOFrac=timeString)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           !write(message,'(A)') trim(myName)//' '//trim(compName)//' '//trim(alarmName)//' rings at '//trim(timestring)
           !call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
@@ -2060,23 +1631,22 @@ module toplevel_component
         enddo
 
         !call ESMF_TimeGet(ringTime,timeStringISOFrac=timestring, rc=localrc)
-        !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         !write(message,'(A)') trim(myName)//' setting child''s stopTime to'//trim(timeString)
         !call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=localrc);
 
 !       TODO: do not modify childClock
 !             (components need to inquire stopTime not from their own clock!)
         call ESMF_ClockSet(childClock, stopTime=ringTime, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call ESMF_ClockGet(childClock, timeStep=timeInterval, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
         if (timeInterval>ringTime-currTime) then
           !call ESMF_ClockSet(childClock, timeStep=ringTime-currTime, rc=localrc)
-          !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
           !call ESMF_LogWrite(trim(myName)//"  must be implemented in "//trim(compName),ESMF_LOGMSG_WARNING)
         endif
 
@@ -2089,12 +1659,10 @@ module toplevel_component
           timeInterval=ringTime-currTime
 
           call ESMF_ClockSet(controlClock, currTime=currTime, timeStep=timeInterval, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           call ESMF_TimeIntervalGet(timeInterval, h=hours, m=minutes, s=seconds, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           write(message,'(A,A,I5.5,A,I2.2,A,I2.2,A)') trim(myName)//' '//trim(timeString)//' calling '//trim(compName), &
             ' to run for ', hours, ':', minutes, ':', seconds, ' hours'
@@ -2104,8 +1672,7 @@ module toplevel_component
         endif
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=localrc)
         call ESMF_ClockSet(controlClock, currTime=currTime,  rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
 
         !! Loop over all run phases, disregarding any action that could be taken between
@@ -2114,19 +1681,47 @@ module toplevel_component
           !call MOSSCO_GridCompFieldsTable(gridCompList(i), importState=gridImportStateList(i), exportState=gridExportStateList(i),rc=localrc)
           call ESMF_LogWrite('toplevel reconciles '//trim(gridCompNameList(i))//'Import', ESMF_LOGMSG_INFO)
           call ESMF_StateReconcile(gridImportStateList(i), rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
           call ESMF_LogWrite('toplevel reconciles '//trim(gridCompNameList(i))//'Export', ESMF_LOGMSG_INFO)
           call ESMF_StateReconcile(gridExportStateList(i), rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          call cpu_time(wallTimeStart(i))
+
           call ESMF_GridCompRun(gridCompList(i),importState=gridImportStateList(i),&
             exportState=gridExportStateList(i), clock=controlClock, phase=phase, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          call cpu_time(wallTimeStop(i))
+
+          ms_r8=1000.0d0 * (wallTimeStop(i) - wallTimeStart(i))
+
+          write(message,'(A)') trim(myName)//' executed '//trim(gridCompNameList(i))//' in '
+          if (ms_r8 < 9999.0d0) then
+            write(formatString,'(A)') '(A,X,'//intformat(int(ms_r8))//',X,A)'
+            write(message, formatString) trim(message), int(ms_r8), 'mseconds'
+          else
+            write(formatString,'(A)') '(A,X,'//intformat(int(ms_r8/1000.0d0))//',X,A)'
+            write(message, formatString) trim(message), int(ms_r8/1000.0d0), 'seconds'
+          endif
+
+          call ESMF_TimeIntervalGet(timeInterval, ms_r8=realValue, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          if (ms_r8>0.0d0 .and. realValue>0.0d0) then
+            realValue = realValue / ms_r8
+            write(formatString,'(A)') '(A,X,'//intformat(int(realValue))//')'
+            write(message, formatString) trim(message)//' with speedup ', int(realValue)
+          endif
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
           !call MOSSCO_GridCompFieldsTable(gridCompList(i), importState=gridImportStateList(i), exportState=gridExportStateList(i),rc=localrc)
           !call ESMF_LogFlush()
         enddo
 
         call ESMF_ClockGet(childClock, currTime=time, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         if (time == currTime) then
           !! This child component did not advance its clock in its Run() routine
@@ -2135,7 +1730,7 @@ module toplevel_component
           !call ESMF_LogWrite("... but this assumption is weird - skipping further action!",ESMF_LOGMSG_WARNING)
 
           !call ESMF_ClockAdvance(childClock, timeStep=timeInterval, rc=localrc)
-          !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         endif
       enddo
 
@@ -2144,7 +1739,7 @@ module toplevel_component
 
       call ESMF_ClockGetAlarmList(myClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
         alarmCount=alarmCount, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (alarmCount==0) then
         !call ESMF_LogWrite('No alarm found in '//trim(myName), ESMF_LOGMSG_WARNING)
@@ -2155,14 +1750,14 @@ module toplevel_component
 
         call ESMF_ClockGetAlarmList(myClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
           alarmList=alarmList, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call ESMF_AlarmGet(alarmList(1), ringTime=ringTime, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         do j=2,alarmCount
           call ESMF_AlarmGet(alarmList(j), ringTime=time, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           if (time<ringTime) ringTime=time
         enddo
@@ -2172,164 +1767,118 @@ module toplevel_component
 
       !> Log current and next ring time
       call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       write(message,'(A)') trim(myName)//' '//trim(timeString)//' '//trim(myName)//' stepping to'
       call ESMF_TimeGet(ringTime,timeStringISOFrac=timestring, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       write(message,'(A)') trim(message)//' '//trim(timeString)
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=localrc)
 
       call ESMF_ClockGet(myClock, advanceCount=advanceCount, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
       call ESMF_GridCompGet(gridComp, localPet=localPet, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       !> If advanceCount==1 then go through all components and log their import and export states
 
       if (localPet==0 .and. advanceCount==0) then
         call ESMF_AttributeGet(importState, name='simulation_title', value=message, defaultvalue='Untitled', rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call ESMF_LogOpen(stateLog,'states_'//trim(message), rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call ESMF_LogWrite('====== Status at end of first run loop  ======', ESMF_LOGMSG_INFO, log=stateLog)
 
         do i=1,numGridComp
           call ESMF_LogWrite('====== States of '//trim(gridCompNameList(i))//' ======', ESMF_LOGMSG_INFO, log=stateLog)
           call MOSSCO_StateLog(gridImportStateList(i), deep=.true., log=stateLog, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
           call MOSSCO_StateLog(gridExportStateList(i), deep=.true., log=stateLog, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         enddo
 
         call ESMF_LogWrite('====== States of '//trim(myName)//' ======', ESMF_LOGMSG_INFO, log=stateLog)
         call MOSSCO_StateLog(importState, log=stateLog, deep=.true.,  rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        call MOSSCO_StateLog(exportState, log=stateLog, deep=.true., rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        call ESMF_LogClose(stateLog)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call MOSSCO_StateLog(exportState, log=stateLog, deep=.true., rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        call ESMF_LogClose(stateLog, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
 
       !> Set new time interval and advance clock, stop if end of
       !! simulation reached
       call ESMF_ClockSet(myClock, timeStep=timeInterval, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_ClockAdvance(myClock, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call cpu_time(wallTimeStop(0))
+      ms_r8 = 1000.0d0 * (wallTimeStop(0)- wallTimeStart(0))
+
+      write(message,'(A)') trim(myName)//' executed in '
+      if (ms_r8 < 9999.0d0) then
+        write(formatString,'(A)') '(A,X,'//intformat(int(ms_r8))//',X,A)'
+        write(message, formatString) trim(message), int(ms_r8), 'mseconds'
+      else
+        write(formatString,'(A)') '(A,X,'//intformat(int(ms_r8/1000.0d0))//',X,A)'
+        write(message, formatString) trim(message), int(ms_r8/1000.0d0), 'seconds'
+      endif
+
+      call ESMF_TimeIntervalGet(timeInterval, ms_r8=realValue, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (ms_r8>0.0d0 .and. realValue > 0.0d0) then
+        realValue = realValue / ms_r8
+        write(formatString,'(A)') '(A,X,'//intformat(int(realValue))//')'
+        write(message, formatString) trim(message)//' with speedup ', int(realValue)
+      endif
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       if (ESMF_ClockIsStopTime(myClock, rc=localrc)) exit
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     enddo
 
-    !! Running final netcdf output coupling wind_input to wind_output
-    call ESMF_CplCompRun(cplCompList(4), importState=gridImportStateList(8), &
-      exportState=gridExportStateList(3), clock=controlClock, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    do phase=1,gridCompPhaseCountList(3)
-      call ESMF_GridCompRun(gridCompList(3), importState=gridImportStateList(3), &
-        exportState=gridExportStateList(3), clock=controlClock, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    enddo
 
     !! Running final netcdf output coupling fabm_sediment to schism_mesh_output
-    call ESMF_CplCompRun(cplCompList(1), importState=gridImportStateList(6), &
-      exportState=gridExportStateList(2), clock=controlClock, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    do phase=1,gridCompPhaseCountList(2)
-      call ESMF_GridCompRun(gridCompList(2), importState=gridImportStateList(2), &
-        exportState=gridExportStateList(2), clock=controlClock, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_CplCompRun(cplCompList(1), importState=gridImportStateList(5), &
+      exportState=gridExportStateList(1), clock=controlClock, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    do phase=1,gridCompPhaseCountList(1)
+      call ESMF_GridCompRun(gridCompList(1), importState=gridImportStateList(1), &
+        exportState=gridExportStateList(1), clock=controlClock, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     enddo
 
     !! Running final netcdf output coupling schism to schism_mesh_output
-    call ESMF_CplCompRun(cplCompList(1), importState=gridImportStateList(5), &
-      exportState=gridExportStateList(2), clock=controlClock, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    do phase=1,gridCompPhaseCountList(2)
-      call ESMF_GridCompRun(gridCompList(2), importState=gridImportStateList(2), &
-        exportState=gridExportStateList(2), clock=controlClock, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    enddo
-
-    !! Running final netcdf output coupling fabm_sediment to schism_grid_output
-    call ESMF_CplCompRun(cplCompList(2), importState=gridImportStateList(6), &
+    call ESMF_CplCompRun(cplCompList(1), importState=gridImportStateList(3), &
       exportState=gridExportStateList(1), clock=controlClock, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     do phase=1,gridCompPhaseCountList(1)
       call ESMF_GridCompRun(gridCompList(1), importState=gridImportStateList(1), &
         exportState=gridExportStateList(1), clock=controlClock, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    enddo
-
-    !! Running final netcdf output coupling wind_input to schism_grid_output
-    call ESMF_CplCompRun(cplCompList(1), importState=gridImportStateList(8), &
-      exportState=gridExportStateList(1), clock=controlClock, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    do phase=1,gridCompPhaseCountList(1)
-      call ESMF_GridCompRun(gridCompList(1), importState=gridImportStateList(1), &
-        exportState=gridExportStateList(1), clock=controlClock, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    enddo
-
-    !! Running final netcdf output coupling schism to schism_grid_output
-    call ESMF_CplCompRun(cplCompList(2), importState=gridImportStateList(5), &
-      exportState=gridExportStateList(1), clock=controlClock, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    do phase=1,gridCompPhaseCountList(1)
-      call ESMF_GridCompRun(gridCompList(1), importState=gridImportStateList(1), &
-        exportState=gridExportStateList(1), clock=controlClock, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     enddo
 
     call ESMF_StateValidate(importState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_StateValidate(exportState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (allocated(wallTimeStart)) deallocate(wallTimeStart)
+    if (allocated(wallTimeStop)) deallocate(wallTimeStop)
 
     call MOSSCO_CompExit(gridComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Run
 
@@ -2432,19 +1981,9 @@ module toplevel_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_GridCompDestroy(gridCompList(5), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_GridCompDestroy(gridCompList(6), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_GridCompDestroy(gridCompList(7), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_GridCompDestroy(gridCompList(8), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_CplCompDestroy(cplCompList(1), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_CplCompDestroy(cplCompList(2), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_CplCompDestroy(cplCompList(3), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_CplCompDestroy(cplCompList(4), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (allocated(gridCompClockList)) deallocate(gridCompClockList)
