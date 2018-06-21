@@ -14,4 +14,4 @@ coupling:
   - components:
      - time_aggregation
      - mossco_lowres
-    interval: 6 h
+    interval: 30 m
