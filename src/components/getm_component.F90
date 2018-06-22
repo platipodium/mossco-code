@@ -77,7 +77,7 @@ module getm_component
      character(len=ESMF_MAXSTR)                  :: fieldname
   end type ptrarray3D
   type(ptrarray3D),dimension(:),allocatable :: transport_ws,transport_conc
-#ifdef _TEST_TRACERFLUXES_
+#ifndef NO_TRACER_FLUXES
   type(ptrarray3D),dimension(:),allocatable :: transport_xflux,transport_yflux
 #endif
 
@@ -410,15 +410,19 @@ module getm_component
 
     fieldBundle = ESMF_FieldBundleCreate(name='concentrations_in_water',multiflag=.true.,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_FieldBundleSet(fieldBundle,getmGrid3D,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_AttributeSet(fieldBundle,'creator', trim(name), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_StateAdd(importState,(/fieldBundle/),rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     fieldBundle = ESMF_FieldBundleCreate(name='concentrations_z_velocity_in_water',multiflag=.true.,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_FieldBundleSet(fieldBundle,getmGrid3D,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_AttributeSet(fieldBundle,'creator', trim(name), rc=localrc)
@@ -449,7 +453,8 @@ module getm_component
       integer,intent(out) :: rc
 
       type(ESMF_Clock)                                    :: myClock
-      type(ESMF_FieldBundle)                              :: concFieldBundle,wsFieldBundle
+      type(ESMF_FieldBundle)                              :: concFieldBundle
+      type(ESMF_FieldBundle)                              :: wsFieldBundle
       type(ESMF_Field)          ,dimension(:),allocatable :: concFieldList,fieldList
       type(ESMF_Field)                                    :: field,wsField
       type(ESMF_FieldStatus_Flag)                         :: status
@@ -515,7 +520,7 @@ module getm_component
 
             allocate(transport_conc(transportFieldCount))
             allocate(transport_ws  (transportFieldCount))
-#ifdef _TEST_TRACERFLUXES_
+#ifndef NO_TRACER_FLUXES
             allocate(transport_xflux(transportFieldCount))
             allocate(transport_yflux(transportFieldCount))
 #endif
@@ -574,10 +579,7 @@ module getm_component
                call ESMF_AttributeGet(concFieldList(i), 'external_index', value=conc_id, defaultValue=int(-1,ESMF_KIND_I8), rc=localrc)
                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-#ifdef _TEST_TRACERFLUXES_
-               call ESMF_AttributeGet(concFieldList(i), 'units', value=units, defaultValue='', rc=localrc)
-               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
+#ifndef NO_TRACER_FLUXES
                itemName = itemNameList(i)(:namelenList(i)-len_trim(conc_suffix))//'_x_flux_in_water'
                allocate(transport_xflux(n)%ptr(I3DFIELD))
                field = ESMF_FieldCreate(getmGrid3D,transport_xflux(n)%ptr, &
@@ -586,15 +588,22 @@ module getm_component
                                         name=trim(itemName),           &
                                         rc=localrc)
                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+               call MOSSCO_FieldCopyAttributes(field, concFieldList(i), rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+               call ESMF_AttributeGet(concFieldList(i), 'units', value=units, defaultValue='', rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+               call ESMF_AttributeSet(field,'units','m3 s-1 '//trim(units), rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
                call ESMF_AttributeSet(field,'creator','getm', rc=localrc)
                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-               call ESMF_AttributeSet(field,'external_index',conc_id, rc=localrc)
-               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-               call ESMF_AttributeSet(field,'units','m3/s*'//trim(units), rc=localrc)
-               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
                call ESMF_StateAddReplace(exportState, (/field/), rc=localrc)
                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-                
+
                write(message,'(A)') trim(name)//' created flux field '//trim(itemname)
                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
@@ -606,12 +615,19 @@ module getm_component
                                         name=trim(itemName),           &
                                         rc=localrc)
                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+               call MOSSCO_FieldCopyAttributes(field, concFieldList(i), rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+               call ESMF_AttributeGet(concFieldList(i), 'units', value=units, defaultValue='', rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+               call ESMF_AttributeSet(field,'units','m3 s-1 '//trim(units), rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
                call ESMF_AttributeSet(field,'creator','getm', rc=localrc)
                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-               call ESMF_AttributeSet(field,'external_index',conc_id, rc=localrc)
-               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-               call ESMF_AttributeSet(field,'units','m3/s*'//trim(units), rc=localrc)
-               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
                call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
                write(message,'(A)') trim(name)//' created flux field '//trim(itemname)
@@ -1448,7 +1464,7 @@ module getm_component
 ! !LOCAL VARIABLES
    REALTYPE,dimension(I3DFIELD),target  :: t_conc,t_ws
    REALTYPE,dimension(:,:,:)   ,pointer :: p_conc,p_ws
-#ifdef _TEST_TRACERFLUXES_
+#ifndef NO_TRACER_FLUXES
    REALTYPE,dimension(I3DFIELD),target  :: t_xflux,t_yflux
    REALTYPE,dimension(:,:,:)   ,pointer :: p_xflux,p_yflux
 #endif
@@ -1479,7 +1495,7 @@ module getm_component
             t_ws = _ZERO_
          end if
          p_ws => t_ws
-#ifdef _TEST_TRACERFLUXES_
+#ifndef NO_TRACER_FLUXES
          if (associated(transport_xflux(n)%ptr)) then
             t_xflux = transport_xflux(n)%ptr
             p_xflux => t_xflux
@@ -1501,7 +1517,7 @@ module getm_component
             t_ws = _ZERO_
             p_ws => t_ws
          end if
-#ifdef _TEST_TRACERFLUXES_
+#ifndef NO_TRACER_FLUXES
          p_xflux => transport_xflux(n)%ptr
          p_yflux => transport_yflux(n)%ptr
 #endif
@@ -1526,7 +1542,7 @@ module getm_component
         endif
       end if
 
-#ifdef _TEST_TRACERFLUXES_
+#ifndef NO_TRACER_FLUXES
       call do_transport_3d(p_conc,p_ws,ffluxu=p_xflux,ffluxv=p_yflux)
 #else
       call do_transport_3d(p_conc,p_ws)
@@ -1535,7 +1551,7 @@ module getm_component
       if (noKindMatch) then
          transport_conc(n)%ptr = t_conc
          transport_ws  (n)%ptr = t_ws
-#ifdef _TEST_TRACERFLUXES_
+#ifndef NO_TRACER_FLUXES
          if (associated(transport_xflux(n)%ptr)) then
             transport_xflux(n)%ptr = t_xflux
          end if
