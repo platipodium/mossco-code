@@ -501,7 +501,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       itemSearch(1)=trim(fieldName)
       call MOSSCO_StateGet(importState, itemfieldList, &
         fieldCount=itemfieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, &
-        include=itemSearch, rc=localrc)
+        include=itemSearch, verbose=verbose,  rc=localrc)
 
       write(*,*) 'IFCOUNT ',i, trim(fieldName), itemFieldCount
 
@@ -545,8 +545,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         fieldNameList(ubound(fieldNameList,1)) = trim(fieldName)
 
       else
-        localrc = ESMF_RC_NOT_IMPL
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) return
+        write(message,'(A)') trim(name)//' strangely received zero for item '//trim(fieldName)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       endif
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     enddo
@@ -559,7 +559,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         itemSearch(1)=trim(fieldNameList(i))
-        
+
         call MOSSCO_StateGet(importState, itemfieldList, &
           fieldCount=itemfieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, &
           include=itemSearch, rc=localrc)
