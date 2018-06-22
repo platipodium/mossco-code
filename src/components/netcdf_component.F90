@@ -340,9 +340,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     integer(ESMF_KIND_I8)   :: i, j, advanceCount
     real(ESMF_KIND_R8)      :: seconds
     integer(ESMF_KIND_I4)   :: itemCount, timeSlice, localPet,  petCount
-    integer(ESMF_KIND_I4)   :: localrc, fieldCount
+    integer(ESMF_KIND_I4)   :: localrc, fieldCount, itemFieldCount
     type(ESMF_StateItem_Flag) :: itemType
-    type(ESMF_StateItem_Flag), allocatable, dimension(:) :: itemTypeList
+    type(ESMF_StateItem_Flag), allocatable, dimension(:)  :: itemTypeList
     character(len=ESMF_MAXSTR), allocatable, dimension(:) :: itemNameList
     character(len=ESMF_MAXSTR), allocatable, dimension(:) :: fieldNameList
     type(ESMF_Clock)        :: clock
@@ -353,7 +353,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     character(len=ESMF_MAXSTR), pointer :: filterIncludeList(:) => null()
     character(len=ESMF_MAXSTR), pointer :: filterExcludeList(:) => null()
     logical                    :: checkNaN=.true., checkInf=.true.
-    type(ESMF_Field), allocatable :: fieldList(:)
+    type(ESMF_Field), allocatable :: fieldList(:), itemFieldList(:)
+    type(ESMF_FieldBundle)        :: fieldBundle
+    character(len=ESMF_MAXSTR), pointer :: itemSearch(:) => null()
 
     rc = ESMF_SUCCESS
 
@@ -486,33 +488,47 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         exclude=filterExcludeList, verbose=verbose, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+    !> This stores the itemSearch pointer field Name
+    if (.not.associated(itemSearch)) allocate(itemSearch(1), stat=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
     do i=1, fieldCount
 
       call ESMF_FieldGet(fieldList(i), name=fieldName, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (verbose) then
-        write(message,'(A)') trim(name)//' will write'
-        call MOSSCO_MessageAdd(message,' '//trim(fieldName))
-        call MOSSCO_MessageAdd(message,' to file ')
-        call MOSSCO_MessageAdd(message,' '//fileName)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      endif
+      !> We need to know whether this field occurs multiple times
+      itemSearch(1)=trim(fieldName)
+      call MOSSCO_StateGet(importState, itemfieldList, &
+        fieldCount=itemfieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, &
+        include=itemSearch, rc=localrc)
 
-      !> As we don't know whether the field comes from a fieldbundle
-      !> of the same name, check this here
-      call ESMF_StateGet(importState, fieldName, itemType, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      write(*,*) 'IFCOUNT ',i, trim(fieldName), itemFieldCount
 
-      if (itemType == ESMF_STATEITEM_FIELD) then
+      !> Simple case: field occurs only once
+      if (itemFieldCount == 1) then
+
+        if (verbose) then
+          write(message,'(A)') trim(name)//' writes '
+          call MOSSCO_FieldString(itemFieldList(1), message)
+          call MOSSCO_MessageAdd(message,' to '//fileName)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        endif
+
         call nc_state_field_write(importState, trim(fieldName), &
           checkNaN=checkNaN, checkInf=checkInf, owner=trim(name), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      elseif (itemType == ESMF_STATEITEM_FIELDBUNDLE &
-        .or.  itemType == ESMF_STATEITEM_NOTFOUND) then
-        !> this is the case when a field has the same name as its containing
-        !> fieldBundle or when a field is in a fieldBundle that has a different name
+      elseif (itemFieldCount > 1) then
+
+        write(message,'(A)') trim(name)//' will write multiple item  '
+        call MOSSCO_FieldString(itemFieldList(1), message)
+        call MOSSCO_MessageAdd(message,' to '//fileName)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+        !> this is the case when a multiple field is in one or more fieldbundles,
+        !> either of the same or a different name. We assemble those fieldNames
+        !> in a fieldNameList for later processing
 
         if (.not.allocated(fieldNameList)) then
           call MOSSCO_Reallocate(fieldNameList, 1, keep=.false., rc=localrc)
@@ -528,10 +544,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
         fieldNameList(ubound(fieldNameList,1)) = trim(fieldName)
 
-        call nc_state_fieldbundle_write(importState, trim(fieldName), &
-          checkNaN=checkNaN, checkInf=checkInf, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
       else
         localrc = ESMF_RC_NOT_IMPL
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) return
@@ -539,6 +551,63 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     enddo
 
+    !> Now take care of all existing fieldBundles with field named in fieldNameList
+    if (allocated(fieldNameList)) then
+      do i=1, ubound(fieldNameList,1)
+
+        call ESMF_StateGet(importState, fieldNameList(i), itemType, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        itemSearch(1)=trim(fieldNameList(i))
+        
+        call MOSSCO_StateGet(importState, itemfieldList, &
+          fieldCount=itemfieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, &
+          include=itemSearch, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        !> Create a fieldBundle of the same name in the importState and add
+        !> all fields with this name the fieldBundle
+        if (itemType == ESMF_STATEITEM_NOTFOUND) then
+
+          fieldBundle = ESMF_FieldBundleCreate(name=fieldNameList(i), &
+            multiflag=.true., rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          call ESMF_FieldBundleAdd(fieldBundle, itemFieldList, multiflag=.true., rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          call ESMF_StateAddReplace(importState, (/fieldBundle/), rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        endif
+
+        if (verbose) then
+          write(message,'(A)') trim(name)//' writes bundle '
+          call MOSSCO_MessageAdd(message,' '//trim(fieldNameList(i))//' to ')
+          call MOSSCO_MessageAdd(message,' '//fileName)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        endif
+
+        do j=1,itemFieldCount
+          write(message,'(A)') trim(name)//' writes '
+          call MOSSCO_FieldString(itemFieldList(j), message)
+          call MOSSCO_MessageAdd(message,' to '//fileName)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        enddo
+
+        call nc_state_fieldbundle_write(importState, trim(fieldNameList(i)), &
+          checkNaN=checkNaN, checkInf=checkInf, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      enddo
+    endif
+
+    call MOSSCO_Reallocate(fieldNameList, 0, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call MOSSCO_Reallocate(itemFieldList, 0, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    deallocate(itemSearch, stat=localrc)
 
       !> Remove from import state all fields, whether written or not, ensure that all processes have
       !> processed all states by using a barrier
