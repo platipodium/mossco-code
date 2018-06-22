@@ -2290,16 +2290,17 @@ contains
     logical, intent(in), optional                :: verbose
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
-    integer(ESMF_KIND_I4)                   :: rc_, localrc, i, j, itemCount
+    integer(ESMF_KIND_I4)                   :: rc_, localrc, i, j, k, itemCount
     integer(ESMF_KIND_I4)                   :: n, fieldCount_, fieldInBundleCount
     character(len=ESMF_MAXPATHLEN)          :: message
-    character(len=ESMF_MAXSTR)              :: owner_
+    character(len=ESMF_MAXSTR)              :: owner_, bundleName, fieldName
     type(ESMF_StateItem_Flag), allocatable, dimension(:) :: itemTypeList
     character(len=ESMF_MAXSTR), allocatable, dimension(:):: itemNameList, fieldNameList(:)
     type(ESMF_FieldBundle)                  :: fieldBundle
     type(ESMF_FieldStatus_Flag)             :: fieldStatus_
     type(ESMF_Field), allocatable           :: tempList(:), fieldInBundleList(:)
     logical                                 :: isMatch, verbose_
+
 
     owner_ = '---'
     rc_ = ESMF_SUCCESS
@@ -2334,7 +2335,7 @@ contains
     endif
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    !> If no fields are found, then an error is returned unless the fieldCount
+    !> If no items are found, then an error is returned unless the fieldCount
     !> optional argument is provided.  This can correctly be zero.
     if (itemCount == 0) then
       if (present(fieldCount)) then
@@ -2362,114 +2363,133 @@ contains
     endif
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    !> Filter the list of all items such that it contains only fields, and complies with
-    !> constraints from include/exclude/status optional arguments
+    !> Filter the list of all items such that it contains only fields, and
+    !> complies with constraints from include/exclude/status optional arguments
     do i = 1, itemCount
 
-      ! Look for an exclusion pattern on this item name
-      if (present(exclude) .and. associated(exclude)) then
-        do j = lbound(exclude,1),ubound(exclude,1)
-          call MOSSCO_StringMatch(itemNameList(i), exclude(j), isMatch, localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      fieldInBundleCount = 1 ! One item was found
 
-          if (ismatch) exit
-        enddo
+      if (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
 
-        if (isMatch) then
-          if (verbose_) then
-            write(message,'(A)') trim(owner_)//' excluded'
-            call MOSSCO_MessageAdd(message, ' '//trim(itemNameList(i))//' with pattern ')
-            call MOSSCO_MessageAdd(message, ' '//trim(exclude(j)))
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-          endif
-          cycle
-        endif
+        call ESMF_StateGet(state, itemNameList(i), fieldBundle, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        call ESMF_FieldBundleGet(fieldBundle, fieldCount=fieldInBundleCount, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        !> Do not consider empty fieldBundles
+        if (fieldInBundleCount < 1) cycle
+
+        call MOSSCO_Reallocate(fieldInBundleList, fieldInBundleCount, &
+          keep=.false., rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        call ESMF_FieldBundleGet(fieldBundle, fieldList=fieldInBundleList, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      else
+        call MOSSCO_Reallocate(fieldInBundleList, 1, keep=.false., rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        call ESMF_StateGet(state, itemNameList(i), fieldInBundleList(1), rc=localrc)
       endif
 
-      !! Look for an inclusion pattern on this field or fieldBundle name
-      if (present(include) .and. associated(include)) then
-        do j = lbound(include,1),ubound(include,1)
-          call MOSSCO_StringMatch(itemNameList(i), include(j), isMatch, localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      do k=1, fieldInBundleCount
 
-          if (ismatch .and. verbose_) then
-            write(message,'(A)') trim(owner_)//' included'
-            call MOSSCO_MessageAdd(message, ' '//trim(itemNameList(i))//' with pattern ')
-            call MOSSCO_MessageAdd(message, ' '//trim(include(j)))
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        ! Look for an exclusion pattern on this item name, check both the
+        ! field and the bundle name
+        if (present(exclude) .and. associated(exclude)) then
+
+          do j = lbound(exclude,1),ubound(exclude,1)
+            call MOSSCO_StringMatch(itemNameList(i), exclude(j), isMatch, localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+            if (ismatch) exit
+          enddo
+
+          if (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
+
+            call ESMF_FieldGet(fieldInBundleList(k), name=fieldName, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+            do j = lbound(exclude,1),ubound(exclude,1)
+              call MOSSCO_StringMatch(fieldName, exclude(j), isMatch, localrc)
+              _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+              if (ismatch) exit
+            enddo
           endif
-          if (ismatch) exit
-        enddo
-        if (.not.ismatch) then
-          if (verbose_) then
-            write(message,'(A)') trim(owner_)//' did not include'
-            call MOSSCO_MessageAdd(message,' '//itemNameList(i))
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+          if (isMatch) then
+            if (verbose_) then
+              write(message,'(A)') trim(owner_)//' excluded'
+              call MOSSCO_MessageAdd(message, ' '//trim(itemNameList(i))//' with pattern ')
+              call MOSSCO_MessageAdd(message, ' '//trim(exclude(j)))
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+            endif
+
+            cycle
           endif
-          cycle
         endif
-      endif
 
-      !> If it is a field, then add to a temporary fieldList
-      if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
+        !! Look for an inclusion pattern on this field or fieldBundle name
+        if (present(include) .and. associated(include)) then
+
+          do j = lbound(include,1),ubound(include,1)
+            call MOSSCO_StringMatch(itemNameList(i), include(j), isMatch, localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+            if (ismatch .and. verbose_) then
+              write(message,'(A)') trim(owner_)//' included'
+              call MOSSCO_MessageAdd(message, ' '//trim(itemNameList(i))//' with pattern ')
+              call MOSSCO_MessageAdd(message, ' '//trim(include(j)))
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+            endif
+            if (ismatch) exit
+          enddo
+
+          !> We only need to check the bundle if a match has not been found
+          if (.not.isMatch .and. itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
+
+            call ESMF_FieldGet(fieldInBundleList(k), name=fieldName, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+            do j = lbound(include,1),ubound(include,1)
+              call MOSSCO_StringMatch(fieldName, include(j), isMatch, localrc)
+              _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+              if (ismatch .and. verbose_) then
+                write(message,'(A)') trim(owner_)//' included'
+                call MOSSCO_MessageAdd(message, ' '//trim(fieldName)//' with pattern ')
+                call MOSSCO_MessageAdd(message, ' '//trim(include(j)))
+                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+              endif
+              if (ismatch) exit
+            enddo
+          endif
+
+          if (.not.ismatch) then
+            if (verbose_) then
+              write(message,'(A)') trim(owner_)//' did not include'
+              call MOSSCO_MessageAdd(message,' '//itemNameList(i))
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+            endif
+            cycle
+          endif
+        endif !> presence of include/exclude
 
         fieldCount_ = fieldCount_ + 1
 
         call MOSSCO_Reallocate(fieldList, fieldCount_, keep=.true., rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-        !> @todo The following call resulted in NOT_FOUND sometimes, this should
-        !> be investigated further
-        call ESMF_StateGet(state, trim(itemNameList(i)), fieldList(fieldCount_), rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+        fieldList(fieldCount_) = fieldInBundleList(k)
 
-        cycle
-      endif
+        !> Deliver only the first result with itemSearch call
+        if (present(itemSearch) .and. fielDCount_ == 1) exit
 
-      !> if it is a fieldBundle, then add a matching field (only with itemSearch option)
-      !> or all fields in the bundle to the temporary fieldList
-      if (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
-
-        call ESMF_StateGet(state, trim(itemNameList(i)), fieldBundle, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-        call ESMF_FieldBundleGet(fieldBundle, fieldCount=fieldInBundleCount, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-        if (fieldInBundleCount < 1) cycle
-
-        call MOSSCO_Reallocate(fieldNameList, fieldInBundleCount, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-        call MOSSCO_Reallocate(fieldInBundleList, fieldInBundleCount, keep=.false., rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-        call ESMF_FieldBundleGet(fieldBundle, fieldList=fieldInBundleList, &
-          fieldNameList=fieldNameList, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-        do j = 1, fieldInBundleCount
-
-          if (present(itemSearch)) then
-            if (trim(fieldNameList(j)) /= trim(itemSearch)) cycle
-          endif
-
-          fieldCount_ = fieldCount_ + 1
-
-          call MOSSCO_Reallocate(fieldList, fieldCount_, keep=.true., rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-          fieldList(fieldCount_) = fieldInBundleList(j)
-        enddo
-
-        call MOSSCO_Reallocate(fieldNameList, 0, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-        call MOSSCO_Reallocate(fieldInBundleList, 0, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-      endif
-    enddo
+      enddo !> k-loop over fields in bundles and states
+    enddo !> i-loop over items ins states
 
     if (fieldCount_ == 0) then
       if (present(fieldCount)) then
