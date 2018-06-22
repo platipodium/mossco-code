@@ -638,6 +638,7 @@ module getm_component
                                         totalUWidth=(/HALO,HALO,0/),   &
                                         name=trim(itemName),           &
                                         rc=localrc)
+
           _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           call MOSSCO_FieldCopyAttributes(field, concFieldList(i), rc=localrc)
@@ -657,7 +658,7 @@ module getm_component
 
           write(message,'(A)') trim(name)//' created flux field '//trim(itemname)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-          
+
           itemName = itemNameList(i)(:namelenList(i)-len_trim(conc_suffix))//trim(yflux_suffix)
           allocate(transport_yflux(n)%ptr(I3DFIELD), stat=localrc)
           _LOG_ALLOC_FINALIZE_ON_ERROR_(rc)
