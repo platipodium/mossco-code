@@ -495,7 +495,7 @@ fid.write('''
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(len=19)       :: timestring
+    character(len=19)       :: timeString
     type(ESMF_Time)         :: startTime, currTime
     type(ESMF_Time)         :: ringTime, time
     type(ESMF_TimeInterval) :: alarmInterval
@@ -684,7 +684,7 @@ fid.write('''
         name=trim(gridCompNameList(i))//'Export')
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_LogWrite('toplevel reconciles '//trim(gridCompNameList(i))//'Export', ESMF_LOGMSG_INFO)
+      call ESMF_LogWrite(trim(myName)//' reconciles '//trim(gridCompNameList(i))//'Export', ESMF_LOGMSG_INFO)
       call ESMF_StateReconcile(gridExportStateList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -692,7 +692,7 @@ fid.write('''
         name=trim(gridCompNameList(i))//'Import')
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_LogWrite('toplevel reconciles '//trim(gridCompNameList(i))//'Import', ESMF_LOGMSG_INFO)
+      call ESMF_LogWrite(trim(myName)//' reconciles '//trim(gridCompNameList(i))//'Import', ESMF_LOGMSG_INFO)
       call ESMF_StateReconcile(gridImportStateList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1117,10 +1117,10 @@ fid.write('    !! End of ReadRestart \n\n')
 
 fid.write('''
     do i=1, numGridComp
-      call ESMF_LogWrite('toplevel reconciles '//trim(gridCompNameList(i))//'Import', ESMF_LOGMSG_INFO)
+      call ESMF_LogWrite(trim(myName)//' reconciles '//trim(gridCompNameList(i))//'Import', ESMF_LOGMSG_INFO)
       call ESMF_StateReconcile(state=gridImportStateList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_LogWrite('toplevel reconciles '//trim(gridCompNameList(i))//'Export', ESMF_LOGMSG_INFO)
+      call ESMF_LogWrite(trim(myName)//'reconciles '//trim(gridCompNameList(i))//'Export', ESMF_LOGMSG_INFO)
       call ESMF_StateReconcile(state=gridExportStateList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
@@ -1333,7 +1333,7 @@ fid.write('''
     do i=1,ubound(alarmList,1)
       call ESMF_AlarmGet(alarmList(i), ringTime=time, name=alarmName, rc=localrc)
 
-      call ESMF_TimeGet(time,timeStringISOFrac=timestring)
+      call ESMF_TimeGet(time,timeStringISOFrac=timeString)
       !write(message,'(A)') trim(myName)//' alarm '//trim(alarmName)//' rings at '//trim(timestring)
       !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
@@ -1445,8 +1445,9 @@ fid.write('''
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(len=ESMF_MAXSTR) :: timestring, cplName, myName, childName
+    character(len=ESMF_MAXSTR) :: timeString, cplName, myName, childName
     type(ESMF_Time)            :: stopTime, currTime, ringTime, time
+    type(ESMF_Time)            :: startTime
     type(ESMF_TimeInterval)    :: timeInterval, ringInterval
     integer(ESMF_KIND_I8)      :: i, j, k, l, advanceCount
     integer(ESMF_KIND_I4)      :: alarmCount
@@ -1487,15 +1488,19 @@ fid.write('''
 
     if (allocated(wallTimeStart)) deallocate(wallTimeStart)
     if (allocated(wallTimeStop)) deallocate(wallTimeStop)
-    allocate(wallTimeStart(0:numComp))
-    allocate(wallTimeStop(0:numComp))
+    allocate(wallTimeStart(0:numComp), stat=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    allocate(wallTimeStop(0:numComp), stat=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !! Establish number of phases and zero phase for all components
     !! @> todo this interface will likely change in the future and will
     !! be integrated with GridCompGet
 
-    allocate(GridCompHasPhaseZeroList(numGridComp))
-    allocate(gridCompPhaseCountList(numGridComp))
+    allocate(GridCompHasPhaseZeroList(numGridComp), stat=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    allocate(gridCompPhaseCountList(numGridComp), stat=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     do i = 1, numGridComp
       call ESMF_GridCompGetEPPhaseCount(gridCompList(i), ESMF_METHOD_RUN, &
@@ -1506,45 +1511,52 @@ fid.write('''
       GridCompHasPhaseZeroList(i)=hasPhaseZero
     enddo
 
-    allocate(CplCompPhaseCountList(numCplComp))
-    !!> @todo reenable if ESMF new enough
-    CplCompPHaseCountList(:)=1
+    allocate(CplCompPhaseCountList(numCplComp), stat=localrc )
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    !do i = 1, numCplComp
-    !  call ESMF_CplCompGetEPPhaseCount(cplCompList(i), ESMF_METHOD_RUN, &
-    !    phaseCount=CplCompPhaseCountList(i), phaseZeroFlag=hasPhaseZero, rc=localrc)
-    !  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    !    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    !  if (.not.hasPhaseZero) cycle
-    !enddo
+#if ESMF_MAJOR_VERSION > 6
+    do i = 1, numCplComp
+      call ESMF_CplCompGetEPPhaseCount(cplCompList(i), ESMF_METHOD_RUN, &
+        phaseCount=CplCompPhaseCountList(i), phaseZeroFlag=hasPhaseZero, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (.not.hasPhaseZero) cycle
+    enddo
+#else
+    CplCompPHaseCountList(:)=1
+#endif
 
     call ESMF_ClockGetAlarmList(myClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
       alarmCount=alarmCount, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
 
     !! Run until the clock's stoptime is reached
     do
 
       call cpu_time(wallTimeStart(0))
 
-      call ESMF_ClockGet(myClock,currTime=currTime, stopTime=stopTime, rc=localrc)
+      call ESMF_ClockGet(myClock,currTime=currTime, stopTime=stopTime, &
+        startTime=startTime, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (currTime>stopTime) then
+      if (currTime > stopTime .or. currTime < startTime) then
         call ESMF_LogWrite(trim(myName)//' clock out of scope', ESMF_LOGMSG_ERROR)
         call ESMF_FINALIZE(endflag=ESMF_END_ABORT, rc=localrc)
       endif
 
-      !! Loop through all components and check whether their clock is currently at the
-      !! same time as my own clock's currTime, if yes, then run the respective couplers
-      do i=1,numGridComp
+      !! Loop through all components and check whether their clock is currently
+      !! at the same time as my own clock's currTime, if yes, then run the
+      !! respective couplers
+      do i=1, numGridComp
+
         !! Determine for each child the clock
-        call ESMF_GridCompGet(gridCompList(i),name=compName, clockIsPresent=clockIsPresent, rc=localrc)
+        call ESMF_GridCompGet(gridCompList(i),name=compName, &
+          clockIsPresent=clockIsPresent, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         if (.not.clockIsPresent) then
-          call ESMF_LogWrite(trim(myName)//' required clock not found in '//trim(compName), ESMF_LOGMSG_ERROR)
+          call ESMF_LogWrite(trim(myName)//' required clock not found in ' &
+            //trim(compName), ESMF_LOGMSG_ERROR)
           call ESMF_FINALIZE(endflag=ESMF_END_ABORT, rc=localrc)
         endif
 
@@ -1554,14 +1566,23 @@ fid.write('''
         call ESMF_ClockGet(childClock, currTime=time, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        ! write(message,'(A)') trim(myName)//' '//trim(compName)//' now at '//trim(timestring)
-        !  call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
+        call ESMF_TimeGet(time, timeStringISOFrac=timeString, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+        !> Do not write out this message, as it probes for time in the
+        !> participating components of a coupling (multiple times per timestep)
+        ! write(message,'(A)') trim(myName)//' '//trim(compName)//' now at '&
+        !  //trim(timeString)
+        ! call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
+
+        !> If the child component has advanced beyond the current time, then
+        !> don't execute the couplers to this component
         if (time>currTime) cycle
 
         !! Find all the alarms in this child and call all the couplers that
         !! have ringing alarms at this stage
 
+        !> @todo Why not rely on ALARMLIST_RINGING?
         call ESMF_ClockGetAlarmList(childClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
           alarmCount=alarmCount, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -1572,8 +1593,10 @@ fid.write('''
         endif
 
         if (allocated(alarmList)) deallocate(alarmList)
-        allocate(alarmList(alarmCount))
+        allocate(alarmList(alarmCount), stat=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+        !> @todo Why not rely on ALARMLIST_RINGING? see above
         call ESMF_ClockGetAlarmList(childClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
            alarmList=alarmList, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -1589,11 +1612,13 @@ fid.write('''
           if (trim(alarmName(1:index(alarmName,'--')-1))/=trim(compName)) cycle
 
           !! Skip this alarm if it is not ringing now
+          !> @todo Why not rely on ALARMLIST_RINGING?, see above
           !if (ringTime > currTime) cycle
 
-          call ESMF_TimeGet(ringTime, timeStringISOFrac=timeString)
+          call ESMF_TimeGet(ringTime, timeStringISOFrac=timeString, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+          !> @todo debug time_aggregation from here
           !write(message,'(A)') trim(myName)//' '//trim(compName)//' '//trim(alarmName)//' rings at '//trim(timeString)
           !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
@@ -1805,7 +1830,6 @@ fid.write('''
         call ESMF_ClockGet(myClock, stopTime=ringTime, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-
         do j=1,alarmCount
           call ESMF_AlarmGet(alarmList(j), name=alarmName, ringTime=time, &
             ringInterval=ringInterval, rc=localrc)
@@ -1832,8 +1856,8 @@ fid.write('''
         !write(message,'(A)') trim(myName)//' setting child''s stopTime to'//trim(timeString)
         !call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=localrc);
 
-!       TODO: do not modify childClock
-!             (components need to inquire stopTime not from their own clock!)
+        !> @todo: do not modify childClock,  (components need to inquire
+        !> stopTime not from their own clock!)
         call ESMF_ClockSet(childClock, stopTime=ringTime, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -1876,11 +1900,11 @@ fid.write('''
         !! phases
         do phase=1,gridCompPhaseCountList(i)
           !call MOSSCO_GridCompFieldsTable(gridCompList(i), importState=gridImportStateList(i), exportState=gridExportStateList(i),rc=localrc)
-          call ESMF_LogWrite('toplevel reconciles '//trim(gridCompNameList(i))//'Import', ESMF_LOGMSG_INFO)
+          call ESMF_LogWrite(trim(myName)//' reconciles '//trim(gridCompNameList(i))//'Import', ESMF_LOGMSG_INFO)
           call ESMF_StateReconcile(gridImportStateList(i), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          call ESMF_LogWrite('toplevel reconciles '//trim(gridCompNameList(i))//'Export', ESMF_LOGMSG_INFO)
+          call ESMF_LogWrite(trim(myName)//' reconciles '//trim(gridCompNameList(i))//'Export', ESMF_LOGMSG_INFO)
           call ESMF_StateReconcile(gridExportStateList(i), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -1920,14 +1944,17 @@ fid.write('''
         call ESMF_ClockGet(childClock, currTime=time, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        if (time == currTime) then
-          !! This child component did not advance its clock in its Run() routine
+        if (time <= currTime) then
+          !> This child component did not advance its clock in its Run() routine.
+          !> This is expected behaviour for components that do not have their own
+          !> timestep, such as calculators, aggregators, input or output.
           !! We do that here
-          call ESMF_LogWrite(trim(myName)//' '//trim(compName)//' did not advance its clock',ESMF_LOGMSG_WARNING)
-          !call ESMF_LogWrite("... but this assumption is weird - skipping further action!",ESMF_LOGMSG_WARNING)
 
-          !call ESMF_ClockAdvance(childClock, timeStep=timeInterval, rc=localrc)
+          call ESMF_ClockAdvance(childClock, timeStep=timeInterval, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          call ESMF_LogWrite(trim(myName)//' advanced clock of '//trim(compName), &
+            ESMF_LOGMSG_INFO)
         endif
       enddo
 
