@@ -50,7 +50,7 @@ $(error Cannot find schism_esmf_component.)
 endif
 
 LIBS+= -L$(SCHISM_DIR)/lib -lhydro -lcore -lfabm_schism -lfabm
-LIBS+= -L$(PARMETIS_DIR) -lparmetis -lmetis
+LIBS+= -L$(PARMETIS_DIR) -lparmetis -lmetis $(PARMETIS_DIR)/libmetis.a
 LIBS+= -L$(MOSSCO_DIR)/lib -lmossco -lmossco_fabm
 F90FLAGS+= -DUSE_FABM
 F90FLAGS+= -I$(SCHISM_DIR)/include
