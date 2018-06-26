@@ -336,26 +336,30 @@ program main
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
   if (localPet==0 .or. logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite("Simulation ends at "//timestring, ESMF_LOGMSG_INFO)
 
-  write(message,'(A, I2)') 'ESMF double precision (KIND_R8) has '
-  if (digits(1.0_ESMF_KIND_R8) < 10) then
-    write(message,'(A,I1,A)')  trim(message)//' ',digits(1.0_ESMF_KIND_R8),' significant digits.'
-  elseif (digits(1.0_ESMF_KIND_R8) < 100) then
-    write(message,'(A,I2,A)')  trim(message)//' ',digits(1.0_ESMF_KIND_R8),' significant digits.'
-  else
-    write(message,'(A,I3,A)')  trim(message)//' ',digits(1.0_ESMF_KIND_R8),' significant digits.'
-  endif
+  write(formatString,'(A)') '(A,'//intformat(digits(1.0_ESMF_KIND_R8))//',A)'
+  write(message,formatString) 'ESMF double precision (KIND_R8) has ', &
+    digits(1.0_ESMF_KIND_R8),' significant digits'
   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-  write(message,'(A, I2)') 'ESMF single precision (KIND_R4) has '
-  if (digits(1.0_ESMF_KIND_R4) < 10) then
-    write(message,'(A,I1,A)')  trim(message)//' ',digits(1.0_ESMF_KIND_R4),' significant digits.'
-  elseif (digits(1.0_ESMF_KIND_R4) < 100) then
-    write(message,'(A,I2,A)')  trim(message)//' ',digits(1.0_ESMF_KIND_R4),' significant digits.'
-  else
-    write(message,'(A,I3,A)')  trim(message)//' ',digits(1.0_ESMF_KIND_R4),' significant digits.'
-  endif
+  write(formatString,'(A)') '(A,'//intformat(digits(1.0_ESMF_KIND_R4))//',A)'
+  write(message,formatString) 'ESMF single precision (KIND_R4) has ', &
+    digits(1.0_ESMF_KIND_R4),' significant digits'
   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
+  write(formatString,'(A,I3.3,A,I3.3,A)') '(A,'//intformat(digits(1_ESMF_KIND_I8))//',A,I', &
+    ceiling(log10(2.0**digits(1_ESMF_KIND_I8))),'.', &
+    ceiling(log10(2.0**digits(1_ESMF_KIND_I8))),').'
+
+  write(message,formatString) 'ESMF long (KIND_I8) has ', &
+    digits(1_ESMF_KIND_I8),'  digits, largest is ',huge(1_ESMF_KIND_I8)
+  call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+  write(formatString,'(A,I3.3,A,I3.3,A)') '(A,'//intformat(digits(1_ESMF_KIND_I4))//',A,I', &
+    ceiling(log10(2.0**digits(1_ESMF_KIND_I4))),'.', &
+    ceiling(log10(2.0**digits(1_ESMF_KIND_I4))),').'
+  write(message,formatString) 'ESMF short (KIND_I4) has ', &
+    digits(1_ESMF_KIND_I4),' digits, largest is ',huge(1_ESMF_KIND_I4)
+  call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
 ! Create toplevel component and call its setservices routines, if namelist was successfully read, then copy the
 ! main clock to the toplevel (child) clock.  If no time information from namelist, then let the toplevel component
