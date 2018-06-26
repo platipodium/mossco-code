@@ -58,10 +58,6 @@ module time_aggregation_component
       userRoutine=InitializeP1, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_READRESTART, phase=1, &
-      userRoutine=ReadRestart, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
-
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
@@ -213,38 +209,6 @@ module time_aggregation_component
   end subroutine InitializeP1
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "ReadRestart"
-  subroutine ReadRestart(gridComp, importState, exportState, parentClock, rc)
-
-    type(ESMF_GridComp)   :: gridComp
-    type(ESMF_State)      :: importState
-    type(ESMF_State)      :: exportState
-    type(ESMF_Clock)      :: parentClock
-    integer, intent(out)  :: rc
-
-    integer(ESMF_KIND_I4)      :: localrc
-    character(len=ESMF_MAXSTR) :: name
-
-    rc = ESMF_SUCCESS
-
-    !> Here omes your restart code, which in the simplest case copies
-    !> values from all fields in importState to those in exportState
-
-    call ESMF_GridCompGet(gridComp, name=name, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
-
-    call ESMF_StateGet(importState, name=name, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
-
-    call ESMF_StateGet(exportState, name=name, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
-
-    call ESMF_ClockGet(parentClock, name=name, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
-
-  end subroutine ReadRestart
-
-#undef  ESMF_METHOD
 #define ESMF_METHOD "Run"
 subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
@@ -299,7 +263,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     call ESMF_GridCompGet(gridComp, petCount=petCount, localPet=localPet, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
-    ! Find in my alarmList couplings to any further the component, if there are, then
+    ! Find in my alarmList couplings to any further calls to this component,
+    ! if there are none, then
     ! remember that this is the last step before having to reset the fields
     call ESMF_ClockGetAlarmList(clock, ESMF_ALARMLIST_ALL, &
       alarmCount=alarmCount, rc=localrc)
@@ -319,9 +284,11 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     endif
 
     if (allocated(alarmList)) deallocate(alarmList)
-    allocate(alarmList(alarmCount))
+    allocate(alarmList(alarmCount), stat=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
-    call ESMF_ClockGetAlarmList(clock,ESMF_ALARMLIST_ALL,alarmList=alarmList,rc=localrc)
+    call ESMF_ClockGetAlarmList(clock, ESMF_ALARMLIST_ALL, &
+      alarmList=alarmList,rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
     call MOSSCO_AttributeGet(importState, 'filter_pattern_include', &
@@ -437,13 +404,15 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
         endif
 
-      endif
+      endif ! exportCount == 0, i.e. exportField not created yet
 
       call MOSSCO_StateGetFieldList(exportState, exportFieldList, fieldCount=exportFieldCount, &
         itemSearch='avg_'//trim(itemNameList(i)),  rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
       if (needReset) then
+        write(message,'(A)') trim(name)//' resets  at '//trim(timeString)
+
         do j=1, exportFieldCount
           call MOSSCO_FieldInitialize(exportFieldList(j), value=0.0D0, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
@@ -451,7 +420,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           call ESMF_AttributeSet(exportFieldList(j), 'averaging_counter', 0, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
         enddo
+      else
+        write(message,'(A)') trim(name)//' does not need reset at '//trim(timeString)
       endif
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       needReset = .false.
 
@@ -462,6 +434,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
         call ESMF_TimeGet(ringTime,timeStringISOFrac=timestring)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+        write(message,'(A)') trim(name)//' alarm '//trim(alarmName)// &
+          ' will ring at '//trim(timestring)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
         !! Skip this alarm if it is not a cplAlarm
         if (index(trim(alarmName),'cplAlarm') < 1) cycle
