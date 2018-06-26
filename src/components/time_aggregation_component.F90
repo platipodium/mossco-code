@@ -242,6 +242,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     type(ESMF_Field), allocatable :: fieldList(:), exportFieldList(:)
     type(ESMF_Field)              :: exportField
     type(ESMF_FieldBundle)        :: fieldBundle
+    character(len=ESMF_MAXSTR), pointer :: include(:)=> null()
 
     rc = ESMF_SUCCESS
 
@@ -327,16 +328,26 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         isMatch, localrc)
       if (isMatch) cycle
 
+      write(message,'(A)') trim(name)//' looks at item '//trim(itemNameList(i))
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
       ! Check whether the item is in any one of the include patterns, if not
       ! matched in any, then skip this item
+      !> @todo this is not correctly working for bundles, see implementation in
+      !> netcdf_component
       isMatch = .true.
       call MOSSCO_StringMatch(itemNameList(i), filterIncludeList, &
         isMatch, localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       if (.not.ismatch) cycle
 
+      allocate(include(1), stat=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      include(1)=trim(itemNameList(i))
       call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
-        itemSearch=trim(itemNameList(i)), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+        include=include, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (fieldCount < 1) then
         write(message,'(A)') trim(name)//' skipped non-field or incomplete item '
@@ -354,20 +365,24 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         enddo
       endif
 
+      include(1) = 'avg_'//trim(itemNameList(i))
       call MOSSCO_StateGetFieldList(exportState, exportFieldList, fieldCount=exportFieldCount, &
-        itemSearch='avg_'//trim(itemNameList(i)),  rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+        include=include,  rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (exportFieldCount == 0) then
 
         if (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
           fieldBundle = ESMF_FieldBundleCreate(name='avg_'//trim(itemNameList(i)),  rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          call ESMF_StateAdd(exportState, (/fieldBundle/), rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+          call ESMF_AttributeSet(fieldBundle, 'creator', trim(name), rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          write(message,'(A)') trim(name)//' created fieldBundle '//trim(itemNameList(i))
+          call ESMF_StateAddReplace(exportState, (/fieldBundle/), rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          write(message,'(A)') trim(name)//' created fieldBundle avg_'//trim(itemNameList(i))
           if (advanceCount < 1) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         endif
 
@@ -375,13 +390,13 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
           exportField = ESMF_FieldEmptyCreate(name='avg_'//trim(itemNameList(i)), rc=localrc)
           call MOSSCO_FieldCopy(exportField, fieldList(j), rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          call ESMF_AttributeSet(exportField, 'averaging_counter', 0, rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+          call ESMF_AttributeSet(exportField, 'creator', trim(name), rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           call MOSSCO_FieldInitialize(exportField, value=0.0d0, rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           write(message,'(A)') trim(name)//' created '
 
@@ -400,14 +415,15 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         enddo
 
         if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
-          call ESMF_StateAdd(exportState, (/exportField/), rc=localrc)
+          call ESMF_StateAddReplace(exportState, (/exportField/), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
         endif
 
       endif ! exportCount == 0, i.e. exportField not created yet
 
+      include(1) = 'avg_'//trim(itemNameList(i))
       call MOSSCO_StateGetFieldList(exportState, exportFieldList, fieldCount=exportFieldCount, &
-        itemSearch='avg_'//trim(itemNameList(i)),  rc=localrc)
+        include=include,  rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
       if (needReset) then
@@ -572,7 +588,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     nullify(exportPtr2)
     nullify(farrayPtr3)
     nullify(exportPtr3)
-
+    if (associated(include)) deallocate(include)
     if (allocated(iubnd)) deallocate(iubnd)
     if (allocated(ilbnd)) deallocate(ilbnd)
     if (allocated(ubnd)) deallocate(ubnd)
@@ -653,7 +669,11 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     if (isPresent) call ESMF_StateValidate(exportState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
-    call MOSSCO_DestroyOwn(exportState, trim(name), rc=localrc)
+    !> @temporarily disabled until fixed in mossco_state
+    !> ESMCI_Container_F.C:321 ESMCI::Container::remove() Invalid argument  - key is not unique
+    !> ESMF_FieldBundle.F90:3925 ESMF_FieldBundleRemove() Invalid argument
+    !> mossco_state.F90:1454 MOSSCO_FieldBundleDestroyOwn Invalid argument
+    !call MOSSCO_DestroyOwn(exportState, trim(name), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
     call MOSSCO_CompExit(gridComp, localrc)
