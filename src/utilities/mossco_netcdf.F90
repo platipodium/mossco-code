@@ -149,15 +149,24 @@ module mossco_netcdf
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)    :: farrayPtr3=>null()
     real(ESMF_KIND_R8), pointer, dimension(:,:)      :: farrayPtr2=>null()
     real(ESMF_KIND_R8), pointer, dimension(:)        :: farrayPtr1=>null()
-    real(ESMF_KIND_R8), pointer, dimension(:,:,:,:)  :: ncarray4=>null()
-    real(ESMF_KIND_R8), pointer, dimension(:,:,:)    :: ncarray3=>null()
-    real(ESMF_KIND_R8), pointer, dimension(:,:)      :: ncarray2=>null()
-    real(ESMF_KIND_R8), pointer, dimension(:)        :: ncarray1=>null()
+    real(ESMF_KIND_R8), pointer, dimension(:,:,:,:)  :: ncfarray4=>null()
+    real(ESMF_KIND_R8), pointer, dimension(:,:,:)    :: ncfarray3=>null()
+    real(ESMF_KIND_R8), pointer, dimension(:,:)      :: ncfarray2=>null()
+    real(ESMF_KIND_R8), pointer, dimension(:)        :: ncfarray1=>null()
+    integer(ESMF_KIND_I4) , pointer, dimension(:,:,:,:)  :: iarrayPtr4=>null()
+    integer(ESMF_KIND_I4) , pointer, dimension(:,:,:)    :: iarrayPtr3=>null()
+    integer(ESMF_KIND_I4) , pointer, dimension(:,:)      :: iarrayPtr2=>null()
+    integer(ESMF_KIND_I4) , pointer, dimension(:)        :: iarrayPtr1=>null()
+    integer(ESMF_KIND_I4) , pointer, dimension(:,:,:,:)  :: nciarray4=>null()
+    integer(ESMF_KIND_I4) , pointer, dimension(:,:,:)    :: nciarray3=>null()
+    integer(ESMF_KIND_I4) , pointer, dimension(:,:)      :: nciarray2=>null()
+    integer(ESMF_KIND_I4) , pointer, dimension(:)        :: nciarray1=>null()
     real(ESMF_KIND_R4)                               :: missingValueR4=-1.0E30
     real(ESMF_KIND_R8)                               :: missingValueR8=-1.0D30, missingValue=-1.0D30
-    real(ESMF_KIND_I4)                               :: missingValueI4=-9999
+    integer(ESMF_KIND_I4)                            :: missingValueI4=-9999
     real(ESMF_KIND_I8)                               :: missingValueI8=-9999
-    real(ESMF_KIND_R8)                               :: representableValue
+    real(ESMF_KIND_R8)                               :: representableValueR8
+    integer(ESMF_KIND_I4)                            :: representableValueI4
     type(ESMF_TypeKind_Flag)                         :: mvTypeKind, typeKind
 
     character(len=11)                 :: precision_
@@ -210,8 +219,8 @@ module mossco_netcdf
     endif
 
     !> @todo need to consider also non double fields
-    if (typeKind /= ESMF_TYPEKIND_R8) then
-      write(message,'(A)')  trim(owner_)//' writing non-double fields not yet supported'
+    if (typeKind /= ESMF_TYPEKIND_R8 .and. typeKind /= ESMF_TYPEKIND_I4) then
+      write(message,'(A)')  trim(owner_)//' writing non-double/short fields not yet supported'
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
       !> @todo reconsider the return value here
       return
@@ -239,10 +248,11 @@ module mossco_netcdf
     precision_=var%precision
 
     if (precision_=='NF90_DOUBLE') then
-      representableValue=huge(0.0_ESMF_KIND_R8)
+      representableValueR8=huge(0.0_ESMF_KIND_R8)
     else
-      representableValue=huge(0.0_ESMF_KIND_R4)
+      representableValueR8=huge(0.0_ESMF_KIND_R4)
     endif
+    representableValueI4=huge(0_ESMF_KIND_I4)
 
     if (.not.associated(var)) then
       call ESMF_LogWrite(trim(owner_)//' could not find variable '//trim(varname), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -383,7 +393,7 @@ module mossco_netcdf
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
 
-    if (abs(missingValue) > representableValue) then
+    if (abs(missingValue) > representableValueR8) then
       write(message,'(A)')  trim(owner_)//'  missing value out of range in '
       call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -391,21 +401,21 @@ module mossco_netcdf
       return
     endif
 
-    if (rank==4) then
+    if (rank==4 .and. typeKind==ESMF_TYPEKIND_R8) then
 
       call  ESMF_FieldGet(field, farrayPtr=farrayPtr4, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      if (associated(ncarray4)) deallocate(ncarray4)
-      allocate(ncarray4(RANGE4D),stat=localrc)
-      ncarray4 = farrayPtr4(RANGE4D)
+      if (associated(ncfarray4)) deallocate(ncfarray4)
+      allocate(ncfarray4(RANGE4D),stat=localrc)
+      ncfarray4 = farrayPtr4(RANGE4D)
 
       if (associated(gridmask3)) then
         do i=lbnd(1),ubnd(1)
           do j=lbnd(2),ubnd(2)
             do k=lbnd(3),ubnd(3)
               if (gridmask3(grid3lbnd(1)-lbnd(1)+i,grid3lbnd(2)-lbnd(2)+j,grid3lbnd(3)-lbnd(3)+k) .le. 0) &
-                ncarray4(i,j,k,lbnd(4):ubnd(4))=missingValue
+                ncfarray4(i,j,k,lbnd(4):ubnd(4))=missingValue
             enddo
           enddo
         enddo
@@ -413,14 +423,14 @@ module mossco_netcdf
         do i=lbnd(1),ubnd(1)
           do j=lbnd(2),ubnd(2)
             if (gridmask2(grid2lbnd(1)-lbnd(1)+i,grid2lbnd(2)-lbnd(2)+j) .le. 0) &
-              ncarray4(i,j,lbnd(3):ubnd(3),lbnd(4):ubnd(4))=missingValue
+              ncfarray4(i,j,lbnd(3):ubnd(3),lbnd(4):ubnd(4))=missingValue
           enddo
         enddo
       end if
 
       ! it is recommended to check of nans with x /= x, as this is true for NaN
       ! it is recommended to check for inf with abs(x) > huge(x)
-      if (checkNaN_ .and. any(ncarray4(RANGE4D) /= ncarray4(RANGE4D))) then
+      if (checkNaN_ .and. any(ncfarray4(RANGE4D) /= ncfarray4(RANGE4D))) then
         call self%close()
 #ifdef DEBUG_NAN
         if (associated(gridmask3)) then
@@ -428,7 +438,7 @@ module mossco_netcdf
             do j=lbnd(2),ubnd(2)
               do k=lbnd(3),ubnd(3)
                 if (gridmask3(grid3lbnd(1)-lbnd(1)+i,grid3lbnd(2)-lbnd(2)+j,grid3lbnd(3)-lbnd(3)+k) .le. 0) cycle
-                if (any (ncarray4(i,j,k,lbnd(4):ubnd(4)) /= ncarray4(i,j,k,lbnd(4):ubnd(4)) )) then
+                if (any (ncfarray4(i,j,k,lbnd(4):ubnd(4)) /= ncfarray4(i,j,k,lbnd(4):ubnd(4)) )) then
                   write(message,'(A,3i4)')  trim(owner_)//' NaN detected in field ',i,j,k
                   call MOSSCO_FieldString(field, message, rc=localrc)
                   call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
@@ -440,7 +450,7 @@ module mossco_netcdf
           do i=lbnd(1),ubnd(1)
             do j=lbnd(2),ubnd(2)
               if (gridmask2(grid2lbnd(1)-lbnd(1)+i,grid2lbnd(2)-lbnd(2)+j) .le. 0) cycle
-              if (any (ncarray4(i,j,lbnd(3):ubnd(3),lbnd(4):ubnd(4)) /= ncarray4(i,j,lbnd(3):ubnd(3),lbnd(4):ubnd(4)) )) then
+              if (any (ncfarray4(i,j,lbnd(3):ubnd(3),lbnd(4):ubnd(4)) /= ncfarray4(i,j,lbnd(3):ubnd(3),lbnd(4):ubnd(4)) )) then
                 write(message,'(A,3i4)')  trim(owner_)//'  NaN detected in field ',i,j
                 call MOSSCO_FieldString(field, message, rc=localrc)
                 call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
@@ -456,11 +466,11 @@ module mossco_netcdf
         if (present(rc)) rc = ESMF_RC_VAL_OUTOFRANGE
       endif
 
-      where (ncarray4(RANGE4D) /= ncarray4(RANGE4D))
-        ncarray4(RANGE4D)=missingValue
+      where (ncfarray4(RANGE4D) /= ncfarray4(RANGE4D))
+        ncfarray4(RANGE4D)=missingValue
       endwhere
 
-      if (any(abs(ncarray4(RANGE4D)) > representableValue)) then
+      if (any(abs(ncfarray4(RANGE4D)) > representableValueR8)) then
         write(message,'(A)')  trim(owner_)//' Inf detected in field '
         call MOSSCO_FieldString(field, message, rc=localrc)
 
@@ -473,7 +483,7 @@ module mossco_netcdf
               do j=lbnd(2),ubnd(2)
                 do k=lbnd(3),ubnd(3)
                   if (gridmask3(grid3lbnd(1)-lbnd(1)+i,grid3lbnd(2)-lbnd(2)+j,grid3lbnd(3)-lbnd(3)+k) .le. 0) cycle
-                  if (any( abs(ncarray4(i,j,k,lbnd(4):ubnd(4))) > representableValue )) then
+                  if (any( abs(ncfarray4(i,j,k,lbnd(4):ubnd(4))) > representableValueR8 )) then
                     write(message,'(A,3i4)')  trim(owner_)//' inf detected in field ',i,j,k
                     call MOSSCO_FieldString(field, message, rc=localrc)
                     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
@@ -485,7 +495,7 @@ module mossco_netcdf
             do i=lbnd(1),ubnd(1)
               do j=lbnd(2),ubnd(2)
                 if (gridmask2(grid2lbnd(1)-lbnd(1)+i,grid2lbnd(2)-lbnd(2)+j) .le. 0) cycle
-                if (any( abs(ncarray4(i,j,lbnd(3):ubnd(3),lbnd(4):ubnd(4))) > representableValue )) then
+                if (any( abs(ncfarray4(i,j,lbnd(3):ubnd(3),lbnd(4):ubnd(4))) > representableValueR8 )) then
                   write(message,'(A,3i4)')  trim(owner_)//' Inf detected in field ',i,j
                   call MOSSCO_FieldString(field, message, rc=localrc)
                   call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
@@ -496,7 +506,7 @@ module mossco_netcdf
             i=lbnd(1)
             j=lbnd(2)
             do k=lbnd(3),ubnd(3)
-              if ( abs(ncarray3(i,j,k)) > representableValue ) then
+              if ( abs(ncfarray3(i,j,k)) > representableValueR8 ) then
                 write(message,'(A,3i4)')  trim(owner_)//' Inf detected in field ',i,j,k
                 call MOSSCO_FieldString(field, message, rc=localrc)
                 call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -513,15 +523,15 @@ module mossco_netcdf
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
       endif
 
-      where (abs(ncarray4) > RepresentableValue)
-        ncarray4=missingValue
+      where (abs(ncfarray4) > representableValueR8)
+        ncfarray4=missingValue
       endwhere
 
       if (any(var%dimids==self%timeDimId)) then
-        ncStatus = nf90_put_var(self%ncid, var%varid, ncarray4(RANGE4D), &
+        ncStatus = nf90_put_var(self%ncid, var%varid, ncfarray4(RANGE4D), &
         start=(/1,1,1,1,dimlen/))
       else
-        ncStatus = nf90_put_var(self%ncid, var%varid, ncarray4(RANGE4D))
+        ncStatus = nf90_put_var(self%ncid, var%varid, ncfarray4(RANGE4D))
       endif
       if (ncStatus /= NF90_NOERR) then
         call ESMF_LogWrite(trim(owner_)//'  '//trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -529,22 +539,63 @@ module mossco_netcdf
         return
       endif
 
-      if (associated(ncarray4)) deallocate(ncarray4); nullify(ncarray4)
+      if (associated(ncfarray4)) deallocate(ncfarray4)
 
-    elseif (rank==3) then
+    elseif (rank==4 .and. typeKind==ESMF_TYPEKIND_I4) then
+
+        call  ESMF_FieldGet(field, farrayPtr=iarrayPtr4, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        if (associated(iarrayPtr4)) deallocate(iarrayPtr4)
+        allocate(iarrayPtr4(RANGE4D),stat=localrc)
+        nciarray4 = iarrayPtr4(RANGE4D)
+
+        if (associated(gridmask3)) then
+          do i=lbnd(1),ubnd(1)
+            do j=lbnd(2),ubnd(2)
+              do k=lbnd(3),ubnd(3)
+                if (gridmask3(grid3lbnd(1)-lbnd(1)+i,grid3lbnd(2)-lbnd(2)+j,grid3lbnd(3)-lbnd(3)+k) .le. 0) &
+                  nciarray4(i,j,k,lbnd(4):ubnd(4))=missingValueI4
+              enddo
+            enddo
+          enddo
+        elseif (associated(gridmask2)) then
+          do i=lbnd(1),ubnd(1)
+            do j=lbnd(2),ubnd(2)
+              if (gridmask2(grid2lbnd(1)-lbnd(1)+i,grid2lbnd(2)-lbnd(2)+j) .le. 0) &
+                nciarray4(i,j,lbnd(3):ubnd(3),lbnd(4):ubnd(4))=missingValueI4
+            enddo
+          enddo
+        end if
+
+        if (any(var%dimids==self%timeDimId)) then
+          ncStatus = nf90_put_var(self%ncid, var%varid, nciarray4(RANGE4D), &
+          start=(/1,1,1,1,dimlen/))
+        else
+          ncStatus = nf90_put_var(self%ncid, var%varid, nciarray4(RANGE4D))
+        endif
+        if (ncStatus /= NF90_NOERR) then
+          call ESMF_LogWrite(trim(owner_)//'  '//trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+          if (present(rc)) rc = ESMF_RC_FILE_WRITE
+          return
+        endif
+
+        if (associated(nciarray4)) deallocate(nciarray4)
+
+    elseif (rank==3 .and. typeKind==ESMF_TYPEKIND_R8) then
 
       call  ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      if (associated(ncarray3)) deallocate(ncarray3)
-      allocate(ncarray3(RANGE3D),stat=localrc)
-      ncarray3(RANGE3D) = farrayPtr3(RANGE3D)
+      if (associated(ncfarray3)) deallocate(ncfarray3)
+      allocate(ncfarray3(RANGE3D),stat=localrc)
+      ncfarray3(RANGE3D) = farrayPtr3(RANGE3D)
       if (associated(gridmask3)) then
         do i=lbnd(1),ubnd(1)
           do j=lbnd(2),ubnd(2)
             do k=lbnd(3),ubnd(3)
               if (gridmask3(grid3lbnd(1)-lbnd(1)+i,grid3lbnd(2)-lbnd(2)+j,grid3lbnd(3)-lbnd(3)+k) .le. 0) &
-                ncarray3(i,j,k)=missingValue
+                ncfarray3(i,j,k)=missingValue
              enddo
           enddo
         enddo
@@ -552,12 +603,12 @@ module mossco_netcdf
         do i=lbnd(1),ubnd(1)
           do j=lbnd(2),ubnd(2)
             if (gridmask2(grid2lbnd(1)-lbnd(1)+i,grid2lbnd(2)-lbnd(2)+j) .le. 0) &
-                ncarray3(i,j,lbnd(3):ubnd(3))=missingValue
+                ncfarray3(i,j,lbnd(3):ubnd(3))=missingValue
           enddo
         enddo
       end if
 
-      if (checkNaN_ .and. any(ncarray3(RANGE3D) /= ncarray3(RANGE3D))) then
+      if (checkNaN_ .and. any(ncfarray3(RANGE3D) /= ncfarray3(RANGE3D))) then
 
         call self%close()
 
@@ -567,7 +618,7 @@ module mossco_netcdf
             do j=lbnd(2),ubnd(2)
               do k=lbnd(3),ubnd(3)
                 if (gridmask3(grid3lbnd(1)-lbnd(1)+i,grid3lbnd(2)-lbnd(2)+j,grid3lbnd(3)-lbnd(3)+k) .le. 0) cycle
-                if ( ncarray3(i,j,k) /= ncarray3(i,j,k) ) then
+                if ( ncfarray3(i,j,k) /= ncfarray3(i,j,k) ) then
                   write(message,'(A,3i4)')  trim(owner_)//' NaN detected in field ',i,j,k
                   call MOSSCO_FieldString(field, message, rc=localrc)
                   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -580,7 +631,7 @@ module mossco_netcdf
           do i=lbnd(1),ubnd(1)
             do j=lbnd(2),ubnd(2)
               if (gridmask2(grid2lbnd(1)-lbnd(1)+i,grid2lbnd(2)-lbnd(2)+j) .le. 0) cycle
-              if (any (ncarray3(i,j,lbnd(3):ubnd(3)) /= ncarray3(i,j,lbnd(3):ubnd(3)) )) then
+              if (any (ncfarray3(i,j,lbnd(3):ubnd(3)) /= ncfarray3(i,j,lbnd(3):ubnd(3)) )) then
                 write(message,'(A,3i4)')  trim(owner_)//' NaN detected in field ',i,j
                 call MOSSCO_FieldString(field, message, rc=localrc)
                 call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -592,7 +643,7 @@ module mossco_netcdf
           i=lbnd(1)
           j=lbnd(2)
           do k=lbnd(3),ubnd(3)
-            if ( ncarray3(i,j,k) /= ncarray3(i,j,k) ) then
+            if ( ncfarray3(i,j,k) /= ncfarray3(i,j,k) ) then
               write(message,'(A,3i4)')  trim(owner_)//' NaN detected in field ',i,j,k
               call MOSSCO_FieldString(field, message, rc=localrc)
               call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -609,11 +660,11 @@ module mossco_netcdf
         return
       endif
 
-      where (ncarray3(RANGE3D) /= ncarray3(RANGE3D))
-        ncarray3(RANGE3D) = missingValue
+      where (ncfarray3(RANGE3D) /= ncfarray3(RANGE3D))
+        ncfarray3(RANGE3D) = missingValue
       endwhere
 
-      if (any(abs(ncarray3(RANGE3D)) > representableValue)) then
+      if (any(abs(ncfarray3(RANGE3D)) > representableValueR8)) then
         write(message,'(A)')  trim(owner_)//' Inf detected in field '
         call MOSSCO_FieldString(field, message, rc=localrc)
 
@@ -626,7 +677,7 @@ module mossco_netcdf
               do j=lbnd(2),ubnd(2)
                 do k=lbnd(3),ubnd(3)
                   if (gridmask3(grid3lbnd(1)-lbnd(1)+i,grid3lbnd(2)-lbnd(2)+j,grid3lbnd(3)-lbnd(3)+k) .le. 0) cycle
-                  if ( ncarray3(i,j,k) > representableValue ) then
+                  if ( ncfarray3(i,j,k) > representableValueR8 ) then
                     write(message,'(A,3i4)')  trim(owner_)//' Inf detected in field ',i,j,k
                     call MOSSCO_FieldString(field, message, rc=localrc)
                     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -639,7 +690,7 @@ module mossco_netcdf
             do i=lbnd(1),ubnd(1)
               do j=lbnd(2),ubnd(2)
                 if (gridmask2(grid2lbnd(1)-lbnd(1)+i,grid2lbnd(2)-lbnd(2)+j) .le. 0) cycle
-                if (any( abs(ncarray3(i,j,lbnd(3):ubnd(3))) > representableValue )) then
+                if (any( abs(ncfarray3(i,j,lbnd(3):ubnd(3))) > representableValueR8 )) then
                   write(message,'(A,3i4)')  trim(owner_)//' Inf detected in field ',i,j
                   call MOSSCO_FieldString(field, message, rc=localrc)
                   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -651,7 +702,7 @@ module mossco_netcdf
             i=lbnd(1)
             j=lbnd(2)
             do k=lbnd(3),ubnd(3)
-              if ( abs(ncarray3(i,j,k)) > representableValue ) then
+              if ( abs(ncfarray3(i,j,k)) > representableValueR8 ) then
                 write(message,'(A,3i4)')  trim(owner_)//' Inf detected in field ',i,j,k
                 call MOSSCO_FieldString(field, message, rc=localrc)
                 call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -668,15 +719,15 @@ module mossco_netcdf
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
       endif
 
-      where (abs(ncarray3(RANGE3D)) > representableValue)
-        ncarray3(RANGE3D) = missingValue
+      where (abs(ncfarray3(RANGE3D)) > representableValueR8)
+        ncfarray3(RANGE3D) = missingValue
       endwhere
 
       if (any(var%dimids==self%timeDimId)) then
-        ncStatus = nf90_put_var(self%ncid, var%varid, real(ncarray3(RANGE3D)), &
+        ncStatus = nf90_put_var(self%ncid, var%varid, real(ncfarray3(RANGE3D)), &
         start=(/1,1,1,dimlen/))
       else
-        ncStatus = nf90_put_var(self%ncid, var%varid, real(ncarray3(RANGE3D)))
+        ncStatus = nf90_put_var(self%ncid, var%varid, real(ncfarray3(RANGE3D)))
       endif
       if (ncStatus /= NF90_NOERR) then
         call ESMF_LogWrite(trim(owner_)//'  '//trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -684,27 +735,68 @@ module mossco_netcdf
         return
       endif
 
-      if (associated(ncarray3)) deallocate(ncarray3); nullify(ncarray3)
+      if (associated(ncfarray3)) deallocate(ncfarray3)
 
-    elseif (rank==2) then
+    elseif (rank==3 .and. typeKind==ESMF_TYPEKIND_I4) then
+
+        call  ESMF_FieldGet(field, farrayPtr=iarrayPtr3, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        if (associated(iarrayPtr3)) deallocate(iarrayPtr3)
+        allocate(iarrayPtr3(RANGE3D),stat=localrc)
+        nciarray3 = iarrayPtr3(RANGE3D)
+
+        if (associated(gridmask3)) then
+          do i=lbnd(1),ubnd(1)
+            do j=lbnd(2),ubnd(2)
+              do k=lbnd(3),ubnd(3)
+                if (gridmask3(grid3lbnd(1)-lbnd(1)+i,grid3lbnd(2)-lbnd(2)+j,grid3lbnd(3)-lbnd(3)+k) .le. 0) &
+                  nciarray3(i,j,k)=missingValueI4
+              enddo
+            enddo
+          enddo
+        elseif (associated(gridmask2)) then
+          do i=lbnd(1),ubnd(1)
+            do j=lbnd(2),ubnd(2)
+              if (gridmask2(grid2lbnd(1)-lbnd(1)+i,grid2lbnd(2)-lbnd(2)+j) .le. 0) &
+                nciarray3(i,j,lbnd(3):ubnd(3))=missingValueI4
+            enddo
+          enddo
+        end if
+
+        if (any(var%dimids==self%timeDimId)) then
+          ncStatus = nf90_put_var(self%ncid, var%varid, nciarray3(RANGE3D), &
+          start=(/1,1,1,dimlen/))
+        else
+          ncStatus = nf90_put_var(self%ncid, var%varid, nciarray3(RANGE3D))
+        endif
+        if (ncStatus /= NF90_NOERR) then
+          call ESMF_LogWrite(trim(owner_)//'  '//trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+          if (present(rc)) rc = ESMF_RC_FILE_WRITE
+          return
+        endif
+
+        if (associated(nciarray3)) deallocate(nciarray3)
+
+    elseif (rank==2 .and. typeKind==ESMF_TYPEKIND_R8) then
 
       call  ESMF_FieldGet(field, farrayPtr=farrayPtr2, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      if (associated(ncarray2)) deallocate(ncarray2)
-      allocate(ncarray2(RANGE2D),stat=localrc)
-      ncarray2 = farrayPtr2(RANGE2D)
+      if (associated(ncfarray2)) deallocate(ncfarray2)
+      allocate(ncfarray2(RANGE2D),stat=localrc)
+      ncfarray2 = farrayPtr2(RANGE2D)
 
       if (associated(gridmask2)) then
         do i=lbnd(1),ubnd(1)
           do j=lbnd(2),ubnd(2)
             if (gridmask2(grid2lbnd(1)-lbnd(1)+i,grid2lbnd(2)-lbnd(2)+j) .le. 0) &
-                ncarray2(i,j)=missingValue
+                ncfarray2(i,j)=missingValue
           enddo
         enddo
       end if
 
-      if (checkNaN_ .and. any(ncarray2(RANGE2D) /= ncarray2(RANGE2D))) then
+      if (checkNaN_ .and. any(ncfarray2(RANGE2D) /= ncfarray2(RANGE2D))) then
         call self%close()
 
 #ifdef DEBUG_NAN
@@ -712,7 +804,7 @@ module mossco_netcdf
           do i=lbnd(1),ubnd(1)
             do j=lbnd(2),ubnd(2)
               if (gridmask2(grid2lbnd(1)-lbnd(1)+i,grid2lbnd(2)-lbnd(2)+j) .le. 0) cycle
-              if ( ncarray2(i,j) /= ncarray2(i,j) ) then
+              if ( ncfarray2(i,j) /= ncfarray2(i,j) ) then
                 write(message,'(A,3i4)')  trim(owner_)//'  NaN detected in field ',i,j
                 call MOSSCO_FieldString(field, message, rc=localrc)
                 call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -722,7 +814,7 @@ module mossco_netcdf
         else
           i=lbnd(1)
           j=lbnd(2)
-          if ( ncarray2(i,j) /= ncarray2(i,j) ) then
+          if ( ncfarray2(i,j) /= ncfarray2(i,j) ) then
             write(message,'(A,3i4)')  trim(owner_)//' NaN detected in field ',i,j
             call MOSSCO_FieldString(field, message, rc=localrc)
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -737,11 +829,11 @@ module mossco_netcdf
         return
       endif
 
-      where (ncarray2(RANGE2D) /= ncarray2(RANGE2D))
-        ncarray2(RANGE2D) = missingValue
+      where (ncfarray2(RANGE2D) /= ncfarray2(RANGE2D))
+        ncfarray2(RANGE2D) = missingValue
       endwhere
 
-      if (any(abs(ncarray2(RANGE2D)) > representableValue)) then
+      if (any(abs(ncfarray2(RANGE2D)) > representableValueR8)) then
         write(message,'(A)')  trim(owner_)//' Inf detected in field '
         call MOSSCO_FieldString(field, message, rc=localrc)
 
@@ -753,7 +845,7 @@ module mossco_netcdf
           do i=lbnd(1),ubnd(1)
             do j=lbnd(2),ubnd(2)
               if (gridmask2(grid2lbnd(1)-lbnd(1)+i,grid2lbnd(2)-lbnd(2)+j) .le. 0) cycle
-              if ( abs(ncarray2(i,j)) > representableValue ) then
+              if ( abs(ncfarray2(i,j)) > representableValueR8 ) then
                 write(message,'(A,3i4)')  trim(owner_)//' Inf detected in field ',i,j
                 call MOSSCO_FieldString(field, message, rc=localrc)
                 call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -763,7 +855,7 @@ module mossco_netcdf
         else
           i=lbnd(1)
           j=lbnd(2)
-          if ( abs(ncarray2(i,j)) > representableValue ) then
+          if ( abs(ncfarray2(i,j)) > representableValueR8 ) then
             write(message,'(A,3i4)')  trim(owner_)//' Inf detected in field ',i,j
             call MOSSCO_FieldString(field, message, rc=localrc)
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -778,15 +870,15 @@ module mossco_netcdf
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
       endif
 
-      where (abs(ncarray2(RANGE2D)) > representableValue)
-        ncarray2(RANGE2D) = missingValue
+      where (abs(ncfarray2(RANGE2D)) > representableValueR8)
+        ncfarray2(RANGE2D) = missingValue
       endwhere
 
       if (any(var%dimids==self%timeDimId)) then
-        ncStatus = nf90_put_var(self%ncid, var%varid, ncarray2(RANGE2D), &
+        ncStatus = nf90_put_var(self%ncid, var%varid, ncfarray2(RANGE2D), &
         start=(/1,1,dimlen/))
       else
-        ncStatus = nf90_put_var(self%ncid, var%varid, ncarray2(RANGE2D))
+        ncStatus = nf90_put_var(self%ncid, var%varid, ncfarray2(RANGE2D))
       endif
       if (ncStatus /= NF90_NOERR) then
         call ESMF_LogWrite(trim(owner_)//'  '//trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -794,18 +886,50 @@ module mossco_netcdf
         return
       endif
 
-      if (associated(ncarray2)) deallocate(ncarray2)
+      if (associated(ncfarray2)) deallocate(ncfarray2)
 
-    elseif (rank==1) then
+    elseif (rank==2 .and. typeKind==ESMF_TYPEKIND_I4) then
+
+      call  ESMF_FieldGet(field, farrayPtr=iarrayPtr2, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      if (associated(nciarray2)) deallocate(nciarray2)
+      allocate(nciarray2(RANGE2D),stat=localrc)
+      nciarray2 = iarrayPtr2(RANGE2D)
+
+      if (associated(gridmask2)) then
+        do i=lbnd(1),ubnd(1)
+          do j=lbnd(2),ubnd(2)
+            if (gridmask2(grid2lbnd(1)-lbnd(1)+i,grid2lbnd(2)-lbnd(2)+j) .le. 0) &
+                nciarray2(i,j)=missingValueI4
+          enddo
+        enddo
+      end if
+
+      if (any(var%dimids==self%timeDimId)) then
+        ncStatus = nf90_put_var(self%ncid, var%varid, nciarray2(RANGE2D), &
+        start=(/1,1,dimlen/))
+      else
+        ncStatus = nf90_put_var(self%ncid, var%varid, nciarray2(RANGE2D))
+      endif
+      if (ncStatus /= NF90_NOERR) then
+        call ESMF_LogWrite(trim(owner_)//'  '//trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        if (present(rc)) rc = ESMF_RC_FILE_WRITE
+        return
+      endif
+
+      if (associated(nciarray2)) deallocate(nciarray2)
+
+    elseif (rank==1 .and. typeKind==ESMF_TYPEKIND_R8) then
 
       call  ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      if (associated(ncarray1)) deallocate(ncarray1)
-      allocate(ncarray1(RANGE1D),stat=localrc)
-      ncarray1 = farrayPtr1(RANGE1D)
+      if (associated(ncfarray1)) deallocate(ncfarray1)
+      allocate(ncfarray1(RANGE1D),stat=localrc)
+      ncfarray1 = farrayPtr1(RANGE1D)
 
-      if (checkNaN_ .and. any(ncarray1(RANGE1D) /= ncarray1(RANGE1D))) then
+      if (checkNaN_ .and. any(ncfarray1(RANGE1D) /= ncfarray1(RANGE1D))) then
         call self%close()
 #ifdef DEBUG_NAN
 #else
@@ -817,11 +941,11 @@ module mossco_netcdf
         return
       endif
 
-      where (ncarray1(RANGE1D) /= ncarray1(RANGE1D))
-        ncarray1(RANGE1D) = missingValue
+      where (ncfarray1(RANGE1D) /= ncfarray1(RANGE1D))
+        ncfarray1(RANGE1D) = missingValue
       endwhere
 
-      if (any(abs(ncarray1(RANGE1D)) > representableValue)) then
+      if (any(abs(ncfarray1(RANGE1D)) > representableValueR8)) then
         write(message,'(A)')  trim(owner_)//' Inf detected in field '
         call MOSSCO_FieldString(field, message, rc=localrc)
 
@@ -838,15 +962,15 @@ module mossco_netcdf
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
       endif
 
-      where (abs(ncarray1(RANGE1D)) > representableValue)
-        ncarray1(RANGE1D) = missingValue
+      where (abs(ncfarray1(RANGE1D)) > representableValueR8)
+        ncfarray1(RANGE1D) = missingValue
       endwhere
 
       if (any(var%dimids==self%timeDimId)) then
-        ncStatus = nf90_put_var(self%ncid, var%varid, ncarray1(RANGE1D), &
+        ncStatus = nf90_put_var(self%ncid, var%varid, ncfarray1(RANGE1D), &
         start=(/1,dimlen/))
       else
-        ncStatus = nf90_put_var(self%ncid, var%varid, ncarray1(RANGE1D))
+        ncStatus = nf90_put_var(self%ncid, var%varid, ncfarray1(RANGE1D))
       endif
       if (ncStatus /= NF90_NOERR) then
         call ESMF_LogWrite(trim(owner_)//'  '//trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -854,7 +978,30 @@ module mossco_netcdf
         return
       endif
 
-      if (associated(ncarray1)) deallocate(ncarray1)
+      if (associated(ncfarray1)) deallocate(ncfarray1)
+
+    elseif (rank==1 .and. typeKind==ESMF_TYPEKIND_I4) then
+
+      call  ESMF_FieldGet(field, farrayPtr=iarrayPtr1, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      if (associated(nciarray1)) deallocate(nciarray1)
+      allocate(nciarray1(RANGE1D),stat=localrc)
+      nciarray1 = iarrayPtr1(RANGE1D)
+
+      if (any(var%dimids==self%timeDimId)) then
+        ncStatus = nf90_put_var(self%ncid, var%varid, nciarray1(RANGE1D), &
+        start=(/1,dimlen/))
+      else
+        ncStatus = nf90_put_var(self%ncid, var%varid, nciarray1(RANGE1D))
+      endif
+      if (ncStatus /= NF90_NOERR) then
+        call ESMF_LogWrite(trim(owner_)//'  '//trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        if (present(rc)) rc = ESMF_RC_FILE_WRITE
+        return
+      endif
+
+      if (associated(nciarray1)) deallocate(nciarray1)
 
     endif
 
