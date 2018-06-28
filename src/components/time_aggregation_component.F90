@@ -18,8 +18,9 @@
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "time_aggregation_component.F90"
 
-#define RANGE2D lbnd(1):ubnd(1),lbnd(2):ubnd(2)
-#define RANGE3D lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)
+#define RANGE1D lbnd(1):ubnd(1)
+#define RANGE2D RANGE1D,lbnd(2):ubnd(2)
+#define RANGE3D RANGE2D,lbnd(3):ubnd(3)
 #define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 module time_aggregation_component
@@ -28,6 +29,7 @@ module time_aggregation_component
   use mossco_strings
   use mossco_component
   use mossco_field
+!  use mossco_fieldbundle
   use mossco_state
   use mossco_attribute
   use mossco_config
@@ -240,9 +242,14 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     character(len=ESMF_MAXSTR) :: message, name, timeUnit, alarmName
     character(len=ESMF_MAXSTR), allocatable :: filterIncludeList(:), filterExcludeList(:)
     type(ESMF_Field), allocatable :: fieldList(:), exportFieldList(:)
-    type(ESMF_Field)              :: exportField
+    type(ESMF_Field)              :: exportField, field
     type(ESMF_FieldBundle)        :: fieldBundle
     character(len=ESMF_MAXSTR), pointer :: include(:)=> null()
+    type(ESMF_GeomType_Flag)      :: geomType
+    type(ESMF_Grid)               :: grid
+    type(ESMF_XGrid)              :: xgrid
+    type(ESMF_LocStream)          :: locStream
+    type(ESMF_Mesh)               :: mesh
 
     rc = ESMF_SUCCESS
 
@@ -328,7 +335,15 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         isMatch, localrc)
       if (isMatch) cycle
 
-      write(message,'(A)') trim(name)//' looks at item '//trim(itemNameList(i))
+      if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
+        call ESMF_StateGet(importState, itemNameList(i), field, rc=localrc)
+        write(message,'(A)') trim(name)//' looks at '
+        call MOSSCO_FieldString(field, message)
+      else
+        call ESMF_StateGet(importState, itemNameList(i), fieldBundle, rc=localrc)
+        write(message,'(A)') trim(name)//' looks at bundle '//trim(itemNameList(i))
+        !call MOSSCO_FieldBundleString(fieldBundle, message)
+      endif
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       ! Check whether the item is in any one of the include patterns, if not
@@ -373,7 +388,47 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       if (exportFieldCount == 0) then
 
         if (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
-          fieldBundle = ESMF_FieldBundleCreate(name='avg_'//trim(itemNameList(i)),  rc=localrc)
+          call ESMF_StateGet(importState, trim(itemNameList(i)), &
+            fieldBundle, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          call ESMF_FieldBundleGet(fieldBundle, geomType=geomType,rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          if (geomType == ESMF_GEOMTYPE_GRID) then
+            call ESMF_FieldBundleGet(fieldBundle, grid=grid, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+            fieldBundle = ESMF_FieldBundleCreate(name='avg_'//trim(itemNameList(i)),  rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+            call ESMF_FieldBundleSet(fieldBundle, grid=grid, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          elseif (geomType == ESMF_GEOMTYPE_MESH) then
+            call ESMF_FieldBundleGet(fieldBundle, mesh=mesh, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+            fieldBundle = ESMF_FieldBundleCreate(name='avg_'//trim(itemNameList(i)), rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+            call ESMF_FieldBundleSet(fieldBundle, mesh=mesh, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          elseif (geomType == ESMF_GEOMTYPE_XGRID) then
+            call ESMF_FieldBundleGet(fieldBundle, xgrid=xgrid, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+            fieldBundle = ESMF_FieldBundleCreate(name='avg_'//trim(itemNameList(i)), rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+            call ESMF_FieldBundleSet(fieldBundle, xgrid=xgrid, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          elseif (geomType == ESMF_GEOMTYPE_LOCSTREAM) then
+            call ESMF_FieldBundleGet(fieldBundle, xgrid=xgrid, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+            fieldBundle = ESMF_FieldBundleCreate(name='avg_'//trim(itemNameList(i)), rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+            call ESMF_FieldBundleSet(fieldBundle, locstream=locstream, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          endif
+
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           call ESMF_AttributeSet(fieldBundle, 'creator', trim(name), rc=localrc)
@@ -389,6 +444,33 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         do j=1,fieldCount
 
           exportField = ESMF_FieldEmptyCreate(name='avg_'//trim(itemNameList(i)), rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          call ESMF_FieldGet(fieldList(j), geomType=geomType, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          if (geomType == ESMF_GEOMTYPE_GRID) then
+            call ESMF_FieldGet(fieldList(j), grid=grid, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+            call ESMF_FieldEmptySet(exportField, grid, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          elseif (geomType == ESMF_GEOMTYPE_MESH) then
+            call ESMF_FieldGet(fieldList(j), mesh=mesh, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+            call ESMF_FieldEmptySet(exportField, mesh, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          elseif (geomType == ESMF_GEOMTYPE_XGRID) then
+            call ESMF_FieldGet(fieldList(j), xgrid=xgrid, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+            call ESMF_FieldEmptySet(exportField, xgrid, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          elseif (geomType == ESMF_GEOMTYPE_LOCSTREAM) then
+            call ESMF_FieldGet(fieldList(j), locstream=locstream, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+            call ESMF_FieldEmptySet(exportField, locstream, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          endif
+
           call MOSSCO_FieldCopy(exportField, fieldList(j), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -473,6 +555,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         endif
       enddo
 
+      write(*,*) __LINE__, needReset
+
       !> At this point, we are within the same itemName, but can have different
       !> order/index of fields in import and export State
       if (exportFieldCount /= fieldCount) then
@@ -537,7 +621,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           call MOSSCO_FieldString(fieldList(matchIndex), message)
           call MOSSCO_MessageAdd(message,' to ')
           call MOSSCO_FieldString(exportFieldList(j), message)
-          if (advanceCount < 1) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          if (advanceCount < 1) then
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          endif
 
           call ESMF_FieldGet(fieldList(matchIndex), farrayPtr=farrayPtr2, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
@@ -545,12 +631,13 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           call ESMF_FieldGet(exportFieldList(j), farrayPtr=exportPtr2, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
+          write(*,*) __LINE__,maxval(farrayPtr2(ilbnd(1):iubnd(1), ilbnd(2):iubnd(2))),maxval(exportPtr2(RANGE2D))
+
           exportPtr2(RANGE2D) = exportPtr2(RANGE2D)  + &
             farrayPtr2(ilbnd(1):iubnd(1), ilbnd(2):iubnd(2))
 
-          ! Divide by number of steps for state variables (i.e. arithmetic
-          ! mean, do not divide for fluxes, that are summed)
-          if (needReset .and. index(itemNameList(i), '_flux_') < 1 ) then
+          ! Divide by number of steps
+          if (needReset) then
             exportPtr2(RANGE2D) = exportPtr2(RANGE2D) / counter
           endif
 
@@ -571,9 +658,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           exportPtr3(RANGE3D) = exportPtr3(RANGE3D)  &
              + farrayPtr3(ilbnd(1):iubnd(1), ilbnd(2):iubnd(2), ilbnd(3):iubnd(3))
 
-          ! Divide by number of steps for state variables (i.e. arithmetic
-          ! mean, do not divide for fluxes, that are summed)
-          if (needReset .and. index(itemNameList(i), '_flux_') < 1 ) then
+          ! Divide by number of steps
+          if (needReset) then
             exportPtr3(RANGE3D) = exportPtr3(RANGE3D) / counter
           endif
 
