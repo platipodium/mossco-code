@@ -673,7 +673,7 @@ end function MOSSCO_GridCreateRegional2D
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_GridString"
-subroutine MOSSCO_GridString(grid, message, kwe, length, options, rc)
+subroutine MOSSCO_GridString(grid, message, kwe, length, options, staggerLoc, rc)
 
   type(ESMF_Grid), intent(in)                    :: grid
   character(len=ESMF_MAXSTR), intent(inout)      :: message
@@ -681,6 +681,7 @@ subroutine MOSSCO_GridString(grid, message, kwe, length, options, rc)
   integer(ESMF_KIND_I4), intent(inout), optional :: length
   character(len=ESMF_MAXSTR), intent(in), allocatable, optional :: options(:)
   integer(ESMF_KIND_I4), intent(out), optional   :: rc
+  type(ESMF_StaggerLoc), intent(in), optional    :: staggerLoc
 
   integer(ESMF_KIND_I4)   :: rc_, length_, rank, localrc, i
   character(ESMF_MAXSTR)  :: string, name, formatString
@@ -688,8 +689,14 @@ subroutine MOSSCO_GridString(grid, message, kwe, length, options, rc)
   logical                            :: isPresent
   integer(ESMF_KIND_I4), allocatable :: ubnd(:), lbnd(:)
   character(len=ESMF_MAXSTR), allocatable  :: options_(:)
+  type(ESMF_StaggerLoc)              :: staggerLoc_
+  integer(ESMF_KIND_I4), pointer     :: mask1(:) => null()
+  integer(ESMF_KIND_I4), pointer     :: mask2(:,:) => null()
+  integer(ESMF_KIND_I4), pointer     :: mask3(:,:,:) => null()
 
   rc_ = ESMF_SUCCESS
+  staggerLoc_ = ESMF_STAGGERLOC_CENTER
+
   if (present(kwe)) rc_ = ESMF_SUCCESS
   if (present(options)) then
     if (allocated(options)) then
@@ -703,6 +710,7 @@ subroutine MOSSCO_GridString(grid, message, kwe, length, options, rc)
     allocate(options_(1))
     options_(1)='creator'
   endif
+  if (present(staggerLoc)) staggerLoc_ = staggerLoc
 
   call ESMF_GridGet(grid, name=name, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -742,8 +750,44 @@ subroutine MOSSCO_GridString(grid, message, kwe, length, options, rc)
     write(formatString,'(A)') '(A,'//intformat(ubnd(i)-lbnd(i)+1)//')'
     write(string,formatString) trim(string)//'x',ubnd(i)-lbnd(i)+1
   enddo
+
+  call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, &
+    staggerLoc=staggerLoc, isPresent=isPresent, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  if (isPresent) then
+    if (rank==1) then
+      call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask1, &
+        staggerLoc=staggerLoc, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      write(formatString,'(A)') '(A,'//intformat(count(mask1>0))//')'
+      write(string,formatString) trim(string)//' m=',count(mask1>0)
+
+    elseif (rank==2) then
+      call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask2, &
+        staggerLoc=staggerLoc, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      write(formatString,'(A)') '(A,'//intformat(count(mask2>0))//')'
+      write(string,formatString) trim(string)//' m=',count(mask2>0)
+
+    elseif (rank==3) then
+      call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask3, &
+        staggerLoc=staggerLoc, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      write(formatString,'(A)') '(A,'//intformat(count(mask3>0))//')'
+      write(string,formatString) trim(string)//' m=',count(mask3>0)
+
+    endif
+  endif
+
   call MOSSCO_MessageAdd(message, trim(string)//')', rc=localrc)
 
+  nullify(mask1)
+  nullify(mask2)
+  nullify(mask3)
   deallocate(ubnd, stat=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
   deallocate(lbnd, stat=localrc)

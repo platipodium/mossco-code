@@ -102,6 +102,10 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, options, rc)
   type(ESMF_FieldStatus_Flag) :: fieldStatus
   logical                     :: isPresent
   character(len=ESMF_MAXSTR), allocatable  :: options_(:)
+  type(ESMF_StaggerLoc)       :: staggerLoc
+  type(ESMF_LocStream)        :: locStream
+  type(ESMF_XGrid)            :: xgrid
+  type(ESMF_MeshLoc)          :: meshLoc
 
   rc_ = ESMF_SUCCESS
 
@@ -141,89 +145,53 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, options, rc)
 
   if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
     call MOSSCO_MessageAdd(message,' (empty)')
-  elseif (fieldStatus == ESMF_FIELDSTATUS_GRIDSET) then
-    call MOSSCO_MessageAdd(message,' (gridset)')
-  endif
-
-  if (fieldStatus /= ESMF_FIELDSTATUS_EMPTY) then
+  else
     call ESMF_FieldGet(field, geomtype=geomtype, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (geomtype==ESMF_GEOMTYPE_GRID) then
-      call ESMF_FieldGet(field, grid=grid, rc=localrc)
+      call ESMF_FieldGet(field, staggerLoc=staggerLoc, grid=grid, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      call ESMF_GridGet(grid, name=geomName, rank=geomRank, rc=localrc)
+      call ESMF_GridGet(grid, rank=geomRank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      call MOSSCO_MessageAdd(message,' '//trim(geomName))
-
-      if (fieldStatus == ESMF_FIELDSTATUS_COMPLETE) then
-        call ESMF_FieldGet(field, rank=rank, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-      else
-        rank=geomRank ! fall back to geomRank, if field not completed
-        if (len_trim(message) + 7<=len(message)) write(message,'(A,I1)') trim(message)//' rank ',rank
-
-        if (rank > 0) then
-          if (allocated(ubnd)) deallocate(ubnd)
-          allocate(ubnd(rank), stat=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-          if (allocated(lbnd)) deallocate(lbnd)
-          allocate(lbnd(rank), stat=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-          call ESMF_GridGet(grid, staggerloc=ESMF_STAGGERLOC_CENTER, localDe=0, &
-            exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-          if (len_trim(message) + 5 <=len(message)) then
-            write(form,'(A)') '(A,'//intformat(ubnd(1)-lbnd(1)+1)//')'
-            write(message,form) trim(message)//' (', ubnd(1)-lbnd(1)+1
-          endif
-
-          do i=2,rank
-            if (ubnd(i)<lbnd(i)) then
-              write(message,'(A)') '  bounds problem, please check your foreign_grid specification'
-              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-            endif
-
-            width=order(ubnd(i)-lbnd(i)+1)+1
-            write(form,'(A)') '(A,'//intformat(ubnd(i)-lbnd(i)+1)//')'
-            if (len_trim(message) + 1 + width <=len(message)) write(message,form) trim(message)//'x', ubnd(i)-lbnd(i)+1
-          enddo
-
-          if (len_trim(message) + 1 <=len(message)) write(message,'(A)') trim(message)//')'
-        endif
-      endif
-
-      !! Check for ungridded dimensions
-      n=rank-geomRank
-      if (n>0) then
-        allocate(ungriddedUbnd(n))
-        allocate(ungriddedLbnd(n))
-        call ESMF_FieldGet(field, ungriddedLBound=ungriddedLbnd, ungriddedUbound=ungriddedUbnd, &
-          rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-      endif
+      call MOSSCO_GeomString(grid, message, staggerloc=staggerloc, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     elseif (geomtype==ESMF_GEOMTYPE_MESH) then
       call ESMF_FieldGet(field, mesh=mesh, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      geomRank=1
+
       call MOSSCO_GeomString(mesh, message, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       !call MOSSCO_MessageAdd(message,' mesh')
     elseif (geomtype==ESMF_GEOMTYPE_LOCSTREAM) then
+      geomRank=1
+
       call MOSSCO_MessageAdd(message,' locstream')
     elseif (geomtype==ESMF_GEOMTYPE_XGRID) then
+      call ESMF_FieldGet(field, xgrid=xgrid, staggerLoc=staggerLoc, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       call MOSSCO_MessageAdd(message,' xgrid')
     else
       write(message,'(A)') 'Unknown geometry type.'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
+  endif
+
+  !! Check for ungridded dimensions
+  n=rank-geomRank
+  if (n>0) then
+    allocate(ungriddedUbnd(n))
+    allocate(ungriddedLbnd(n))
+    call ESMF_FieldGet(field, ungriddedLBound=ungriddedLbnd, ungriddedUbound=ungriddedUbnd, &
+      rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
   endif
 
   if (fieldStatus == ESMF_FIELDSTATUS_COMPLETE .and. geomtype == ESMF_GEOMTYPE_GRID) then
