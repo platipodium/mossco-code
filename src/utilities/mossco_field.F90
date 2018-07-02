@@ -83,32 +83,42 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_FieldString"
-subroutine MOSSCO_FieldString(field, message, kwe, length, prefix, rc)
+subroutine MOSSCO_FieldString(field, message, kwe, length, options, rc)
 
   type(ESMF_Field), intent(in)                     :: field
   character(len=*), intent(inout)                  :: message
   type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
   integer(ESMF_KIND_I4), intent(out), optional     :: length
-  character(len=*), intent(in), optional           :: prefix
+  character(len=ESMF_MAXSTR), intent(in), optional, allocatable :: options(:)
   integer(ESMF_KIND_I4), intent(out), optional     :: rc
 
   integer(ESMF_KIND_I4)   :: rc_, rank, localrc, geomRank, n, i, width
   integer(ESMF_KIND_I4), allocatable :: lbnd(:), ubnd(:), ungriddedLbnd(:), ungriddedUbnd(:)
 
   character(len=ESMF_MAXSTR)  :: geomName, stringValue, name, form
-  character(len=ESMF_MAXSTR)  :: prefix_
   type(ESMF_Grid)             :: grid
   type(ESMF_Mesh)             :: mesh
   type(ESMF_GeomType_Flag)    :: geomType
   type(ESMF_FieldStatus_Flag) :: fieldStatus
   logical                     :: isPresent
+  character(len=ESMF_MAXSTR), allocatable  :: options_(:)
 
   rc_ = ESMF_SUCCESS
-  prefix_ = 'none'
 
   if (present(kwe)) rc_ = ESMF_SUCCESS
-  if (present(prefix)) call MOSSCO_StringCopy(prefix_, prefix)
   if (present(rc)) rc = rc_
+  if (present(options)) then
+    if (allocated(options)) then
+      allocate(options_(size(options)), stat=localrc)
+      _MOSSCO_LOG_ALLOC_FINALIZE_ON_ERROR_(rc)
+      do i=lbound(options,1),ubound(options,1)
+        call MOSSCO_StringCopy(options_(i),options(i))
+      enddo
+    endif
+  else
+    allocate(options_(1))
+    options_(1)='creator'
+  endif
 
   rank = 0
   geomRank = 0
@@ -2909,7 +2919,7 @@ end subroutine MOSSCO_FieldCopyAttribute
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     write(message, '(A)') 'field '
-    call MOSSCO_FieldString(field, message, prefix=prefix_, rc=localrc)
+    call MOSSCO_FieldString(field, message, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 

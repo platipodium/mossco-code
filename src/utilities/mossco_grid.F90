@@ -673,12 +673,13 @@ end function MOSSCO_GridCreateRegional2D
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_GridString"
-subroutine MOSSCO_GridString(grid, message, kwe, length, rc)
+subroutine MOSSCO_GridString(grid, message, kwe, length, options, rc)
 
   type(ESMF_Grid), intent(in)                    :: grid
   character(len=ESMF_MAXSTR), intent(inout)      :: message
   logical, intent(in), optional                  :: kwe
   integer(ESMF_KIND_I4), intent(inout), optional :: length
+  character(len=ESMF_MAXSTR), intent(in), allocatable, optional :: options(:)
   integer(ESMF_KIND_I4), intent(out), optional   :: rc
 
   integer(ESMF_KIND_I4)   :: rc_, length_, rank, localrc, i
@@ -686,9 +687,22 @@ subroutine MOSSCO_GridString(grid, message, kwe, length, rc)
 
   logical                            :: isPresent
   integer(ESMF_KIND_I4), allocatable :: ubnd(:), lbnd(:)
+  character(len=ESMF_MAXSTR), allocatable  :: options_(:)
 
   rc_ = ESMF_SUCCESS
   if (present(kwe)) rc_ = ESMF_SUCCESS
+  if (present(options)) then
+    if (allocated(options)) then
+      allocate(options_(size(options)), stat=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      do i=lbound(options,1),ubound(options,1)
+        call MOSSCO_StringCopy(options_(i),options(i))
+      enddo
+    endif
+  else
+    allocate(options_(1))
+    options_(1)='creator'
+  endif
 
   call ESMF_GridGet(grid, name=name, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
