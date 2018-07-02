@@ -2510,11 +2510,6 @@ end subroutine MOSSCO_FieldCopyAttribute
         call ESMF_FieldGet(field, farrayPtr=ifarrayPtrR83, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-        write(*,*) __LINE__, sum(farrayPtrR83,mask=(mask3>0))
-        write(*,*) __LINE__, sum(ifarrayPtrR83,mask=(imask3>0))
-        write(*,*) __LINE__, ifarrayPtrR83(:,:,1)
-        write(*,*) __LINE__, farrayPtrR83(:,:,1)
-
         where (mask3*imask3 > 0)
           farrayPtrR83(RANGE3D) = farrayPtrR83(RANGE3D) + &
             ifarrayPtrR83(ilbnd(1):iubnd(1),ilbnd(2):iubnd(2),ilbnd(3):iubnd(3))
