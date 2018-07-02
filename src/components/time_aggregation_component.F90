@@ -232,12 +232,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     character(len=ESMF_MAXSTR), allocatable, dimension(:) :: itemNameList
     type(ESMF_Clock)        :: clock
     logical                 :: isMatch
-    logical ,save                :: needReset=.false.
+    logical ,save                :: needReset
     character(len=ESMF_MAXSTR) :: form
     type(ESMF_Alarm), dimension(:), allocatable :: alarmList
     integer(ESMF_KIND_I4), allocatable :: ubnd(:), lbnd(:), iubnd(:), ilbnd(:)
-    real(ESMF_KIND_R8), pointer :: farrayPtr2(:,:) => null(), farrayPtr3(:,:,:) => null()
-    real(ESMF_KIND_R8), pointer :: exportPtr2(:,:) => null(), exportPtr3(:,:,:) => null()
 
     character(len=ESMF_MAXSTR) :: message, name, timeUnit, alarmName
     character(len=ESMF_MAXSTR), allocatable :: filterIncludeList(:), filterExcludeList(:)
@@ -250,6 +248,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     type(ESMF_XGrid)              :: xgrid
     type(ESMF_LocStream)          :: locStream
     type(ESMF_Mesh)               :: mesh
+
+    real(ESMF_KIND_R8), pointer :: farrayPtr2(:,:) => null()
+    integer(ESMF_KIND_I4), pointer :: mask2(:,:) => null()
 
     rc = ESMF_SUCCESS
 
@@ -274,30 +275,69 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     ! Find in my alarmList couplings to any further calls to this component,
     ! if there are none, then
     ! remember that this is the last step before having to reset the fields
-    call ESMF_ClockGetAlarmList(clock, ESMF_ALARMLIST_ALL, &
+    call ESMF_ClockGetAlarmList(clock, ESMF_ALARMLIST_RINGING, &
       alarmCount=alarmCount, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
     call ESMF_TimeGet(currTime, timeStringISOFrac=timestring, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
-    !> Skip if there are no alarms (that would be unusual, so warn about it)
-    if (alarmCount == 0) then
-      write(message,'(A)') trim(name)//' did not find any ringing alarms ' &
-        //' .. strangely at'//trim(timestring)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    !> Skip if there are no alarms (that would be unusual at any time later
+    !> than the first advanceCount, so warn about it)
+    if (alarmCount == 0 .and. advanceCount > 0) then
+      write(message,'(A)') trim(name)//' '//trim(timestring)//' did not find any ringing alarms'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
       call MOSSCO_CompExit(gridComp, localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
       return
     endif
 
-    if (allocated(alarmList)) deallocate(alarmList)
-    allocate(alarmList(alarmCount), stat=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    needReset = .true.
+    if (alarmCount > 0) then
+      if (allocated(alarmList)) deallocate(alarmList)
+      allocate(alarmList(alarmCount), stat=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
-    call ESMF_ClockGetAlarmList(clock, ESMF_ALARMLIST_ALL, &
-      alarmList=alarmList,rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+      call ESMF_ClockGetAlarmList(clock, ESMF_ALARMLIST_RINGING, &
+        alarmList=alarmList,rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+      needReset = .false.
+
+      do k=lbound(alarmList,1),ubound(alarmList,1)
+
+        call ESMF_AlarmGet(alarmList(k), ringTime=ringTime, name=alarmName, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+        !! Skip this alarm if it is not a cplAlarm
+        if (index(trim(alarmName),'cplAlarm') < 1) cycle
+
+        call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+        write(message,'(A)') trim(name)//' '//trim(timeString)//' ringing alarm '//trim(alarmName)
+
+        call ESMF_TimeGet(ringTime,timeStringISOFrac=timestring)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+        call MOSSCO_MessageAdd(message,' will ring next at '//trim(timestring))
+        !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+        if (trim(alarmName(1:index(alarmName,'--')-1)) == trim(name)) then
+          ! 'getm--time_aggregation--cpAlarm'  => .false.
+          ! 'time_aggregation--mossco_getm--cpAlarm' => .true.
+          call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+          write(message,'(A)') trim(name)//' '//trim(timeString)//' resets aggregated variables now'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+          needReset = .true.
+          call ESMF_AlarmRingerOff(alarmList(k), rc=localrc)
+          exit ! from k-loop over alarmList
+        endif
+      enddo
+    endif
 
     call MOSSCO_AttributeGet(importState, 'filter_pattern_include', &
       filterIncludeList, rc=localrc)
@@ -477,8 +517,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           call ESMF_AttributeSet(exportField, 'creator', trim(name), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          call MOSSCO_FieldInitialize(exportField, value=0.0d0, rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          call MOSSCO_FieldInitialize(exportField, value=0.0d0, &
+            owner=trim(name), rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           write(message,'(A)') trim(name)//' created '
 
@@ -509,7 +550,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
       if (needReset) then
-        write(message,'(A)') trim(name)//' resets  at '//trim(timeString)
+        write(message,'(A)') trim(name)//' '//trim(timeString)//' resets  now '
 
         do j=1, exportFieldCount
           call MOSSCO_FieldInitialize(exportFieldList(j), value=0.0D0, rc=localrc)
@@ -519,43 +560,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
         enddo
       else
-        write(message,'(A)') trim(name)//' does not need reset at '//trim(timeString)
+        write(message,'(A)') trim(name)//' '//trim(timeString)//' does not need reset'
       endif
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-      needReset = .false.
-
-      do k=lbound(alarmList,1),ubound(alarmList,1)
-
-        call ESMF_AlarmGet(alarmList(k), ringTime=ringTime, name=alarmName, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
-
-        call ESMF_TimeGet(ringTime,timeStringISOFrac=timestring)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
-
-        write(message,'(A)') trim(name)//' alarm '//trim(alarmName)// &
-          ' will ring at '//trim(timestring)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-        !! Skip this alarm if it is not a cplAlarm
-        if (index(trim(alarmName),'cplAlarm') < 1) cycle
-
-        !! Skip this alarm if it is not ringing now
-        if (currTime /= ringTime) cycle
-
-        if (trim(alarmName(1:index(alarmName,'--')-1)) == trim(name)) then
-          ! 'getm--time_aggregation--cpAlarm'  => .false.
-          ! 'time_aggregation--mossco_getm--cpAlarm' => .true.
-          write(message,'(A)') trim(name)//' alarm '//trim(alarmName)// &
-            ' is ringing at '//trim(timestring)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-          needReset = .true.
-          exit ! from k-loop over alarmList
-        endif
-      enddo
-
-      write(*,*) __LINE__, needReset
 
       !> At this point, we are within the same itemName, but can have different
       !> order/index of fields in import and export State
@@ -600,80 +607,30 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           return
         endif
 
-        if (allocated(iubnd)) deallocate(iubnd)
-        if (allocated(ilbnd)) deallocate(ilbnd)
-        allocate(iubnd(rank))
-        allocate(ilbnd(rank))
-        call ESMF_FieldGetBounds(fieldList(matchIndex), exclusiveUbound=iubnd, &
-          exclusiveLbound=ilbnd, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+        call ESMF_FieldGet(fieldList(matchIndex), grid=grid, rc=localrc)
+        call ESMF_FieldGet(fieldList(matchIndex), farrayPtr=farrayPtr2, rc=localrc)
+        call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask2, rc=localrc)
+        write(*,*) '1 before adding import ',count(mask2>0), sum(farrayPtr2,mask=mask2>0)
+        call ESMF_FieldGet(exportFieldList(j), grid=grid, rc=localrc)
+        call ESMF_FieldGet(exportFieldList(j), farrayPtr=farrayPtr2, rc=localrc)
+        call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask2, rc=localrc)
+        write(*,*) '2 before adding export ',count(mask2>0),sum(farrayPtr2,mask=mask2>0)
 
-        if (any((iubnd - ilbnd) - ( ubnd - lbnd )  /= 0)) then
-          write(message,'(A)') trim(name)//' skipped array bounds mismatch in '
-          call MOSSCO_FieldString(fieldList(j),message)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
-          cycle
+        call MOSSCO_FieldAdd(exportFieldList(j), fieldList(matchIndex), verbose=.true., owner=trim(name), rc=localrc)
+        call ESMF_FieldGet(fieldList(matchIndex), farrayPtr=farrayPtr2, rc=localrc)
+        write(*,*) '3 after  adding export ',count(mask2>0),sum(farrayPtr2,mask=mask2>0)
+
+        write(message,'(A,I2.2)') trim(name)//' aggregated step ',counter
+        if (fieldCount > 1) then
+          write(message,'(A)') trim(message)//' bundled '
+          call MOSSCO_MessageAdd(message,' '//itemNameList(i))
         endif
+        call MOSSCO_FieldString(exportFieldList(j), message)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-        if (rank == 2) then
-
-          write(message,'(A)') trim(name)//' aggregating '
-          call MOSSCO_FieldString(fieldList(matchIndex), message)
-          call MOSSCO_MessageAdd(message,' to ')
-          call MOSSCO_FieldString(exportFieldList(j), message)
-          if (advanceCount < 1) then
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-          endif
-
-          call ESMF_FieldGet(fieldList(matchIndex), farrayPtr=farrayPtr2, rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
-
-          call ESMF_FieldGet(exportFieldList(j), farrayPtr=exportPtr2, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
-
-          write(*,*) __LINE__,maxval(farrayPtr2(ilbnd(1):iubnd(1), ilbnd(2):iubnd(2))),maxval(exportPtr2(RANGE2D))
-
-          exportPtr2(RANGE2D) = exportPtr2(RANGE2D)  + &
-            farrayPtr2(ilbnd(1):iubnd(1), ilbnd(2):iubnd(2))
-
-          ! Divide by number of steps
-          if (needReset) then
-            exportPtr2(RANGE2D) = exportPtr2(RANGE2D) / counter
-          endif
-
-        elseif (rank == 3)  then
-
-          write(message,'(A)') trim(name)//' aggregating '
-          call MOSSCO_FieldString(fieldList(matchIndex), message)
-          call MOSSCO_MessageAdd(message,' to ')
-          call MOSSCO_FieldString(exportFieldList(j), message)
-          if (advanceCount < 1) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-          call ESMF_FieldGet(fieldList(matchIndex), farrayPtr=farrayPtr3, rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
-
-          call ESMF_FieldGet(exportFieldList(j), farrayPtr=exportPtr3, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
-
-          exportPtr3(RANGE3D) = exportPtr3(RANGE3D)  &
-             + farrayPtr3(ilbnd(1):iubnd(1), ilbnd(2):iubnd(2), ilbnd(3):iubnd(3))
-
-          ! Divide by number of steps
-          if (needReset) then
-            exportPtr3(RANGE3D) = exportPtr3(RANGE3D) / counter
-          endif
-
-        else
-          write(message,'(A)') trim(name)//' not implemented aggregating fields with rank not 2 or 3,    '//trim(itemNameList(i))
-          if (advanceCount < 1) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
-        endif
       enddo
     enddo
 
-    nullify(farrayPtr2)
-    nullify(exportPtr2)
-    nullify(farrayPtr3)
-    nullify(exportPtr3)
     if (associated(include)) deallocate(include)
     if (allocated(iubnd)) deallocate(iubnd)
     if (allocated(ilbnd)) deallocate(ilbnd)
