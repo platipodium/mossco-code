@@ -38,7 +38,7 @@ LIBMOSSCO_UTIL_OBJS+= 							\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_grid.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_mesh.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_geom.o) \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_staggerloc.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_loc.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_routehandle.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_locstream.o) \
   $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(ESMF_GridCreate3D.o)
@@ -71,8 +71,8 @@ libmossco_util:  prefix sha $(LIBMOSSCO_UTIL_OBJS)
 libmossco_db: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_db.a(mossco_db.o)
 mossco_state.o : mossco_field.o mossco_state.F90
 mossco_logging.o : mossco_strings.o mossco_field.o mossco_state.o mossco_logging.F90
-mossco_field.o : mossco_strings.o mossco_field.F90 mossco_memory.o mossco_attribute.o mossco_grid.o mossco_geom.o mossco_staggerloc.o
-mossco_staggerloc.o : mossco_strings.o mossco_staggerloc.F90
+mossco_field.o : mossco_strings.o mossco_field.F90 mossco_memory.o mossco_attribute.o mossco_grid.o mossco_geom.o mossco_loc.o
+mossco_loc.o : mossco_strings.o mossco_loc.F90
 mossco_gridspec.o : mossco_strings.o mossco_gridspec.F90
 mossco_geom.o : mossco_strings.o ESMF_GridCreate3D.o mossco_mesh.o mossco_grid.o mossco_locstream.o
 mossco_grid.o : mossco_strings.o mossco_grid.F90
@@ -120,7 +120,7 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_grid.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_mesh.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_geom.mod
-	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_staggerloc.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_loc.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_routehandle.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_locstream.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_netcdf.mod
