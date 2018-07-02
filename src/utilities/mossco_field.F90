@@ -50,7 +50,7 @@ module mossco_field
   public :: MOSSCO_FieldReduce, MOSSCO_FieldInitialize, MOSSCO_FieldCopyAttributes
   public :: MOSSCO_FieldMatchFields, MOSSCO_FieldWeightField, MOSSCO_FieldGetMissingValue
   public :: MOSSCO_FieldLog, MOSSCO_FieldExponentiate, MOSSCO_FieldMultiply
-  public :: MOSSCO_FieldAdd, MOSSCO_FieldNameCheck, MOSSCO_FieldUnitString
+  public :: MOSSCO_FieldAdd, MOSSCO_FieldNameCheck, MOSSCO_FieldUnitString, MOSSCO_FieldGetMask
 
   interface MOSSCO_FieldGetMissingValue
     module procedure MOSSCO_FieldGetMissingValueR8
@@ -73,6 +73,12 @@ module mossco_field
     module procedure MOSSCO_FieldUnitStringSub
   end interface MOSSCO_FieldUnitString
 
+  interface MOSSCO_FieldGetMask
+    module procedure MOSSCO_FieldGetMask1
+    module procedure MOSSCO_FieldGetMask2
+    module procedure MOSSCO_FieldGetMask3
+    module procedure MOSSCO_FieldGetMask4
+  end interface
 contains
 
 #undef  ESMF_METHOD
@@ -86,7 +92,7 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, prefix, rc)
   character(len=*), intent(in), optional           :: prefix
   integer(ESMF_KIND_I4), intent(out), optional     :: rc
 
-  integer(ESMF_KIND_I4)   :: rc_, rank, localrc, gridRank, n, i, width
+  integer(ESMF_KIND_I4)   :: rc_, rank, localrc, geomRank, n, i, width
   integer(ESMF_KIND_I4), allocatable :: lbnd(:), ubnd(:), ungriddedLbnd(:), ungriddedUbnd(:)
 
   character(len=ESMF_MAXSTR)  :: geomName, stringValue, name, form
@@ -105,7 +111,7 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, prefix, rc)
   if (present(rc)) rc = rc_
 
   rank = 0
-  gridRank = 0
+  geomRank = 0
 
   call ESMF_FieldGet(field, name=name, status=fieldStatus, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -137,7 +143,7 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, prefix, rc)
       call ESMF_FieldGet(field, grid=grid, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      call ESMF_GridGet(grid, name=geomName, rank=gridRank, rc=localrc)
+      call ESMF_GridGet(grid, name=geomName, rank=geomRank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       call MOSSCO_MessageAdd(message,' '//trim(geomName))
@@ -147,7 +153,7 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, prefix, rc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       else
-        rank=gridRank ! fall back to gridRank, if field not completed
+        rank=geomRank ! fall back to geomRank, if field not completed
         if (len_trim(message) + 7<=len(message)) write(message,'(A,I1)') trim(message)//' rank ',rank
 
         if (rank > 0) then
@@ -184,7 +190,7 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, prefix, rc)
       endif
 
       !! Check for ungridded dimensions
-      n=rank-gridRank
+      n=rank-geomRank
       if (n>0) then
         allocate(ungriddedUbnd(n))
         allocate(ungriddedLbnd(n))
@@ -233,7 +239,7 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, prefix, rc)
         write(message,form) trim(message)//' (', ubnd(1)-lbnd(1)+1
       endif
 
-      do i=2, gridRank
+      do i=2, geomRank
         if (ubnd(i)<lbnd(i)) then
           write(message,'(A)') '  bounds problem, please check your foreign_grid specification'
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -244,10 +250,10 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, prefix, rc)
         if (len_trim(message) + 1 + width <=len(message)) write(message,form) trim(message)//'x', ubnd(i)-lbnd(i)+1
      enddo
 
-      do i=gridRank+1, rank
+      do i=geomRank+1, rank
         width=order(ubnd(i)-lbnd(i)+1)+1
         write(form,'(A)') '(A,'//intformat(ubnd(i)-lbnd(i)+1)//',A)'
-        !write(0,*) i, gridRank, ubnd(i)-lbnd(i)+1, width, intformat(ubnd(i)-lbnd(i)+1)
+        !write(0,*) i, geomRank, ubnd(i)-lbnd(i)+1, width, intformat(ubnd(i)-lbnd(i)+1)
         if (len_trim(message) + 2 + width <=len(message)) write(message,form) trim(message)//'x', ubnd(i)-lbnd(i)+1,'u'
       enddo
 
@@ -809,14 +815,14 @@ end subroutine MOSSCO_FieldCopyContent
     character(len=*), intent(in), optional           :: owner
 
     character(len=ESMF_MAXSTR)               :: message, owner_
-    integer(ESMF_KIND_I4)                    :: rc_, rank, localrc, gridRank
+    integer(ESMF_KIND_I4)                    :: rc_, rank, localrc, geomRank
     integer(ESMF_KIND_I4), allocatable       :: ubnd(:), lbnd(:)
     type(ESMF_TypeKind_Flag)                 :: typeKind
     real(ESMF_KIND_R8)                       :: value_, missingValueR8=-1.0D30
-    type(ESMF_Grid)                          :: grid
+    integer(ESMF_KIND_I4), pointer           :: mask1(:) => null()
     integer(ESMF_KIND_I4), pointer           :: mask2(:,:) => null()
     integer(ESMF_KIND_I4), pointer           :: mask3(:,:,:) => null()
-    type(ESMF_GeomType_Flag)                 :: geomType
+    integer(ESMF_KIND_I4), pointer           :: mask4(:,:,:,:) => null()
 
     real(ESMF_KIND_R8), pointer  :: farrayPtr1(:), farrayPtr2(:,:)
     real(ESMF_KIND_R8), pointer  :: farrayPtr3(:,:,:), farrayPtr4(:,:,:,:)
@@ -825,7 +831,6 @@ end subroutine MOSSCO_FieldCopyContent
 
     type(ESMF_FieldStatus_Flag) :: fieldStatus
     logical                     :: isPresent
-    type(ESMF_StaggerLoc)       :: staggerLoc
 
     rc_ = ESMF_SUCCESS
     owner_ = '--'
@@ -837,7 +842,7 @@ end subroutine MOSSCO_FieldCopyContent
       value_ = 0.0D0
     endif
     if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
-    gridRank = -1
+    geomRank = -1
 
     call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -869,54 +874,17 @@ end subroutine MOSSCO_FieldCopyContent
     call ESMF_FieldGetbounds(field, localDe=0,  exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_FieldGet(field, typeKind=typeKind, geomType=geomType, rc=localrc)
+    call ESMF_FieldGet(field, typeKind=typeKind, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    if (geomType == ESMF_GEOMTYPE_GRID) then
-      call ESMF_FieldGet(field, grid=grid, staggerloc=staggerloc, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-      call ESMF_GridGet(grid, rank=gridRank, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-      call ESMF_GridGetItem(grid, itemflag=ESMF_GRIDITEM_MASK, &
-        staggerloc=staggerloc, isPresent=isPresent, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-      if (.not.isPresent) then
-        if (rank == 2) then
-          if (associated(mask2)) deallocate(mask2)
-          allocate(mask2(RANGE2D), stat=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-          mask2(RANGE2D) = 1
-        elseif (rank == 3) then
-          if (associated(mask3)) deallocate(mask3)
-          allocate(mask3(RANGE3D), stat=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-          mask3(RANGE3D) = 1
-        endif
-
-      elseif (gridRank == 2) then
-        call ESMF_GridGetItem(grid, itemFlag=ESMF_GRIDITEM_MASK, &
-            farrayPtr=mask2, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-        if (rank == 3) then
-          if (associated(mask3)) deallocate(mask3)
-          allocate(mask3(RANGE3D), stat=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-          mask3(RANGE3D) = spread(mask2(RANGE2D),3,ubnd(3)-lbnd(3)+1)
-        endif
-
-      elseif (gridRank == 3) then
-        call ESMF_GridGetItem(grid, itemFlag=ESMF_GRIDITEM_MASK, &
-            farrayPtr=mask3, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-      endif
-    endif
+    if (rank == 1) call MOSSCO_FieldGetMask(field, mask=mask1, rank=geomRank, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    if (rank == 2) call MOSSCO_FieldGetMask(field, mask=mask2, rank=geomRank, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    if (rank == 3) call MOSSCO_FieldGetMask(field, mask=mask3, rank=geomRank, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    if (rank == 4) call MOSSCO_FieldGetMask(field, mask=mask4, rank=geomRank, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (typeKind == ESMF_TYPEKIND_R8) then
       call ESMF_AttributeGet(field, 'missingValue', missingValueR8, &
@@ -931,8 +899,9 @@ end subroutine MOSSCO_FieldCopyContent
     if (rank == 1) then
       call ESMF_FieldGet(field, localDe=0,  farrayPtr=farrayPtr1, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-      farrayPtr1(RANGE1D) = value_
-
+      where(mask1(RANGE1D)>0)
+        farrayPtr1(RANGE1D) = value_
+      endwhere
     elseif (rank == 2) then
       call ESMF_FieldGet(field, localDe=0,  farrayPtr=farrayPtr2, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -956,7 +925,7 @@ end subroutine MOSSCO_FieldCopyContent
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       farrayPtr4(RANGE4D) = missingValueR8
-      where(spread(mask3(RANGE3D),4,ubnd(4)-lbnd(4)+1) > 0)
+      where(mask4(RANGE4D) > 0)
         farrayPtr4(RANGE4D) = value_
       endwhere
 
@@ -969,16 +938,466 @@ end subroutine MOSSCO_FieldCopyContent
 
     if (allocated(ubnd)) deallocate(ubnd)
     if (allocated(lbnd)) deallocate(lbnd)
-    if (associated(mask3) .and. gridRank /= 3) deallocate(mask3)
-    if (associated(mask2) .and. gridRank /= 2) deallocate(mask2)
+    !>
+    !if (associated(mask3) .and. geomRank /= 3) deallocate(mask3)
+    !if (associated(mask2) .and. geomRank /= 2) deallocate(mask2)
+    nullify(mask1)
     nullify(mask2)
     nullify(mask3)
+    nullify(mask4)
     nullify(farrayPtr4)
     nullify(farrayPtr3)
     nullify(farrayPtr2)
     nullify(farrayPtr1)
 
   end subroutine MOSSCO_FieldInitialize
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_FieldGetMask1"
+  subroutine MOSSCO_FieldGetMask1(field,  mask, kwe, owner, rank, rc)
+
+    type(ESMF_Field), intent(in)                     :: field
+    integer(ESMF_KIND_I4), intent(out), pointer      :: mask(:)
+    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe ! Keyword enforcer
+    integer(ESMF_KIND_I4), intent(out), optional     :: rc, rank
+    character(len=*), intent(in), optional           :: owner
+
+    character(len=ESMF_MAXSTR)               :: message, owner_
+    integer(ESMF_KIND_I4)                    :: rc_, fieldRank, localrc, geomRank
+    integer(ESMF_KIND_I4), allocatable       :: ubnd(:), lbnd(:)
+    type(ESMF_Grid)                          :: grid
+    type(ESMF_GeomType_Flag)                 :: geomType
+
+    type(ESMF_FieldStatus_Flag) :: fieldStatus
+    logical                     :: isPresent
+    type(ESMF_StaggerLoc)       :: staggerLoc
+
+    rc_ = ESMF_SUCCESS
+    owner_ = '--'
+    if (present(kwe)) localrc = ESMF_SUCCESS
+    if (present(rc)) rc = ESMF_SUCCESS
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+    geomRank = -1
+    if (present(rank)) rank=-1
+    nullify(mask)
+
+    call ESMF_FieldGet(field, status=fieldStatus, geomType=geomType, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
+      write(message,'(A)') trim(owner)//' cannot obtain geometry from empty '
+      call MOSSCO_FieldString(field, message, rc=localrc)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      _MOSSCO_RETURN_ON_PRESENT_RC_OR_FINALIZE_(ESMF_RC_ARG_BAD)
+    endif
+
+    !> We expect to deal with 1D (surface mesh), 2D (surface grid or
+    !> or vertical mesh), 3D (grid or mesh+classes), and 4D (3D grid
+    !> + classes variables here)
+    call ESMF_FieldGet(field, geomType=geomType, rank=fieldRank, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (fieldRank /= 1) then
+      write(message,'(A,I1,A)') trim(owner)//' called nonmatching interface rank 1 /= ',rank,' for '
+      call MOSSCO_FieldString(field, message, rc=localrc)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      _MOSSCO_RETURN_ON_PRESENT_RC_OR_FINALIZE_(ESMF_RC_ARG_BAD)
+    endif
+
+    if (allocated(ubnd)) deallocate(ubnd)
+    if (allocated(lbnd)) deallocate(lbnd)
+
+    allocate(ubnd(fieldRank), stat=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    allocate(lbnd(fieldRank), stat=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    !> @todo currently only deals localDe = 0
+    call ESMF_FieldGetbounds(field, localDe=0,  exclusiveUBound=ubnd, &
+      exclusiveLBound=lbnd, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (geomType == ESMF_GEOMTYPE_GRID) then
+      call ESMF_FieldGet(field, grid=grid, staggerloc=staggerloc, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call ESMF_GridGet(grid, rank=geomRank, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call ESMF_GridGetItem(grid, itemflag=ESMF_GRIDITEM_MASK, &
+        staggerloc=staggerloc, isPresent=isPresent, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      if (.not.isPresent) then
+
+        allocate(mask(RANGE1D), stat=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        mask(RANGE1D) = 1
+
+      elseif (geomRank == 1) then
+        call ESMF_GridGetItem(grid, itemFlag=ESMF_GRIDITEM_MASK, &
+            farrayPtr=mask, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      endif
+    endif
+    if (present(rank)) rank = geomRank
+
+    if (allocated(ubnd)) deallocate(ubnd)
+    if (allocated(lbnd)) deallocate(lbnd)
+
+  end subroutine MOSSCO_FieldGetMask1
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_FieldGetMask2"
+  subroutine MOSSCO_FieldGetMask2(field,  mask, kwe, owner, rank, rc)
+
+    type(ESMF_Field), intent(in)                     :: field
+    integer(ESMF_KIND_I4), intent(out), pointer      :: mask(:,:)
+    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe ! Keyword enforcer
+    integer(ESMF_KIND_I4), intent(out), optional     :: rc, rank
+    character(len=*), intent(in), optional           :: owner
+
+    character(len=ESMF_MAXSTR)               :: message, owner_
+    integer(ESMF_KIND_I4)                    :: rc_, fieldRank, localrc, geomRank
+    integer(ESMF_KIND_I4), allocatable       :: ubnd(:), lbnd(:)
+    integer(ESMF_KIND_I4), pointer           :: mask1(:) => null()
+    type(ESMF_Grid)                          :: grid
+    type(ESMF_GeomType_Flag)                 :: geomType
+
+    type(ESMF_FieldStatus_Flag) :: fieldStatus
+    logical                     :: isPresent
+    type(ESMF_StaggerLoc)       :: staggerLoc
+
+    rc_ = ESMF_SUCCESS
+    owner_ = '--'
+    if (present(kwe)) localrc = ESMF_SUCCESS
+    if (present(rc)) rc = ESMF_SUCCESS
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+    geomRank = -1
+    if (present(rank)) rank=-1
+    nullify(mask)
+
+    call ESMF_FieldGet(field, status=fieldStatus, geomType=geomType, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
+      write(message,'(A)') trim(owner)//' cannot obtain geometry from empty '
+      call MOSSCO_FieldString(field, message, rc=localrc)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      _MOSSCO_RETURN_ON_PRESENT_RC_OR_FINALIZE_(ESMF_RC_ARG_BAD)
+    endif
+
+    !> We expect to deal with 1D (surface mesh), 2D (surface grid or
+    !> or vertical mesh), 3D (grid or mesh+classes), and 4D (3D grid
+    !> + classes variables here)
+    call ESMF_FieldGet(field, geomType=geomType, rank=fieldRank, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (fieldRank /= 2) then
+      write(message,'(A,I1,A)') trim(owner)//' called nonmatching interface rank 2 /= ',rank,' for '
+      call MOSSCO_FieldString(field, message, rc=localrc)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      _MOSSCO_RETURN_ON_PRESENT_RC_OR_FINALIZE_(ESMF_RC_ARG_BAD)
+    endif
+
+    if (allocated(ubnd)) deallocate(ubnd)
+    if (allocated(lbnd)) deallocate(lbnd)
+
+    allocate(ubnd(fieldRank), stat=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    allocate(lbnd(fieldRank), stat=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    !> @todo currently only deals localDe = 0
+    call ESMF_FieldGetbounds(field, localDe=0,  exclusiveUBound=ubnd, &
+      exclusiveLBound=lbnd, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (geomType == ESMF_GEOMTYPE_GRID) then
+      call ESMF_FieldGet(field, grid=grid, staggerloc=staggerloc, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call ESMF_GridGet(grid, rank=geomRank, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call ESMF_GridGetItem(grid, itemflag=ESMF_GRIDITEM_MASK, &
+        staggerloc=staggerloc, isPresent=isPresent, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      if (.not.isPresent .or. geomRank /= fieldRank) then
+        allocate(mask(RANGE2D), stat=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      endif
+
+      if (.not.isPresent) then
+
+        mask(RANGE2D) = 1
+
+      elseif (geomRank == 1) then
+        call ESMF_GridGetItem(grid, itemFlag=ESMF_GRIDITEM_MASK, &
+            farrayPtr=mask1, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+        mask(RANGE2D) = spread(mask1,2,ubnd(2)-lbnd(2)+1)
+
+      elseif (geomRank == 2) then
+        call ESMF_GridGetItem(grid, itemFlag=ESMF_GRIDITEM_MASK, &
+            farrayPtr=mask, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      endif
+    endif
+
+    nullify(mask1)
+    if (allocated(ubnd)) deallocate(ubnd)
+    if (allocated(lbnd)) deallocate(lbnd)
+    if (present(rank)) rank = geomRank
+
+  end subroutine MOSSCO_FieldGetMask2
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_FieldGetMask3"
+  subroutine MOSSCO_FieldGetMask3(field,  mask, kwe, owner, rank, rc)
+
+    type(ESMF_Field), intent(in)                     :: field
+    integer(ESMF_KIND_I4), intent(out), pointer      :: mask(:,:,:)
+    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe ! Keyword enforcer
+    integer(ESMF_KIND_I4), intent(out), optional     :: rc, rank
+    character(len=*), intent(in), optional           :: owner
+
+    character(len=ESMF_MAXSTR)               :: message, owner_
+    integer(ESMF_KIND_I4)                    :: rc_, fieldRank, localrc, geomRank
+    integer(ESMF_KIND_I4), allocatable       :: ubnd(:), lbnd(:)
+    type(ESMF_Grid)                          :: grid
+    type(ESMF_GeomType_Flag)                 :: geomType
+    integer(ESMF_KIND_I4), pointer           :: mask1(:) => null()
+    integer(ESMF_KIND_I4), pointer           :: mask2(:,:) => null()
+
+    type(ESMF_FieldStatus_Flag) :: fieldStatus
+    logical                     :: isPresent
+    type(ESMF_StaggerLoc)       :: staggerLoc
+
+    rc_ = ESMF_SUCCESS
+    owner_ = '--'
+    if (present(kwe)) localrc = ESMF_SUCCESS
+    if (present(rc)) rc = ESMF_SUCCESS
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+    geomRank = -1
+    if (present(rank)) rank = -1
+    nullify(mask)
+
+    call ESMF_FieldGet(field, status=fieldStatus, geomType=geomType, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
+      write(message,'(A)') trim(owner)//' cannot obtain geometry from empty '
+      call MOSSCO_FieldString(field, message, rc=localrc)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      _MOSSCO_RETURN_ON_PRESENT_RC_OR_FINALIZE_(ESMF_RC_ARG_BAD)
+    endif
+
+    !> We expect to deal with 1D (surface mesh), 2D (surface grid or
+    !> or vertical mesh), 3D (grid or mesh+classes), and 4D (3D grid
+    !> + classes variables here)
+    call ESMF_FieldGet(field, geomType=geomType, rank=fieldRank, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (fieldRank /= 3) then
+      write(message,'(A,I1,A)') trim(owner)//' called nonmatching interface rank 3 /= ',rank,' for '
+      call MOSSCO_FieldString(field, message, rc=localrc)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      _MOSSCO_RETURN_ON_PRESENT_RC_OR_FINALIZE_(ESMF_RC_ARG_BAD)
+    endif
+
+    if (allocated(ubnd)) deallocate(ubnd)
+    if (allocated(lbnd)) deallocate(lbnd)
+
+    allocate(ubnd(fieldRank), stat=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    allocate(lbnd(fieldRank), stat=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    !> @todo currently only deals localDe = 0
+    call ESMF_FieldGetbounds(field, localDe=0,  exclusiveUBound=ubnd, &
+      exclusiveLBound=lbnd, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (geomType == ESMF_GEOMTYPE_GRID) then
+      call ESMF_FieldGet(field, grid=grid, staggerloc=staggerloc, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call ESMF_GridGet(grid, rank=geomRank, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call ESMF_GridGetItem(grid, itemflag=ESMF_GRIDITEM_MASK, &
+        staggerloc=staggerloc, isPresent=isPresent, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      if (.not.isPresent .or. geomRank /= fieldRank) then
+        allocate(mask(RANGE3D), stat=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      endif
+
+      if (.not.isPresent) then
+        mask(RANGE3D) = 1
+
+      elseif (geomRank == 1) then
+        call ESMF_GridGetItem(grid, itemFlag=ESMF_GRIDITEM_MASK, &
+            farrayPtr=mask1, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        mask(RANGE3D) = spread(spread(mask1(RANGE1D),2,ubnd(2)-lbnd(2)+1),3,ubnd(3)-lbnd(3)+1)
+
+      elseif (geomRank == 2) then
+        call ESMF_GridGetItem(grid, itemFlag=ESMF_GRIDITEM_MASK, &
+            farrayPtr=mask2, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        allocate(mask(RANGE3D), stat=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        mask(RANGE3D) = spread(mask2(RANGE2D),3,ubnd(3)-lbnd(3)+1)
+
+      elseif (geomRank == 3) then
+        call ESMF_GridGetItem(grid, itemFlag=ESMF_GRIDITEM_MASK, &
+            farrayPtr=mask, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      endif
+    endif
+
+    nullify(mask1)
+    nullify(mask2)
+    if (present(rank)) rank=geomRank
+    if (allocated(ubnd)) deallocate(ubnd)
+    if (allocated(lbnd)) deallocate(lbnd)
+
+  end subroutine MOSSCO_FieldGetMask3
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_FieldGetMask4"
+  subroutine MOSSCO_FieldGetMask4(field,  mask, kwe, owner, rank, rc)
+
+    type(ESMF_Field), intent(in)                     :: field
+    integer(ESMF_KIND_I4), intent(out), pointer      :: mask(:,:,:,:)
+    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe ! Keyword enforcer
+    integer(ESMF_KIND_I4), intent(out), optional     :: rc, rank
+    character(len=*), intent(in), optional           :: owner
+
+    character(len=ESMF_MAXSTR)               :: message, owner_
+    integer(ESMF_KIND_I4)                    :: rc_, fieldRank, localrc, geomRank, i
+    integer(ESMF_KIND_I4), allocatable       :: ubnd(:), lbnd(:)
+    type(ESMF_Grid)                          :: grid
+    type(ESMF_GeomType_Flag)                 :: geomType
+    integer(ESMF_KIND_I4), pointer           :: mask1(:) => null()
+    integer(ESMF_KIND_I4), pointer           :: mask2(:,:) => null()
+    integer(ESMF_KIND_I4), pointer           :: mask3(:,:,:) => null()
+
+    type(ESMF_FieldStatus_Flag) :: fieldStatus
+    logical                     :: isPresent
+    type(ESMF_StaggerLoc)       :: staggerLoc
+
+    rc_ = ESMF_SUCCESS
+    owner_ = '--'
+    if (present(kwe)) localrc = ESMF_SUCCESS
+    if (present(rc)) rc = ESMF_SUCCESS
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+    geomRank = -1
+    if (present(rank)) rank = -1
+    nullify(mask)
+
+    call ESMF_FieldGet(field, status=fieldStatus, geomType=geomType, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
+      write(message,'(A)') trim(owner)//' cannot obtain geometry from empty '
+      call MOSSCO_FieldString(field, message, rc=localrc)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      _MOSSCO_RETURN_ON_PRESENT_RC_OR_FINALIZE_(ESMF_RC_ARG_BAD)
+    endif
+
+    !> We expect to deal with 1D (surface mesh), 2D (surface grid or
+    !> or vertical mesh), 3D (grid or mesh+classes), and 4D (3D grid
+    !> + classes variables here)
+    call ESMF_FieldGet(field, geomType=geomType, rank=fieldRank, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (fieldRank /= 3) then
+      write(message,'(A,I1,A)') trim(owner)//' called nonmatching interface rank 4 /= ',rank,' for '
+      call MOSSCO_FieldString(field, message, rc=localrc)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      _MOSSCO_RETURN_ON_PRESENT_RC_OR_FINALIZE_(ESMF_RC_ARG_BAD)
+    endif
+
+    if (allocated(ubnd)) deallocate(ubnd)
+    if (allocated(lbnd)) deallocate(lbnd)
+
+    allocate(ubnd(fieldRank), stat=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    allocate(lbnd(fieldRank), stat=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    !> @todo currently only deals localDe = 0
+    call ESMF_FieldGetbounds(field, localDe=0,  exclusiveUBound=ubnd, &
+      exclusiveLBound=lbnd, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (geomType == ESMF_GEOMTYPE_GRID) then
+      call ESMF_FieldGet(field, grid=grid, staggerloc=staggerloc, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call ESMF_GridGet(grid, rank=geomRank, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call ESMF_GridGetItem(grid, itemflag=ESMF_GRIDITEM_MASK, &
+        staggerloc=staggerloc, isPresent=isPresent, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      if (.not.isPresent .or. geomRank /= fieldRank) then
+        allocate(mask(RANGE4D), stat=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      endif
+
+      if (.not.isPresent) then
+
+        mask(RANGE4D) = 1
+
+      elseif (geomRank == 1) then
+        call ESMF_GridGetItem(grid, itemFlag=ESMF_GRIDITEM_MASK, &
+            farrayPtr=mask1, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        do i=lbnd(1),ubnd(1)
+          mask(i,lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)) = mask1(i)
+        enddo
+
+      elseif (geomRank == 2) then
+        call ESMF_GridGetItem(grid, itemFlag=ESMF_GRIDITEM_MASK, &
+            farrayPtr=mask2, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        mask(RANGE4D) = spread(spread(mask2(RANGE2D),3,ubnd(3)-lbnd(3)+1),4,ubnd(4)-lbnd(4)+1)
+
+      elseif (geomRank == 3) then
+        call ESMF_GridGetItem(grid, itemFlag=ESMF_GRIDITEM_MASK, &
+            farrayPtr=mask3, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        mask(RANGE4D) = spread(mask3(RANGE3D),4,ubnd(4)-lbnd(4)+1)
+      endif
+
+    endif
+
+    nullify(mask1)
+    nullify(mask2)
+    nullify(mask3)
+    if (present(rank)) rank=geomRank
+    if (allocated(ubnd)) deallocate(ubnd)
+    if (allocated(lbnd)) deallocate(lbnd)
+
+  end subroutine MOSSCO_FieldGetMask4
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_FieldMatchFieldsFromState"
@@ -1498,7 +1917,7 @@ end subroutine MOSSCO_FieldCopyAttribute
     real(ESMF_KIND_R4)                     :: real4
     type(ESMF_TypeKind_Flag)               :: typeKind
 
-    integer(ESMF_KIND_I4)                  :: localrc, rc_, gridRank
+    integer(ESMF_KIND_I4)                  :: localrc, rc_, geomRank
     type(ESMF_Grid)                        :: grid
 
     rc_ = ESMF_SUCCESS
@@ -1620,27 +2039,27 @@ end subroutine MOSSCO_FieldCopyAttribute
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (isPresent) then
-        call ESMF_GridGet(grid, rank=gridRank, rc=localrc)
+        call ESMF_GridGet(grid, rank=geomRank, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         if (allocated(gridUbnd)) deallocate(gridUbnd)
-        allocate(gridUbnd(gridRank))
+        allocate(gridUbnd(geomRank))
 
         if (allocated(gridLbnd)) deallocate(gridLbnd)
-        allocate(gridLbnd(gridRank))
+        allocate(gridLbnd(geomRank))
 
         call ESMF_GridGet(grid, staggerloc=ESMF_STAGGERLOC_CENTER, localDe=0, &
           exclusiveUBound=gridUbnd, exclusiveLBound=gridLbnd, rc=localrc)
 
-        if (gridRank == 2) then
+        if (geomRank == 2) then
           call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridMask2, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           mask2 = (mask2 .and. (gridMask2(gridLbnd(1):gridUbnd(1),gridLbnd(2):gridUbnd(2)) > 0))
 
-        elseif (gridRank == 3) then
+        elseif (geomRank == 3) then
           call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridMask3, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1659,18 +2078,18 @@ end subroutine MOSSCO_FieldCopyAttribute
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (isPresent) then
-        call ESMF_GridGet(grid, rank=gridRank, rc=localrc)
+        call ESMF_GridGet(grid, rank=geomRank, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        if (gridRank == 2) then
+        if (geomRank == 2) then
           call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridMask2, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           mask2 = (mask2 .and. (gridMask2(gridLbnd(1):gridUbnd(1),gridLbnd(2):gridUbnd(2)) > 0))
 
-        elseif (gridRank == 3) then
+        elseif (geomRank == 3) then
           call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridMask3, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1890,15 +2309,12 @@ end subroutine MOSSCO_FieldCopyAttribute
     integer(ESMF_KIND_I4)        :: rc_, localrc
     character(len=ESMF_MAXSTR)   :: owner_, message
     integer(ESMF_KIND_I4), allocatable :: ubnd(:), lbnd(:), ilbnd(:), iubnd(:)
-    integer(ESMF_KIND_I4)        :: rank, irank
+    integer(ESMF_KIND_I4)        :: rank, irank, geomRank, igeomRank
     integer(ESMF_KIND_I4), pointer :: mask2(:,:), imask2(:,:)
     integer(ESMF_KIND_I4), pointer :: mask3(:,:,:), imask3(:,:,:)
     type(ESMF_FieldStatus_Flag)  :: status
-    type(ESMF_Grid)              :: grid
     type(ESMF_TypeKind_Flag)     :: typeKind, iTypeKind
-    type(ESMF_GeomType_Flag)     :: geomType
     logical                      :: verbose_
-    type(ESMF_StaggerLoc)        :: staggerLoc
 
     integer(ESMF_KIND_I4), pointer  :: ifarrayPtrI41(:) => null()
     integer(ESMF_KIND_I4), pointer  :: ifarrayPtrI42(:,:) => null()
@@ -2007,6 +2423,20 @@ end subroutine MOSSCO_FieldCopyAttribute
     call ESMF_FieldGet(importField, typeKind=itypeKind, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
+    geomRank = -1
+
+    if (rank == 2) then
+      call MOSSCO_FieldGetMask(field, mask=mask2, rank=geomRank, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      call MOSSCO_FieldGetMask(importField, mask=imask2, rank=igeomRank, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    elseif (rank == 3) then
+      call MOSSCO_FieldGetMask(field, mask=mask3, rank=geomRank, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      call MOSSCO_FieldGetMask(importField, mask=imask3, rank=igeomRank, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
     if (rank == 1 .and. typeKind == ESMF_TYPEKIND_R8) then
 
       call ESMF_FieldGet(field, farrayPtr=farrayPtrR81, rc=localrc)
@@ -2036,69 +2466,36 @@ end subroutine MOSSCO_FieldCopyAttribute
 
     elseif (rank == 2 .and. typeKind == ESMF_TYPEKIND_R8) then
 
-      call ESMF_FieldGet(field, geomType=geomType, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-      if (geomType == ESMF_GEOMTYPE_GRID) then
-        call ESMF_FieldGet(field, grid=grid, staggerLoc=staggerloc, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-        call ESMF_GridGetItem(grid, itemFlag=ESMF_GRIDITEM_MASK, &
-          staggerLoc=staggerloc, farrayPtr=mask2, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-      else
-        if (associated(mask2)) deallocate(mask2)
-        allocate(mask2(RANGE2D), stat=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-        mask2=1
-      endif
-
-      call ESMF_FieldGet(importField, geomType=geomType, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-      if (geomType == ESMF_GEOMTYPE_GRID) then
-        call ESMF_FieldGet(importField, grid=grid, staggerLoc=staggerloc, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-        call ESMF_GridGetItem(grid, itemFlag=ESMF_GRIDITEM_MASK, &
-          staggerLoc=staggerloc, farrayPtr=imask2, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-        mask2 = mask2 * imask2
-      endif
-
       call ESMF_FieldGet(field, farrayPtr=farrayPtrR82, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       if (itypeKind == ESMF_TYPEKIND_R8) then
         call ESMF_FieldGet(field, farrayPtr=ifarrayPtrR82, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-        write(*,*) __LINE__, sum(mask2,mask=(mask2>0))
-        write(*,*) __LINE__, sum(imask2,mask=(imask2>0))
-        write(*,*) __LINE__, sum(farrayPtrR82,mask=(farrayPtrR82>0))
-        write(*,*) __LINE__, sum(ifarrayPtrR82,mask=(ifarrayPtrR82>0))
-        write(*,*) __LINE__, ifarrayPtrR82(1,:)
-        write(*,*) __LINE__, farrayPtrR82(1,:)
 
-        where (mask2 > 0)
+        where (mask2*imask2 > 0)
           farrayPtrR82(RANGE2D) = farrayPtrR82(RANGE2D)  &
             + ifarrayPtrR82(ilbnd(1):iubnd(1),ilbnd(2):iubnd(2))
         endwhere
+
       elseif (iTypeKind == ESMF_TYPEKIND_R4) then
         call ESMF_FieldGet(field, farrayPtr=ifarrayPtrR42, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-        where (mask2 > 0)
+        where (mask2*imask2 > 0)
         farrayPtrR82(RANGE2D) = farrayPtrR82(RANGE2D) + &
           real(ifarrayPtrR42(ilbnd(1):iubnd(1),ilbnd(2):iubnd(2)), kind=ESMF_KIND_R8)
         endwhere
       elseif (iTypeKind == ESMF_TYPEKIND_I8) then
         call ESMF_FieldGet(field, farrayPtr=ifarrayPtrI82, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-        where (mask2 > 0)
+        where (mask2*imask2 > 0)
         farrayPtrR82(RANGE2D) = farrayPtrR82(RANGE2D) + &
           real(ifarrayPtrI82(ilbnd(1):iubnd(1),ilbnd(2):iubnd(2)), kind=ESMF_KIND_R8)
         endwhere
       elseif (iTypeKind == ESMF_TYPEKIND_I4) then
         call ESMF_FieldGet(field, farrayPtr=ifarrayPtrI42, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-        where (mask2 > 0)
+        where (mask2*imask2 > 0)
         farrayPtrR82(RANGE2D) = farrayPtrR82(RANGE2D) + &
           real(ifarrayPtrI42(ilbnd(1):iubnd(1),ilbnd(2):iubnd(2)), kind=ESMF_KIND_R8)
         endwhere
@@ -2106,51 +2503,42 @@ end subroutine MOSSCO_FieldCopyAttribute
 
     elseif (rank == 3 .and. typeKind == ESMF_TYPEKIND_R8) then
 
-      call ESMF_FieldGet(field, geomType=geomType, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-      if (geomType == ESMF_GEOMTYPE_GRID) then
-        call ESMF_FieldGet(field, grid=grid, staggerLoc=staggerloc, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-        call ESMF_GridGetItem(grid, itemFlag=ESMF_GRIDITEM_MASK, &
-          staggerLoc=staggerloc, farrayPtr=mask3, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-      else
-        if (associated(mask3)) deallocate(mask3)
-        allocate(mask3(RANGE3D), stat=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-        mask3=1
-      endif
-
       call ESMF_FieldGet(field, farrayPtr=farrayPtrR83, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       if (itypeKind == ESMF_TYPEKIND_R8) then
         call ESMF_FieldGet(field, farrayPtr=ifarrayPtrR83, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-        write(*,*) __LINE__, mask2
-        where (mask3 > 0)
+
+        write(*,*) __LINE__, sum(farrayPtrR83,mask=(mask3>0))
+        write(*,*) __LINE__, sum(ifarrayPtrR83,mask=(imask3>0))
+        write(*,*) __LINE__, ifarrayPtrR83(:,:,1)
+        write(*,*) __LINE__, farrayPtrR83(:,:,1)
+
+        where (mask3*imask3 > 0)
           farrayPtrR83(RANGE3D) = farrayPtrR83(RANGE3D) + &
             ifarrayPtrR83(ilbnd(1):iubnd(1),ilbnd(2):iubnd(2),ilbnd(3):iubnd(3))
         endwhere
+
       elseif (iTypeKind == ESMF_TYPEKIND_R4) then
         call ESMF_FieldGet(field, farrayPtr=ifarrayPtrR43, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-        where (mask3 > 0)
-        farrayPtrR83(RANGE3D) = farrayPtrR83(RANGE3D) + &
-          real(ifarrayPtrR43(ilbnd(1):iubnd(1),ilbnd(2):iubnd(2),ilbnd(3):iubnd(3)), kind=ESMF_KIND_R8)
+
+        where (mask3*imask3 > 0)
+          farrayPtrR83(RANGE3D) = farrayPtrR83(RANGE3D) + &
+            real(ifarrayPtrR43(ilbnd(1):iubnd(1),ilbnd(2):iubnd(2),ilbnd(3):iubnd(3)), kind=ESMF_KIND_R8)
         endwhere
       elseif (iTypeKind == ESMF_TYPEKIND_I8) then
         call ESMF_FieldGet(field, farrayPtr=ifarrayPtrI83, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-        where (mask3 > 0)
+        where (mask3*imask3 > 0)
         farrayPtrR83(RANGE3D) = farrayPtrR83(RANGE3D) + &
           real(ifarrayPtrI83(ilbnd(1):iubnd(1),ilbnd(2):iubnd(2),ilbnd(3):iubnd(3)), kind=ESMF_KIND_R8)
         endwhere
       elseif (iTypeKind == ESMF_TYPEKIND_I4) then
         call ESMF_FieldGet(field, farrayPtr=ifarrayPtrI43, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-        where (mask3 > 0)
+        where (mask3*imask3 > 0)
         farrayPtrR83(RANGE3D) = farrayPtrR83(RANGE3D) + &
           real(ifarrayPtrI43(ilbnd(1):iubnd(1),ilbnd(2):iubnd(2),ilbnd(3):iubnd(3)), kind=ESMF_KIND_R8)
         endwhere
@@ -2160,6 +2548,20 @@ end subroutine MOSSCO_FieldCopyAttribute
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
       return
     endif
+
+    if (allocated(ubnd)) deallocate(ubnd)
+    if (allocated(lbnd)) deallocate(lbnd)
+    if (allocated(iubnd)) deallocate(iubnd)
+    if (allocated(ilbnd)) deallocate(ilbnd)
+
+    if (rank==2 .and. geomRank /= 2) deallocate(mask2)
+    if (rank==3 .and. geomRank /= 3) deallocate(mask3)
+    if (rank==2 .and. igeomRank /= 2) deallocate(imask2)
+    if (rank==3 .and. igeomRank /= 3) deallocate(imask3)
+    nullify(mask2)
+    nullify(mask3)
+    nullify(imask2)
+    nullify(imask3)
 
   end subroutine MOSSCO_FieldAddField
 
@@ -2236,7 +2638,7 @@ end subroutine MOSSCO_FieldCopyAttribute
     real(ESMF_KIND_R8)                     :: missingValue
     type(ESMF_TypeKind_Flag)               :: typeKind
 
-    integer(ESMF_KIND_I4)                  :: localrc, rc_, gridRank, i, j
+    integer(ESMF_KIND_I4)                  :: localrc, rc_, geomRank, i, j
     type(ESMF_Grid)                        :: grid
 
     rc_ = ESMF_SUCCESS
@@ -2303,21 +2705,21 @@ end subroutine MOSSCO_FieldCopyAttribute
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (isPresent) then
-      call ESMF_GridGet(grid, rank=gridRank, rc=localrc)
+      call ESMF_GridGet(grid, rank=geomRank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       if (allocated(gridLbnd)) deallocate(gridLbnd)
       if (allocated(gridUbnd)) deallocate(gridUbnd)
-      allocate(gridLbnd(gridRank))
-      allocate(gridUbnd(gridRank))
+      allocate(gridLbnd(geomRank))
+      allocate(gridUbnd(geomRank))
 
       call ESMF_GridGet(grid, staggerloc=ESMF_STAGGERLOC_CENTER, localDe=0, &
         exclusiveUBound=gridUbnd, exclusiveLBound=gridLbnd, rc=localrc)
 
-      if (gridRank == 2) then
+      if (geomRank == 2) then
         call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridMask2, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-      elseif (gridRank == 3) then
+      elseif (geomRank == 3) then
         call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridMask3, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       else
@@ -2330,22 +2732,22 @@ end subroutine MOSSCO_FieldCopyAttribute
 
       if (rank == 2) then
         mask2 = (mask2 .and. (gridMask2(gridLbnd(1):gridUbnd(1),gridLbnd(2):gridUbnd(2)) > 0))
-      elseif (rank == 3 .and. gridRank == 3) then
+      elseif (rank == 3 .and. geomRank == 3) then
         mask3 = (mask3 .and. &
           (gridMask3(gridLbnd(1):gridUbnd(1),gridLbnd(2):gridUbnd(2),gridLbnd(3):gridUbnd(3))  > 0))
-      elseif (rank == 3 .and. gridrank == 2) then
+      elseif (rank == 3 .and. geomRank == 2) then
         do i = lbnd(3), ubnd(3)
           mask3(RANGE2D,i) = (mask3(RANGE2D,i) .and. &
             (gridMask2(gridLbnd(1):gridUbnd(1),gridLbnd(2):gridUbnd(2))  > 0))
         enddo
-      elseif (rank == 4 .and. gridrank == 2) then
+      elseif (rank == 4 .and. geomRank == 2) then
         do i = lbnd(3), ubnd(3)
           do j = lbnd(4), ubnd(4)
             mask4(RANGE2D,i,j) = (mask4(RANGE2D,i,j) .and. &
               (gridMask2(gridLbnd(1):gridUbnd(1),gridLbnd(2):gridUbnd(2))  > 0))
           enddo
         enddo
-      elseif (rank == 4 .and. gridrank == 3) then
+      elseif (rank == 4 .and. geomRank == 3) then
         do j = lbnd(4), ubnd(4)
           mask4(RANGE3D,j) = (mask4(RANGE3D,j) .and. &
             (gridMask3(gridLbnd(1):gridUbnd(1),gridLbnd(2):gridUbnd(2),gridLbnd(3):gridUbnd(3))  > 0))
@@ -2749,7 +3151,7 @@ end subroutine MOSSCO_FieldCopyAttribute
     integer(ESMF_KIND_I4), intent(out), optional     :: rc
     logical                                          :: isOkay
 
-    integer(ESMF_KIND_I4)               :: rc_, localrc, rank, i, gridRank
+    integer(ESMF_KIND_I4)               :: rc_, localrc, rank, i, geomRank
     character(len=ESMF_MAXSTR)          :: name, message, owner_
     logical                             :: verbose_, isPresent
     type(ESMF_Typekind_Flag)            :: typeKind
@@ -2835,19 +3237,19 @@ end subroutine MOSSCO_FieldCopyAttribute
       call ESMF_FieldGet(field, grid=grid, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      call ESMF_GridGet(grid, rank=gridRank, rc=localrc)
+      call ESMF_GridGet(grid, rank=geomRank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, isPresent=isPresent, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      if (gridRank < 2 .or. gridRank > 3) then
+      if (geomRank < 2 .or. geomRank > 3) then
         if (present(rc)) rc = ESMF_RC_NOT_IMPL
         return
       endif
 
       if (isPresent) then
-        if (gridRank == 3) then
+        if (geomRank == 3) then
           call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridMask3, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
         else
@@ -2855,7 +3257,7 @@ end subroutine MOSSCO_FieldCopyAttribute
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
         endif
       else
-        if (gridRank == 3) then
+        if (geomRank == 3) then
           allocate(gridMask3(RANGE3D), stat=localrc)
           gridMask3(RANGE3D) = 1
         else
@@ -2864,7 +3266,7 @@ end subroutine MOSSCO_FieldCopyAttribute
         endif
       endif
 
-      if (rank == 3 .and. gridRank == 2) then
+      if (rank == 3 .and. geomRank == 2) then
         allocate(gridMask3(RANGE3D), stat=localrc)
         do i=lbnd(3),ubnd(3)
           gridMask3(RANGE2D,i) = gridMask2(RANGE2D)
@@ -2900,9 +3302,9 @@ end subroutine MOSSCO_FieldCopyAttribute
       nullify(farrayPtr3)
     endif ! typekind == R8
 
-    if (isPresent .and. gridRank == 3) then
+    if (isPresent .and. geomRank == 3) then
       nullify(gridMask3)
-    elseif (isPresent .and. gridRank == 2) then
+    elseif (isPresent .and. geomRank == 2) then
       nullify(gridMask2)
     else
       if (associated(gridMask2)) deallocate(gridMask2)
