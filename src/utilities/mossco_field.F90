@@ -39,6 +39,7 @@ module mossco_field
   use mossco_attribute
   use mossco_grid
   use mossco_geom
+  use mossco_loc
   use mossco_strings
   use esmf
 
@@ -194,11 +195,13 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, options, rc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
   endif
 
-  if (fieldStatus == ESMF_FIELDSTATUS_COMPLETE .and. geomtype == ESMF_GEOMTYPE_GRID) then
+  !> Print the rank and dimensions only if different from grid
+  if (fieldStatus == ESMF_FIELDSTATUS_COMPLETE .and. geomtype == ESMF_GEOMTYPE_GRID &
+    .and. n>0) then
     call ESMF_FieldGet(field, rank=rank, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    if (len_trim(message) + 7<=len(message)) write(message,'(A,I1)') trim(message)//' rank ',rank
+    if (len_trim(message) + 4<=len(message)) write(message,'(A,I1)') trim(message)//' r=',rank
 
     if (rank > 0) then
       if (allocated(ubnd)) deallocate(ubnd)
@@ -218,11 +221,6 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, options, rc)
       endif
 
       do i=2, geomRank
-        if (ubnd(i)<lbnd(i)) then
-          write(message,'(A)') '  bounds problem, please check your foreign_grid specification'
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        endif
-
         width=order(ubnd(i)-lbnd(i)+1)+1
         write(form,'(A)') '(A,'//intformat(ubnd(i)-lbnd(i)+1)//')'
         if (len_trim(message) + 1 + width <=len(message)) write(message,form) trim(message)//'x', ubnd(i)-lbnd(i)+1
@@ -237,6 +235,29 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, options, rc)
 
       if (len_trim(message) + 1 <=len(message)) write(message,'(A)') trim(message)//')'
     endif
+  endif
+
+  !> Add information on stagger location
+  call MOSSCO_StringMatch('stagger', options_, isPresent, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  if (isPresent .and. fieldStatus /= ESMF_FIELDSTATUS_EMPTY) then
+    if (geomType == ESMF_GEOMTYPE_GRID) then
+      call MOSSCO_LocString(staggerLoc, message, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    elseif (geomType == ESMF_GEOMTYPE_MESH) then
+      call MOSSCO_LocString(meshLoc, message, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+  endif
+
+  !> Add information on stagger location
+  call MOSSCO_StringMatch('mean', options_, isPresent, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  if (isPresent .and. fieldStatus == ESMF_FIELDSTATUS_COMPLETE) then
+    !call MOSSCO_FieldValueString(field, 'mean', message, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
   endif
 
   if (allocated(ubnd)) deallocate(ubnd)

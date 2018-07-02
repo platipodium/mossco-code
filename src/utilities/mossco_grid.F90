@@ -755,6 +755,7 @@ subroutine MOSSCO_GridString(grid, message, kwe, length, options, staggerLoc, rc
     staggerLoc=staggerLoc, isPresent=isPresent, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
+  !> @todo add GRIDITEM_AREA
   if (isPresent) then
     if (rank==1) then
       call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask1, &

@@ -45,10 +45,6 @@ call MOSSCO_FieldString(otherField, message, length=n)
 write(message,'(A,I3)') trim(message)//' length ',n
 call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-write(message,'(A)') 'Test prefix on '
-call MOSSCO_FieldString(otherField, message, prefix='PREFIX: ')
-call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
 write(message,'(A)') 'Test return code on '
 call MOSSCO_FieldString(otherField, message, rc=localrc)
 call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
