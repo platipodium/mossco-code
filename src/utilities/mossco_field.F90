@@ -2687,7 +2687,8 @@ end subroutine MOSSCO_FieldCopyAttribute
 
       write(message,'(A)') trim(owner_)//' bounds mismatch '
       call MOSSCO_FieldString(field, message, options=options)
-      call MOSSCO_MessageAdd(message,' and')
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+      write(message,'(A)') trim(owner_)//' with '
       call MOSSCO_FieldString(importfield, message, options=options)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
       deallocate(options)
@@ -3367,18 +3368,18 @@ end subroutine MOSSCO_FieldCopyAttribute
       call ESMF_FieldGet(fieldList(i), name=matchName, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      if (trim(matchName) /= trim(fieldName)) cycle
-
       matchScore(i) = MOSSCO_FieldAttributesIdentical(field, fieldList(i), &
         verbose=verbose_, owner=trim(owner_), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      !write(message,'(A,I2,X,I2,A,I2)') '-- ',i,fieldCount,' score ',matchScore(i)
-      !call MOSSCO_FieldString(field, message)
-      !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
-      !write(message,'(A)') '-- matching '
-      !call MOSSCO_FieldString(fieldList(i), message)
-      !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+      if (trim(matchName) /= trim(fieldName)) matchScore(i) = matchScore(i)+50
+
+      ! write(message,'(A,I2,X,I2,A,I2)') '-- ',i,fieldCount,' score ',matchScore(i)
+      ! call MOSSCO_FieldString(field, message)
+      ! call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+      ! write(message,'(A)') '-- matching '
+      ! call MOSSCO_FieldString(fieldList(i), message)
+      ! call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
 
     enddo
 
