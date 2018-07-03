@@ -22,6 +22,7 @@ real(kind=ESMF_KIND_R8), pointer    :: farrayPtr2(:,:) => null()
 type(ESMF_Array)        :: array
 integer(ESMF_KIND_I4), pointer :: mask2(:,:), mask3(:,:,:)
 type(ESMF_DistGrid)     :: distGrid
+character(len=ESMF_MAXSTR), allocatable :: options(:)
 
 call ESMF_initialize()
 
@@ -143,6 +144,64 @@ call ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=localrc)
 if (sum(farrayPtr3,mask=mask3>0) < 176.0D0  .or. sum(farrayPtr3,mask=mask3>0) > 176.0D0 ) then
   write(*,*) '  failed 3D masked with itself', sum(farrayPtr3, mask=mask3>0),' /= 176.0'
 endif
+
+write(*,'(A)') 'Testing MOSSCO_FieldValue'
+
+call MOSSCO_FieldInitialize(field, value=8.0D0, rc=localrc)
+real8=MOSSCO_FieldValue(field, operator='min')
+if (int(real8) /= 8) then
+  write(*,*) '  failed 3D masked min value', minval(farrayPtr3, mask=mask3>0),' /= ', real8
+endif
+real8=MOSSCO_FieldValue(field, operator='max')
+if (int(real8) /= 8) then
+  write(*,*) '  failed 3D masked max value', maxval(farrayPtr3, mask=mask3>0),' /= ', real8
+endif
+real8=MOSSCO_FieldValue(field, operator='mean')
+if (int(real8) /= 8) then
+  write(*,*) '  failed 3D masked mean value', sum(farrayPtr3, mask=mask3>0)/count(mask3>0),' /= ', real8
+endif
+real8=MOSSCO_FieldValue(field, operator='sum')
+if (int(real8) /= 176) then
+  write(*,*) '  failed 3D masked sum value', sum(farrayPtr3, mask=mask3>0),' /= ', real8
+endif
+
+write(*,'(A)') 'Testing MOSSCO_FieldString'
+!write(*,*) farrayPtr3
+
+allocate(options(4))
+options(1)='creator'
+options(2)='mean'
+options(3)='geom'
+options(4)='loc'
+
+write(message,'(A)') ''
+call MOSSCO_FieldString(field, message, options=options, rc=localrc)
+if (trim(message) /= ' fieldGrid002(r=3 5x6x1 m=22)O  8.00E+00') then
+  write(*,*) '  failed 3D with options, " fieldGrid002(r=3 5x6x1 m=22)O  8.00E+00" /= "'//trim(message)//'"'
+endif
+
+call ESMF_AttributeSet(field, 'creator', 'test', rc=localrc)
+options(2)='sum'
+
+write(message,'(A)') ''
+call MOSSCO_FieldString(field, message, options=options, rc=localrc)
+if (trim(message) /= ' [test]fieldGrid002(r=3 5x6x1 m=22)O  1.76E+02') then
+  write(*,*) '  failed 3D with options, " [test]fieldGrid002(r=3 5x6x1 m=22)O  1.76E+02" /= "'//trim(message)//'"'
+endif
+
+options(1:4)=(/'min ','mean','max ','sum '/)
+write(message,'(A)') ''
+call MOSSCO_FieldString(field, message, options=options, rc=localrc)
+if (trim(message) /= '  8.00E+00  1.76E+02  8.00E+00  8.00E+00') then
+  write(*,*) '  failed 3D with options, "  8.00E+00  1.76E+02  8.00E+00  8.00E+00" /= "'//trim(message)//'"'
+endif
+
+
+
+deallocate(options)
+
+
+
 
 nullify(farrayPtr3)
 nullify(mask2)

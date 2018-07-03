@@ -126,8 +126,9 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, options, rc)
       enddo
     endif
   else
-    allocate(options_(1))
+    allocate(options_(2))
     options_(1)='creator'
+    options_(2)='geom'
   endif
 
   rank = 0
@@ -136,22 +137,32 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, options, rc)
   call ESMF_FieldGet(field, name=name, status=fieldStatus, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-  call ESMF_AttributeGet(field, name='creator', isPresent=isPresent, rc=localrc)
+  !> Add information on creator
+  call MOSSCO_StringMatch('creator', options_, isPresent, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   if (isPresent) then
-    call ESMF_AttributeGet(field, name='creator', value=stringValue, rc=localrc)
+    call ESMF_AttributeGet(field, name='creator', isPresent=isPresent, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call MOSSCO_MessageAdd(message, ' ['//stringValue)
-    call MOSSCO_MessageAdd(message, ']'//name)
-  else
-    call MOSSCO_MessageAdd(message,' '//name)
+    if (isPresent) then
+      call ESMF_AttributeGet(field, name='creator', value=stringValue, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call MOSSCO_MessageAdd(message, ' ['//stringValue)
+      call MOSSCO_MessageAdd(message, ']'//name)
+    else
+      call MOSSCO_MessageAdd(message,' '//name)
+    endif
   endif
 
-  if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
+  !> Add information on geom
+  call MOSSCO_StringMatch('geom', options_, isPresent, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  if (fieldStatus == ESMF_FIELDSTATUS_EMPTY .and. isPresent) then
     call MOSSCO_MessageAdd(message,' (empty)')
-  else
+  elseif (isPresent) then
     call ESMF_FieldGet(field, geomtype=geomtype, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
@@ -200,8 +211,12 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, options, rc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
   endif
 
+  !> Add information on geom
+  call MOSSCO_StringMatch('geom', options_, isPresent, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
   !> Print the rank and dimensions only if different from grid
-  if (fieldStatus == ESMF_FIELDSTATUS_COMPLETE .and. geomtype == ESMF_GEOMTYPE_GRID &
+  if (isPresent .and. fieldStatus == ESMF_FIELDSTATUS_COMPLETE .and. geomtype == ESMF_GEOMTYPE_GRID &
     .and. n>0) then
     call ESMF_FieldGet(field, rank=rank, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -242,8 +257,8 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, options, rc)
     endif
   endif
 
-  !> Add information on stagger location
-  call MOSSCO_StringMatch('stagger', options_, isPresent, rc=localrc)
+  !> Add information on stagger/mesh loc location
+  call MOSSCO_StringMatch('loc', options_, isPresent, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   if (isPresent .and. fieldStatus /= ESMF_FIELDSTATUS_EMPTY) then
@@ -265,10 +280,36 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, options, rc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
   endif
 
+  call MOSSCO_StringMatch('sum', options_, isPresent, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  if (isPresent .and. fieldStatus == ESMF_FIELDSTATUS_COMPLETE) then
+    call MOSSCO_FieldValueString(field, message, operator='sum', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  endif
+
+  call MOSSCO_StringMatch('min', options_, isPresent, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  if (isPresent .and. fieldStatus == ESMF_FIELDSTATUS_COMPLETE) then
+    call MOSSCO_FieldValueString(field, message, operator='min', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  endif
+
+  call MOSSCO_StringMatch('max', options_, isPresent, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  if (isPresent .and. fieldStatus == ESMF_FIELDSTATUS_COMPLETE) then
+    call MOSSCO_FieldValueString(field, message, operator='max', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  endif
+
+
   if (allocated(ubnd)) deallocate(ubnd)
   if (allocated(lbnd)) deallocate(lbnd)
   if (allocated(ungriddedUbnd)) deallocate(ungriddedUbnd)
   if (allocated(ungriddedLbnd)) deallocate(ungriddedLbnd)
+  if (allocated(options_)) deallocate(options_)
 
   if (present(length)) length=len_trim(message)
   if (present(rc)) rc=rc_
@@ -354,7 +395,6 @@ function MOSSCO_FieldValueR8(field, kwe, operator, rc) result(value)
 
   type(ESMF_FieldStatus_Flag) :: fieldStatus
   type(ESMF_TypeKind_Flag)    :: typeKind
-  real(ESMF_KIND_R8)          :: real8
 
   rc_ = ESMF_SUCCESS
   operator_ = 'mean'
@@ -401,55 +441,61 @@ function MOSSCO_FieldValueR8(field, kwe, operator, rc) result(value)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (trim(operator_) == 'mean' .and. count(mask1(RANGE1D)>0)>0) then
-      real8 = sum(farrayPtr1(RANGE1D), mask=mask1(RANGE1D)>0)/count(mask1(RANGE1D)>0)
+      value = sum(farrayPtr1(RANGE1D), mask=mask1(RANGE1D)>0)/count(mask1(RANGE1D)>0)
     elseif (trim(operator_) == 'sum') then
-      real8 = sum(farrayPtr1(RANGE1D), mask=mask1(RANGE1D)>0)
+      value = sum(farrayPtr1(RANGE1D), mask=mask1(RANGE1D)>0)
     elseif (trim(operator_) == 'min') then
-      real8 = minval(farrayPtr1(RANGE1D), mask=mask1(RANGE1D)>0)
+      value = minval(farrayPtr1(RANGE1D), mask=mask1(RANGE1D)>0)
     elseif (trim(operator_) == 'max') then
-      real8 = maxval(farrayPtr1(RANGE1D), mask=mask1(RANGE1D)>0)
+      value = maxval(farrayPtr1(RANGE1D), mask=mask1(RANGE1D)>0)
     endif
 
   elseif (rank==2) then
     call MOSSCO_FieldGetMask(field, mask2, rc=localrc)
-    call ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    call ESMF_FieldGet(field, farrayPtr=farrayPtr2, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (trim(operator_) == 'mean' .and. count(mask2(RANGE2D)>0)>0) then
-      real8 = sum(farrayPtr2(RANGE2D), mask=mask2(RANGE2D)>0)/count(mask2(RANGE2D)>0)
+      value = sum(farrayPtr2(RANGE2D), mask=mask2(RANGE2D)>0)/count(mask2(RANGE2D)>0)
     elseif (trim(operator_) == 'sum') then
-      real8 = sum(farrayPtr2(RANGE2D), mask=mask2(RANGE2D)>0)
+      value = sum(farrayPtr2(RANGE2D), mask=mask2(RANGE2D)>0)
     elseif (trim(operator_) == 'min') then
-      real8 = minval(farrayPtr2(RANGE2D), mask=mask2(RANGE2D)>0)
+      value = minval(farrayPtr2(RANGE2D), mask=mask2(RANGE2D)>0)
     elseif (trim(operator_) == 'max') then
-      real8 = maxval(farrayPtr2(RANGE2D), mask=mask2(RANGE2D)>0)
+      value = maxval(farrayPtr2(RANGE2D), mask=mask2(RANGE2D)>0)
     endif
 
   elseif (rank==3) then
     call MOSSCO_FieldGetMask(field, mask3, rc=localrc)
-    call ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    call ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (trim(operator_) == 'mean' .and. count(mask3(RANGE3D)>0)>0) then
-      real8 = sum(farrayPtr3(RANGE3D), mask=mask3(RANGE3D)>0)/count(mask3(RANGE3D)>0)
+      value = sum(farrayPtr3(RANGE3D), mask=mask3(RANGE3D)>0)/count(mask3(RANGE3D)>0)
     elseif (trim(operator_) == 'sum') then
-      real8 = sum(farrayPtr3(RANGE3D), mask=mask3(RANGE3D)>0)
+      value = sum(farrayPtr3(RANGE3D), mask=mask3(RANGE3D)>0)
     elseif (trim(operator_) == 'min') then
-      real8 = minval(farrayPtr3(RANGE3D), mask=mask3(RANGE3D)>0)
+      value = minval(farrayPtr3(RANGE3D), mask=mask3(RANGE3D)>0)
     elseif (trim(operator_) == 'max') then
-      real8 = maxval(farrayPtr3(RANGE3D), mask=mask3(RANGE3D)>0)
+      value = maxval(farrayPtr3(RANGE3D), mask=mask3(RANGE3D)>0)
     endif
 
   elseif (rank==4) then
     call MOSSCO_FieldGetMask(field, mask4, rc=localrc)
-    call ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    call ESMF_FieldGet(field, farrayPtr=farrayPtr4, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (trim(operator_) == 'mean' .and. count(mask4(RANGE4D)>0)>0) then
-      real8 = sum(farrayPtr4(RANGE4D), mask=mask4(RANGE4D)>0)/count(mask4(RANGE4D)>0)
+      value = sum(farrayPtr4(RANGE4D), mask=mask4(RANGE4D)>0)/count(mask4(RANGE4D)>0)
     elseif (trim(operator_) == 'sum') then
-      real8 = sum(farrayPtr4(RANGE4D), mask=mask4(RANGE4D)>0)
+      value = sum(farrayPtr4(RANGE4D), mask=mask4(RANGE4D)>0)
     elseif (trim(operator_) == 'min') then
-      real8 = minval(farrayPtr4(RANGE4D), mask=mask4(RANGE4D)>0)
+      value = minval(farrayPtr4(RANGE4D), mask=mask4(RANGE4D)>0)
     elseif (trim(operator_) == 'max') then
-      real8 = maxval(farrayPtr4(RANGE4D), mask=mask4(RANGE4D)>0)
+      value = maxval(farrayPtr4(RANGE4D), mask=mask4(RANGE4D)>0)
     endif
 
   else
@@ -2541,6 +2587,7 @@ end subroutine MOSSCO_FieldCopyAttribute
 
     rc_ = ESMF_SUCCESS
     owner_ = '--'
+    verbose_ = .false.
     if (present(rc)) rc = rc_
     if (present(kwe)) rc = rc_
     if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
