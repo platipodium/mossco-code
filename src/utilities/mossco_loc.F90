@@ -62,29 +62,29 @@ subroutine MOSSCO_StaggerLocString(staggerloc, message, kwe, length, options, rc
   endif
 
   if (staggerLoc == ESMF_STAGGERLOC_CENTER) then
-    call MOSSCO_MessageAdd(message,'O')
+    call MOSSCO_MessageAdd(message,' O')
   elseif (staggerLoc == ESMF_STAGGERLOC_CORNER) then
-    call MOSSCO_MessageAdd(message,'C')
+    call MOSSCO_MessageAdd(message,' C')
   elseif (staggerLoc == ESMF_STAGGERLOC_EDGE1) then
-    call MOSSCO_MessageAdd(message,'X')
+    call MOSSCO_MessageAdd(message,' X')
   elseif (staggerLoc == ESMF_STAGGERLOC_EDGE2) then
-    call MOSSCO_MessageAdd(message,'Y')
+    call MOSSCO_MessageAdd(message,' Y')
   elseif (staggerLoc == ESMF_STAGGERLOC_CENTER_VCENTER) then
-    call MOSSCO_MessageAdd(message,'OO')
+    call MOSSCO_MessageAdd(message,' OO')
   elseif (staggerLoc == ESMF_STAGGERLOC_CORNER_VCENTER) then
-    call MOSSCO_MessageAdd(message,'CO')
+    call MOSSCO_MessageAdd(message,' CO')
   elseif (staggerLoc == ESMF_STAGGERLOC_EDGE1_VCENTER) then
-    call MOSSCO_MessageAdd(message,'XO')
+    call MOSSCO_MessageAdd(message,' XO')
   elseif (staggerLoc == ESMF_STAGGERLOC_EDGE2_VCENTER) then
-    call MOSSCO_MessageAdd(message,'YO')
+    call MOSSCO_MessageAdd(message,' YO')
   elseif (staggerLoc == ESMF_STAGGERLOC_CORNER_VFACE) then
-    call MOSSCO_MessageAdd(message,'CC')
+    call MOSSCO_MessageAdd(message,' CC')
   elseif (staggerLoc == ESMF_STAGGERLOC_EDGE1_VFACE) then
-    call MOSSCO_MessageAdd(message,'XC')
+    call MOSSCO_MessageAdd(message,' XC')
   elseif (staggerLoc == ESMF_STAGGERLOC_EDGE2_VFACE) then
-    call MOSSCO_MessageAdd(message,'YC')
+    call MOSSCO_MessageAdd(message,' YC')
   elseif (staggerLoc == ESMF_STAGGERLOC_CENTER_VFACE) then
-    call MOSSCO_MessageAdd(message,'OC')
+    call MOSSCO_MessageAdd(message,' OC')
   endif
 
   length_=len_trim(message)
