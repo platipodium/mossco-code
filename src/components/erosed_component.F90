@@ -654,7 +654,7 @@ module erosed_component
       call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      write(message, '(A)') trim(name)//' created field'
+      write(message, '(A)') trim(name)//' created '
       call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
@@ -782,15 +782,14 @@ module erosed_component
     type(ESMF_Field), target     :: field
     type(ESMF_Grid)              :: grid
     type(ESMF_FieldStatus_Flag)  :: status
-    integer(ESMF_KIND_I4)        :: localrc
+    integer(ESMF_KIND_I4)        :: localrc, i,j,l,n
 
-    integer,target                  :: coordDimCount(2),coordDimMap(2,2)
-    integer,dimension(2)            :: totalLBound,totalUBound
-    integer,dimension(2)            :: lbnd,ubnd
-    integer                         :: i,j,l,n
+    integer(ESMF_KIND_I4),target       :: coordDimCount(2),coordDimMap(2,2)
+    integer(ESMF_KIND_I4),dimension(2) :: totalLBound,totalUBound
+    integer(ESMF_KIND_I4),dimension(2) :: lbnd,ubnd
 
     type :: allocatable_integer_array
-      integer,dimension(:),allocatable :: data
+      integer(ESMF_KIND_I4),dimension(:),allocatable :: data
     end type
 
     type(allocatable_integer_array) :: coordTotalLBound(2),coordTotalUBound(2)
@@ -802,20 +801,22 @@ module erosed_component
     real(ESMF_KIND_R8),dimension(:,:)  ,pointer    :: ptr_f2=>null()
     integer(ESMF_KIND_I8),dimension(:),allocatable :: spm_flux_id
     logical :: isPresent
+    character(len=ESMF_MAXSTR), allocatable        :: options(:)
 
-    call MOSSCO_CompEntry(gridComp, clock, name=name, currTime=currTime, importState=importState, &
-      exportState=exportState, rc=localrc)
+    call MOSSCO_CompEntry(gridComp, clock, name=name, currTime=currTime, &
+      importState=importState, exportState=exportState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
 !   Get the total domain size from the coordinates associated with the Grid
     call ESMF_GridCompGet(gridComp, grid=grid, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_GridGet(grid, ESMF_STAGGERLOC_CENTER, 0, &
+    call ESMF_GridGet(grid, ESMF_STAGGERLOC_CENTER, localDe=0, &
       exclusiveLBound=lbnd, exclusiveUBound=ubnd, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_GridGet(grid, coordDimCount=coordDimCount, coordDimMap=coordDimMap, rc=localrc)
+    call ESMF_GridGet(grid, coordDimCount=coordDimCount, &
+      coordDimMap=coordDimMap, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     do i=1,2
@@ -824,6 +825,7 @@ module erosed_component
       call ESMF_GridGetCoordBounds(grid, coordDim=i,                     &
                                    totalLBound=coordTotalLBound(i)%data, &
                                    totalUBound=coordTotalUBound(i)%data)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       do j=1,coordDimCount(i)
         if (coordDimMap(i,j) .eq. i) then
           totalLBound(i) = coordTotalLBound(i)%data(j)
@@ -871,6 +873,9 @@ module erosed_component
      enddo
    endif
 
+   allocate(options(5))
+   options(:)=(/'creator','bounds ','geom   ','loc    ','mean   '/)
+
 !   Complete Import Fields
     do i = 1, ubound(importList,1)
       call ESMF_StateGet(importState, trim(importList(i)%name), field, rc=localrc)
@@ -884,7 +889,7 @@ module erosed_component
         if ( importList(i)%optional ) cycle
 
         write(message, '(A)') trim(name)//' import from internal  '
-        call MOSSCO_FieldString(field, message)
+        call MOSSCO_FieldString(field, message, options=options)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
         allocate(importList(i)%data(RANGE2D), stat=localrc)
@@ -897,7 +902,7 @@ module erosed_component
       elseif (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
 
         write(message, '(A)') trim(name)//' import from external  '
-        call MOSSCO_FieldString(field, message)
+        call MOSSCO_FieldString(field, message, options=options)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
         call ESMF_FieldGet(field, farrayPtr=importList(i)%data, rc=localrc)
@@ -908,8 +913,8 @@ module erosed_component
                    .or.(      all(lbound(importList(i)%data) .eq. lbnd)           &
                         .and. all(ubound(importList(i)%data) .eq. ubnd) ) ) ) then
 
-          write(message, '(A)') trim(name)//' invalid field bounds in '
-          call MOSSCO_FieldString(field, message)
+          write(message, '(A)') trim(name)//' invalid bounds '
+          call MOSSCO_FieldString(field, message, options=options)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           call ESMF_Finalize(endflag=ESMF_END_ABORT)
         end if
@@ -1050,8 +1055,8 @@ module erosed_component
        call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-       write(message,'(A)') trim(name)//' creates field'
-       call MOSSCO_FieldString(field, message, rc=localrc)
+       write(message,'(A)') trim(name)//' created'
+       call MOSSCO_FieldString(field, message, options=options, rc=localrc)
        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
        call ESMF_FieldBundleAdd(fieldBundle,(/field/),multiflag=.true.,rc=localrc)
@@ -1074,8 +1079,8 @@ module erosed_component
     call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    write(message,'(A)') trim(name)//' created field'
-    call MOSSCO_FieldString(field, message, rc=localrc)
+    write(message,'(A)') trim(name)//' created'
+    call MOSSCO_FieldString(field, message, options=options, rc=localrc)
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
     call ESMF_StateAdd(exportState,(/field/), rc=localrc)
@@ -1094,8 +1099,8 @@ module erosed_component
     call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    write(message,'(A)') trim(name)//' created field'
-    call MOSSCO_FieldString(field, message, rc=localrc)
+    write(message,'(A)') trim(name)//' created'
+    call MOSSCO_FieldString(field, message, options=options, rc=localrc)
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
     call ESMF_StateAdd(exportState,(/field/), rc=localrc)
@@ -1112,8 +1117,8 @@ module erosed_component
     call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    write(message,'(A)') trim(name)//' created field'
-    call MOSSCO_FieldString(field, message, rc=localrc)
+    write(message,'(A)') trim(name)//' created'
+    call MOSSCO_FieldString(field, message, options=options, rc=localrc)
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
     call ESMF_StateAdd(exportState,(/field/), rc=localrc)
@@ -1130,8 +1135,8 @@ module erosed_component
     call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    write(message,'(A)') trim(name)//' created field'
-    call MOSSCO_FieldString(field, message, rc=localrc)
+    write(message,'(A)') trim(name)//' created'
+    call MOSSCO_FieldString(field, message, options=options, rc=localrc)
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
     call ESMF_StateAdd(exportState,(/field/), rc=localrc)
@@ -1150,8 +1155,8 @@ module erosed_component
     call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    write(message,'(A)') trim(name)//' created field'
-    call MOSSCO_FieldString(field, message, rc=localrc)
+    write(message,'(A)') trim(name)//' created'
+    call MOSSCO_FieldString(field, message, options=options, rc=localrc)
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
     call ESMF_AttributeSet(field,'units',trim('g m**-3'),rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -1170,8 +1175,8 @@ module erosed_component
         name='Sum_depth_average_concentration_of_SPM_in_water', rc=localrc)
     call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-    write(message,'(A)') trim(name)//' created field'
-    call MOSSCO_FieldString(field, message, rc=localrc)
+    write(message,'(A)') trim(name)//' created'
+    call MOSSCO_FieldString(field, message, options=options, rc=localrc)
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
     call ESMF_AttributeSet(field,'units',trim('g.m-3'),rc=localrc)
@@ -1179,6 +1184,8 @@ module erosed_component
 
     call ESMF_StateAdd(exportState,(/field/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    deallocate(options)
 
     call MOSSCO_CompExit(gridComp, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
