@@ -622,41 +622,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           return
         endif
 
-        allocate(options(2))
-        options(1)='creator'
-        options(2)='sum'
-
-        write(message,'(A)') trim(name)//'2 base '
-        call MOSSCO_FieldString(exportFieldList(j), message, options=options)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        write(message,'(A)') trim(name)//'1 plus '
-        call MOSSCO_FieldString(fieldList(matchIndex), message, options=options)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-
-        call ESMF_FieldGet(fieldList(matchIndex), grid=grid, rc=localrc)
-        call ESMF_FieldGet(fieldList(matchIndex), farrayPtr=farrayPtr2, rc=localrc)
-        call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask2, rc=localrc)
-        write(*,*) '1 before adding import ',count(mask2>0), sum(farrayPtr2,mask=mask2>0)
-        nullify(farrayPtr2)
-        call ESMF_FieldGet(exportFieldList(j), grid=grid, rc=localrc)
-        call ESMF_FieldGet(exportFieldList(j), farrayPtr=farrayPtr2, rc=localrc)
-        call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask2, rc=localrc)
-        write(*,*) '2 before adding export ',count(mask2>0),sum(farrayPtr2,mask=mask2>0)
-        nullify(farrayPtr2)
-
         call MOSSCO_FieldAdd(exportFieldList(j), fieldList(matchIndex), verbose=.true., owner=trim(name), rc=localrc)
-        !call MOSSCO_FieldAdd(exportFieldList(j), 1.5D0, rc=localrc)
-
-        call ESMF_FieldGet(exportFieldList(j), farrayPtr=farrayPtr2, rc=localrc)
-        write(*,*) '3 after  adding export ',count(mask2>0),sum(farrayPtr2,mask=mask2>0)
-        nullify(farrayPtr2)
-
-        write(message,'(A)') trim(name)//'3 equal '
-        call MOSSCO_FieldString(exportFieldList(j), message, options=options)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-        deallocate(options)
 
         write(message,'(A,I2.2)') trim(name)//' aggregated step ',counter
         if (fieldCount > 1) then

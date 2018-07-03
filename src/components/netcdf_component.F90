@@ -503,8 +503,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         fieldCount=itemfieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, &
         include=itemSearch, verbose=verbose,  rc=localrc)
 
-      write(*,*) 'IFCOUNT ',i, trim(fieldName), itemFieldCount
-
       !> Simple case: field occurs only once
       if (itemFieldCount == 1) then
 
