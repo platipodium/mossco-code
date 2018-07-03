@@ -99,9 +99,11 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, options, rc)
   integer(ESMF_KIND_I4), intent(out), optional     :: rc
 
   integer(ESMF_KIND_I4)   :: rc_, rank, localrc, geomRank, n, i, width
-  integer(ESMF_KIND_I4), allocatable :: lbnd(:), ubnd(:), ungriddedLbnd(:), ungriddedUbnd(:)
+  integer(ESMF_KIND_I4), allocatable :: lbnd(:), ubnd(:), elbnd(:), eubnd(:)
+  integer(ESMF_KIND_I4), allocatable :: ungriddedLbnd(:), ungriddedUbnd(:)
 
   character(len=ESMF_MAXSTR)  :: geomName, stringValue, name, form
+  character(len=ESMF_MAXSTR)  :: formatString, string
   type(ESMF_Grid)             :: grid
   type(ESMF_Mesh)             :: mesh
   type(ESMF_GeomType_Flag)    :: geomType
@@ -155,6 +157,7 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, options, rc)
   else
     call MOSSCO_MessageAdd(message,' '//name)
   endif
+
 
   !> Add information on geom
   call MOSSCO_StringMatch('geom', options_, isPresent, rc=localrc)
@@ -271,7 +274,55 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, options, rc)
     endif
   endif
 
-  !> Add information on stagger location
+  !> Add information on bounds
+  call MOSSCO_StringMatch('bounds', options_, isPresent, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  if (isPresent) then
+    call ESMF_FieldGet(field, rank=rank, rc=localrc)
+    if (allocated(ubnd)) deallocate(ubnd)
+    if (allocated(lbnd)) deallocate(lbnd)
+    allocate(elbnd(rank), eubnd(rank), lbnd(rank), ubnd(rank))
+    call ESMF_FieldGetBounds(field, exclusiveLbound=elbnd, exclusiveubound=eubnd, &
+      computationalLbound=lbnd, computationalUbound=ubnd, rc=localrc)
+    if (lbnd(1) /= elbnd(1)) then
+      write(formatString,'(A)') '(A,'//intformat(lbnd(1))//',A,'//intformat(elbnd(1)) &
+        //',A)'
+      write(string,formatString) ' ',lbnd(1),'|',elbnd(1),':'
+    else
+      write(formatString,'(A)') '(A,'//intformat(elbnd(1))//',A)'
+      write(string,formatString) ' ',elbnd(1),':'
+    endif
+    if (ubnd(1) /= eubnd(1)) then
+      write(formatString,'(A)') '(A,'//intformat(eubnd(1))//',A,'//intformat(ubnd(1))//')'
+      write(string,formatString) trim(string),eubnd(1),'|',ubnd(1)
+    else
+      write(formatString,'(A)') '(A,'//intformat(eubnd(1))//')'
+      write(string,formatString) trim(string),eubnd(1)
+    endif
+
+    do i=2,rank
+      if (lbnd(i) /= elbnd(i)) then
+        write(formatString,'(A)') '(A,'//intformat(lbnd(i))//',A,'//intformat(elbnd(i)) &
+          //',A)'
+        write(string,formatString) trim(string)//',',lbnd(i),'|',elbnd(i),':'
+      else
+        write(formatString,'(A)') '(A,'//intformat(elbnd(i))//',A)'
+        write(string,formatString) trim(string)//',',elbnd(i),':'
+      endif
+      if (ubnd(i) /= eubnd(i)) then
+        write(formatString,'(A)') '(A,'//intformat(eubnd(i))//',A,'//intformat(ubnd(i))//')'
+        write(string,formatString) trim(string),eubnd(i),'|',ubnd(i)
+      else
+        write(formatString,'(A)') '(A,'//intformat(eubnd(i))//')'
+        write(string,formatString) trim(string),eubnd(i)
+      endif
+    enddo
+
+    call MOSSCO_MessageAdd(message, string)
+  endif
+
+  !> Add information on value
   call MOSSCO_StringMatch('mean', options_, isPresent, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
@@ -307,6 +358,8 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, options, rc)
 
   if (allocated(ubnd)) deallocate(ubnd)
   if (allocated(lbnd)) deallocate(lbnd)
+  if (allocated(eubnd)) deallocate(eubnd)
+  if (allocated(elbnd)) deallocate(elbnd)
   if (allocated(ungriddedUbnd)) deallocate(ungriddedUbnd)
   if (allocated(ungriddedLbnd)) deallocate(ungriddedLbnd)
   if (allocated(options_)) deallocate(options_)
@@ -1092,7 +1145,7 @@ end subroutine MOSSCO_FieldCopyContent
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
-      write(message,'(A)') trim(owner)//' cannot initialize incomplete '
+      write(message,'(A)') trim(owner_)//' cannot initialize incomplete '
       call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       _MOSSCO_RETURN_ON_PRESENT_RC_OR_FINALIZE_(ESMF_RC_ARG_BAD)
@@ -1174,7 +1227,7 @@ end subroutine MOSSCO_FieldCopyContent
       endwhere
 
     else
-      write(message,'(A)') trim(owner)//' has not implementation for rank>4 '
+      write(message,'(A)') trim(owner_)//' has not implementation for rank>4 '
       call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       _MOSSCO_RETURN_ON_PRESENT_RC_OR_FINALIZE_(ESMF_RC_NOT_IMPL)
@@ -1229,7 +1282,7 @@ end subroutine MOSSCO_FieldCopyContent
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
-      write(message,'(A)') trim(owner)//' cannot obtain geometry from empty '
+      write(message,'(A)') trim(owner_)//' cannot obtain geometry from empty '
       call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       _MOSSCO_RETURN_ON_PRESENT_RC_OR_FINALIZE_(ESMF_RC_ARG_BAD)
@@ -1242,7 +1295,7 @@ end subroutine MOSSCO_FieldCopyContent
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (fieldRank /= 1) then
-      write(message,'(A,I1,A)') trim(owner)//' called nonmatching interface rank 1 /= ',rank,' for '
+      write(message,'(A,I1,A)') trim(owner_)//' called nonmatching interface rank 1 /= ',rank,' for '
       call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       _MOSSCO_RETURN_ON_PRESENT_RC_OR_FINALIZE_(ESMF_RC_ARG_BAD)
@@ -1327,7 +1380,7 @@ end subroutine MOSSCO_FieldCopyContent
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
-      write(message,'(A)') trim(owner)//' cannot obtain geometry from empty '
+      write(message,'(A)') trim(owner_)//' cannot obtain geometry from empty '
       call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       _MOSSCO_RETURN_ON_PRESENT_RC_OR_FINALIZE_(ESMF_RC_ARG_BAD)
@@ -1340,7 +1393,7 @@ end subroutine MOSSCO_FieldCopyContent
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (fieldRank /= 2) then
-      write(message,'(A,I1,A)') trim(owner)//' called nonmatching interface rank 2 /= ',rank,' for '
+      write(message,'(A,I1,A)') trim(owner_)//' called nonmatching interface rank 2 /= ',rank,' for '
       call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       _MOSSCO_RETURN_ON_PRESENT_RC_OR_FINALIZE_(ESMF_RC_ARG_BAD)
@@ -1435,7 +1488,7 @@ end subroutine MOSSCO_FieldCopyContent
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
-      write(message,'(A)') trim(owner)//' cannot obtain geometry from empty '
+      write(message,'(A)') trim(owner_)//' cannot obtain geometry from empty '
       call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       _MOSSCO_RETURN_ON_PRESENT_RC_OR_FINALIZE_(ESMF_RC_ARG_BAD)
@@ -1448,7 +1501,7 @@ end subroutine MOSSCO_FieldCopyContent
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (fieldRank /= 3) then
-      write(message,'(A,I1,A)') trim(owner)//' called nonmatching interface rank 3 /= ',rank,' for '
+      write(message,'(A,I1,A)') trim(owner_)//' called nonmatching interface rank 3 /= ',rank,' for '
       call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       _MOSSCO_RETURN_ON_PRESENT_RC_OR_FINALIZE_(ESMF_RC_ARG_BAD)
@@ -1555,7 +1608,7 @@ end subroutine MOSSCO_FieldCopyContent
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
-      write(message,'(A)') trim(owner)//' cannot obtain geometry from empty '
+      write(message,'(A)') trim(owner_)//' cannot obtain geometry from empty '
       call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       _MOSSCO_RETURN_ON_PRESENT_RC_OR_FINALIZE_(ESMF_RC_ARG_BAD)
@@ -1568,7 +1621,7 @@ end subroutine MOSSCO_FieldCopyContent
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (fieldRank /= 3) then
-      write(message,'(A,I1,A)') trim(owner)//' called nonmatching interface rank 4 /= ',rank,' for '
+      write(message,'(A,I1,A)') trim(owner_)//' called nonmatching interface rank 4 /= ',rank,' for '
       call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       _MOSSCO_RETURN_ON_PRESENT_RC_OR_FINALIZE_(ESMF_RC_ARG_BAD)
@@ -2142,7 +2195,7 @@ end subroutine MOSSCO_FieldCopyAttribute
     logical, intent(in), optional          :: tagOnly
     integer(ESMF_KIND_I4), optional        :: rc
 
-    character(ESMF_MAXSTR)                 :: message
+    character(ESMF_MAXSTR)                 :: message, owner_
     type(ESMF_FieldStatus_Flag)            :: fieldStatus
     integer(ESMF_KIND_I4)                  :: i, j, fieldCount, rank, exportRank, int4
     integer(ESMF_KIND_I8)                  :: numChanged, advanceCount, int8
@@ -2163,8 +2216,10 @@ end subroutine MOSSCO_FieldCopyAttribute
 
     integer(ESMF_KIND_I4)                  :: localrc, rc_, geomRank
     type(ESMF_Grid)                        :: grid
+    character(len=ESMF_MAXSTR), allocatable :: options(:)
 
     rc_ = ESMF_SUCCESS
+    owner_ = '--'
     if (present(rc)) rc = rc_
     if (present(kwe)) rc = rc_
     if (present(tagOnly)) then
@@ -2175,6 +2230,7 @@ end subroutine MOSSCO_FieldCopyAttribute
     weight_ = weight
     if (weight > 1.0) weight_ = 1.0
     if (weight <= 0.0) return
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
 
     call ESMF_FieldGet(exportField, status=fieldStatus, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -2193,15 +2249,10 @@ end subroutine MOSSCO_FieldCopyAttribute
     if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) return
 
     call ESMF_FieldGet(importField, rank=rank, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (rank /= exportRank) then
-      if (present(owner)) then
-        write(message,'(A)')  trim(owner)//' rank mismatch in '
-      else
-        write(message,'(A)')  '  rank mismatch in '
-      endif
+      write(message,'(A)')  trim(owner_)//' rank mismatch in '
 
       call MOSSCO_FieldString(exportField, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -2223,23 +2274,24 @@ end subroutine MOSSCO_FieldCopyAttribute
     endif
 
     call ESMF_FieldGetBounds(importField, exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_FieldGetBounds(exportField, exclusiveUBound=exportUbnd, exclusiveLBound=exportLbnd, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_FieldGetBounds(exportField, exclusiveUBound=exportUbnd, &
+      exclusiveLBound=exportLbnd, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (any(exportLbnd - lbnd > 0) .or. any(exportUbnd - ubnd > 0))  then
-      if (present(owner)) then
-        write(message,'(A)')  trim(owner)//' exclusive bounds mismatch in '
-      else
-        write(message,'(A)')  '  exclusive bounds mismatch in '
-      endif
-        call MOSSCO_FieldString(exportField, message)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-        if (present(rc)) rc = ESMF_RC_ARG_INCOMP
-        return
+      write(message,'(A)')  trim(owner_)//' exclusive bounds mismatch '
+      allocate(options(2))
+      options=(/'creator','bounds '/)
+      call MOSSCO_FieldString(exportField, message, options=options)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      write(message,'(A)') '  with'
+      call MOSSCO_FieldString(importField, message, options=options)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      deallocate(options)
+      if (present(rc)) rc = ESMF_RC_ARG_INCOMP
+      return
     endif
 
     if (allocated(exportUbnd)) deallocate(exportUbnd)
@@ -2247,20 +2299,17 @@ end subroutine MOSSCO_FieldCopyAttribute
 
     call MOSSCO_AttributeGet(importField, 'missing_value', importMissingValue, &
       defaultValue=-1D30, convert=.true., rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call MOSSCO_AttributeGet(exportField, 'missing_value', exportMissingValue, &
       defaultValue=-1D30, convert=.true., rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     !> @todo The has_boundary_data attribute is set to .true. by default here,
     !> this should be changed by a configuration attribute and the attribute name MOSSCO_AttributeGet
     !> be synchronized with the transporting component (e.g. getm_component)
     call ESMF_AttributeSet(exportField, 'has_boundary_data', .true., rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (.not. tagOnly_) then
       numChanged = 0
@@ -2275,17 +2324,14 @@ end subroutine MOSSCO_FieldCopyAttribute
       mask3 = .true.
 
       call ESMF_FieldGet(importField, grid=grid, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, isPresent=isPresent, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       if (isPresent) then
         call ESMF_GridGet(grid, rank=geomRank, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
         if (allocated(gridUbnd)) deallocate(gridUbnd)
         allocate(gridUbnd(geomRank))
@@ -2295,18 +2341,17 @@ end subroutine MOSSCO_FieldCopyAttribute
 
         call ESMF_GridGet(grid, staggerloc=ESMF_STAGGERLOC_CENTER, localDe=0, &
           exclusiveUBound=gridUbnd, exclusiveLBound=gridLbnd, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
         if (geomRank == 2) then
           call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridMask2, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
           mask2 = (mask2 .and. (gridMask2(gridLbnd(1):gridUbnd(1),gridLbnd(2):gridUbnd(2)) > 0))
 
         elseif (geomRank == 3) then
           call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridMask3, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
           mask3 = (mask3 .and. &
             (gridMask3(gridLbnd(1):gridUbnd(1),gridLbnd(2):gridUbnd(2),gridLbnd(3):gridUbnd(3))  > 0))
@@ -2314,29 +2359,24 @@ end subroutine MOSSCO_FieldCopyAttribute
       endif
 
       call ESMF_FieldGet(exportField, grid=grid, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, isPresent=isPresent, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       if (isPresent) then
         call ESMF_GridGet(grid, rank=geomRank, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
         if (geomRank == 2) then
           call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridMask2, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
           mask2 = (mask2 .and. (gridMask2(gridLbnd(1):gridUbnd(1),gridLbnd(2):gridUbnd(2)) > 0))
 
         elseif (geomRank == 3) then
           call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridMask3, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
           mask3 = (mask3 .and. &
             (gridMask3(gridLbnd(1):gridUbnd(1),gridLbnd(2):gridUbnd(2),gridLbnd(3):gridUbnd(3))  > 0))
@@ -2346,12 +2386,10 @@ end subroutine MOSSCO_FieldCopyAttribute
       select case (rank)
         case(2)
           call ESMF_FieldGet(importField, farrayPtr=importPtr2, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
           call ESMF_FieldGet(exportField, farrayPtr=exportPtr2, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
           ! Mask all values that are missing value
           mask2 = (mask2 .and. exportPtr2(RANGE2D) .ne. exportMissingValue)
@@ -2364,9 +2402,12 @@ end subroutine MOSSCO_FieldCopyAttribute
           !> @todo add infinity to mask
 
           call ESMF_AttributeGet(importField, 'valid_min', isPresent=isPresent, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
           if (isPresent) then
             call MOSSCO_AttributeGet(importField, label='valid_min', value=real8, &
               convert=.true., rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
             mask2 = (mask2 .and. importPtr2(RANGE2D) >= real8)
           endif
 
@@ -2485,11 +2526,7 @@ end subroutine MOSSCO_FieldCopyAttribute
       endselect
 
       !if (numChanged>0) then
-        if (present(owner)) then
-          write(message,'(A)') trim(owner)//' weight'
-        else
-          write(message,'(A)') '  weight'
-        endif
+        write(message,'(A)') trim(owner_)//' weight'
         write(message,'(A,ES9.2,A,I5.5,A)') trim(message), weight_, ' changed ', numChanged, ' cells '
         call MOSSCO_FieldString(exportField, message)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
@@ -2497,16 +2534,13 @@ end subroutine MOSSCO_FieldCopyAttribute
     endif
 
     call ESMF_AttributeSet(exportField, 'nudging_weight', weight_, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_AttributeGet(importField, 'creator', message, defaultValue='unknown', rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_AttributeSet(exportField, 'nudging_component', trim(message), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (allocated(lbnd)) deallocate(lbnd)
     if (allocated(ubnd)) deallocate(ubnd)
@@ -2597,7 +2631,7 @@ end subroutine MOSSCO_FieldCopyAttribute
 
     call ESMF_FieldGet(field, rank=rank, status=status, rc=localrc)
     if (status /= ESMF_FIELDSTATUS_COMPLETE) then
-      write(message, '(A)') trim(owner)//' cannot use incomplete field '
+      write(message, '(A)') trim(owner_)//' cannot use incomplete field '
       call MOSSCO_FieldString(field, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       if (present(rc)) then
@@ -2610,7 +2644,7 @@ end subroutine MOSSCO_FieldCopyAttribute
 
     call ESMF_FieldGet(importfield, rank=irank, status=status, rc=localrc)
     if (status /= ESMF_FIELDSTATUS_COMPLETE) then
-      write(message, '(A)') trim(owner)//' cannot use incomplete field '
+      write(message, '(A)') trim(owner_)//' cannot use incomplete field '
       call MOSSCO_FieldString(importField, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       if (present(rc)) then
@@ -2622,7 +2656,7 @@ end subroutine MOSSCO_FieldCopyAttribute
     endif
 
     if (rank /= irank) then
-      write(message,'(A)') trim(owner)//' found rank mismatch in '
+      write(message,'(A)') trim(owner_)//' found rank mismatch '
       call MOSSCO_FieldString(field, message)
       call MOSSCO_MessageAdd(message,' and')
       call MOSSCO_FieldString(importfield, message)
@@ -2648,11 +2682,15 @@ end subroutine MOSSCO_FieldCopyAttribute
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (any((iubnd - ilbnd) - ( ubnd - lbnd )  /= 0)) then
-      write(message,'(A)') trim(owner)//' found array bounds mismatch in '
-      call MOSSCO_FieldString(field, message)
+      allocate(options(2))
+      options(:)=(/'creator','bounds '/)
+
+      write(message,'(A)') trim(owner_)//' bounds mismatch '
+      call MOSSCO_FieldString(field, message, options=options)
       call MOSSCO_MessageAdd(message,' and')
-      call MOSSCO_FieldString(importfield, message)
+      call MOSSCO_FieldString(importfield, message, options=options)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+      deallocate(options)
       return
     endif
 
@@ -2790,7 +2828,7 @@ end subroutine MOSSCO_FieldCopyAttribute
         endwhere
       endif
     else
-      write(message,'(A)') trim(owner)//' has no implementation for this rank/type combination yet '
+      write(message,'(A)') trim(owner_)//' has no implementation for this rank/type combination yet '
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
       return
     endif
@@ -2897,7 +2935,7 @@ end subroutine MOSSCO_FieldCopyAttribute
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
-      write(message,'(A)') trim(owner)//' skipped incomplete field'
+      write(message,'(A)') trim(owner_)//' skipped incomplete field'
       call MOSSCO_FieldString(field, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
       return
@@ -2907,7 +2945,7 @@ end subroutine MOSSCO_FieldCopyAttribute
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (rank < 1 .or. rank > 4) then
-      write(message,'(A,I1,A)') trim(owner)//' skipped rank ',rank,' field'
+      write(message,'(A,I1,A)') trim(owner_)//' skipped rank ',rank,' field'
       call MOSSCO_FieldString(field, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
       return
@@ -2969,7 +3007,7 @@ end subroutine MOSSCO_FieldCopyAttribute
         call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridMask3, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       else
-        write(message,'(A)') trim(owner)//' only considers grid rank 2 or 3, got'
+        write(message,'(A)') trim(owner_)//' only considers grid rank 2 or 3, got'
         call MOSSCO_FieldString(field, message)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         if (present(rc)) rc = ESMF_RC_NOT_IMPL
@@ -3008,7 +3046,7 @@ end subroutine MOSSCO_FieldCopyAttribute
       call ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      write(message,'(A,ES10.3)') trim(owner)//' mean value before operation '//trim(operation)//' ', &
+      write(message,'(A,ES10.3)') trim(owner_)//' mean value before operation '//trim(operation)//' ', &
         sum(farrayPtr1(RANGE1D),mask1(RANGE1D))/count(mask1(RANGE1D))
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
@@ -3026,14 +3064,14 @@ end subroutine MOSSCO_FieldCopyAttribute
           farrayPtr1(RANGE1D) = farrayPtr1(RANGE1D) ** scalar
         endwhere
       endif
-      write(message,'(A,ES10.3)') trim(owner)//' mean value after operation '//trim(operation)//' ', &
+      write(message,'(A,ES10.3)') trim(owner_)//' mean value after operation '//trim(operation)//' ', &
         sum(farrayPtr1(RANGE1D),mask1(RANGE1D))/count(mask1(RANGE1D))
 
     case (2)
       call ESMF_FieldGet(field, farrayPtr=farrayPtr2, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      write(message,'(A,ES10.3)') trim(owner)//' mean value before operation '//trim(operation)//' ', &
+      write(message,'(A,ES10.3)') trim(owner_)//' mean value before operation '//trim(operation)//' ', &
         sum(farrayPtr2(RANGE2D),mask2(RANGE2D))/count(mask2(RANGE2D))
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
@@ -3050,14 +3088,14 @@ end subroutine MOSSCO_FieldCopyAttribute
           farrayPtr2(RANGE2D) = farrayPtr2(RANGE2D) ** scalar
         endwhere
       endif
-      write(message,'(A,ES10.3)') trim(owner)//' mean value after operation '//trim(operation)//' ', &
+      write(message,'(A,ES10.3)') trim(owner_)//' mean value after operation '//trim(operation)//' ', &
         sum(farrayPtr2(RANGE2D),mask2(RANGE2D))/count(mask2(RANGE2D))
 
     case (3)
       call ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      write(message,'(A,ES10.3)') trim(owner)//' mean value before operation '//trim(operation)//' ', &
+      write(message,'(A,ES10.3)') trim(owner_)//' mean value before operation '//trim(operation)//' ', &
         sum(farrayPtr3(RANGE3D),mask3(RANGE3D))/count(mask3(RANGE3D))
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
@@ -3074,14 +3112,14 @@ end subroutine MOSSCO_FieldCopyAttribute
           farrayPtr3(RANGE3D) = farrayPtr3(RANGE3D) ** scalar
         endwhere
       endif
-      write(message,'(A,ES10.3)') trim(owner)//' mean value after operation '//trim(operation)//' ', &
+      write(message,'(A,ES10.3)') trim(owner_)//' mean value after operation '//trim(operation)//' ', &
         sum(farrayPtr3(RANGE3D),mask3(RANGE3D))/count(mask3(RANGE3D))
 
     case (4)
       call ESMF_FieldGet(field, farrayPtr=farrayPtr4, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      write(message,'(A,ES10.3)') trim(owner)//' mean value before operation '//trim(operation)//' ', &
+      write(message,'(A,ES10.3)') trim(owner_)//' mean value before operation '//trim(operation)//' ', &
         sum(farrayPtr4(RANGE4D),mask4(RANGE4D))/count(mask4(RANGE4D))
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
@@ -3098,10 +3136,10 @@ end subroutine MOSSCO_FieldCopyAttribute
           farrayPtr4(RANGE4D) = farrayPtr4(RANGE4D) ** scalar
         endwhere
       endif
-      write(message,'(A,ES10.3)') trim(owner)//' mean value after operation '//trim(operation)//' ', &
+      write(message,'(A,ES10.3)') trim(owner_)//' mean value after operation '//trim(operation)//' ', &
         sum(farrayPtr4(RANGE4D),mask4(RANGE4D))/count(mask4(RANGE4D))
     case default
-      write(message,'(A)') trim(owner)//' only allows operations "*", "+", "^" on '
+      write(message,'(A)') trim(owner_)//' only allows operations "*", "+", "^" on '
       call MOSSCO_FieldString(field, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       if (present(rc)) rc = ESMF_RC_NOT_IMPL
@@ -3612,7 +3650,7 @@ end subroutine MOSSCO_FieldCopyAttribute
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (rank3 /= 3) then
-      write(message,'(A)') trim(owner)//' expected field to have rank 3. Skipped '
+      write(message,'(A)') trim(owner_)//' expected field to have rank 3. Skipped '
       call MOSSCO_FieldString(field3, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       if (present(rc)) rc = ESMF_RC_ARG_INCOMP
@@ -3624,7 +3662,7 @@ end subroutine MOSSCO_FieldCopyAttribute
 
     if (rank2 /= 2) then
       if (present(owner)) then
-        write(message,'(A)') trim(owner)//' expected field to have rank 2. Skipped '
+        write(message,'(A)') trim(owner_)//' expected field to have rank 2. Skipped '
       else
         write(message,'(A)') '   expected field to have rank 2. Skipped '
       endif
@@ -3646,7 +3684,7 @@ end subroutine MOSSCO_FieldCopyAttribute
 
     if (any(ubnd3(1:2)-lbnd3(1:2)-(ubnd2(1:2)-lbnd2(1:2)) > 0)) then
       if (present(owner)) then
-        write(message,'(A)') trim(owner)//' lateral bounds mismatch. Skipped '
+        write(message,'(A)') trim(owner_)//' lateral bounds mismatch. Skipped '
       else
         write(message,'(A)') '   lateral bounds mismatch. Skipped  '
       endif
@@ -3662,7 +3700,7 @@ end subroutine MOSSCO_FieldCopyAttribute
 
     if (.not. (staggerloc == ESMF_STAGGERLOC_CENTER)) then
       if (present(owner)) then
-        write(message,'(A)') trim(owner)//' does not implement the stagger location in'
+        write(message,'(A)') trim(owner_)//' does not implement the stagger location in'
       else
         write(message,'(A)') '   does not implement the stagger location in '
       endif
@@ -3678,7 +3716,7 @@ end subroutine MOSSCO_FieldCopyAttribute
     if (.not. (staggerloc == ESMF_STAGGERLOC_CENTER .or. &
       staggerloc == ESMF_STAGGERLOC_CENTER_VFACE)) then
       if (present(owner)) then
-        write(message,'(A)') trim(owner)//' does not implement the stagger location in'
+        write(message,'(A)') trim(owner_)//' does not implement the stagger location in'
       else
         write(message,'(A)') '   does not implement the stagger location in '
       endif

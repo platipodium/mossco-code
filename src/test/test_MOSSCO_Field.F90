@@ -201,6 +201,13 @@ if (trim(message) /= ' field  8.00E+00  1.76E+02  8.00E+00  8.00E+00') then
   write(*,*) '  failed 3D with options, " field  8.00E+00  1.76E+02  8.00E+00  8.00E+00" /= "'//trim(message)//'"'
 endif
 
+options(1:4)=(/'creator','geom   ','bounds ','       '/)
+write(message,'(A)') ''
+call MOSSCO_FieldString(field, message, options=options, rc=localrc)
+if (trim(message) /= ' [test]fieldgrid3D(r=3 5x6x1 m=22) 1:5,1:6,1:1') then
+  write(*,*) '  failed 3D with bounds option, " [test]fieldgrid3D(r=3 5x6x1 m=22) 1:5,1:6,1:1" /= "'//trim(message)//'"'
+endif
+
 call ESMF_FieldDestroy(field, rc=localrc)
 !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
