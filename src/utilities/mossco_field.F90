@@ -51,6 +51,7 @@ module mossco_field
   public :: MOSSCO_FieldReduce, MOSSCO_FieldInitialize, MOSSCO_FieldCopyAttributes
   public :: MOSSCO_FieldMatchFields, MOSSCO_FieldWeightField, MOSSCO_FieldGetMissingValue
   public :: MOSSCO_FieldLog, MOSSCO_FieldExponentiate, MOSSCO_FieldMultiply
+  public :: MOSSCO_FieldValue
   public :: MOSSCO_FieldAdd, MOSSCO_FieldNameCheck, MOSSCO_FieldUnitString, MOSSCO_FieldGetMask
 
   interface MOSSCO_FieldGetMissingValue
@@ -74,6 +75,10 @@ module mossco_field
     module procedure MOSSCO_FieldUnitStringSub
   end interface MOSSCO_FieldUnitString
 
+  interface MOSSCO_FieldValue
+    module procedure MOSSCO_FieldValueR8
+  end interface MOSSCO_FieldValue
+
   interface MOSSCO_FieldGetMask
     module procedure MOSSCO_FieldGetMask1
     module procedure MOSSCO_FieldGetMask2
@@ -90,7 +95,7 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, options, rc)
   character(len=*), intent(inout)                  :: message
   type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
   integer(ESMF_KIND_I4), intent(out), optional     :: length
-  character(len=ESMF_MAXSTR), intent(in), optional, allocatable :: options(:)
+  character(len=VARLEN), intent(in), optional, allocatable :: options(:)
   integer(ESMF_KIND_I4), intent(out), optional     :: rc
 
   integer(ESMF_KIND_I4)   :: rc_, rank, localrc, geomRank, n, i, width
@@ -256,7 +261,7 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, options, rc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   if (isPresent .and. fieldStatus == ESMF_FIELDSTATUS_COMPLETE) then
-    !call MOSSCO_FieldValueString(field, 'mean', message, rc=localrc)
+    call MOSSCO_FieldValueString(field, message, operator='mean', rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
   endif
 
@@ -269,6 +274,200 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, options, rc)
   if (present(rc)) rc=rc_
 
 end subroutine MOSSCO_FieldString
+
+#undef ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_FieldValueString"
+subroutine MOSSCO_FieldValueString(field, message, kwe, operator, length, options, rc)
+
+  type(ESMF_Field), intent(in)                     :: field
+  character(len=*), intent(inout)                  :: message
+  type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+  integer(ESMF_KIND_I4), intent(out), optional     :: length
+  character(len=ESMF_MAXSTR), intent(in), optional, allocatable :: options(:)
+  character(len=*), intent(in), optional           :: operator
+  integer(ESMF_KIND_I4), intent(out), optional     :: rc
+
+  integer(ESMF_KIND_I4)   :: rc_, localrc, i
+
+  type(ESMF_FieldStatus_Flag)              :: fieldStatus
+  character(len=ESMF_MAXSTR), allocatable  :: options_(:)
+  real(ESMF_KIND_R8)                       :: real8
+  character(len=ESMF_MAXSTR)               :: operator_, string
+  type(ESMF_TypeKind_Flag)                 :: typeKind
+
+  rc_ = ESMF_SUCCESS
+  operator_ = 'mean'
+
+  if (present(kwe)) rc_ = ESMF_SUCCESS
+  if (present(rc)) rc = rc_
+  if (present(options)) then
+    if (allocated(options)) then
+      allocate(options_(size(options)), stat=localrc)
+      _MOSSCO_LOG_ALLOC_FINALIZE_ON_ERROR_(rc)
+      do i=lbound(options,1),ubound(options,1)
+        call MOSSCO_StringCopy(options_(i),options(i))
+      enddo
+    endif
+  endif
+
+  if (present(operator)) call MOSSCO_StringCopy(operator_, operator)
+
+  call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) return
+
+  call ESMF_FieldGet(field, typeKind=typeKind, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  if (typeKind /= ESMF_TYPEKIND_R8) return
+
+  real8 = MOSSCO_FieldValue(field, operator=trim(operator_), rc=localrc)
+
+  write(string,'(ES9.2)') real8
+  call MOSSCO_MessageAdd(message,' '//string)
+
+  if (present(length)) length=len_trim(message)
+  if (present(rc)) rc=rc_
+
+end subroutine MOSSCO_FieldValueString
+
+#undef ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_FieldValueR8"
+function MOSSCO_FieldValueR8(field, kwe, operator, rc) result(value)
+
+  type(ESMF_Field), intent(in)                     :: field
+  type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+  integer(ESMF_KIND_I4), intent(out), optional     :: rc
+  character(len=*), intent(in), optional           :: operator
+  real(ESMF_KIND_R8)                               :: value
+
+  integer(ESMF_KIND_I4)   :: rc_, rank, localrc
+  integer(ESMF_KIND_I4), allocatable :: lbnd(:), ubnd(:)
+  integer(ESMF_KIND_I4), pointer     :: mask1(:) => null()
+  integer(ESMF_KIND_I4), pointer     :: mask2(:,:) => null()
+  integer(ESMF_KIND_I4), pointer     :: mask3(:,:,:) => null()
+  integer(ESMF_KIND_I4), pointer     :: mask4(:,:,:,:) => null()
+  real(ESMF_KIND_R8), pointer        :: farrayPtr1(:) => null()
+  real(ESMF_KIND_R8), pointer        :: farrayPtr2(:,:) => null()
+  real(ESMF_KIND_R8), pointer        :: farrayPtr3(:,:,:) => null()
+  real(ESMF_KIND_R8), pointer        :: farrayPtr4(:,:,:,:) => null()
+  character(len=ESMF_MAXSTR)         :: operator_
+
+  type(ESMF_FieldStatus_Flag) :: fieldStatus
+  type(ESMF_TypeKind_Flag)    :: typeKind
+  real(ESMF_KIND_R8)          :: real8
+
+  rc_ = ESMF_SUCCESS
+  operator_ = 'mean'
+  value = 0.0
+
+  if (present(kwe)) rc_ = ESMF_SUCCESS
+  if (present(rc)) rc = rc_
+  if (present(operator)) call MOSSCO_StringCopy(operator_, operator)
+
+  call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
+    return
+  endif
+
+  call ESMF_FieldGet(field, typeKind=typeKind, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  !> @todo expand to other typekinds
+  if (typeKind /= ESMF_TYPEKIND_R8) then
+    return
+  endif
+
+  call ESMF_FieldGet(field, rank=rank, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  if (allocated(ubnd)) deallocate(ubnd)
+  if (allocated(lbnd)) deallocate(lbnd)
+  allocate(lbnd(rank))
+  allocate(ubnd(rank))
+
+  call ESMF_FieldGetBounds(field, exclusiveLbound=lbnd, exclusiveUbound=ubnd, &
+    rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  call MOSSCO_FieldGetMissingValue(field, value, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  if (rank==1) then
+    call MOSSCO_FieldGetMask(field, mask1, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    call ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (trim(operator_) == 'mean' .and. count(mask1(RANGE1D)>0)>0) then
+      real8 = sum(farrayPtr1(RANGE1D), mask=mask1(RANGE1D)>0)/count(mask1(RANGE1D)>0)
+    elseif (trim(operator_) == 'sum') then
+      real8 = sum(farrayPtr1(RANGE1D), mask=mask1(RANGE1D)>0)
+    elseif (trim(operator_) == 'min') then
+      real8 = minval(farrayPtr1(RANGE1D), mask=mask1(RANGE1D)>0)
+    elseif (trim(operator_) == 'max') then
+      real8 = maxval(farrayPtr1(RANGE1D), mask=mask1(RANGE1D)>0)
+    endif
+
+  elseif (rank==2) then
+    call MOSSCO_FieldGetMask(field, mask2, rc=localrc)
+    call ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=localrc)
+
+    if (trim(operator_) == 'mean' .and. count(mask2(RANGE2D)>0)>0) then
+      real8 = sum(farrayPtr2(RANGE2D), mask=mask2(RANGE2D)>0)/count(mask2(RANGE2D)>0)
+    elseif (trim(operator_) == 'sum') then
+      real8 = sum(farrayPtr2(RANGE2D), mask=mask2(RANGE2D)>0)
+    elseif (trim(operator_) == 'min') then
+      real8 = minval(farrayPtr2(RANGE2D), mask=mask2(RANGE2D)>0)
+    elseif (trim(operator_) == 'max') then
+      real8 = maxval(farrayPtr2(RANGE2D), mask=mask2(RANGE2D)>0)
+    endif
+
+  elseif (rank==3) then
+    call MOSSCO_FieldGetMask(field, mask3, rc=localrc)
+    call ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=localrc)
+
+    if (trim(operator_) == 'mean' .and. count(mask3(RANGE3D)>0)>0) then
+      real8 = sum(farrayPtr3(RANGE3D), mask=mask3(RANGE3D)>0)/count(mask3(RANGE3D)>0)
+    elseif (trim(operator_) == 'sum') then
+      real8 = sum(farrayPtr3(RANGE3D), mask=mask3(RANGE3D)>0)
+    elseif (trim(operator_) == 'min') then
+      real8 = minval(farrayPtr3(RANGE3D), mask=mask3(RANGE3D)>0)
+    elseif (trim(operator_) == 'max') then
+      real8 = maxval(farrayPtr3(RANGE3D), mask=mask3(RANGE3D)>0)
+    endif
+
+  elseif (rank==4) then
+    call MOSSCO_FieldGetMask(field, mask4, rc=localrc)
+    call ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=localrc)
+
+    if (trim(operator_) == 'mean' .and. count(mask4(RANGE4D)>0)>0) then
+      real8 = sum(farrayPtr4(RANGE4D), mask=mask4(RANGE4D)>0)/count(mask4(RANGE4D)>0)
+    elseif (trim(operator_) == 'sum') then
+      real8 = sum(farrayPtr4(RANGE4D), mask=mask4(RANGE4D)>0)
+    elseif (trim(operator_) == 'min') then
+      real8 = minval(farrayPtr4(RANGE4D), mask=mask4(RANGE4D)>0)
+    elseif (trim(operator_) == 'max') then
+      real8 = maxval(farrayPtr4(RANGE4D), mask=mask4(RANGE4D)>0)
+    endif
+
+  else
+    return
+  endif
+
+  if (allocated(ubnd)) deallocate(ubnd)
+  if (allocated(lbnd)) deallocate(lbnd)
+  nullify(farrayPtr1)
+  nullify(farrayPtr2)
+  nullify(farrayPtr3)
+  nullify(farrayPtr4)
+  nullify(mask1)
+  nullify(mask2)
+  nullify(mask3)
+  nullify(mask4)
+
+end function MOSSCO_FieldValueR8
 
 #undef ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_FieldUnitStringSub"
