@@ -98,7 +98,7 @@ if (localrc /= ESMF_SUCCESS) then
   write(*,'(A)') '  failed with owner optional argument'
 endif
 call ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=localrc)
-if (sum(farrayPtr3) /= 0.0) then
+if (sum(farrayPtr3) < 0.0 .or. sum(farrayPtr3) > 0.0) then
   write(*,*) '  failed with no value argument', sum(farrayPtr3),' /= 0.0'
 endif
 
@@ -108,7 +108,7 @@ if (localrc /= ESMF_SUCCESS) then
 endif
 
 call ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=localrc)
-if (sum(farrayPtr3) /= 30.0D0 ) then
+if (sum(farrayPtr3) < 30.0D0  .or. sum(farrayPtr3) > 30.0D0) then
   write(*,*) '  failed with value argument', sum(farrayPtr3),' /= 30.0'
 endif
 nullify(farrayPtr3)
@@ -124,7 +124,7 @@ call ESMF_GridSetItem(grid3, itemFlag=ESMF_GRIDITEM_MASK, array=array, rc=localr
 
 call MOSSCO_FieldInitialize(field, value=2.0D0, rc=localrc)
 call ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=localrc)
-if (sum(farrayPtr3,mask=mask3>0) /= 44.0D0 ) then
+if (sum(farrayPtr3,mask=mask3>0) < 44.0D0 .or. sum(farrayPtr3,mask=mask3>0) > 44.0D0) then
   write(*,*) '  failed with 3D masked argument', sum(farrayPtr3,mask=mask3>0),' /= 44.0'
 endif
 
@@ -134,13 +134,13 @@ write(*,'(A)') 'Testing MOSSCO_FieldAdd'
 
 call MOSSCO_FieldAdd(field, 2.0D0, rc=localrc)
 call ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=localrc)
-if (sum(farrayPtr3,mask=mask3>0) /= 88.0D0 ) then
+if (sum(farrayPtr3,mask=mask3>0) < 88.0D0 .or. sum(farrayPtr3,mask=mask3>0) > 88.0D0 ) then
   write(*,*) '  failed 3D masked with scalar argument', sum(farrayPtr3,mask=mask3>0),' /= 88.0'
 endif
 
 call MOSSCO_FieldAdd(field, field, rc=localrc)
 call ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=localrc)
-if (sum(farrayPtr3,mask=mask3>0) /= 176.0D0 ) then
+if (sum(farrayPtr3,mask=mask3>0) < 176.0D0  .or. sum(farrayPtr3,mask=mask3>0) > 176.0D0 ) then
   write(*,*) '  failed 3D masked with itself', sum(farrayPtr3, mask=mask3>0),' /= 176.0'
 endif
 
