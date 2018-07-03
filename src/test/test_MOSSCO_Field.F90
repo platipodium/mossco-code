@@ -3,15 +3,17 @@
 !! @author Carsten Lemmen, Richard Hofmeister
 !!
 
+#define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
 program test_mossco_field
 
 use esmf
 use mossco_field
 
 type(ESMF_field)     :: field, otherField
-type(ESMF_Grid)      :: grid3
+type(ESMF_Grid)      :: grid3, grid2
 type(ESMF_ArraySpec) :: arraySpec
-integer              :: localrc, n
+integer              :: localrc, n, rc
 character(len=ESMF_MAXSTR) :: message
 real(kind=ESMF_KIND_R8) :: real8 = 1.0
 real(kind=ESMF_KIND_R4) :: real4 = 1.0
@@ -27,7 +29,10 @@ character(len=ESMF_MAXSTR), allocatable :: options(:)
 call ESMF_initialize()
 
 ! Create a test field
-grid3  = ESMF_GridCreateNoPeriDim( &
+grid2  = ESMF_GridCreateNoPeriDim(name='grid2D',  &
+         minIndex=(/1,1/),maxIndex=(/5,6/), regDecomp=(/1,1/), rc=localrc)
+
+grid3  = ESMF_GridCreateNoPeriDim(name='grid3D', &
          minIndex=(/1,1,1/),maxIndex=(/5,6,1/), regDecomp=(/1,1,1/), rc=localrc)
 call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=localrc)
 field = ESMF_FieldCreate(grid=grid3,arrayspec=arrayspec,name="field", rc=localrc)
@@ -176,8 +181,8 @@ options(4)='loc'
 
 write(message,'(A)') ''
 call MOSSCO_FieldString(field, message, options=options, rc=localrc)
-if (trim(message) /= ' fieldGrid002(r=3 5x6x1 m=22)O  8.00E+00') then
-  write(*,*) '  failed 3D with options, " fieldGrid002(r=3 5x6x1 m=22)O  8.00E+00" /= "'//trim(message)//'"'
+if (trim(message) /= 'grid3D(r=3 5x6x1 m=22) O  8.00E+00') then
+  write(*,*) '  failed 3D with options, " grid3D(r=3 5x6x1 m=22) O  8.00E+00" /= "'//trim(message)//'"'
 endif
 
 call ESMF_AttributeSet(field, 'creator', 'test', rc=localrc)
@@ -185,31 +190,82 @@ options(2)='sum'
 
 write(message,'(A)') ''
 call MOSSCO_FieldString(field, message, options=options, rc=localrc)
-if (trim(message) /= ' [test]fieldGrid002(r=3 5x6x1 m=22)O  1.76E+02') then
-  write(*,*) '  failed 3D with options, " [test]fieldGrid002(r=3 5x6x1 m=22)O  1.76E+02" /= "'//trim(message)//'"'
+if (trim(message) /= ' [test]fieldgrid3D(r=3 5x6x1 m=22) O  1.76E+02') then
+  write(*,*) '  failed 3D with options, " [test]fieldgrid3D(r=3 5x6x1 m=22) O  1.76E+02" /= "'//trim(message)//'"'
 endif
 
 options(1:4)=(/'min ','mean','max ','sum '/)
 write(message,'(A)') ''
 call MOSSCO_FieldString(field, message, options=options, rc=localrc)
-if (trim(message) /= '  8.00E+00  1.76E+02  8.00E+00  8.00E+00') then
-  write(*,*) '  failed 3D with options, "  8.00E+00  1.76E+02  8.00E+00  8.00E+00" /= "'//trim(message)//'"'
+if (trim(message) /= ' field  8.00E+00  1.76E+02  8.00E+00  8.00E+00') then
+  write(*,*) '  failed 3D with options, " field  8.00E+00  1.76E+02  8.00E+00  8.00E+00" /= "'//trim(message)//'"'
 endif
 
+call ESMF_FieldDestroy(field, rc=localrc)
+!_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+call ESMF_ArraySpecSet(arrayspec, rank=2, typekind=ESMF_TYPEKIND_I4, rc=localrc)
+!_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+call ESMF_GridGet(grid2, distgrid=distgrid, rc=localrc)
+!_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+array = ESMF_ArrayCreate(distgrid=distgrid, arrayspec=arrayspec, rc=localrc)
+!_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+call ESMF_ArrayGet(array, farrayPtr=mask2, rc=localrc)
+!_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+mask2=1            ! Mark all 30 elements as valid
+mask2(2:5,3:4)=0 ! Mask out 8 elements
+call ESMF_GridSetItem(grid2, itemFlag=ESMF_GRIDITEM_MASK, &
+  staggerLoc=ESMF_STAGGERLOC_CENTER, array=array, rc=localrc)
+!_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+field=ESMF_FieldCreate(name='field2D', grid=grid2, &
+  staggerLoc=ESMF_STAGGERLOC_CENTER, typeKind=ESMF_TYPEKIND_R8, rc=localrc)
+!_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+call MOSSCO_FieldInitialize(field, value=3.0D0, rc=localrc)
+
+write(*,'(A)') 'Testing MOSSCO_FieldAdd'
+
+call MOSSCO_FieldAdd(field, 2.0D0, rc=localrc)
+call ESMF_FieldGet(field, farrayPtr=farrayPtr2, rc=localrc)
+if (sum(farrayPtr2,mask=mask2>0) < 110.0D0 .or. sum(farrayPtr2,mask=mask2>0) > 110.0D0 ) then
+  write(*,*) '  failed 2D masked with scalar argument', sum(farrayPtr2,mask=mask2>0),' /= 110.0'
+endif
+
+call MOSSCO_FieldAdd(field, field, rc=localrc)
+call ESMF_FieldGet(field, farrayPtr=farrayPtr2, rc=localrc)
+if (sum(farrayPtr2,mask=mask2>0) < 220.0D0  .or. sum(farrayPtr2,mask=mask2>0) > 220.0D0 ) then
+  write(*,*) '  failed 2D masked with itself', sum(farrayPtr2, mask=mask2>0),' /= 220.0'
+endif
 
 
 deallocate(options)
 
-
-
-
 nullify(farrayPtr3)
+nullify(farrayPtr2)
 nullify(mask2)
 nullify(mask3)
-call ESMF_FieldDestroy(field, rc=localrc)
-call ESMF_ArrayDestroy(array, rc=localrc)
-call ESMF_DistGridDestroy(distGrid, rc=localrc)
 call ESMF_GridDestroy(grid3, rc=localrc)
+!_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+call ESMF_GridDestroy(grid2, rc=localrc)
+!_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+call ESMF_FieldDestroy(field, rc=localrc)
+!_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+call ESMF_ArrayDestroy(array, rc=localrc)
+!_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+call ESMF_DistGridDestroy(distGrid, rc=localrc)
+!_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+call ESMF_GridDestroy(grid3, rc=localrc)
+!_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
 write(*,'(A)') 'All tests completed.'
 
