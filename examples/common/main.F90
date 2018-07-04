@@ -99,6 +99,7 @@ program main
   inquire(file=trim(configfilename), exist=fileIsPresent)
   if (.not.fileIsPresent) then
     configfilename=''
+    stop 'No mossco_run file present'
     !call ESMF_LogWrite('Not using a configuration file', ESMF_LOGMSG_WARNING)
   endif
 
@@ -110,6 +111,7 @@ program main
       close(nmlunit)
     else
       write(0, '(A)') 'Fatal problem reading namelist from '//trim(configFileName)
+      stop
       !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
     end if
   endif
