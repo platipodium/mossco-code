@@ -490,28 +490,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           call ESMF_FieldGet(fieldList(j), geomType=geomType, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          if (geomType == ESMF_GEOMTYPE_GRID) then
-            call ESMF_FieldGet(fieldList(j), grid=grid, rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-            call ESMF_FieldEmptySet(exportField, grid, rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-          elseif (geomType == ESMF_GEOMTYPE_MESH) then
-            call ESMF_FieldGet(fieldList(j), mesh=mesh, rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-            call ESMF_FieldEmptySet(exportField, mesh, rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-          elseif (geomType == ESMF_GEOMTYPE_XGRID) then
-            call ESMF_FieldGet(fieldList(j), xgrid=xgrid, rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-            call ESMF_FieldEmptySet(exportField, xgrid, rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-          elseif (geomType == ESMF_GEOMTYPE_LOCSTREAM) then
-            call ESMF_FieldGet(fieldList(j), locstream=locstream, rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-            call ESMF_FieldEmptySet(exportField, locstream, rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-          endif
-
           call MOSSCO_FieldCopy(exportField, fieldList(j), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
