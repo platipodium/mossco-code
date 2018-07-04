@@ -404,9 +404,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (advanceCount<huge(timeSlice)) then
       timeSlice=int(advanceCount, ESMF_KIND_I4)
     else
-      write(message,'(A)') 'Cannot use this advanceCount for a netcdf timeSlice, failed to convert long int to int'
+      write(message,'(A)') trim(name)//' cannot use this advanceCount for a netcdf timeSlice, failed to convert long int to int'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       rc = ESMF_RC_ARG_OUTOFRANGE
+      call MOSSCO_CompExit(gridcomp, rc=localrc)
       return
     endif
 
@@ -444,7 +445,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       else
         verbose = .false.
       end if
-        nc = mossco_netcdfOpen(fileName, timeUnit=timeUnit, state=importState, rc=localrc)
+
+      nc = mossco_netcdfOpen(fileName, timeUnit=timeUnit, state=importState, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call nc%update()
@@ -454,9 +456,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       !! variables.  Continue an error message
 
       call nc%timeGet(minTime, searchIndex=1, stopTime=maxTime, rc=localrc)
+
       if (localrc == ESMF_RC_NOT_FOUND .or. maxTime < currTime) then
         call nc%add_timestep(seconds, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       elseif (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
