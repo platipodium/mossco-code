@@ -2951,11 +2951,11 @@ end subroutine MOSSCO_FieldCopyAttribute
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
         !> @todo remove these debug statements
-        write(message,'(A)') ''
-        call MOSSCO_FieldString(importField, message)
-        write(*,'(A,18(X,I3))') trim(message), shape(mask3(RANGE3D)),&
-          shape(imask3(IRANGE3D)),shape(mask3),shape(imask3),&
-          shape(farrayPtrR83),shape(ifarrayPtrR83)
+        ! write(message,'(A)') ''
+        ! call MOSSCO_FieldString(importField, message)
+        ! write(*,'(A,18(X,I3))') trim(message), shape(mask3(RANGE3D)),&
+        !   shape(imask3(IRANGE3D)),shape(mask3),shape(imask3),&
+        !   shape(farrayPtrR83),shape(ifarrayPtrR83)
 
         where (mask3(RANGE3D)*imask3(IRANGE3D) > 0)
           farrayPtrR83(RANGE3D) = farrayPtrR83(RANGE3D) + &
