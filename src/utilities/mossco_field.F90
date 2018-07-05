@@ -3526,7 +3526,7 @@ end subroutine MOSSCO_FieldCopyAttribute
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       matchScore(i) = MOSSCO_FieldAttributesIdentical(field, fieldList(i), &
-        verbose=verbose_, owner=trim(owner_), rc=localrc)
+        verbose=.false., owner=trim(owner_), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       if (trim(matchName) /= trim(fieldName)) matchScore(i) = matchScore(i)+50
@@ -3544,6 +3544,12 @@ end subroutine MOSSCO_FieldCopyAttribute
       write(message,'(A)') trim(owner_)//' ambiguous matching for '
       call MOSSCO_FieldString(field, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      do i=1, fieldCount
+        if (matchScore(i) /= minval(matchScore,1)) continue
+        write(message,'(A,I3)') trim(owner_)//' potential candidate with score ',matchScore(i)
+        call MOSSCO_FieldString(fieldList(i), message)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      enddo
     end if
 
     index=minloc(matchScore,1)
