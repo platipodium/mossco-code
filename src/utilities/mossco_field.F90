@@ -20,6 +20,10 @@
 #define RANGE2D RANGE1D,lbnd(2):ubnd(2)
 #define RANGE3D RANGE2D,lbnd(3):ubnd(3)
 #define RANGE4D RANGE3D,lbnd(4):ubnd(4)
+#define IRANGE1D ilbnd(1):iubnd(1)
+#define IRANGE2D RANGE1D,ilbnd(2):iubnd(2)
+#define IRANGE3D RANGE2D,ilbnd(3):iubnd(3)
+#define IRANGE4D RANGE3D,ilbnd(4):iubnd(4)
 #define RANGE22D lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2)
 #define RANGE33D RANGE22D,lbnd3(3):ubnd3(3)
 
@@ -2882,22 +2886,22 @@ end subroutine MOSSCO_FieldCopyAttribute
         call ESMF_FieldGet(importField, farrayPtr=ifarrayPtrR81, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
         farrayPtrR81(RANGE1D) = farrayPtrR81(RANGE1D) + &
-          ifarrayPtrR81(ilbnd(1):iubnd(1))
+          ifarrayPtrR81(IRANGE1D)
       elseif (iTypeKind == ESMF_TYPEKIND_R4) then
         call ESMF_FieldGet(importField, farrayPtr=ifarrayPtrR41, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
         farrayPtrR81(RANGE1D) = farrayPtrR81(RANGE1D) + &
-          real(ifarrayPtrR41(ilbnd(1):iubnd(1)), kind=ESMF_KIND_R8)
+          real(ifarrayPtrR41(IRANGE1D), kind=ESMF_KIND_R8)
       elseif (iTypeKind == ESMF_TYPEKIND_I8) then
         call ESMF_FieldGet(importField, farrayPtr=ifarrayPtrI81, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
         farrayPtrR81(RANGE1D) = farrayPtrR81(RANGE1D) + &
-          real(ifarrayPtrI81(ilbnd(1):iubnd(1)), kind=ESMF_KIND_R8)
+          real(ifarrayPtrI81(IRANGE1D), kind=ESMF_KIND_R8)
       elseif (iTypeKind == ESMF_TYPEKIND_I4) then
         call ESMF_FieldGet(importField, farrayPtr=ifarrayPtrI41, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
         farrayPtrR81(RANGE1D) = farrayPtrR81(RANGE1D) + &
-          real(ifarrayPtrI41(ilbnd(1):iubnd(1)), kind=ESMF_KIND_R8)
+          real(ifarrayPtrI41(IRANGE1D), kind=ESMF_KIND_R8)
       endif
 
     elseif (rank == 2 .and. typeKind == ESMF_TYPEKIND_R8) then
@@ -2911,29 +2915,29 @@ end subroutine MOSSCO_FieldCopyAttribute
 
         where (mask2(RANGE2D)*imask2(RANGE2D) > 0)
           farrayPtrR82(RANGE2D) = farrayPtrR82(RANGE2D)  &
-            + ifarrayPtrR82(ilbnd(1):iubnd(1),ilbnd(2):iubnd(2))
+            + ifarrayPtrR82(IRANGE2D)
         endwhere
 
       elseif (iTypeKind == ESMF_TYPEKIND_R4) then
         call ESMF_FieldGet(importField, farrayPtr=ifarrayPtrR42, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-        where (mask2*imask2 > 0)
+        where (mask2(RANGE2D)*imask2(IRANGE2D) > 0)
         farrayPtrR82(RANGE2D) = farrayPtrR82(RANGE2D) + &
-          real(ifarrayPtrR42(ilbnd(1):iubnd(1),ilbnd(2):iubnd(2)), kind=ESMF_KIND_R8)
+          real(ifarrayPtrR42(IRANGE2D), kind=ESMF_KIND_R8)
         endwhere
       elseif (iTypeKind == ESMF_TYPEKIND_I8) then
         call ESMF_FieldGet(importField, farrayPtr=ifarrayPtrI82, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-        where (mask2*imask2 > 0)
+        where (mask2(RANGE2D)*imask2(IRANGE2D) > 0)
         farrayPtrR82(RANGE2D) = farrayPtrR82(RANGE2D) + &
-          real(ifarrayPtrI82(ilbnd(1):iubnd(1),ilbnd(2):iubnd(2)), kind=ESMF_KIND_R8)
+          real(ifarrayPtrI82(IRANGE2D), kind=ESMF_KIND_R8)
         endwhere
       elseif (iTypeKind == ESMF_TYPEKIND_I4) then
         call ESMF_FieldGet(importField, farrayPtr=ifarrayPtrI42, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-        where (mask2*imask2 > 0)
+        where (mask2(RANGE2D)*imask2(IRANGE2D) > 0)
         farrayPtrR82(RANGE2D) = farrayPtrR82(RANGE2D) + &
-          real(ifarrayPtrI42(ilbnd(1):iubnd(1),ilbnd(2):iubnd(2)), kind=ESMF_KIND_R8)
+          real(ifarrayPtrI42(IRANGE2D), kind=ESMF_KIND_R8)
         endwhere
       endif
 
@@ -2946,32 +2950,39 @@ end subroutine MOSSCO_FieldCopyAttribute
         call ESMF_FieldGet(importField, farrayPtr=ifarrayPtrR83, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-        where (mask3*imask3 > 0)
+        !> @todo remove these debug statements
+        write(message,'(A)') ''
+        call MOSSCO_FieldString(importField, message)
+        write(*,'(A,18(X,I3))') trim(message), shape(mask3(RANGE3D)),&
+          shape(imask3(IRANGE3D)),shape(mask3),shape(imask3),&
+          shape(farrayPtrR83),shape(ifarrayPtrR83)
+
+        where (mask3(RANGE3D)*imask3(IRANGE3D) > 0)
           farrayPtrR83(RANGE3D) = farrayPtrR83(RANGE3D) + &
-            ifarrayPtrR83(ilbnd(1):iubnd(1),ilbnd(2):iubnd(2),ilbnd(3):iubnd(3))
+            ifarrayPtrR83(IRANGE3D)
         endwhere
 
       elseif (iTypeKind == ESMF_TYPEKIND_R4) then
         call ESMF_FieldGet(importField, farrayPtr=ifarrayPtrR43, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-        where (mask3*imask3 > 0)
+        where (mask3(RANGE3D)*imask3(IRANGE3D) > 0)
           farrayPtrR83(RANGE3D) = farrayPtrR83(RANGE3D) + &
-            real(ifarrayPtrR43(ilbnd(1):iubnd(1),ilbnd(2):iubnd(2),ilbnd(3):iubnd(3)), kind=ESMF_KIND_R8)
+            real(ifarrayPtrR43(IRANGE3D), kind=ESMF_KIND_R8)
         endwhere
       elseif (iTypeKind == ESMF_TYPEKIND_I8) then
         call ESMF_FieldGet(importField, farrayPtr=ifarrayPtrI83, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-        where (mask3*imask3 > 0)
+        where (mask3(RANGE3D)*imask3(IRANGE3D) > 0)
         farrayPtrR83(RANGE3D) = farrayPtrR83(RANGE3D) + &
-          real(ifarrayPtrI83(ilbnd(1):iubnd(1),ilbnd(2):iubnd(2),ilbnd(3):iubnd(3)), kind=ESMF_KIND_R8)
+          real(ifarrayPtrI83(IRANGE3D), kind=ESMF_KIND_R8)
         endwhere
       elseif (iTypeKind == ESMF_TYPEKIND_I4) then
         call ESMF_FieldGet(importField, farrayPtr=ifarrayPtrI43, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-        where (mask3*imask3 > 0)
+        where (mask3(RANGE3D)*imask3(IRANGE3D) > 0)
         farrayPtrR83(RANGE3D) = farrayPtrR83(RANGE3D) + &
-          real(ifarrayPtrI43(ilbnd(1):iubnd(1),ilbnd(2):iubnd(2),ilbnd(3):iubnd(3)), kind=ESMF_KIND_R8)
+          real(ifarrayPtrI43(IRANGE3D), kind=ESMF_KIND_R8)
         endwhere
       endif
     else
