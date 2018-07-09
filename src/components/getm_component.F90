@@ -691,6 +691,9 @@ module getm_component
                                    rc=localrc)
           _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+          call ESMF_AttributeSet(field,'external_index',conc_id, rc=localrc)
+          _LOG_AND_FINALIZE_ON_ERROR_(rc)
+
           call ESMF_AttributeSet(field,'units','m3 s-1 '//trim(units), rc=localrc)
           _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -743,6 +746,9 @@ module getm_component
                                    totalUWidth=(/HALO,HALO/),           &
                                    name=trim(itemName),                 &
                                    rc=localrc)
+          _LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          call ESMF_AttributeSet(field,'external_index',conc_id, rc=localrc)
           _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           call ESMF_AttributeSet(field,'units','m3 s-1 '//trim(units), rc=localrc)
