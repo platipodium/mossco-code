@@ -573,7 +573,7 @@ module getm_component
         _LOG_ALLOC_FINALIZE_ON_ERROR_(rc)
         allocate(transport_yflux(transportFieldCount), stat=localrc)
         _LOG_ALLOC_FINALIZE_ON_ERROR_(rc)
-#ifdef _DEPTH_INTEGRATED_TRACER_FLUXES
+#ifdef _DEPTH_INTEGRATED_TRACER_FLUXES_
         allocate(transport_xflux2d(transportFieldCount), stat=localrc)
         _LOG_ALLOC_FINALIZE_ON_ERROR_(rc)
         allocate(transport_yflux2d(transportFieldCount), stat=localrc)
@@ -681,7 +681,7 @@ module getm_component
 
           call fm%register(trim(itemname)//external_index_string,trim(units),trim(itemname),standard_name='',dimensions=(/id_dim_z/),data3d=transport_xflux(n)%ptr(_3D_W_),category='mossco', output_level=output_level_debug)
 
-#ifdef _DEPTH_INTEGRATED_TRACER_FLUXES
+#ifdef _DEPTH_INTEGRATED_TRACER_FLUXES_
           itemName = itemname//'_di'
 
           allocate(transport_xflux2d(n)%ptr(I2DFIELD), stat=localrc)
@@ -738,7 +738,7 @@ module getm_component
 
           call fm%register(trim(itemname)//external_index_string,trim(units),trim(itemname),standard_name='',dimensions=(/id_dim_z/),data3d=transport_yflux(n)%ptr(_3D_W_),category='mossco', output_level=output_level_debug)
 
-#ifdef _DEPTH_INTEGRATED_TRACER_FLUXES
+#ifdef _DEPTH_INTEGRATED_TRACER_FLUXES_
           itemName = itemname//'_di'
 
           allocate(transport_yflux2d(n)%ptr(I2DFIELD), stat=localrc)
