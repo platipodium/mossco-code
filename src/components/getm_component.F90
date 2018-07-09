@@ -455,6 +455,10 @@ module getm_component
 #ifndef NO_3D
     use variables_3d, only: dt
 #endif
+#ifndef NO_TRACER_FLUXES
+    use field_manager
+    use register_all_variables
+#endif
     implicit none
 
     type(ESMF_GridComp) :: gridComp
@@ -672,6 +676,8 @@ module getm_component
           write(message,'(A)') trim(name)//' created flux field '//trim(itemname)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
+          call fm%register(trim(itemname),trim(units),trim(itemname),standard_name='',dimensions=(/id_dim_z/),data3d=transport_xflux(n)%ptr(_3D_W_),category='mossco', output_level=output_level_debug)
+
 #ifdef _DEPTH_INTEGRATED_TRACER_FLUXES
           itemName = itemname//'_di'
 
@@ -723,6 +729,8 @@ module getm_component
 
           write(message,'(A)') trim(name)//' created flux field '//trim(itemname)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+          call fm%register(trim(itemname),trim(units),trim(itemname),standard_name='',dimensions=(/id_dim_z/),data3d=transport_yflux(n)%ptr(_3D_W_),category='mossco', output_level=output_level_debug)
 
 #ifdef _DEPTH_INTEGRATED_TRACER_FLUXES
           itemName = itemname//'_di'
