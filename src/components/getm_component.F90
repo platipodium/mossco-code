@@ -478,6 +478,7 @@ module getm_component
     type(ESMF_TimeInterval)                             :: timeInterval
     character(len=ESMF_MAXSTR),dimension(:),allocatable :: itemNameList
     character(len=ESMF_MAXSTR)                          :: itemName,units, name, message
+    character(3)                                        :: external_index_string
     integer                   ,dimension(:),allocatable :: namelenList,concFlags
     integer                                             :: concFieldCount,transportFieldCount,FieldCount
     integer(ESMF_KIND_I8)                               :: conc_id,ws_id
@@ -644,6 +645,8 @@ module getm_component
             value=conc_id, defaultValue=int(-1,ESMF_KIND_I8), rc=localrc)
           _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+          write(external_index_string,'(I0.3)') conc_id
+
 #ifndef NO_TRACER_FLUXES
           itemName = itemNameList(i)(:namelenList(i)-len_trim(conc_suffix))//trim(xflux_suffix)
 
@@ -676,7 +679,7 @@ module getm_component
           write(message,'(A)') trim(name)//' created flux field '//trim(itemname)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-          call fm%register(trim(itemname),trim(units),trim(itemname),standard_name='',dimensions=(/id_dim_z/),data3d=transport_xflux(n)%ptr(_3D_W_),category='mossco', output_level=output_level_debug)
+          call fm%register(trim(itemname)//external_index_string,trim(units),trim(itemname),standard_name='',dimensions=(/id_dim_z/),data3d=transport_xflux(n)%ptr(_3D_W_),category='mossco', output_level=output_level_debug)
 
 #ifdef _DEPTH_INTEGRATED_TRACER_FLUXES
           itemName = itemname//'_di'
@@ -733,7 +736,7 @@ module getm_component
           write(message,'(A)') trim(name)//' created flux field '//trim(itemname)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-          call fm%register(trim(itemname),trim(units),trim(itemname),standard_name='',dimensions=(/id_dim_z/),data3d=transport_yflux(n)%ptr(_3D_W_),category='mossco', output_level=output_level_debug)
+          call fm%register(trim(itemname)//external_index_string,trim(units),trim(itemname),standard_name='',dimensions=(/id_dim_z/),data3d=transport_yflux(n)%ptr(_3D_W_),category='mossco', output_level=output_level_debug)
 
 #ifdef _DEPTH_INTEGRATED_TRACER_FLUXES
           itemName = itemname//'_di'
