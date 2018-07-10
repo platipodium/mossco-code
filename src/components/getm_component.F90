@@ -82,13 +82,6 @@ module getm_component
   type(ptrarray3D),dimension(:),allocatable :: transport_ws,transport_conc
 #ifndef NO_TRACER_FLUXES
   type(ptrarray3D),dimension(:),allocatable :: transport_xflux,transport_yflux
-#ifdef _DEPTH_INTEGRATED_TRACER_FLUXES_
-  type :: ptrarray2D
-     real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr=>NULL()
-     character(len=ESMF_MAXSTR)                :: fieldname
-  end type ptrarray2D
-  type(ptrarray2D),dimension(:),allocatable :: transport_xflux2d,transport_yflux2d
-#endif
 #endif
 
   contains
@@ -563,12 +556,6 @@ module getm_component
         _LOG_ALLOC_FINALIZE_ON_ERROR_(rc)
         allocate(transport_yflux(transportFieldCount), stat=localrc)
         _LOG_ALLOC_FINALIZE_ON_ERROR_(rc)
-#ifdef _DEPTH_INTEGRATED_TRACER_FLUXES
-        allocate(transport_xflux2d(transportFieldCount), stat=localrc)
-        _LOG_ALLOC_FINALIZE_ON_ERROR_(rc)
-        allocate(transport_yflux2d(transportFieldCount), stat=localrc)
-        _LOG_ALLOC_FINALIZE_ON_ERROR_(rc)
-#endif
 #endif
 
         call ESMF_StateGet(importState, "concentrations_z_velocity_in_water", wsFieldBundle, rc=localrc)
@@ -671,29 +658,6 @@ module getm_component
 
           call fm%register(trim(itemname)//'_'//external_index_string,trim(units),trim(itemname),standard_name='',dimensions=(/id_dim_z/),data3d=transport_xflux(n)%ptr(_3D_W_),category='mossco', output_level=output_level_debug)
 
-#ifdef _DEPTH_INTEGRATED_TRACER_FLUXES
-          itemName = itemname//'_di'
-
-          allocate(transport_xflux2d(n)%ptr(I2DFIELD), stat=localrc)
-          _LOG_ALLOC_FINALIZE_ON_ERROR_(rc)
-
-          field = ESMF_FieldCreate(getmGrid2D,transport_xflux2d(n)%ptr, &
-                                   totalLWidth=(/HALO,HALO/),           &
-                                   totalUWidth=(/HALO,HALO/),           &
-                                   name=trim(itemName),                 &
-                                   rc=localrc)
-          _LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-          call ESMF_AttributeSet(field,'units','m3 s-1 '//trim(units), rc=localrc)
-          _LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-          call ESMF_AttributeSet(field,'creator','getm', rc=localrc)
-          _LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-          write(message,'(A)') trim(name)//' created flux field '//trim(itemname)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-#endif
-
           itemName = itemNameList(i)(:namelenList(i)-len_trim(conc_suffix))//trim(yflux_suffix)
           allocate(transport_yflux(n)%ptr(I3DFIELD), stat=localrc)
           _LOG_ALLOC_FINALIZE_ON_ERROR_(rc)
@@ -724,30 +688,6 @@ module getm_component
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
           call fm%register(trim(itemname)//'_'//external_index_string,trim(units),trim(itemname),standard_name='',dimensions=(/id_dim_z/),data3d=transport_yflux(n)%ptr(_3D_W_),category='mossco', output_level=output_level_debug)
-
-#ifdef _DEPTH_INTEGRATED_TRACER_FLUXES
-          itemName = itemname//'_di'
-
-          allocate(transport_yflux2d(n)%ptr(I2DFIELD), stat=localrc)
-          _LOG_ALLOC_FINALIZE_ON_ERROR_(rc)
-
-          field = ESMF_FieldCreate(getmGrid2D,transport_yflux2d(n)%ptr, &
-                                   totalLWidth=(/HALO,HALO/),           &
-                                   totalUWidth=(/HALO,HALO/),           &
-                                   name=trim(itemName),                 &
-                                   rc=localrc)
-          _LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-          call ESMF_AttributeSet(field,'units','m3 s-1 '//trim(units), rc=localrc)
-          _LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-          call ESMF_AttributeSet(field,'creator','getm', rc=localrc)
-          _LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-          write(message,'(A)') trim(name)//' created flux field '//trim(itemname)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-#endif
-
 #endif
 
 !              search for corresponding z_velocity
@@ -1696,13 +1636,6 @@ module getm_component
          end if
 #endif
       end if
-
-#ifndef NO_TRACER_FLUXES
-#ifdef _TRACER_FLUX_DI_
-      transport_xflux2d(n)%ptr = sum(transport_xflux(n)%ptr(:,:,1:),dim=3)
-      transport_yflux2d(n)%ptr = sum(transport_yflux(n)%ptr(:,:,1:),dim=3)
-#endif
-#endif
 
    end do
 
