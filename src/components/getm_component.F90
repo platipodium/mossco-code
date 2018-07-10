@@ -498,16 +498,6 @@ module getm_component
     call ESMF_gridCompGet(gridComp, name=name, rc=localrc)
     _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_GridCompGetEPPhaseCount(getmComp,ESMF_METHOD_INITIALIZE,  &
-                                        phaseCount, rc=localrc)
-    _LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    do phase=2,phaseCount
-      call ESMF_GridCompInitialize(getmComp,clock=clock,            &
-        importState=importState, exportState=exportState, phase=phase, rc=localrc)
-      _LOG_AND_FINALIZE_ON_ERROR_(rc)
-    end do
-
     call ESMF_StateGet(importState,"concentrations_in_water",concFieldBundle, rc=localrc)
     _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -843,6 +833,17 @@ module getm_component
      end if
 
       end if
+
+
+    call ESMF_GridCompGetEPPhaseCount(getmComp,ESMF_METHOD_INITIALIZE,  &
+                                      phaseCount, rc=localrc)
+    _LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    do phase=2,phaseCount
+      call ESMF_GridCompInitialize(getmComp,clock=clock,            &
+        importState=importState, exportState=exportState, phase=phase, rc=localrc)
+      _LOG_AND_FINALIZE_ON_ERROR_(rc)
+    end do
 
     call MOSSCO_CompExit(gridComp, rc=localrc)
     _LOG_AND_FINALIZE_ON_ERROR_(rc)
