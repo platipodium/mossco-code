@@ -416,7 +416,7 @@ ifeq ($(MOSSCO_GETM),true)
     GETM_LINKDIRS += -L$(FABM_LIBRARY_PATH)
     GETM_LIBS += -lgotm_fabm_prod $(FABM_LIBS)
   endif
-  GETM_LIBS += -lturbulence -lutil
+  GETM_LIBS += -lturbulence -lutil -loutput_manager
 
   ifeq ($(FORTRAN_COMPILER), XLF)
     export STATIC += -WF,$(GETM_STATIC_DEFINES)
