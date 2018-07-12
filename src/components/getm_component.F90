@@ -624,6 +624,9 @@ module getm_component
 
           write(external_index_string,'(I0.3)') conc_id
 
+          call ESMF_AttributeGet(concFieldList(i), 'units', value=units, defaultValue='', rc=localrc)
+          _LOG_AND_FINALIZE_ON_ERROR_(rc)
+
 #ifndef NO_TRACER_FLUXES
           itemName = itemNameList(i)(:namelenList(i)-len_trim(conc_suffix))//trim(xflux_suffix)
 
@@ -635,13 +638,9 @@ module getm_component
                                         totalUWidth=(/HALO,HALO,0/),   &
                                         name=trim(itemName),           &
                                         rc=localrc)
-
           _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           call MOSSCO_FieldCopyAttributes(field, concFieldList(i), rc=localrc)
-          _LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-          call ESMF_AttributeGet(concFieldList(i), 'units', value=units, defaultValue='', rc=localrc)
           _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           call ESMF_AttributeSet(field,'units','m3 s-1 '//trim(units), rc=localrc)
@@ -656,9 +655,11 @@ module getm_component
           write(message,'(A)') trim(name)//' created flux field '//trim(itemname)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-          call fm%register(trim(itemname)//'_'//external_index_string,trim(units),trim(itemname),standard_name='',dimensions=(/id_dim_z/),data3d=transport_xflux(n)%ptr(_3D_W_),category='mossco', output_level=output_level_debug)
+          call fm%register(trim(itemname)//'_'//external_index_string,'m3 s-1 '//trim(units),trim(itemname),standard_name='',dimensions=(/id_dim_z/),data3d=transport_xflux(n)%ptr(_3D_W_),category='mossco', output_level=output_level_debug)
+
 
           itemName = itemNameList(i)(:namelenList(i)-len_trim(conc_suffix))//trim(yflux_suffix)
+
           allocate(transport_yflux(n)%ptr(I3DFIELD), stat=localrc)
           _LOG_ALLOC_FINALIZE_ON_ERROR_(rc)
 
@@ -672,9 +673,6 @@ module getm_component
           call MOSSCO_FieldCopyAttributes(field, concFieldList(i), rc=localrc)
           _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          call ESMF_AttributeGet(concFieldList(i), 'units', value=units, defaultValue='', rc=localrc)
-          _LOG_AND_FINALIZE_ON_ERROR_(rc)
-
           call ESMF_AttributeSet(field,'units','m3 s-1 '//trim(units), rc=localrc)
           _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -687,7 +685,7 @@ module getm_component
           write(message,'(A)') trim(name)//' created flux field '//trim(itemname)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-          call fm%register(trim(itemname)//'_'//external_index_string,trim(units),trim(itemname),standard_name='',dimensions=(/id_dim_z/),data3d=transport_yflux(n)%ptr(_3D_W_),category='mossco', output_level=output_level_debug)
+          call fm%register(trim(itemname)//'_'//external_index_string,'m3 s-1 '//trim(units),trim(itemname),standard_name='',dimensions=(/id_dim_z/),data3d=transport_yflux(n)%ptr(_3D_W_),category='mossco', output_level=output_level_debug)
 #endif
 
 !              search for corresponding z_velocity
