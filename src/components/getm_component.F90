@@ -632,6 +632,7 @@ module getm_component
 
           allocate(transport_xflux(n)%ptr(I3DFIELD), stat=localrc)
           _LOG_ALLOC_FINALIZE_ON_ERROR_(rc)
+          transport_xflux(n)%ptr = _ZERO_
 
           field = ESMF_FieldCreate(getmGrid3D,transport_xflux(n)%ptr, &
                                         totalLWidth=(/HALO,HALO,1/),   &
@@ -662,6 +663,7 @@ module getm_component
 
           allocate(transport_yflux(n)%ptr(I3DFIELD), stat=localrc)
           _LOG_ALLOC_FINALIZE_ON_ERROR_(rc)
+          transport_yflux(n)%ptr = _ZERO_
 
           field = ESMF_FieldCreate(getmGrid3D,transport_yflux(n)%ptr, &
                                         totalLWidth=(/HALO,HALO,1/),   &
