@@ -282,13 +282,17 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, options, rc)
   call MOSSCO_StringMatch('bounds', options_, isPresent, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-  if (isPresent) then
+  if (isPresent .and. fieldStatus == ESMF_FIELDSTATUS_COMPLETE) then
     call ESMF_FieldGet(field, rank=rank, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
     if (allocated(ubnd)) deallocate(ubnd)
     if (allocated(lbnd)) deallocate(lbnd)
     allocate(elbnd(rank), eubnd(rank), lbnd(rank), ubnd(rank))
     call ESMF_FieldGetBounds(field, exclusiveLbound=elbnd, exclusiveubound=eubnd, &
       computationalLbound=lbnd, computationalUbound=ubnd, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
     if (lbnd(1) /= elbnd(1)) then
       write(formatString,'(A)') '(A,'//intformat(lbnd(1))//',A,'//intformat(elbnd(1)) &
         //',A)'

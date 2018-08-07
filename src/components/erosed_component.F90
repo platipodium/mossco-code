@@ -889,7 +889,8 @@ module erosed_component
         if ( importList(i)%optional ) cycle
 
         write(message, '(A)') trim(name)//' import from internal  '
-        call MOSSCO_FieldString(field, message, options=options)
+        call MOSSCO_FieldString(field, message, options=options, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
         allocate(importList(i)%data(RANGE2D), stat=localrc)
