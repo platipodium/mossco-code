@@ -1298,7 +1298,8 @@ module erosed_component
     do j=1,jnum
       do i=1,inum
         if (mask(lbnd(1)-1+i,lbnd(2)-1+j)>0) then
-          mass(1:nfrac,inum*(j-1)+i) = mass(1:nfrac,inum*(j-1)+i) &
+          !> @todo we should not add but merely copy sediment_mass into mass
+          mass(1:nfrac,inum*(j-1)+i) = & !mass(1:nfrac,inum*(j-1)+i) &
             + sediment_mass(lbnd(1)-1+i,lbnd(2)-1+j,1:nfrac)
         endif
       end do
