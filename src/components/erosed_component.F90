@@ -61,8 +61,8 @@ module erosed_component
 
   type (BioturbationEffect)                              :: BioEffects
 
-  real   (kind=ESMF_KIND_R8),dimension(:,:,:)  ,pointer  :: layers_height=>null(),sigma_midlayer=>null(),sediment_mass=>null()
-  real   (kind=ESMF_KIND_R8),dimension(:,:,:)  ,pointer  :: relative_thickness_of_layers=>null(), thickness_of_layers=>null()
+  real   (kind=ESMF_KIND_R8),dimension(:,:,:)  ,pointer  :: interface_height_above_soil_surface=>null(),sigma_midlayer=>null(),sediment_mass=>null()
+  real   (kind=ESMF_KIND_R8),dimension(:,:,:)  ,pointer  :: relative_layer_thickness=>null(), layer_thickness=>null()
   real   (kind=ESMF_KIND_R8),dimension(:,:,:)  ,pointer  :: depth_avg_spm_concentration=>null()! Dimensions (x,y,fraction index)
   real   (kind=ESMF_KIND_R8),dimension(:,:)    ,pointer  :: sum_depth_avg_spm_concentration=>null()!Dimensions (x,y)
   real   (kind=ESMF_KIND_R8),dimension(:,:,:,:),pointer  :: spm_concentration=>null() ! Dimensions (x,y,depth layer, fraction index)
@@ -1419,6 +1419,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
   integer,dimension(2)     :: exclusiveLBound,exclusiveUBound
   integer,dimension(3)     :: exclusiveLBound3,exclusiveUBound3,totalLBound3,totalUBound3
   integer(ESMF_KIND_I4)    :: ubnd(3), lbnd(3), tubnd(3), tlbnd(3)
+  integer(ESMF_KIND_I4)    :: ifubnd(3), iflbnd(3)
   integer                  :: kmx, kmaxsd, knum !(kmaxsd: kmax-layer index for sand)
   real (kind=fp) :: deposition_rate, entrainment_rate
 
@@ -1628,33 +1629,30 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
   end if
 
   call ESMF_FieldGet(fieldList(1), grid=grid,rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-  !> get z-positions of vertical layer interfaces
-  call ESMF_GridGetCoord(grid, coordDim=3, &
-    staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
-    farrayPtr=layers_height, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-  istat = 0
-  if (.not. associated (thickness_of_layers)) then
-    allocate (thickness_of_layers(RANGE3D), stat=istat)
+  !> Get the height/thickness of all layers in 3D grid and also
+  !> get the depth of the interfaces
+  call MOSSCO_GridGetDepth(grid, height=layer_thickness,  &
+    interface=interface_height_above_soil_surface, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  call ESMF_GridGetCoordBounds(grid, coordDim=3, &
+    staggerloc=ESMF_STAGGERLOC_CENTER, &
+    exclusiveLBound=lbnd, exclusiveUbound=ubnd, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  call ESMF_GridGetCoordBounds(grid, coordDim=3, &
+    staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
+    exclusiveLBound=iflbnd, exclusiveUbound=ifubnd, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  if (.not. associated (relative_layer_thickness)) then
+    allocate (relative_layer_thickness(RANGE3D), stat=istat)
   endif
 
   if (istat /= 0) then
-    write(message,'(A)') trim(name)//' cannot allocate memory for thickness_of_layers'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-    call MOSSCO_CompExit(gridComp, localrc)
-    rc = ESMF_RC_MEM_ALLOCATE
-    return
-  end if
-
-  if (.not. associated (relative_thickness_of_layers)) then
-    allocate (relative_thickness_of_layers(RANGE3D), stat=istat)
-  endif
-
-  if (istat /= 0) then
-    write(message,'(A)') trim(name)//' cannot allocate memory for relative_thickness_of_layers'
+    write(message,'(A)') trim(name)//' cannot allocate memory for relative_layer_thickness'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
     call MOSSCO_CompExit(gridComp, localrc)
     rc = ESMF_RC_MEM_ALLOCATE
@@ -1673,28 +1671,29 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     return
   end if
 
+  !> @todo Why do we allow localrc /= 0? (if there is no grid?)
   if (localrc == 0) then
 
-    !> Interface depth is a zero-based vector with one more index than
-    !> thickness_of_layers
-    do k = lbnd(3),ubnd(3)
+    do k = 0,ubnd(3)-lbnd(3)
 
-        thickness_of_layers(RANGE2D,k) = &
-          layers_height(RANGE2D,k) - layers_height(RANGE2D,k-1)
+      layer_thickness(RANGE2D,lbnd(3)+k) &
+        = interface_height_above_soil_surface(RANGE2D,iflbnd(3)+k+1) &
+        - interface_height_above_soil_surface(RANGE2D,iflbnd(3)+k)
 
-        relative_thickness_of_layers(RANGE2D,k) =  thickness_of_layers(RANGE2D,k) &
-          / (layers_height(RANGE2D,ubnd(3)) - layers_height(RANGE2D,lbnd(3)-1))
+      relative_layer_thickness(RANGE2D,lbnd(3)+k) &
+        =  layer_thickness(RANGE2D,lbnd(3)+k) &
+        / (interface_height_above_soil_surface(RANGE2D,ifubnd(3)) - interface_height_above_soil_surface(RANGE2D,iflbnd(3)))
     end do
 
     do k = ubnd(3),1,-1
-        if (k ==ubnd(3)) then
-          sigma_midlayer(RANGE2D,ubnd(3)) = -0.5_fp &
-            *  relative_thickness_of_layers(RANGE2D,ubnd(3))
-        else
-         sigma_midlayer(RANGE2D,k) = sigma_midlayer(RANGE2D,k+1) -0.5_fp &
-           * (relative_thickness_of_layers(RANGE2D,k) &
-           + relative_thickness_of_layers(RANGE2D,k+1) )
-        endif
+      if (k == ubnd(3)) then
+        sigma_midlayer(RANGE2D,ubnd(3)) = -0.5_fp &
+          *  relative_layer_thickness(RANGE2D,ubnd(3))
+      else
+        sigma_midlayer(RANGE2D,k) = sigma_midlayer(RANGE2D,k+1) - 0.5_fp &
+          * (relative_layer_thickness(RANGE2D,k) &
+          + relative_layer_thickness(RANGE2D,k+1) )
+      endif
     end do
 
     do j=1,jnum
@@ -1766,7 +1765,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
               & sedd90 , sedtyp , sink     , sinkf  , sour , sourf   , anymud      , wave ,  uorb, &
               & tper   , teta   , spm_concentration , BioEffects     , nybot       , sigma_midlayer, &
               & u_bot  , v_bot  , u2d      , v2d    , h0   , mask    , advancecount, taubn,eq_conc, &
-              & relative_thickness_of_layers, kmaxsd, taubmax )
+              & relative_layer_thickness, kmaxsd, taubmax )
 
   n = 0
 
@@ -2040,7 +2039,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       do l = 1, nfrac
         do k = 1,ubnd(3)
            depth_avg_spm_concentration (i,j,l)= depth_avg_spm_concentration (i,j,l) &
-             + spm_concentration (i,j,k,l) * thickness_of_layers (i,j,k)
+             + spm_concentration (i,j,k,l) * layer_thickness (i,j,k)
         end do
       end do
     end do
@@ -2175,7 +2174,7 @@ end subroutine Run
     if (associated(spm_concentration)) nullify (spm_concentration)
     if (associated(depth_avg_spm_concentration)) nullify (depth_avg_spm_concentration)
     if (associated(sum_depth_avg_spm_concentration)) nullify (sum_depth_avg_spm_concentration)
-    if (associated(layers_height)) nullify (layers_height)
+    if (associated(interface_height_above_soil_surface)) nullify (interface_height_above_soil_surface)
     if (associated(rms_orbital_velocity%ptr)) nullify (rms_orbital_velocity%ptr)
     if (associated(equilibrium_spm%ptr)) nullify (equilibrium_spm%ptr)
     if (associated(bottom_shear_stress%ptr)) nullify (bottom_shear_stress%ptr)
@@ -2183,8 +2182,8 @@ end subroutine Run
     if (associated(mask)) nullify(mask)
     if (associated(area)) nullify(area)
 
-    if (associated(thickness_of_layers)) deallocate (thickness_of_layers)
-    if (associated(relative_thickness_of_layers)) deallocate (relative_thickness_of_layers)
+    if (associated(layer_thickness)) deallocate (layer_thickness)
+    if (associated(relative_layer_thickness)) deallocate (relative_layer_thickness)
     if (associated(sigma_midlayer)) deallocate (sigma_midlayer)
     if (associated(sediment_mass)) nullify (sediment_mass)
 
