@@ -158,7 +158,7 @@ libmossco_getm: libmossco_getm_driver libmossco_util \
 libmossco_technical: prefix libmossco_util test_component.F90 \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_technical.a(empty_component.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_technical.a(dummy_component.o) \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_technical.a(test_component.o) \
+#	$(MOSSCO_LIBRARY_PATH)/libmossco_technical.a(test_component.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_technical.a(inout_component.o)
 
 libmossco_aggregation: prefix libmossco_util  \
