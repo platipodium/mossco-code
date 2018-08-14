@@ -1649,28 +1649,28 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
   if (.not. associated (relative_layer_thickness)) then
     allocate (relative_layer_thickness(RANGE3D), stat=istat)
-  endif
 
-  if (istat /= 0) then
-    write(message,'(A)') trim(name)//' cannot allocate memory for relative_layer_thickness'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-    call MOSSCO_CompExit(gridComp, localrc)
-    rc = ESMF_RC_MEM_ALLOCATE
-    return
-  end if
+    if (istat /= 0) then
+      write(message,'(A)') trim(name)//' cannot allocate memory for relative_layer_thickness'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      call MOSSCO_CompExit(gridComp, localrc)
+      rc = ESMF_RC_MEM_ALLOCATE
+      return
+    end if
+  endif
 
   if (.not. associated (sigma_midlayer)) then
     allocate (sigma_midlayer  (RANGE3D), stat = istat)
-  endif
 
-  if (istat /= 0) then
-    write(message,'(A)') trim(name)//' cannot allocate memory for mid_layer'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-    call MOSSCO_CompExit(gridComp, localrc)
-    rc = ESMF_RC_MEM_ALLOCATE
-    return
-  end if
-
+    if (istat /= 0) then
+      write(message,'(A)') trim(name)//' cannot allocate memory for mid_layer'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      call MOSSCO_CompExit(gridComp, localrc)
+      rc = ESMF_RC_MEM_ALLOCATE
+      return
+    end if
+endif
+  
   !> @todo Why do we allow localrc /= 0? (if there is no grid?)
   if (localrc == 0) then
 
