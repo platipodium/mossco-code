@@ -66,10 +66,6 @@ module filtration_component
       userRoutine=InitializeP2, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_READRESTART, phase=1, &
-      userRoutine=ReadRestart, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -228,7 +224,6 @@ module filtration_component
 
         otherCount = ubound(filterSpeciesList,1)
         allocate(partitionFactors(ubound(filterSpeciesList,2)-1), stat=localrc)
-        partitionFactors=0.0
 
         do j=1,otherCount
 
@@ -237,6 +232,7 @@ module filtration_component
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
  
           !> Add explicit partitioning and balance 
+          partitionFactors=0.0
           do k=2, ubound(filterSpeciesList, 2)
             if (filterSpeciesList(j,k) == '')  exit
 
@@ -249,6 +245,7 @@ module filtration_component
             endif
           enddo
           partitionFactors=partitionFactors/sum(partitionFactors)
+          
 
           do k=2, ubound(filterSpeciesList, 2)
             if (filterSpeciesList(j,k) == '')  exit
@@ -600,12 +597,12 @@ module filtration_component
 
       allocate(partitionFactors(ubound(filterSpeciesList,2)-1), stat=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      partitionFactors = 0.0
 
       do i = lbound(filterSpeciesList,1), ubound(filterSpeciesList,1)
         write(message,'(A)') trim(name)//' filtrates also '//trim(filterSpeciesList(i,1))
 
         !> Add explicit partitioning and balance
+        partitionFactors = 0.0
         do j=2, ubound(filterSpeciesList, 2)
           if (filterSpeciesList(i,j) == '')  exit
 
@@ -671,36 +668,6 @@ module filtration_component
   end subroutine InitializeP2
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "ReadRestart"
-  subroutine ReadRestart(gridComp, importState, exportState, parentClock, rc)
-
-    type(ESMF_GridComp)   :: gridComp
-    type(ESMF_State)      :: importState
-    type(ESMF_State)      :: exportState
-    type(ESMF_Clock)      :: parentClock
-    integer, intent(out)  :: rc
-
-    integer(ESMF_KIND_I4)      :: localrc
-    type(ESMF_Time)            :: currTime
-    character(len=ESMF_MAXSTR) :: name
-
-    rc = ESMF_SUCCESS
-
-    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
-      importState=importState,  exportState=exportState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    !> Here omes your restart code, which in the simplest case copies
-    !> values from all fields in importState to those in exportState
-
-    call MOSSCO_CompExit(gridComp, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-  end subroutine ReadRestart
-
-#undef  ESMF_METHOD
 #define ESMF_METHOD "Run"
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
@@ -728,7 +695,7 @@ module filtration_component
     logical, allocatable, dimension(:,:,:)       :: mask
     type(ESMF_Field)        :: field
     type(ESMF_Grid)         :: grid
-    integer(ESMF_KIND_I4)   :: localrc, i, rank, otherCount, fieldCount, j, k
+    integer(ESMF_KIND_I4)   :: localrc, i, rank, otherCount, fieldCount, j, k, l
     real(ESMF_KIND_R8)      :: musselMass, scaleFactor
     real(ESMF_KIND_R8)      :: maximumRelativeChange
     real(ESMF_KIND_R8)      :: integration_timestep, threshold
@@ -746,6 +713,7 @@ module filtration_component
     real(ESMF_KIND_R8),parameter:: pi=3.141592653589793d0
     integer(ESMF_KIND_I8)       :: advanceCount
     real(ESMF_KIND_R8), parameter :: respiration_fraction=0.2
+    real(ESMF_KIND_R8), allocatable :: partitionFactors(:)
 
     rc = ESMF_SUCCESS
 
@@ -1201,6 +1169,7 @@ module filtration_component
 
       if (allocated(filterSpeciesList)) then
         otherCount = ubound(filterSpeciesList,1)
+        allocate(partitionFactors(ubound(filterSpeciesList, 2)-1))
       else
         otherCount = 0
       endif
@@ -1280,51 +1249,55 @@ module filtration_component
         call MOSSCO_FieldString(fieldList(1),message)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-        !> If there is a product from the educt, then add the lossRate previously calculated
+        !> If there is one or more product from the educt, then add the lossRate previously calculated
         !> to the product flux
-        if (trim(filterSpeciesList(i,2)) == '') cycle
+        partitionFactors=0.0
+        do l=2, ubound(filterSpeciesList, 2)
+        
+          if (trim(filterSpeciesList(i,l)) == '') exit
 
-        write(fluxName,'(A)') trim(filterSpeciesList(i,2))//'_flux_in_water'
+          write(fluxName,'(A)') trim(filterSpeciesList(i,l))//'_flux_in_water'
 
-        call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
-          itemSearch=trim(fluxName), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-        do j=1, fieldCount
-          call ESMF_AttributeGet(fieldList(j), 'creator', creatorName, defaultValue='none', rc=localrc)
+          call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
+            itemSearch=trim(fluxName), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          if (trim(creatorName) /= trim(name)) then
-            fieldCount=fieldCount - 1
+          do j=1, fieldCount
+            call ESMF_AttributeGet(fieldList(j), 'creator', creatorName, defaultValue='none', rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+            if (trim(creatorName) /= trim(name)) then
+              fieldCount=fieldCount - 1
+              cycle
+            endif
+            field=fieldList(j)
+            exit
+          enddo
+
+          if (fieldCount /= 1) then
+            write(message,'(A)') trim(name)//' did not find matching field with name '//trim(fluxName)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
             cycle
           endif
-          field=fieldList(j)
-          exit
+
+          call ESMF_FieldGet(field, farrayPtr=productionRate,  rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          !> This assumes that the educt and product share the same unit
+          where(mask(RANGE3D))
+            productionRate(RANGE3D) = productionRate(RANGE3D) - partitionFactors(l-1)*lossRate(RANGE3D)
+          endwhere
+
+          write(message,'(A,ES10.3)') trim(name)//' produces up to ', &
+            partitionFactors(l-1)*maxval(-lossRate(RANGE3D), mask=mask(RANGE3D))
+          call ESMF_AttributeGet(field, 'units', value=string, &
+            defaultValue='', rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          call MOSSCO_MessageAdd(message,' '//trim(string))
+          call MOSSCO_FieldString(fieldList(1),message)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
         enddo
-
-        if (fieldCount /= 1) then
-          write(message,'(A)') trim(name)//' did not find matching field with name '//trim(fluxName)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-          cycle
-        endif
-
-        call ESMF_FieldGet(field, farrayPtr=productionRate,  rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-        !> This assumes that the educt and product share the same unit
-        where(mask(RANGE3D))
-          productionRate(RANGE3D) = productionRate(RANGE3D) - lossRate(RANGE3D)
-        endwhere
-
-        write(message,'(A,ES10.3)') trim(name)//' produces up to ', &
-          maxval(-lossRate(RANGE3D), mask=mask(RANGE3D))
-        call ESMF_AttributeGet(field, 'units', value=string, &
-          defaultValue='', rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        call MOSSCO_MessageAdd(message,' '//trim(string))
-        call MOSSCO_FieldString(fieldList(1),message)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
       enddo
     enddo
 
