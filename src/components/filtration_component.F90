@@ -125,9 +125,10 @@ module filtration_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(ESMF_MAXSTR)  :: name, message, configfilename, itemName
+    character(ESMF_MAXSTR)  :: name, message, configfilename, itemName, string
     type(ESMF_Time)         :: currTime
-    integer(ESMF_KIND_I4)   :: localrc, rank, otherCount, i, j, diagCount
+    integer(ESMF_KIND_I4)   :: localrc, rank, otherCount, i, j, k, diagCount
+    integer(ESMF_KIND_I4)   :: starIndex
     type(ESMF_Field)        :: field
     type(ESMF_FieldBundle)  :: fieldBundle
     type(ESMF_Config)       :: config
@@ -139,6 +140,7 @@ module filtration_component
     character(len=ESMF_MAXSTR)  :: xVelocity, yVelocity
     character(len=ESMF_MAXSTR), allocatable  :: filterSpeciesList(:,:), itemNameList(:)
     character(len=ESMF_MAXSTR), allocatable  :: diagNameList(:), filterSpecies(:)
+    real(ESMF_KIND_R8), allocatable          :: partitionFactors(:)
 
     type(MOSSCO_ParameterType), dimension(10) :: parameters
 
@@ -225,19 +227,54 @@ module filtration_component
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         otherCount = ubound(filterSpeciesList,1)
+        allocate(partitionFactors(ubound(filterSpeciesList,2)-1), stat=localrc)
+        partitionFactors=0.0
 
         do j=1,otherCount
+
           write(message,'(A)') trim(name)//' co-filters '
           call MOSSCO_MessageAdd(message, ' '//trim(filterSpeciesList(j,1)), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+ 
+          !> Add explicit partitioning and balance 
+          do k=2, ubound(filterSpeciesList, 2)
+            if (filterSpeciesList(j,k) == '')  exit
 
-          if (filterSpeciesList(j,2) /= '') then
-            call MOSSCO_MessageAdd(message,' => '//trim(filterSpeciesList(j,2)), rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-          endif
+            string = filterSpeciesList(j,k)
+            starIndex=index('*',string)
+            if (starIndex>1) then 
+              read(string(1:starIndex-1), *) partitionFactors(k-1)
+            else
+              partitionFactors(k-1) = 1.0
+            endif
+          enddo
+          partitionFactors=partitionFactors/sum(partitionFactors)
+
+          do k=2, ubound(filterSpeciesList, 2)
+            if (filterSpeciesList(j,k) == '')  exit
+
+            if (k==2) then 
+              call MOSSCO_MessageAdd(message,' =>', rc=localrc)
+            else
+              call MOSSCO_MessageAdd(message,' + ', rc=localrc)
+            endif
+
+            write(string,'(F4.2,A)') partitionFactors(k-1), '*'
+            call MOSSCO_MessageAdd(message,trim(string), rc=localrc)
+
+            string = filterSpeciesList(j,k)
+            starIndex=index('*',string)
+            if (starIndex>1) then 
+              call MOSSCO_MessageAdd(message,trim(string(starIndex+1:)), rc=localrc)
+            else
+              call MOSSCO_MessageAdd(message,trim(string), rc=localrc)
+            endif
+          enddo
 
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         enddo
+        deallocate(partitionFactors, stat=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       else
         otherCount = 0
       endif
@@ -348,11 +385,14 @@ module filtration_component
       diagNameList(ubound(diagNameList,1))=trim(filterSpecies(2))
     endif
     do i=lbound(filterSpeciesList,1), ubound(filterSpeciesList,1)
-      if (filterSpeciesList(i,2) == '') cycle
-      call MOSSCO_Reallocate(diagNameList, ubound(diagNameList,1) + 1, keep=.true., rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      diagNameList(ubound(diagNameList,1))=trim(filterSpeciesList(i,2))
+      do j=2, ubound(filterSpeciesList,2) 
+        if (filterSpeciesList(i,j) == '') exit
+        call MOSSCO_Reallocate(diagNameList, ubound(diagNameList,1) + 1, keep=.true., rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        diagNameList(ubound(diagNameList,1))=trim(filterSpeciesList(i,j))
+      enddo
     enddo
 
     !> Create export states for all variables above index 5,  add diagnostic variables
@@ -424,20 +464,21 @@ module filtration_component
 
     character(ESMF_MAXSTR)  :: name, message
     character(ESMF_MAXSTR), allocatable  :: filterSpeciesList(:,:), filterSpecies(:)
-    character(ESMF_MAXSTR)  :: foreignGridFieldName
+    character(ESMF_MAXSTR)  :: foreignGridFieldName, string
     type(ESMF_Time)         :: currTime
 
     type(ESMF_Grid)             :: grid, grid2
     type(ESMF_Field)            :: field
     type(ESMF_Field), allocatable, dimension(:) :: fieldList
-    integer(ESMF_KIND_I4)       :: localrc, i, rank, gridRank
+    integer(ESMF_KIND_I4)       :: localrc, i, rank, gridRank, j
     type(ESMF_FieldStatus_Flag) :: fieldStatus
     type(ESMF_StateItem_Flag)   :: itemType
     type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
     character(len=ESMF_MAXSTR), allocatable :: itemNameList(:), diagNameList(:)
     character(len=ESMF_MAXSTR)              :: itemName
-    integer(ESMF_KIND_I4)                   :: itemCount
+    integer(ESMF_KIND_I4)                   :: itemCount, starIndex
     real(ESMF_KIND_R8)                      :: musselMass, minimumFoodFlux
+    real(ESMF_KIND_R8), allocatable         :: partitionFactors(:)
 
     rc = ESMF_SUCCESS
 
@@ -556,13 +597,56 @@ module filtration_component
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (allocated(filterSpeciesList)) then
+
+      allocate(partitionFactors(ubound(filterSpeciesList,2)-1), stat=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      partitionFactors = 0.0
+
       do i = lbound(filterSpeciesList,1), ubound(filterSpeciesList,1)
         write(message,'(A)') trim(name)//' filtrates also '//trim(filterSpeciesList(i,1))
-        if ((ubound(filterSpeciesList,2) == 2) .and. (filterSpeciesList(i,2) /= '')) then
-          write(message,'(A)') trim(message)//' => '//trim(filterSpeciesList(i,2))
-        endif
+
+        !> Add explicit partitioning and balance
+        do j=2, ubound(filterSpeciesList, 2)
+          if (filterSpeciesList(i,j) == '')  exit
+
+          string = filterSpeciesList(i,j)
+          starIndex=index('*',string)
+          if (starIndex>1) then
+            read(string(1:starIndex-1), *) partitionFactors(j-1)
+          else
+            partitionFactors(j-1) = 1.0
+          endif
+        enddo
+        partitionFactors=partitionFactors/sum(partitionFactors)
+
+        do j=2, ubound(filterSpeciesList, 2)
+
+          if (trim(filterSpeciesList(i,j)) == '') exit
+          
+
+          if (j==2) then
+            call MOSSCO_MessageAdd(message,' =>', rc=localrc)
+          else
+            call MOSSCO_MessageAdd(message,' + ', rc=localrc)
+          endif
+
+          write(string,'(F4.2,A)') partitionFactors(j-1), '*'
+          call MOSSCO_MessageAdd(message,trim(string), rc=localrc)
+
+          string = filterSpeciesList(i,j)
+          starIndex=index('*',string)
+          if (starIndex>1) then
+            call MOSSCO_MessageAdd(message,trim(string(starIndex+1:)), rc=localrc)
+          else
+            call MOSSCO_MessageAdd(message,trim(string), rc=localrc)
+          endif
+        enddo
+
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       enddo
+
+      deallocate(partitionFactors, stat=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
 
     call MOSSCO_AttributeGet(gridComp, 'diagnostic_variables', diagNameList, rc=localrc)
