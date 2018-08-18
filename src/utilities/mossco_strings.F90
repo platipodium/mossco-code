@@ -213,6 +213,7 @@ contains
      integer             :: o
 
      o=order(i)
+     if (i<0) o=o+1
      if (o<1) o=1
      if (o>9) o=9
      write(intformat_i8,'(A,I1,A,I1)') 'I', o , '.', o
