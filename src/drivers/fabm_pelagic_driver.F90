@@ -641,18 +641,22 @@
 
   !> update pelagic FABM export states pointers and sinking velocities using a list of export states
 
-  subroutine update_export_states(pf,update_sinking)
+  subroutine update_export_states(pf, update_sinking, rc)
 
     class(type_mossco_fabm_pelagic) :: pf
-    logical,optional :: update_sinking
+    logical, intent(in), optional   :: update_sinking
+    integer, intent(out), optional  :: rc
 
     real(rk),dimension(pf%inum,pf%jnum,pf%knum,pf%nvar) :: wstmp
     real(rk),dimension(:,:,:),pointer :: p3d
 
     type(export_state_type),pointer :: export_state
-    integer :: n,i,j,k
+    integer :: n,i,j,k, rc_
     integer,dimension(4) :: lbnd
     logical :: update_sinking_eff
+
+    rc_ = 0
+    if (present(rc)) rc = 0
 
     update_sinking_eff=.true.
     if (present(update_sinking)) update_sinking_eff=update_sinking
@@ -660,7 +664,7 @@
       do i=1,pf%inum
         do j=1,pf%jnum
           do k=1,pf%knum
-            call fabm_get_vertical_movement(pf%model,i,j,k,wstmp(i,j,k,:))
+            call fabm_get_vertical_movement(pf%model, i, j, k, wstmp(i,j,k,:))
           end do
         end do
       end do
