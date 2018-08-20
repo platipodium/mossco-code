@@ -741,7 +741,7 @@ subroutine MOSSCO_GridString(grid, message, kwe, length, options, staggerLoc, rc
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   call ESMF_GridGetFieldBounds(grid, totalUBound=ubnd, &
-    totalLBound=lbnd, rc=localrc)
+        totalLBound=lbnd, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   write(formatString,'(A)') '(X,'//intformat(ubnd(1)-lbnd(1)+1)//')'
@@ -779,13 +779,12 @@ subroutine MOSSCO_GridString(grid, message, kwe, length, options, staggerLoc, rc
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       write(formatString,'(A)') '(A,'//intformat(count(mask3>0))//')'
-      write(string, formatString) trim(string)//' m=',count(mask3>0)
+      write(string,formatString) trim(string)//' m=',count(mask3>0)
 
     endif
   endif
 
   call MOSSCO_MessageAdd(message, trim(string)//')', rc=localrc)
-  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   nullify(mask1)
   nullify(mask2)
