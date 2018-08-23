@@ -3334,8 +3334,8 @@ end subroutine MOSSCO_FieldCopyAttribute
     integer(ESMF_KIND_I4), optional :: rc
 
     integer(ESMF_KIND_I4)           :: localRc, i, j, maxDigits, count, itemCount
-    character(len=ESMF_MAXPATHLEN)  :: string, message
-    character(len=ESMF_MAXSTR)      :: name, attributeName
+    character(len=ESMF_MAXPATHLEN)  :: string, message 
+    character(len=ESMF_MAXSTR)      :: name, attributeName, formatString
     integer(ESMF_KIND_I4)           :: totalLWidth(7), totalUWidth(7)
     type(ESMF_TypeKind_Flag)        :: typeKind
     logical, allocatable            :: logicalValueList(:)
@@ -3429,11 +3429,11 @@ end subroutine MOSSCO_FieldCopyAttribute
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        write(message,'(A,I3.3)') trim(message)//' ',integer4ValueList(1)
+        call MOSSCO_MessageAdd(message,' '//trim(intString(integer4ValueList(1))))
         do j=2, itemCount-1
-          write(string,'(A,I3.3)') ', ',integer4ValueList(j)
-          call MOSSCO_MessageAdd(message,trim(string))
+          call MOSSCO_MessageAdd(message,', '//trim(intString(integer4ValueList(1))))
         enddo
+
         deallocate(integer4ValueList)
       elseif (typekind==ESMF_TYPEKIND_I8) then
         call MOSSCO_MessageAdd(message,' (I8)')
@@ -3442,11 +3442,11 @@ end subroutine MOSSCO_FieldCopyAttribute
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        write(message,'(A,I3.3)') trim(message)//' ',integer8ValueList(1)
+        call MOSSCO_MessageAdd(message,' '//trim(intString(integer8ValueList(1))))
         do j=2, itemCount-1
-          write(string,'(A,I3.3)') ', ',integer8ValueList(j)
-          call MOSSCO_MessageAdd(message,trim(string))
+          call MOSSCO_MessageAdd(message,', '//trim(intString(integer8ValueList(1))))
         enddo
+        
         deallocate(integer8ValueList)
       elseif (typekind==ESMF_TYPEKIND_R4) then
         call MOSSCO_MessageAdd(message,' (R4)')
