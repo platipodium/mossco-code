@@ -2471,7 +2471,7 @@ contains
           if (.not.ismatch) then
             if (verbose_) then
               write(message,'(A)') trim(owner_)//' did not include'
-              call MOSSCO_MessageAdd(message,' '//itemNameList(i))
+              call MOSSCO_MessageAdd(message,' '//trim(itemNameList(i)), rc=localrc)
               call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
             endif
             cycle
