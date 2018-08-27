@@ -908,7 +908,7 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     call nc%put_variable(field, name=trim(fieldName), &
       checkNaN=checkNaN_, checkInf=checkInf_, owner=trim(owner_), rc=localrc)
     if (localrc /= ESMF_SUCCESS) then
-      write(message,'(A)') '-- could not write'
+      write(message,'(A)') trim(owner_)//' could not write'
       call MOSSCO_FieldString(field, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
     endif
