@@ -3717,60 +3717,63 @@ module mossco_netcdf
     character(len=*), intent(in), optional           :: owner
     integer(ESMF_KIND_I4), intent(out), optional     :: rc
 
-
     integer(ESMF_KIND_I4)                        :: localrc, i, n, rc_
     integer(ESMF_KIND_I4)                        :: rank, decount,localPet
     integer(ESMF_KIND_I4),allocatable            :: minIndexPDe(:,:), maxIndexPDe(:,:), deBlockList(:,:,:)
     type(ESMF_DistGrid)                          :: distGrid
     type(ESMF_DELayout)                          :: delayout
     type(ESMF_Vm)                                :: Vm
+    character(len=ESMF_MAXSTR)                   :: owner_
 
     rc_ = ESMF_SUCCESS
+    owner_ = '--'
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
 
     nullify(intPtr1)
 
     call ESMF_GridGet(grid, distGrid=distGrid, rank=rank, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_DistGridGet(distGrid, delayout=delayout, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_DELayoutGet(delayout, deCount=deCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    allocate(minIndexPDe(rank, deCount))
-    allocate(maxIndexPDe(rank, deCount))
-    allocate(deBlockList(rank, 2, deCount))
+    allocate(minIndexPDe(rank, deCount), stat=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    allocate(maxIndexPDe(rank, deCount), stat=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    allocate(deBlockList(rank, 2, deCount), stat=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_DistGridGet(distGrid, minIndexPDe=minIndexPDe, &
-                                    maxIndexPDe=maxIndexPDe, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      maxIndexPDe=maxIndexPDe, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     deBlockList(:,1,:) = minIndexPDe
     deBlockList(:,2,:) = maxIndexPDe
 
     call ESMF_VmGetGlobal(vm, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     !> @todo decount instead of petCount
     call ESMF_VmGet(vm, localPet=localPet, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     n=deBlockList(coordDim,2,localPet+1)-deBlockList(coordDim,1,localPet+1)+1
-    allocate(intPtr1(n))
+    allocate(intPtr1(n), stat=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
     do i=1,n
       intPtr1(i)=deBlockList(coordDim,1,localPet+1)+i-1
     enddo
 
    ! write (0,*) 'c, deBlockList1 = ', coordDim, deBlockList(coordDim,1,localPet+1), deBlockList(coordDim,2,localPet+1)
-
-    if (present(rc)) rc=rc_
 
   end subroutine grid_get_coordinate_axis
 
