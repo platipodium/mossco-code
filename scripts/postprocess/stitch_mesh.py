@@ -16,34 +16,32 @@ import netCDF4 as netcdf
 import glob as glob
 import numpy as np
 import sys
-import os
 
-if len(sys.argv) > 1:
-  prefix = sys.argv[1]
-else:
-  prefix = u"mossco_gfs"
-  prefix = u"t1000/schism_mesh_output"
-
-if prefix.endswith('.nc'):
-  pattern=prefix
-  prefix=pattern.split('*')[0]
-  if prefix.endswith('_'):
-    prefix=prefix[0:-1]
-else:
-  pattern=prefix + u'.*.nc'
-
+prefix = u"schism_mesh_output"
+pattern=prefix + u'.*.nc'
 petlist=[]
+timelist=[1000]
 key=''
 val=''
 excl_variables=[]
 outfile=prefix + '_stitched.nc'
 incl_variables=[]
 
-for i in range(1,len(sys.argv)):
+for i in range(0,len(sys.argv)):
     arg=sys.argv[i]
     if arg[0:2] == '--':
         key=arg.split('=')[0]
         val=arg.split('=')[1]
+    else:
+        prefix=arg
+        if prefix.endswith('.nc'):
+            pattern=prefix
+            prefix=pattern.split('*')[0]
+            if prefix.endswith('_'):
+                prefix=prefix[0:-1]
+            else:
+                pattern=prefix + u'.*.nc'
+        continue
 
     if key=='--include':
         incl_variables=val.split(',')
@@ -57,26 +55,33 @@ for i in range(1,len(sys.argv)):
     if key=='--level':
         levellist=val.split(',')
 
+    if key=='--pet':
+        petlist=val.split(',')
+
+    if key=='--time':
+        petlist=val.split(',')
+
+    
 #print petlist
 files=glob.glob(pattern)
 if len(petlist) > 0 and len(files) > 0:
     fileparts=files[0].split('.')
     files=[]
-    print fileparts
+    print (fileparts)
     petlen=len(fileparts[-2])
     for i,p in enumerate(petlist):
-        if petlen==1: f='%s.%1.1d.nc'%(os.path.join(fileparts[:-2])[0],int(p))
-        if petlen==2: f='%s.%2.2d.nc'%(os.path.join(fileparts[:-2])[0],int(p))
-        if petlen==3: f='%s.%3.3d.nc'%(os.path.join(fileparts[:-2])[0],int(p))
-        if petlen==4: f='%s.%4.4d.nc'%(os.path.join(fileparts[:-2])[0],int(p))
-        if petlen==5: f='%s.%5.5d.nc'%(os.path.join(fileparts[:-2])[0],int(p))
+        if petlen==1: f='%s.%1.1d.nc'%('.'.join(fileparts[:-2]),int(p))
+        if petlen==2: f='%s.%2.2d.nc'%('.'.join(fileparts[:-2]),int(p))
+        if petlen==3: f='%s.%3.3d.nc'%('.'.join(fileparts[:-2]),int(p))
+        if petlen==4: f='%s.%4.4d.nc'%('.'.join(fileparts[:-2]),int(p))
+        if petlen==5: f='%s.%5.5d.nc'%('.'.join(fileparts[:-2]),int(p))
         files.append(f)
 
 if len(files)<1:
-  print "Did not find any files for pattern "+pattern
+  print ("Did not find any files for pattern "+pattern)
   quit()
 else:
-  print "Using input files " + pattern + " for output file " + outfile
+  print("Using input files " + pattern + " for output file " + outfile)
 
 # Assembling a set of global node and element ids
 
@@ -133,12 +138,15 @@ except:
   ncout.close()
   ncout = netcdf.Dataset(outfile, 'w', format='NETCDF4_CLASSIC')
 
-for key,value in nc.dimensions.iteritems():
+for key,value in nc.dimensions.items():
 
-    if ncout.dimensions.has_key(key): continue
+    if key in ncout.dimensions: continue
 
-    if key == 'time' and len(time)>0:
-        ncout.createDimension('time',len(time))
+    if key == 'time':
+        if (len(timelist)>0):  
+            ncout.createDimension('time',len(timelist))
+        elif len(time)>0:
+            ncout.createDimension('time',len(time))
     elif key == 'mesh_element':
         ncout.createDimension(key,elem_id_max)
     elif key == 'mesh_node':
@@ -161,20 +169,26 @@ else:
   incl_variables.extend(['mesh_node_lat','mesh_node_lon','mesh_element_node_connectivity','mesh_element_lon','mesh_element_lat'])
   incl_variables.append('time')
 
-  for key,value in nc.variables.iteritems():
+  for key,value in nc.variables.items():
     try:
         incl_variables.extend(value.coordinates.split(' '))
     except:
         pass
 
-incl_variables=list(set(incl_variables))
-print incl_variables
+incl_variables=set(incl_variables)
+try: incl_variables.remove('mesh_global_element_id')
+except: pass
+try: incl_variables.remove('mesh_global_node_id')
+except: pass
 
-for key,value in nc.variables.iteritems():
+incl_variables=list(set(incl_variables))
+print( incl_variables)
+
+for key,value in nc.variables.items():
   dims=list(value.dimensions)
 
- #if key == 'mesh_element_node_connectivity':
- #      dims = list(value.dimensions[1:])
+  if key == 'mesh_element_node_connectivity':
+      if 'time' in value.dimensions: dims = list(value.dimensions[1:])
 
   if (key in incl_variables):
     try:
@@ -185,10 +199,14 @@ for key,value in nc.variables.iteritems():
     for att in value.ncattrs():
       if att == '_FillValue': continue
       var.setncattr(att,value.getncattr(att))
-    print 'Created for output variable ', key , tuple(dims)
+    print ('Created for output variable ', key , tuple(dims))
 
 # Now add values to time and coordinate variables
-if 'time' in ncout.variables: ncout.variables['time'][:]=time
+if 'time' in ncout.variables:
+    if len(timelist)>0:
+        ncout.variables['time'][:]=time[timelist]
+    else:
+        ncout.variables['time'][:]=time
 if 'mesh_node_lat' in ncout.variables: ncout.variables['mesh_node_lat'][:]=node_lat
 if 'mesh_node_lon' in ncout.variables: ncout.variables['mesh_node_lon'][:]=node_lon
 if 'mesh_element_lat' in ncout.variables: ncout.variables['mesh_element_lat'][:]=elem_lat
@@ -207,14 +225,17 @@ if 'mesh_element_node_connectivity' in ncout.variables:
 
 ncout.Conventions = "CF-1.7, UGRID-1.0" ;
 
-for key, value in nc.variables.iteritems():
+for key, value in nc.variables.items():
 
     if 'mesh_node'    in value.dimensions: continue
     if 'mesh_element' in value.dimensions: continue
 
     if not key in ncout.variables.keys(): continue
 
-    ncout.variables[key][:]=nc.variables[key][:]
+    if 'time' in value.dimensions and len(timelist)>0:
+        ncout.variables[key][:]=nc.variables[key][timelist]
+    else:        
+        ncout.variables[key][:]=nc.variables[key][:]
     print ('Added non-meshed information ' + key)
 
 nc.close()
@@ -224,7 +245,7 @@ for f in files[:]:
     try:
         nc=netcdf.Dataset(f,'r')
     except:
-        print 'Dataset is already open'
+        print( 'Dataset is already open')
 
     # Note that in the .nc file, the node id's are 1-based
     if nc.variables['mesh_global_node_id'].dimensions[0] == 'time':
@@ -234,7 +255,7 @@ for f in files[:]:
         node_id_global=list(nc.variables['mesh_global_node_id'][:]-1)
         elem_id_global=list(nc.variables['mesh_global_element_id'][:]-1)
 
-    for key, value in nc.variables.iteritems():
+    for key, value in nc.variables.items():
 
         if not key in ncout.variables: continue
 
@@ -247,7 +268,7 @@ for f in files[:]:
     ncout.variables['mesh_node_lon'].standard_name='longitude'
     ncout.variables['mesh_node_lat'].standard_name='latitude'
 
-    for key, value in nc.variables.iteritems():
+    for key, value in nc.variables.items():
 
         if key in ['mesh_node_lat','mesh_node_lon','mesh_element_node_connectivity','mesh_element_lon','mesh_element_lat','time']: continue
 
@@ -262,26 +283,41 @@ for f in files[:]:
         else:
             continue
 
+        var = ncout.variables[key]
         mesh_index_position = value.dimensions.index(mesh_location)
+        if 'time' in value.dimensions: 
+            time_index_position = value.dimensions.index('time')
         if len(value.shape) == 1:
-            ncout.variables[key][mesh_index] == value[:]
+            if 'time' in value.dimensions and len(timelist)>0:
+                var[mesh_index] == value[timelist]
+            else:
+                var[mesh_index] == value[:]
         elif len(value.shape) == 2:
             if mesh_index_position == 0:
-                ncout.variables[key][mesh_index,:] == value[:]
+                var[mesh_index,:] = value[:]
             else:
-                ncout.variables[key][:,mesh_index] == value[:]
+                if 'time' in value.dimensions and len(timelist)>0:
+                    var[:,mesh_index] = value[timelist,:]
+                else:
+                    var[:,mesh_index] = value[:]
         elif len(value.shape) == 3:
             if mesh_index_position == 0:
-                ncout.variables[key][mesh_index,:,:] == value[:]
+                var[mesh_index,:,:] = value[:]
             elif mesh_index_position == 1:
-                ncout.variables[key][:,mesh_index,:] == value[:]
+                if 'time' in value.dimensions and len(timelist)>0:
+                    var[:,mesh_index,:] = value[timelist,:,:]
+                else:
+                    var[:,mesh_index,:] = value[:,:,:]
             else:
-                ncout.variables[key][:,:,mesh_index] == value[:]
+                if 'time' in value.dimensions and len(timelist)>0:
+                    var[:,:,mesh_index] = value[timelist,:,:]
+                else:
+                    var[:,:,mesh_index] = value[:,:,:]
         else:
-            print 'Not implemented. skipped ' + key, value.shape
+            print ('Not implemented. skipped ' + key, value.shape)
 
         ncout.sync()
-        print 'Stitched ' + f + ' ' + key, value.shape
+        print ('Stitched ' + f + ' ' + key, value.shape)
 
     nc.close()
 
