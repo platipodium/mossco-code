@@ -22,7 +22,7 @@ EXTRA_DIST=README
 
 SUBDIRS=gotm remtc
 
-TARGETS=libmossco_technical libmossco_default
+TARGETS=libmossco_technical libmossco_default libmossco_random
 TARGETS+=libmossco_aggregation libmossco_grid
 TARGETS+=libmossco_simplewave libmossco_info libmossco_filtration
 

@@ -2297,6 +2297,7 @@ libs = {'gotm'       : ['solver', 'mossco_gotm'] ,
         'fabm_benthic' : ['mossco_fabmbenthic', 'util', 'solver'],
         'constant'   : ['constant', 'mossco_util'],
         'default'   :  ['default'],
+        'random'    _ ['random'],
         'clm_netcdf' : ['mossco_clm'],
         'benthos'    : ['mossco_benthos'],
         'grid'       : ['mossco_grid'],
@@ -2361,6 +2362,7 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'dummy'      : ['libmossco_technical'],
         'constant'   : ['libconstant libmossco_util'],
         'default'  : ['libdefault'],
+        'random'  : ['libmossco_random'],
         'gotm'       : ['libmossco_gotm', 'libsolver'],
         'fabm_gotm'                : ['libmossco_fabmgotm'],
         'gotmfabm'       : ['libmossco_gotmfabm', 'libsolver'],
@@ -2447,7 +2449,7 @@ libmossco_util libsolver:
 
 libsediment libconstant libdefault libmossco_clm libmossco_erosed \
 libmossco_fabm0d libmossco_fabmpelagic libmossco_filtration libmossco_grid \
-libmossco_fabmbenthic:
+libmossco_fabmbenthic libmossco_random:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libmossco_technical libmossco_getm libmossco_simplewave libmossco_netcdf libmossco_benthos:
