@@ -20,7 +20,7 @@ import sys
 prefix = u"schism_mesh_output"
 pattern=prefix + u'.*.nc'
 petlist=[]
-timelist=[1000]
+timelist=[]
 key=''
 val=''
 excl_variables=[]
@@ -297,7 +297,8 @@ for f in files[:]:
                 var[mesh_index,:] = value[:]
             else:
                 if 'time' in value.dimensions and len(timelist)>0:
-                    var[:,mesh_index] = value[timelist,:]
+                    var[:,mesh_index] = value[timelist,:].copy()
+                    #print(var.dimensions,var[:,mesh_index[0:10]],value[timelist,0:10])
                 else:
                     var[:,mesh_index] = value[:]
         elif len(value.shape) == 3:
