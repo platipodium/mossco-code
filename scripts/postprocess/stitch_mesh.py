@@ -61,7 +61,7 @@ for i in range(0,len(sys.argv)):
     if key=='--time':
         petlist=val.split(',')
 
-    
+
 #print petlist
 files=glob.glob(pattern)
 if len(petlist) > 0 and len(files) > 0:
@@ -143,7 +143,7 @@ for key,value in nc.dimensions.items():
     if key in ncout.dimensions: continue
 
     if key == 'time':
-        if (len(timelist)>0):  
+        if (len(timelist)>0):
             ncout.createDimension('time',len(timelist))
         elif len(time)>0:
             ncout.createDimension('time',len(time))
@@ -234,7 +234,7 @@ for key, value in nc.variables.items():
 
     if 'time' in value.dimensions and len(timelist)>0:
         ncout.variables[key][:]=nc.variables[key][timelist]
-    else:        
+    else:
         ncout.variables[key][:]=nc.variables[key][:]
     print ('Added non-meshed information ' + key)
 
@@ -285,41 +285,44 @@ for f in files[:]:
 
         var = ncout.variables[key]
         mesh_index_position = value.dimensions.index(mesh_location)
-        if 'time' in value.dimensions: 
-            time_index_position = value.dimensions.index('time')
-        if len(value.shape) == 1:
-            if 'time' in value.dimensions and len(timelist)>0:
-                var[mesh_index] == value[timelist]
-            else:
-                var[mesh_index] == value[:]
-        elif len(value.shape) == 2:
-            if mesh_index_position == 0:
-                var[mesh_index,:] = value[:]
-            else:
-                if 'time' in value.dimensions and len(timelist)>0:
-                    var[:,mesh_index] = value[timelist,:].copy()
-                    #print(var.dimensions,var[:,mesh_index[0:10]],value[timelist,0:10])
-                else:
-                    var[:,mesh_index] = value[:]
-        elif len(value.shape) == 3:
-            if mesh_index_position == 0:
-                var[mesh_index,:,:] = value[:]
-            elif mesh_index_position == 1:
-                if 'time' in value.dimensions and len(timelist)>0:
-                    var[:,mesh_index,:] = value[timelist,:,:]
-                else:
-                    var[:,mesh_index,:] = value[:,:,:]
-            else:
-                if 'time' in value.dimensions and len(timelist)>0:
-                    var[:,:,mesh_index] = value[timelist,:,:]
-                else:
-                    var[:,:,mesh_index] = value[:,:,:]
-        else:
-            print ('Not implemented. skipped ' + key, value.shape)
 
-        ncout.sync()
-        print ('Stitched ' + f + ' ' + key, value.shape)
+        try:
+            if 'time' in value.dimensions:
+                time_index_position = value.dimensions.index('time')
 
+            if len(value.shape) == 1:
+                if 'time' in value.dimensions and len(timelist)>0:
+                    var[mesh_index] == value[timelist].copy()
+                else:
+                    var[mesh_index] == value[:].copy()
+            elif len(value.shape) == 2:
+                if mesh_index_position == 0:
+                    var[mesh_index,:] = value[:].copy()
+                else:
+                    if 'time' in value.dimensions and len(timelist)>0:
+                        var[:,mesh_index] = value[timelist,:].copy()
+                    else:
+                        var[:,mesh_index] = value[:].copy()
+            elif len(value.shape) == 3:
+                if mesh_index_position == 0:
+                    var[mesh_index,:,:] = value[:].copy()
+                elif mesh_index_position == 1:
+                    if 'time' in value.dimensions and len(timelist)>0:
+                        var[:,mesh_index,:] = value[timelist,:,:].copy()
+                    else:
+                        var[:,mesh_index,:] = value[:].copy()
+                else:
+                    if 'time' in value.dimensions and len(timelist)>0:
+                        var[:,:,mesh_index] = value[timelist,:,:]
+                    else:
+                        var[:,:,mesh_index] = value[:].copy()
+            else:
+                print ('Not implemented. skipped ' + key, value.shape)
+
+            ncout.sync()
+            print ('Stitched ' + f + ' ' + key, value.shape)
+        except:
+            print ('Did not stitch ' + f + ' ' + key, value.shape)
     nc.close()
 
 ncout.close()
