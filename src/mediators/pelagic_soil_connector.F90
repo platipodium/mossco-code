@@ -1,9 +1,9 @@
 !> @brief Implementation of an ESMF soil to pelagic mediation
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
-!> @author Richard Hofmeister
-!> @author Carsten Lemmen
+!> @copyright Copyright (C) 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
+!> @author Richard Hofmeister <richard.hofmeister@hzg.de>
+!> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -17,8 +17,10 @@
 #define ESMF_FILENAME "pelagic_soil_connector.F90"
 
 #define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-#define RANGE2D lbnd(1):ubnd(1),lbnd(2):ubnd(2)
-#define RANGE3D lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)
+
+#define RANGE1D lbnd(1):ubnd(1)
+#define RANGE2D RANGE1D,lbnd(2):ubnd(2)
+#define RANGE3D RANGE2D,lbnd(3):ubnd(3)
 
 module pelagic_soil_connector
 
@@ -49,7 +51,6 @@ module pelagic_soil_connector
   real(ESMF_KIND_R8) :: half_sedimentation_tke=1.0d3 !> [m2/s2] use 50% of prescribed sinking factor for this tke
   real(ESMF_KIND_R8) :: critical_detritus=60.0 !> [mmolC/m3] use minimum sinking for det above critical_detritus
 
-
   public SetServices
 
   contains
@@ -69,17 +70,17 @@ module pelagic_soil_connector
 
     call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_INITIALIZE, phase=0, &
       userRoutine=InitializeP0, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_INITIALIZE, phase=1, &
       userRoutine=InitializeP1, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_RUN, Run, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_FINALIZE, Finalize, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine SetServices
 
@@ -103,31 +104,31 @@ module pelagic_soil_connector
     rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
 
     call ESMF_AttributeAdd(cplComp, convention="NUOPC", purpose="General", &
       attrList=(/"InitializePhaseMap"/), rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_AttributeSet(cplComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
       convention="NUOPC", purpose="General", rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_CompExit(cplComp, localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP0
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "InitializeP1"
-  subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
+  subroutine InitializeP1(cplcomp, importState, exportState, parentClock, rc)
 
     type(ESMF_CplComp)   :: cplcomp
     type(ESMF_State)     :: importState
     type(ESMF_State)     :: exportState
-    type(ESMF_Clock)     :: externalclock
+    type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
     type(ESMF_Field)            :: newfield
@@ -144,8 +145,8 @@ module pelagic_soil_connector
     type(ESMF_Grid)             :: grid
     type(ESMF_Field)            :: field
     integer(ESMF_KIND_I4)       :: rank, ubnd(2), lbnd(2), itemCount
-    real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3 => null()
-    real(ESMF_KIND_R8),dimension(:,:),   pointer :: ptr_f2 => null()
+    real(ESMF_KIND_R8),dimension(:,:,:), pointer :: farrayPtr3 => null()
+    real(ESMF_KIND_R8),dimension(:,:),   pointer :: farrayPtr2 => null()
     logical                     :: isPresent
     integer                     :: nmlunit=127
 
@@ -155,10 +156,11 @@ module pelagic_soil_connector
 
     rc = ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    !read namelist
+    !read namelist,
+    !@>todo Read from .cfg file and write attributes to component's attributes
     inquire(file=trim(name)//'.nml', exist=isPresent)
     if (isPresent) then
       open(nmlunit,file='pelagic_soil_connector.nml',action='read',status='old')
@@ -169,19 +171,18 @@ module pelagic_soil_connector
     !> @todo: check for necessary fields in export state?
 
     call MOSSCO_CompExit(cplComp, localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP1
 
-
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Run"
- subroutine Run(cplcomp, importState, exportState, externalclock, rc)
+ subroutine Run(cplcomp, importState, exportState, parentClock, rc)
 
     type(ESMF_CplComp)   :: cplcomp
     type(ESMF_State)     :: importState
     type(ESMF_State)     :: exportState
-    type(ESMF_Clock)     :: externalclock
+    type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
     logical  :: hasAmmonium = .false.
@@ -189,10 +190,10 @@ module pelagic_soil_connector
     logical  :: hasDIN = .false.
     logical  :: hasDIP = .false.
 
-    integer                     :: myrank
+    integer                     :: rank
     integer                     :: i,j,inum,jnum
-    integer                     :: lbnd(3)=1,ubnd(3)=1
-    integer                     :: lbnd_2nd(3)=1,ubnd_2nd(3)=1
+    integer(ESMF_KIND_I4), allocatable :: lbnd(:), ubnd(:)
+    integer(ESMF_KIND_I4), allocatable :: lbnd2(:), ubnd2(:)
     integer                     :: Clbnd(3),AMMlbnd(3),Plbnd(3)
     integer                     :: Cubnd(3),AMMubnd(3),Pubnd(3)
     type(ESMF_Time)             :: localtime
@@ -204,24 +205,31 @@ module pelagic_soil_connector
     real(ESMF_KIND_R8),dimension(:,:),pointer :: frac_ldet=>null()
     real(ESMF_KIND_R8),dimension(:,:),pointer :: frac_sdet=>null()
     real(ESMF_KIND_R8),dimension(:,:),pointer :: fac_env=>null()
-    real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3 => null()
-    real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3_2nd => null()
-    real(ESMF_KIND_R8),dimension(:,:),   pointer :: ptr_f2 => null()
+    real(ESMF_KIND_R8),dimension(:,:,:), pointer :: farrayPtr3 => null()
+    real(ESMF_KIND_R8),dimension(:,:,:), pointer :: farrayPtr32 => null()
+    real(ESMF_KIND_R8),dimension(:,:),   pointer :: farrayPtr2 => null()
+    real(ESMF_KIND_R8),dimension(:,:),   pointer :: farrayPtr22 => null()
+    real(ESMF_KIND_R8),dimension(:),     pointer :: farrayPtr1 => null()
+    real(ESMF_KIND_R8),dimension(:),     pointer :: farrayPtr12 => null()
 
     character(len=ESMF_MAXSTR)  :: name, message
     type(ESMF_Time)             :: currTime, stopTime
     integer                     :: localrc, oxyrc, odurc, fieldCount
-    integer(ESMF_KIND_I8)       :: advanceCount
-    logical                     :: verbose=.true.
-    type(ESMF_Field), allocatable :: fieldList(:)
+    integer(ESMF_KIND_I8)               :: advanceCount
+    logical                             :: verbose=.true.
+    type(ESMF_Field), allocatable       :: fieldList(:)
     character(len=ESMF_MAXSTR), pointer :: includeList(:) => null()
+    type(ESMF_Clock)                    :: clock
 
     rc = ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_ClockGet(externalClock, advanceCount=advanceCount, rc=localrc)
+    call ESMF_CplCompGet(cplComp, clock=clock, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_ClockGet(clock, advanceCount=advanceCount, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (advanceCount > 0) verbose=.false.
@@ -251,49 +259,184 @@ module pelagic_soil_connector
     endif
 
     !> Get oxygen, both positive and negative (odu), and transfer it to the
-    !> soil surface (optional )
-    call mossco_state_get(importState,(/ &
-        'concentration_of_dissolved_oxygen_in_water', &
-        'oxygen_in_water                           ', &
-        'dissolved_oxygen_oxy_in_water             ', &
-        'dissolved_oxygen_in_water                 '/), &
-        ptr_f3,lbnd=lbnd,ubnd=ubnd, verbose=verbose, rc=oxyrc)
+    !> soil surface (optional)
+    if (associated(includeList)) deallocate(includeList)
+    allocate(includeList(5))
+    includeList(1)='concentration_of_dissolved_oxygen_in_water'
+    includeList(2)='oxygen_in_water'
+    includeList(3)='dissolved_oxygen_oxy_in_water'
+    includeList(4)='hzg_ecosmo_oxy_in_water'
+    includeList(5)='dissolved_oxygen_in_water'
+    call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
+      include=includeList, verbose=verbose, owner=trim(name), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (fieldCount > 0) then
+      oxyrc = ESMF_SUCCESS
+      call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      allocate(lbnd(rank), ubnd(rank))
+
+      if (rank==3) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr3, exclusiveLBound=lbnd, &
+          exclusiveUbound=ubnd, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      elseif (rank==2) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr2, exclusiveLBound=lbnd, &
+          exclusiveUbound=ubnd, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      endif
+    endif
 
     ! dissolved_reduced_substances:
-    call mossco_state_get(importState,(/ &
-        'dissolved_reduced_substances_odu_in_water ', &
-        'dissolved_reduced_substances_in_water     '/), &
-        ptr_f3_2nd,lbnd=lbnd_2nd,ubnd=ubnd_2nd,verbose=verbose, rc=odurc)
+    if (associated(includeList)) deallocate(includeList)
+    allocate(includeList(2))
+    includeList(1) = 'dissolved_reduced_substances_odu_in_water'
+    includeList(2) = 'dissolved_reduced_substances_in_water'
+    call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
+      include=includeList, verbose=verbose, owner=trim(name), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    if (oxyrc == ESMF_SUCCESS) then
-      call mossco_state_get(exportState,(/'dissolved_oxygen_at_soil_surface'/), &
-        ptr_f2,verbose=verbose, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    if (fieldCount > 0) then
+      call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      allocate(lbnd2(rank), ubnd2(rank))
+      odurc = ESMF_SUCCESS
 
-      if (.not.associated(oxy)) allocate(oxy(RANGE2D))
-      if (.not.associated(odu)) allocate(odu(RANGE2D))
+      if (rank==3) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr32, exclusiveLBound=lbnd, &
+          exclusiveUbound=ubnd, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      elseif (rank==2) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr22, exclusiveLBound=lbnd, &
+          exclusiveUbound=ubnd, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      endif
+    endif
 
-      if (odurc == 0) then
-        oxy = ptr_f3(RANGE2D,lbnd(3))
-        odu = ptr_f3_2nd(RANGE2D,lbnd(3))
-      else
-        ! assume that negative oxygen is amount of reduced substances
-        do j=lbnd(2),ubnd(2)
-          do i=lbnd(1),ubnd(1)
-            oxy(i,j) = max(0.0d0,ptr_f3(i,j,lbnd(3)))
-            odu(i,j) = max(0.0d0,-ptr_f3(i,j,lbnd(3)))
-          end do
-        end do
-      end if
-      ptr_f2 = oxy(:,:)
+    allocate(includeList(1))
+    includeList='dissolved_oxygen_at_soil_surface'
+    call MOSSCO_StateGet(exportState, fieldList, fieldCount=fieldCount, &
+      include=includeList, verbose=verbose, owner=trim(name), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call mossco_state_get(exportState, &
-        (/'dissolved_reduced_substances_at_soil_surface'/), &
-        ptr_f2, verbose=verbose, rc=odurc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
-      ptr_f2 = odu(:,:)
-    end if
-    nullify(ptr_f3)
+    if (fieldCount > 0) then
+      ! this is always true for OMexDia
+
+      call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (rank==2) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr2, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      elseif (rank==1) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr1, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      endif
+    endif
+
+    allocate(includeList(1))
+    includeList='dissolved_reduced_substances_at_soil_surface'
+    call MOSSCO_StateGet(exportState, fieldList, fieldCount=fieldCount, &
+      include=includeList, verbose=verbose, owner=trim(name), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (fieldCount > 0) then
+      ! this is always true for OMexDia
+
+      call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (rank==2) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr22, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      elseif (rank==1) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr12, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      endif
+    endif
+
+    if (odurc == ESMF_SUCCESS .and. oxyrc == ESMF_SUCCESS) then
+      ! importState provides both oxy and odu
+
+      ! Use association as proxy for rank
+      if (associated(farrayPtr3)) then
+        farrayPtr2(RANGE2D)  = farrayPtr3(RANGE2D,lbnd(3))
+        farrayPtr22(RANGE2D) = farrayPtr32(RANGE2D,lbnd(3))
+      elseif (associated(farrayPtr2)) then
+        farrayPtr1(RANGE1D)  = farrayPtr2(RANGE1D,lbnd(2))
+        farrayPtr12(RANGE1D) = farrayPtr22(RANGE1D,lbnd(2))
+      endif
+    elseif (odurc == ESMF_SUCCESS) then
+      ! importState provides only odu, split negative part to oxy
+
+      if (associated(farrayPtr32)) then
+        farrayPtr2(RANGE2D)  =  max(0.0, -farrayPtr32(RANGE2D,lbnd(3)))
+        farrayPtr22(RANGE2D) =  max(0.0, farrayPtr32(RANGE2D,lbnd(3)))
+      elseif (associated(farrayPtr22)) then
+        farrayPtr1(RANGE1D)  = max(0.0, -farrayPtr22(RANGE1D,lbnd(2)))
+        farrayPtr12(RANGE1D) =  max(0.0, -farrayPtr22(RANGE1D,lbnd(2)))
+      endif
+
+    elseif (oxyrc == ESMF_SUCCESS) then
+      ! importState provides only oxy, split negative part to odu
+
+      if (associated(farrayPtr32)) then
+        farrayPtr2(RANGE2D)  =  max(0.0, -farrayPtr32(RANGE2D,lbnd(3)))
+        farrayPtr22(RANGE2D) =  max(0.0, farrayPtr32(RANGE2D,lbnd(3)))
+      elseif (associated(farrayPtr22)) then
+        farrayPtr1(RANGE1D)  = max(0.0, -farrayPtr22(RANGE1D,lbnd(2)))
+        farrayPtr12(RANGE1D) =  max(0.0, -farrayPtr22(RANGE1D,lbnd(2)))
+      endif
+
+    else ! no vertical information found
+      allocate(includeList(1))
+      includeList(1) = 'hzg_ecosmo_oxy_at_soil_surface'
+      call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
+        include=includeList, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      do i=1, fieldCount
+        field = fieldList(i)
+        includeList(1) = 'dissolved_oxygen_at_soil_surface'
+
+        call MOSSCO_StateGet(exportState, fieldList, fieldCount=fieldCount, &
+          include=includeList, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        if (fieldCount < 1) exit
+
+        call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        if (rank==2) then
+          call ESMF_FieldGet(fieldList(1), farrayPtr=oxy, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          call ESMF_FieldGet(field, farrayPtr=farrayPtr2, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          oxy(RANGE2D) = farrayPtr2(RANGE2D)
+        elseif (rank==1) then
+
+          allocate(ubnd(1), lbnd(1), stat=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr1, &
+            exclusiveLBound=lbnd, exclusiveUbound=ubnd, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          call ESMF_FieldGet(field, farrayPtr=farrayPtr12, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          farrayPtr12(RANGE1D) = farrayPtr1(RANGE1D)
+          deallocate(ubnd, lbnd, stat=localrc)
+        endif
+      enddo
+    endif
+
+    if (allocated(ubnd)) deallocate(ubnd)
+    if (allocated(lbnd)) deallocate(lbnd)
+    nullify(farrayPtr3, farrayPtr32, farrayPtr2, farrayPtr22, farrayPtr1, farrayPtr12)
 
     !> Get detritus and transfer it to the
     !> soil surface (optional), if not found, then skip the rest of
@@ -306,10 +449,10 @@ module pelagic_soil_connector
 
     if (localrc == ESMF_RC_NOT_FOUND) then
       call MOSSCO_CompExit(cplComp, localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       return
     endif
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
 #if DEBUG
     if ( ubnd(1)-lbnd(1)<0 .or. ubnd(2)-lbnd(2)<0 .or. ubnd(3)-lbnd(3)<0 ) then
@@ -326,7 +469,7 @@ module pelagic_soil_connector
             'detN_z_velocity_in_water                  ',   &
             'Detritus_Nitrogen_detN_z_velocity_in_water'/), &
             vDETN, verbose=verbose, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     inum=ubnd(1)-lbnd(1)+1
     jnum=ubnd(2)-lbnd(2)+1
@@ -413,66 +556,66 @@ module pelagic_soil_connector
 
     !> check for Detritus-C and calculate N-based flux
     call mossco_state_get(exportState, (/'detritus_labile_carbon_at_soil_surface'/), &
-      ptr_f2, verbose=verbose, rc=localrc)
-    if (localrc==0) ptr_f2 = fac_ldet * convertN*DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+      farrayPtr2, verbose=verbose, rc=localrc)
+    if (localrc==0) farrayPtr2 = fac_ldet * convertN*DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
 
     call mossco_state_get(exportState, (/'detritus_semilabile_carbon_at_soil_surface'/),&
-      ptr_f2, verbose=verbose, rc=localrc)
-    if(localrc==0) ptr_f2 = fac_sdet * convertN*DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+      farrayPtr2, verbose=verbose, rc=localrc)
+    if(localrc==0) farrayPtr2 = fac_sdet * convertN*DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
 
     call mossco_state_get(exportState, (/'detritus_labile_carbon_z_velocity_at_soil_surface'/), &
-      ptr_f2, verbose=verbose, rc=localrc)
-    if (localrc==0) ptr_f2 = sinking_factor * fac_env * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+      farrayPtr2, verbose=verbose, rc=localrc)
+    if (localrc==0) farrayPtr2 = sinking_factor * fac_env * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
     call mossco_state_get(exportState, (/'detritus_semilabile_carbon_z_velocity_at_soil_surface'/), &
-        ptr_f2, verbose=verbose, rc=localrc)
-    if (localrc==0) ptr_f2 = sinking_factor * fac_env * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+        farrayPtr2, verbose=verbose, rc=localrc)
+    if (localrc==0) farrayPtr2 = sinking_factor * fac_env * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
 
     !> check for Detritus-N and N-based flux
     call mossco_state_get(exportState, (/'detritus_labile_nitrogen_at_soil_surface'/), &
-      ptr_f2, verbose=verbose, rc=localrc)
-    if (localrc==0) ptr_f2 = frac_ldet * convertN*DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
-    !if (localrc==0) ptr_f2 = fac_ldet * convertN*DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))*NC_ldet
+      farrayPtr2, verbose=verbose, rc=localrc)
+    if (localrc==0) farrayPtr2 = frac_ldet * convertN*DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+    !if (localrc==0) farrayPtr2 = fac_ldet * convertN*DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))*NC_ldet
 
     call mossco_state_get(exportState, (/'detritus_semilabile_nitrogen_at_soil_surface'/),&
-      ptr_f2, verbose=verbose, rc=localrc)
-    if(localrc==0) ptr_f2 = frac_sdet * convertN*DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
-    !if(localrc==0) ptr_f2 = fac_sdet * convertN*DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))*NC_sdet
+      farrayPtr2, verbose=verbose, rc=localrc)
+    if(localrc==0) farrayPtr2 = frac_sdet * convertN*DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+    !if(localrc==0) farrayPtr2 = fac_sdet * convertN*DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))*NC_sdet
 
     call mossco_state_get(exportState, (/'detritus_labile_nitrogen_z_velocity_at_soil_surface'/), &
-      ptr_f2, verbose=verbose, rc=localrc)
-    if (localrc==0) ptr_f2 = sinking_factor * fac_env * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+      farrayPtr2, verbose=verbose, rc=localrc)
+    if (localrc==0) farrayPtr2 = sinking_factor * fac_env * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
     call mossco_state_get(exportState, (/'detritus_semilabile_nitrogen_z_velocity_at_soil_surface'/), &
-        ptr_f2, verbose=verbose, rc=localrc)
-    if (localrc==0) ptr_f2 = sinking_factor * fac_env * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+        farrayPtr2, verbose=verbose, rc=localrc)
+    if (localrc==0) farrayPtr2 = sinking_factor * fac_env * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
 
     !> check for Detritus-P and calculate flux either N-based
     !> or as present through the Detritus-P pool
     call mossco_state_get(exportState, (/ &
           'detritus_phosphorus_at_soil_surface       ',   &
           'detritus_labile_phosphorus_at_soil_surface'/), &
-          ptr_f2, verbose=verbose, rc=localrc)
+          farrayPtr2, verbose=verbose, rc=localrc)
     call mossco_state_get(importState,(/ &
           'detP_in_water                    ',   &
           'Detritus_Phosphorus_detP_in_water'/), &
           DETP,lbnd=Plbnd,ubnd=Pubnd, verbose=verbose, rc=localrc)
     if (localrc == 0) then
-        ptr_f2 = DETP(Plbnd(1):Pubnd(1),Plbnd(2):Pubnd(2),plbnd(3))
+        farrayPtr2 = DETP(Plbnd(1):Pubnd(1),Plbnd(2):Pubnd(2),plbnd(3))
     else
-        ptr_f2 = 1.0d0/16.0d0 * convertN*DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+        farrayPtr2 = 1.0d0/16.0d0 * convertN*DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
     end if
 
     call mossco_state_get(exportState, (/ &
          'detritus_phosphorus_z_velocity_at_soil_surface       ',   &
          'detritus_labile_phosphorus_z_velocity_at_soil_surface'/), &
-         ptr_f2, verbose=verbose, rc=localrc)
+         farrayPtr2, verbose=verbose, rc=localrc)
     call mossco_state_get(importState,(/ &
          'detP_z_velocity_in_water                    ', &
          'Detritus_Phosphorus_detP_z_velocity_in_water'/), &
          vDETP, verbose=verbose, rc=localrc)
     if (localrc==0) then
-        ptr_f2 = sinking_factor * fac_env * vDETP(Plbnd(1):Pubnd(1),Plbnd(2):Pubnd(2),Plbnd(3))
+        farrayPtr2 = sinking_factor * fac_env * vDETP(Plbnd(1):Pubnd(1),Plbnd(2):Pubnd(2),Plbnd(3))
     else
-        ptr_f2 = sinking_factor * fac_env * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+        farrayPtr2 = sinking_factor * fac_env * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
     end if
 
 
@@ -480,16 +623,16 @@ module pelagic_soil_connector
     call MOSSCO_StateGet(importState, fieldList, itemSearchList= (/ &
       'nitrate_in_water'/), &
       fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount > 0) then
       hasNitrate = .true.
       call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=lbnd, &
         exclusiveUBound=ubnd, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_FieldGet(fieldList(1), farrayPtr=nit, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       write(message,'(A)') trim(name)//' obtains DIN from '
       call MOSSCO_FieldString(fieldList(1), message)
@@ -502,17 +645,17 @@ module pelagic_soil_connector
     includeList(3) = 'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water'
     call MOSSCO_StateGet(importState, fieldList, include=includeList, &
       fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     deallocate(includeList)
 
     if (fieldCount > 0) then
       hasDIN = .true.
       call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=lbnd, &
         exclusiveUBound=ubnd, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_FieldGet(fieldList(1), farrayPtr=din, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       write(message,'(A)') trim(name)//' obtains DIN from '
       call MOSSCO_FieldString(fieldList(1), message)
@@ -523,16 +666,16 @@ module pelagic_soil_connector
       'ammonium_in_water              ', &
       'dissolved_ammonium_nh3_in_water'/), &
       fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount > 0) then
       hasAmmonium = .true.
       call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=AMMlbnd, &
         exclusiveUBound=AMMubnd, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_FieldGet(fieldList(1), farrayPtr=amm, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       write(message,'(A)') trim(name)//' obtains ammonium from '
       call MOSSCO_FieldString(fieldList(1), message)
@@ -546,7 +689,7 @@ module pelagic_soil_connector
     call MOSSCO_StateGet(exportState, fieldList, &
       itemSearch='mole_concentration_of_ammonium_at_soil_surface', &
       fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount /= 1) then
       write(message,'(A,I1)') 'Expected exactly one complete field for mole_concentration_of_ammonium_at_soil_surface, received ',fieldCount
@@ -555,21 +698,21 @@ module pelagic_soil_connector
       return
     endif
 
-    call ESMF_FieldGet(fieldList(1), localde=0, farrayPtr=ptr_f2, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    call ESMF_FieldGet(fieldList(1), localde=0, farrayPtr=farrayPtr2, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (hasAmmonium) then
-      ptr_f2 = convertN*amm(AMMlbnd(1):AMMubnd(1),AMMlbnd(2):AMMubnd(2),AMMlbnd(3))
+      farrayPtr2 = convertN*amm(AMMlbnd(1):AMMubnd(1),AMMlbnd(2):AMMubnd(2),AMMlbnd(3))
     elseif (hasDIN .and. hasNitrate) then
-      ptr_f2 = convertN*(din(RANGE2D,lbnd(3)) - nit(RANGE2D,lbnd(3)))
+      farrayPtr2 = convertN*(din(RANGE2D,lbnd(3)) - nit(RANGE2D,lbnd(3)))
       write(message,'(A)') trim(name)//' calculates NH4 as DIN - NO3'
       if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     elseif (hasDIN) then
-      ptr_f2 = convertN*0.5d0 * DIN(RANGE2D,lbnd(3))
+      farrayPtr2 = convertN*0.5d0 * DIN(RANGE2D,lbnd(3))
       write(message,'(A)') trim(name)//' calculates NH4 as 0.5 * DIN'
       if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     elseif (hasNitrate) then
-      ptr_f2 = convertN*nit(RANGE2D,lbnd(3))
+      farrayPtr2 = convertN*nit(RANGE2D,lbnd(3))
       write(message,'(A)') trim(name)//' calculates NH4 as equal to NO3'
       if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     else
@@ -584,24 +727,24 @@ module pelagic_soil_connector
 
     call ESMF_StateGet(exportState, &
       'mole_concentration_of_nitrate_at_soil_surface', field, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_FieldGet(field, localde=0, farrayPtr=ptr_f2, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    call ESMF_FieldGet(field, localde=0, farrayPtr=farrayPtr2, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (hasNitrate) then
-      ptr_f2 = convertN*nit(RANGE2D,lbnd(3))
+      farrayPtr2 = convertN*nit(RANGE2D,lbnd(3))
     elseif (hasAmmonium .and. hasDIN) then
-      ptr_f2 = convertN*din(RANGE2D,lbnd(3)) &
+      farrayPtr2 = convertN*din(RANGE2D,lbnd(3)) &
         - amm(AMMlbnd(1):AMMubnd(1),AMMlbnd(2):AMMubnd(2),AMMlbnd(3))
       write(message,'(A)') trim(name)//' calculates NO3 = DIN - NH4'
       if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     elseif (hasDIN) then
-      ptr_f2 = convertN*0.5d0 * DIN(RANGE2D,lbnd(3))
+      farrayPtr2 = convertN*0.5d0 * DIN(RANGE2D,lbnd(3))
       write(message,'(A)') trim(name)//' calculates NO3 = 0.5 * DIN'
       if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     elseif (hasAmmonium) then
-      ptr_f2 = convertN*amm(AMMlbnd(1):AMMubnd(1),AMMlbnd(2):AMMubnd(2),AMMlbnd(3))
+      farrayPtr2 = convertN*amm(AMMlbnd(1):AMMubnd(1),AMMlbnd(2):AMMubnd(2),AMMlbnd(3))
       write(message,'(A)') trim(name)//' calculates NO3 equal to NH4'
       if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     else
@@ -618,15 +761,15 @@ module pelagic_soil_connector
       'phosphate_in_water                              ', &
       'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water'/), &
       fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount > 0) then
       call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=Plbnd, &
         exclusiveUBound=Pubnd, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_FieldGet(fieldList(1), farrayPtr=dip, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       write(message,'(A)') trim(name)//' obtains phosphorous from '
       call MOSSCO_FieldString(fieldList(1), message)
@@ -660,39 +803,39 @@ module pelagic_soil_connector
     endif
 
     call ESMF_StateGet(exportState,'mole_concentration_of_phosphate_at_soil_surface', field, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f2,rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    call ESMF_FieldGet(field,localde=0,farrayPtr=farrayPtr2,rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    ptr_f2 = convertP*DIP(RANGE2D,Plbnd(3))
+    farrayPtr2 = convertP*DIP(RANGE2D,Plbnd(3))
 
     call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_CompExit(cplComp, localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Run
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Finalize"
-  subroutine Finalize(cplcomp, importState, exportState, externalclock, rc)
+  subroutine Finalize(cplcomp, importState, exportState, parentClock, rc)
     type(ESMF_CplComp)   :: cplcomp
     type(ESMF_State)     :: importState
     type(ESMF_State)     :: exportState
-    type(ESMF_Clock)     :: externalclock
+    type(ESMF_Clock)     :: parentClock
     integer,intent(out)  :: rc
 
     character(len=ESMF_MAXSTR)  :: name, message
     type(ESMF_Time)             :: currTime, stopTime
     integer                     :: localrc
 
-    call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_CompExit(cplComp, localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Finalize
 
