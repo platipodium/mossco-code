@@ -53,13 +53,13 @@ for i in range(0,len(sys.argv)):
         excl_variables=val.split(',')
 
     if key=='--level':
-        levellist=val.split(',')
+        levellist=[np.int(x) for x in val.split(',')]
 
     if key=='--pet':
-        petlist=val.split(',')
+        petlist=[np.int(x) for x in val.split(',')]
 
     if key=='--time':
-        petlist=val.split(',')
+        timelist=[np.int(x) for x in val.split(',')]
 
 
 #print petlist
