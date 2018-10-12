@@ -27,9 +27,9 @@
 &mossco_run
    title = 'schism-1x1-schism',
    start = '2009-03-01 00:00:00',
-   stop = '2009-03-01 03:00:00',
-   loglevel = 'all',
+   stop = '2009-03-01 01:00:00',
+   loglevel = 'error',
    loglevelzero = 'all',
-   logflush = .true.,
+   logflush = .false.,
 /
 
