@@ -28,13 +28,13 @@ module toplevel_component
   use mossco_state
   use mossco_component
 
-  use link_connector, only : link_connector_SetServices => SetServices 
-  use default_component, only : default_SetServices => SetServices 
-  use netcdf_input_component, only : netcdf_input_SetServices => SetServices 
-  use fabm_sediment_component, only : fabm_sediment_SetServices => SetServices 
-  use netcdf_component, only : netcdf_SetServices => SetServices 
-  use schism_esmf_component, only : schism_esmf_SetServices => SetServices 
-  use pelagic_soil_connector, only : pelagic_soil_connector_SetServices => SetServices 
+  use link_connector, only : link_connector_SetServices => SetServices
+  use default_component, only : default_SetServices => SetServices
+  use netcdf_input_component, only : netcdf_input_SetServices => SetServices
+  use fabm_sediment_component, only : fabm_sediment_SetServices => SetServices
+  use netcdf_component, only : netcdf_SetServices => SetServices
+  use schism_esmf_component, only : schism_esmf_SetServices => SetServices
+  use pelagic_soil_connector, only : pelagic_soil_connector_SetServices => SetServices
 
   implicit none
 
@@ -791,7 +791,8 @@ module toplevel_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_LogOpen(stateLog,'states_'//trim(message), rc=localrc)
+      call ESMF_LogOpen(stateLog,'states_'//trim(message), appendFlag=.false., &
+        logkindFlag=ESMF_LOGKIND_SINGLE, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -848,7 +849,7 @@ module toplevel_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-    !! End of ReadRestart 
+    !! End of ReadRestart
 
 
     do i=1, numGridComp
@@ -859,7 +860,7 @@ module toplevel_component
       !call ESMF_StateReconcile(state=gridExportStateList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
- 
+
     !!> Check all states for remaining incomplete fields
     !!>@todo find segfault this is causing
     !call ESMF_LogWrite(trim(myName)//' listing all import and export states', ESMF_LOGMSG_INFO)
@@ -874,6 +875,9 @@ module toplevel_component
    enddo
 
     !> Go through all components and log their import and export states
+    call ESMF_LogOpen(stateLog,'states_'//trim(message), appendFlag=.true., &
+      logkindFlag=ESMF_LOGKIND_SINGLE, rc=localrc)
+
     call ESMF_LogWrite('====== Status at end of child readrestarting ======', ESMF_LOGMSG_INFO, log=stateLog)
 
     !do i=1,numGridComp
@@ -881,6 +885,9 @@ module toplevel_component
     !  call MOSSCO_StateLog(gridImportStateList(i))
     !  call MOSSCO_StateLog(gridExportStateList(i))
     !enddo
+
+    call ESMF_LogClose(stateLog, rc=localrc)
+
     numCplAlarm = 6
     if (allocated(cplAlarmList)) deallocate(cplAlarmList)
     if (allocated(cplNames)) deallocate(cplNames)
@@ -1115,7 +1122,7 @@ module toplevel_component
 
       endif
     enddo
-    
+
     !! Set the default ringTime to the stopTime of local clock, then get all Alarms
     !! from local clock into alarmList, find those that contain the string "cplAlarm"
     !! and look for the earliest ringtime in all coupling alarms.  Save that in the
@@ -1788,8 +1795,8 @@ module toplevel_component
         call ESMF_AttributeGet(importState, name='simulation_title', value=message, defaultvalue='Untitled', rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        call ESMF_LogOpen(stateLog,'states_'//trim(message), rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        call ESMF_LogOpen(stateLog,'states_'//trim(message), appendFlag=.true., &
+          logkindFlag=ESMF_LOGKIND_SINGLE, rc=localrc)
 
         call ESMF_LogWrite('====== Status at end of first run loop  ======', ESMF_LOGMSG_INFO, log=stateLog)
 
