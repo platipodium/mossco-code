@@ -791,7 +791,7 @@ module toplevel_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_LogOpen(stateLog,'states_'//trim(message), appendFlag=.false., &
+      call ESMF_LogOpen(stateLog,'PET.states_'//trim(message), appendFlag=.false., &
         logkindFlag=ESMF_LOGKIND_SINGLE, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -875,7 +875,7 @@ module toplevel_component
    enddo
 
     !> Go through all components and log their import and export states
-    call ESMF_LogOpen(stateLog,'states_'//trim(message), appendFlag=.true., &
+    call ESMF_LogOpen(stateLog,'PET.states_'//trim(message), appendFlag=.true., &
       logkindFlag=ESMF_LOGKIND_SINGLE, rc=localrc)
 
     call ESMF_LogWrite('====== Status at end of child readrestarting ======', ESMF_LOGMSG_INFO, log=stateLog)
@@ -1795,7 +1795,7 @@ module toplevel_component
         call ESMF_AttributeGet(importState, name='simulation_title', value=message, defaultvalue='Untitled', rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        call ESMF_LogOpen(stateLog,'states_'//trim(message), appendFlag=.true., &
+        call ESMF_LogOpen(stateLog,'PET.states_'//trim(message), appendFlag=.true., &
           logkindFlag=ESMF_LOGKIND_SINGLE, rc=localrc)
 
         call ESMF_LogWrite('====== Status at end of first run loop  ======', ESMF_LOGMSG_INFO, log=stateLog)

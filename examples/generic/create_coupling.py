@@ -1044,7 +1044,8 @@ fid.write('''
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_LogOpen(stateLog,'states_'//trim(message), rc=localrc)
+      call ESMF_LogOpen(stateLog,'PET.states_'//trim(message), appendFlag=.false., &
+        logkindFlag=ESMF_LOGKIND_SINGLE, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1144,6 +1145,11 @@ fid.write('''
 # Go through all components and log their import and export states
 fid.write('''
     !> Go through all components and log their import and export states
+    call ESMF_LogOpen(stateLog,'PET.states_'//trim(message), appendFlag=.false., &
+      logkindFlag=ESMF_LOGKIND_SINGLE, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_LogWrite('====== Status at end of child readrestarting ======', ESMF_LOGMSG_INFO, log=stateLog)
 
     !do i=1,numGridComp
@@ -1151,6 +1157,8 @@ fid.write('''
     !  call MOSSCO_StateLog(gridImportStateList(i))
     !  call MOSSCO_StateLog(gridExportStateList(i))
     !enddo
+
+    call ESMF_LogClose(stateLog, rc=localrc)
 ''')
 
 #fid.write('''
@@ -2012,7 +2020,8 @@ fid.write('''
         call ESMF_AttributeGet(importState, name='simulation_title', value=message, defaultvalue='Untitled', rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        call ESMF_LogOpen(stateLog,'states_'//trim(message), rc=localrc)
+        call ESMF_LogOpen(stateLog,'PET.states_'//trim(message), appendFlag=.true., &
+          logkindFlag=ESMF_LOGKIND_SINGLE, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call ESMF_LogWrite('====== Status at end of first run loop  ======', ESMF_LOGMSG_INFO, log=stateLog)
