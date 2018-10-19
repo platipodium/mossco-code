@@ -699,13 +699,13 @@ module pelagic_soil_connector
     if (fieldCount > 0) then
       ! this is always true for OMexDia
 
-      call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
+      call ESMF_FieldGet(fieldList(1), rank=exportRank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (rank==2) then
+      if (exportRank==2) then
         call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr2, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      elseif (rank==1) then
+      elseif (exportRank==1) then
         call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr1, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
@@ -897,6 +897,9 @@ module pelagic_soil_connector
     elseif (exportRank == 2) then
       allocate(CN_det2(RANGE2D))
       CN_det2(RANGE2D) = 106.0d0/16.0d0
+    else
+      localrc = ESMF_RC_NOT_IMPL
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
 
     !> search for Detritus-C, if present, use Detritus C-to-N ratio and apply flux
@@ -1023,10 +1026,14 @@ module pelagic_soil_connector
 
     if (half_sedimentation_depth .gt. 1E-3) then
       ! reduce sedimentation due to depth, assuming higher wave erosion in shallow areas
-      if (associated(depth1)) &
+      if (associated(depth1) .and. associated(fac_env1)) then
         fac_env1(RANGE1D) = fac_env1(RANGE1D) * depth1(RANGE1D)**2/(depth1(RANGE1D)**2 + half_sedimentation_depth**2)
-      if (associated(depth2)) &
+      elseif (associated(depth2) .and. associated(fac_env2)) then
         fac_env2(RANGE2D) = fac_env2(RANGE2D) * depth2(RANGE2D)**2/(depth2(RANGE2D)**2 + half_sedimentation_depth**2)
+      else
+        localrc = ESMF_RC_NOT_IMPL
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      endif
     endif
 
     deallocate(includeList, stat=localrc)
@@ -1419,7 +1426,7 @@ module pelagic_soil_connector
 
         if (associated(detN2)) then
           farrayPtr1 = sinking_factor * fac_env1(RANGE1D) *detN2(RANGE1D,lbnd(2))
-        elseif (associated(detN2)) then
+        elseif (associated(detN1)) then
           farrayPtr1 = sinking_factor * fac_env1(RANGE1D) *detN1(RANGE1D)
         endif
 
@@ -1443,24 +1450,36 @@ module pelagic_soil_connector
 
       if (fieldCount > 0) then
 
+        call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        if (allocated(lbnd)) deallocate(lbnd)
+        if (allocated(ubnd)) deallocate(ubnd)
+        allocate(lbnd(rank), ubnd(rank))
+
+        call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=lbnd, &
+          exclusiveUBound=ubnd, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        if (rank == 1) call ESMF_FieldGet(fieldList(1), farrayPtr=detP1, rc=localrc)
+        if (rank == 2) call ESMF_FieldGet(fieldList(1), farrayPtr=detP2, rc=localrc)
+        if (rank == 3) call ESMF_FieldGet(fieldList(1), farrayPtr=detP3, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
         if (exportRank == 2) then
-          call ESMF_FieldGet(fieldList(1), farrayPtr=detP2, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          if (associated(detP3)) then
+            farrayPtr2 = sinking_factor * fac_env2(RANGE2D) * detP3(RANGE2D,lbnd(3))
+          elseif (associated(detP2)) then
+            farrayPtr2 = sinking_factor * fac_env2(RANGE2D) * detP2(RANGE2D)
+          endif
+
+        elseif (exportRank == 1) then
 
           if (associated(detP2)) then
             farrayPtr1 = sinking_factor * fac_env1(RANGE1D) * detP2(RANGE1D,lbnd(2))
-          elseif (associated(detP2)) then
+          elseif (associated(detP1)) then
             farrayPtr1 = sinking_factor * fac_env1(RANGE1D) * detP1(RANGE1D)
-          endif
-
-        elseif (exportRank == 3) then
-          call ESMF_FieldGet(fieldList(1), farrayPtr=detP3, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-          if (associated(detP3)) then
-            farrayPtr2 = sinking_factor * fac_env2(RANGE2D) *detP3(RANGE2D,lbnd(3))
-          elseif (associated(detP2)) then
-            farrayPtr2 = sinking_factor * fac_env2(RANGE2D) *detP2(RANGE2D)
           endif
         endif
       endif
@@ -1599,16 +1618,18 @@ module pelagic_soil_connector
       return
     endif
 
-    call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
+    call ESMF_FieldGet(fieldList(1), rank=exportRank, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    if (rank == 1) then
+    if (exportRank == 1) then
 
       call ESMF_FieldGet(fieldList(1), localde=0, farrayPtr=farrayPtr1, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (hasAmmonium) then
+      if (hasAmmonium .and. associated(amm2)) then
         farrayPtr1 = convertN*amm2(RANGE1D,lbnd(2))
+      elseif (hasAmmonium .and. associated(amm1)) then
+        farrayPtr1 = convertN*amm1(RANGE1D)
       elseif (hasDIN .and. hasNitrate) then
         farrayPtr1 = convertN*(din2(RANGE1D,lbnd(2)) - nit2(RANGE1D,lbnd(2)))
         write(message,'(A)') trim(name)//' calculates NH4 as DIN - NO3'
@@ -1628,23 +1649,46 @@ module pelagic_soil_connector
         return
       endif
 
-    elseif (rank == 2) then
+    elseif (exportRank == 2) then
 
       call ESMF_FieldGet(fieldList(1), localde=0, farrayPtr=farrayPtr2, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (hasAmmonium) then
+      if (hasAmmonium .and. associated(amm3)) then
         farrayPtr2 = convertN*amm3(RANGE2D,lbnd(3))
+      elseif (hasAmmonium .and. associated(amm2)) then
+        farrayPtr2 = convertN*amm2(RANGE2D)
       elseif (hasDIN .and. hasNitrate) then
-        farrayPtr2 = convertN*(din3(RANGE2D,lbnd(3)) - nit3(RANGE2D,lbnd(3)))
+        if (associated(nit3) .and. associated(din3)) then
+          farrayPtr2 = convertN*(din3(RANGE2D,lbnd(3)) - nit3(RANGE2D,lbnd(3)))
+        elseif (associated(nit2) .and. associated(din2)) then
+          farrayPtr2 = convertN*(din2(RANGE2D) - nit2(RANGE2D))
+        else
+          localrc = ESMF_RC_NOT_IMPL
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        endif
         write(message,'(A)') trim(name)//' calculates NH4 as DIN - NO3'
         if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       elseif (hasDIN) then
-        farrayPtr2 = convertN*0.5d0 * din3(RANGE2D,lbnd(3))
+        if (associated (din3)) then
+          farrayPtr2 = convertN*0.5d0 * din3(RANGE2D,lbnd(3))
+        elseif (associated (din2)) then
+          farrayPtr2 = convertN*0.5d0 * din2(RANGE2D)
+        else
+          localrc = ESMF_RC_NOT_IMPL
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        endif
         write(message,'(A)') trim(name)//' calculates NH4 as 0.5 * DIN'
         if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       elseif (hasNitrate) then
-        farrayPtr2 = convertN*nit3(RANGE2D,lbnd(3))
+        if (associated (nit3)) then
+          farrayPtr2 = convertN*nit3(RANGE2D,lbnd(3))
+        elseif (associated (nit2)) then
+          farrayPtr2 = convertN*nit2(RANGE2D)
+        else
+          localrc = ESMF_RC_NOT_IMPL
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        endif
         write(message,'(A)') trim(name)//' calculates NH4 as equal to NO3'
         if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       else
@@ -1662,24 +1706,53 @@ module pelagic_soil_connector
       'mole_concentration_of_nitrate_at_soil_surface', field, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    if (rank == 1) then
+    if (exportRank == 1) then
 
       call ESMF_FieldGet(fieldList(1), localde=0, farrayPtr=farrayPtr1, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (hasNitrate) then
-        farrayPtr1 = convertN*nit2(RANGE1D,lbnd(2))
+        if (associated(nit2)) then
+          farrayPtr1 = convertN*nit2(RANGE1D,lbnd(2))
+        elseif (associated(nit1)) then
+          farrayPtr1 = convertN*nit1(RANGE1D)
+        else
+          localrc = ESMF_RC_NOT_IMPL
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        endif
       elseif (hasAmmonium .and. hasDIN) then
-        farrayPtr1 = convertN*din2(RANGE1D,lbnd(2)) &
-          - amm2(RANGE1D,lbnd(2))
+        if (associated(din2) .and. associated(amm2)) then
+          farrayPtr1 = convertN*din2(RANGE1D,lbnd(2)) &
+            - amm2(RANGE1D,lbnd(2))
+        elseif (associated(din1) .and. associated(amm1)) then
+          farrayPtr1 = convertN*din1(RANGE1D) - amm1(RANGE1D)
+        else
+          localrc = ESMF_RC_NOT_IMPL
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        endif
+
         write(message,'(A)') trim(name)//' calculates NO3 = DIN - NH4'
         if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       elseif (hasDIN) then
-        farrayPtr1 = convertN*0.5d0 * din2(RANGE1D,lbnd(2))
+        if (associated(din2)) then
+          farrayPtr1 = convertN*0.5d0 * din2(RANGE1D,lbnd(2))
+        elseif (associated(din1)) then
+          farrayPtr1 = convertN*0.5d0 * din1(RANGE1D)
+        else
+          localrc = ESMF_RC_NOT_IMPL
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        endif
         write(message,'(A)') trim(name)//' calculates NO3 = 0.5 * DIN'
         if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       elseif (hasAmmonium) then
-        farrayPtr1 = convertN*amm2(RANGE1D,lbnd(2))
+        if (associated(amm2)) then
+          farrayPtr1 = convertN*amm2(RANGE1D,lbnd(2))
+        elseif (associated(amm1)) then
+          farrayPtr1 = convertN*amm1(RANGE1D)
+        else
+          localrc = ESMF_RC_NOT_IMPL
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        endif
         write(message,'(A)') trim(name)//' calculates NO3 equal to NH4'
         if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       else
@@ -1689,21 +1762,50 @@ module pelagic_soil_connector
         return
       end if
 
-    elseif (rank == 2) then
+    elseif (exportRank == 2) then
 
       if (hasNitrate) then
-        farrayPtr2 = convertN*nit3(RANGE2D,lbnd(3))
+        if (associated(nit3)) then
+          farrayPtr2 = convertN*nit3(RANGE2D,lbnd(3))
+        elseif (associated(nit2)) then
+          farrayPtr2 = convertN*nit2(RANGE2D)
+        else
+          localrc = ESMF_RC_NOT_IMPL
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        endif
       elseif (hasAmmonium .and. hasDIN) then
-        farrayPtr2 = convertN*din3(RANGE2D,lbnd(3)) &
-          - amm3(RANGE2D,lbnd(3))
+        if (associated(nit3).and. associated(amm3)) then
+          farrayPtr2 = convertN*din3(RANGE2D,lbnd(3)) &
+           - amm3(RANGE2D,lbnd(3))
+        elseif (associated(nit2).and. associated(amm2)) then
+          farrayPtr2 = convertN*din2(RANGE2D) &
+           - amm2(RANGE2D)
+        else
+          localrc = ESMF_RC_NOT_IMPL
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        endif
         write(message,'(A)') trim(name)//' calculates NO3 = DIN - NH4'
         if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       elseif (hasDIN) then
-        farrayPtr2 = convertN*0.5d0 * din3(RANGE2D,lbnd(3))
+        if (associated(din3)) then
+          farrayPtr2 = convertN*0.5d0 * din3(RANGE2D,lbnd(3))
+        elseif (associated(din2)) then
+          farrayPtr2 = convertN*0.5d0 * din2(RANGE2D)
+        else
+          localrc = ESMF_RC_NOT_IMPL
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        endif
         write(message,'(A)') trim(name)//' calculates NO3 = 0.5 * DIN'
         if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       elseif (hasAmmonium) then
-        farrayPtr2 = convertN*amm3(RANGE2D,lbnd(3))
+        if (associated(amm3)) then
+          farrayPtr2 = convertN*amm3(RANGE2D,lbnd(3))
+        elseif (associated(amm2)) then
+          farrayPtr2 = convertN*amm2(RANGE2D)
+        else
+          localrc = ESMF_RC_NOT_IMPL
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        endif
         write(message,'(A)') trim(name)//' calculates NO3 equal to NH4'
         if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       else
@@ -1753,7 +1855,7 @@ module pelagic_soil_connector
       write(message,'(A)') trim(name)//' obtains DIP from '
       call MOSSCO_FieldString(fieldList(1), message)
       if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      hasAmmonium = .true.
+      hasDIP = .true.
 
     else
       if (hasAmmonium .and. associated(amm3) .or. hasDIN .and. associated(din3) &

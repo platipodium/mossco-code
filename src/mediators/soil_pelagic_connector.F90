@@ -368,6 +368,9 @@ end type spVariable
       endif
     endif
 
+    !> @todo remove return
+    !return
+
     if (associated(includeList)) deallocate(includeList)
     allocate(includeList(3))
     includeList(1) = 'ammonium_upward_flux_at_soil_surface'
