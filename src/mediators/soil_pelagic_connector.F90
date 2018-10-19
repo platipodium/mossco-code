@@ -50,11 +50,12 @@ module soil_pelagic_connector
   real(ESMF_KIND_R8) :: convertN=1.0d0
 
 type spVariable
-  type(ESMF_Field), pointer :: field => null()
+  type(ESMF_Field)            :: field
   real(ESMF_KIND_R8), pointer :: data1(:) => null()
   real(ESMF_KIND_R8), pointer :: data2(:,:) => null()
-  real(ESMF_KIND_R8), pointer :: data3(:,:,:) => null()
-  integer(ESMF_KIND_I4)     :: rank
+  !real(ESMF_KIND_R8), pointer :: data3(:,:,:) => null()
+  integer(ESMF_KIND_I4)       :: rank = 0
+  character(len=ESMF_MAXSTR)  :: unit = ''
 end type spVariable
 
   public SetServices
@@ -171,7 +172,8 @@ end type spVariable
     call ESMF_AttributeSet(paramState, trim(name)//'::dinflux_const', dinflux_const, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_StateAdd(importState, (/paramState/), rc=localrc)
+    !> @todo re-enable once it does not contain itself anymore
+    !call ESMF_StateAdd(importState, (/paramState/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_CompExit(cplComp, rc=localrc)
@@ -205,12 +207,14 @@ end type spVariable
     real(ESMF_KIND_R8), pointer :: farrayPtr2(:,:) => null()
     logical                     :: hasCarbon, hasNitrogen, hasPhosphorous
     type(ESMF_Field), allocatable       :: importFieldList(:)
-    type(ESMF_Field), allocatable, target :: fieldList(:)
+    type(ESMF_Field), allocatable       :: fieldList(:)
     character(len=ESMF_MAXSTR), pointer :: includeList(:) => null()
 
     type(spVariable) :: soilNitrate, soilAmmonium, soilLabileCarbon
     type(spVariable) :: soilSemilabileCarbon, soilPhosphorous
     type(spVariable) :: waterNitrate, waterAmmonium, waterNutrient
+    type(spVariable) :: waterPhosphorous
+    logical          :: isEqual, isPresent
 
     rc = ESMF_SUCCESS
     call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
@@ -220,7 +224,7 @@ end type spVariable
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     verbose = .true.
-    if (advanceCount > 0) verbose = .false.
+    !if (advanceCount > 0) verbose = .false.
 
     !> Export fields created by OmexDia typically are:
     !> detritus_labile_carbon, detritus_semilabile_carbon, detritus_phosphorus
@@ -238,6 +242,31 @@ end type spVariable
     !> hzg_ecosmo_microzoo, hzg_ecosmo_mesozoo
 
     call MOSSCO_StateGet(importState, fieldList, &
+      itemSearch='mole_concentration_of_phosphate_upward_flux_at_soil_surface', &
+      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (fieldCount /= 1) then
+      write(message,'(A,I1)') 'Expected exactly one complete field for mole_concentration_of_phosphate_upward_flux_at_soil_surface, received ',fieldCount
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      rc = ESMF_RC_ARG_BAD
+      return
+    else
+      soilPhosphorous%field = fieldList(1)
+      call ESMF_FieldGet(fieldList(1), rank=soilPhosphorous%rank, rc=localrc)
+      if (soilPhosphorous%rank == 1) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=soilPhosphorous%data1)
+      elseif (soilPhosphorous%rank == 2) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=soilPhosphorous%data2)
+      endif
+      call ESMF_AttributeGet(fieldList(1), 'unit', soilPhosphorous%unit, &
+        isPresent=isPresent, defaultValue='', rc=localrc)
+      write(message, '(A)') trim(name)//' uses soil phosphorous '
+      call MOSSCO_FieldString(fieldList(1), message)
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    endif
+
+    call MOSSCO_StateGet(importState, fieldList, &
       itemSearch='mole_concentration_of_nitrate_upward_flux_at_soil_surface', &
       fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -248,14 +277,18 @@ end type spVariable
       rc = ESMF_RC_ARG_BAD
       return
     else
-      soilNitrate%field => fieldList(1)
+      soilNitrate%field = fieldList(1)
       call ESMF_FieldGet(fieldList(1), rank=soilNitrate%rank, rc=localrc)
       if (soilNitrate%rank == 1) then
         call ESMF_FieldGet(fieldList(1), farrayPtr=soilNitrate%data1)
       elseif (soilNitrate%rank == 2) then
         call ESMF_FieldGet(fieldList(1), farrayPtr=soilNitrate%data2)
-        val1_f2 => soilNitrate%data2
       endif
+      call ESMF_AttributeGet(fieldList(1), 'unit', soilNitrate%unit, &
+        isPresent=isPresent, defaultValue='', rc=localrc)
+      write(message, '(A)') trim(name)//' uses soil nitrate '
+      call MOSSCO_FieldString(fieldList(1), message)
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     endif
 
     call MOSSCO_StateGet(importState, fieldList, &
@@ -269,14 +302,18 @@ end type spVariable
       rc = ESMF_RC_ARG_BAD
       return
     else
-      soilAmmonium%field => fieldList(1)
+      soilAmmonium%field = fieldList(1)
       call ESMF_FieldGet(fieldList(1), rank=soilAmmonium%rank, rc=localrc)
       if (soilNitrate%rank == 1) then
         call ESMF_FieldGet(fieldList(1), farrayPtr=soilAmmonium%data1)
       elseif (soilNitrate%rank == 2) then
         call ESMF_FieldGet(fieldList(1), farrayPtr=soilAmmonium%data2)
-        val2_f2 => soilAmmonium%data2
       endif
+      call ESMF_AttributeGet(fieldList(1), 'unit', soilAmmonium%unit, &
+        isPresent=isPresent, defaultValue='', rc=localrc)
+      write(message, '(A)') trim(name)//' uses soil ammonium '
+      call MOSSCO_FieldString(fieldList(1), message)
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     endif
 
     !> Now look for nitrogen species in export states, these areas
@@ -286,7 +323,7 @@ end type spVariable
     if (associated(includeList)) deallocate(includeList)
     allocate(includeList(2))
     includeList(1) = 'nitrate_upward_flux_at_soil_surface'
-    includeList(2) = 'hzg_ecosmo_no3_flux_at_soil_surface'
+    includeList(2) = 'hzg_ecosmo_no3_upward_flux_at_soil_surface'
 
     call MOSSCO_StateGet(exportState, fieldList, &
       include=includeList, verbose=verbose, &
@@ -294,14 +331,44 @@ end type spVariable
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount > 0) then
-      waterNitrate%field => fieldList(1)
+      waterNitrate%field = fieldList(1)
       call ESMF_FieldGet(fieldList(1), rank=waterNitrate%rank, rc=localrc)
       if (waterNitrate%rank == 1) then
         call ESMF_FieldGet(fieldList(1), farrayPtr=waterNitrate%data1)
+        if (associated(soilNitrate%data1)) waterNitrate%data1 = soilNitrate%data1
       elseif (waterNitrate%rank == 2) then
         call ESMF_FieldGet(fieldList(1), farrayPtr=waterNitrate%data2)
-        dinflux => waterNitrate%data2
-        DINflux = convertN*val1_f2
+        if (associated(soilNitrate%data2)) waterNitrate%data2 = soilNitrate%data2
+      endif
+      call ESMF_AttributeGet(fieldList(1), 'unit', waterNitrate%unit, &
+        isPresent=isPresent, defaultValue='', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message, '(A)') trim(name)//' uses water nitrate '
+      call MOSSCO_FieldString(fieldList(1), message)
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      if (soilNitrate%rank > 0) then
+        isEqual = .false.
+        !call MOSSCO_CheckUnits(soilNitrate%unit, waterNitrate%unit, isEqual, localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        write(message,'(A)') trim(name)//' unit mismatch '
+        call MOSSCO_MessageAdd(message, trim(soilNitrate%unit)//' /= ')
+        call MOSSCO_MessageAdd(message, trim(waterNitrate%unit))
+        if (.not.isEqual) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+
+        if (waterNitrate%rank == 1) then
+          waterNitrate%data1 = soilNitrate%data1
+        elseif (waterNitrate%rank == 2) then
+          waterNitrate%data2 = soilNitrate%data2
+        endif
+
+        write(message,'(A)') trim(name)//' connected'
+        call MOSSCO_FieldString(soilNitrate%field, message)
+        call MOSSCO_MessageAdd(message,' to ')
+        call MOSSCO_FieldString(waterNitrate%field, message)
+        if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
     endif
 
@@ -309,7 +376,7 @@ end type spVariable
     allocate(includeList(3))
     includeList(1) = 'ammonium_upward_flux_at_soil_surface'
     includeList(2) = 'dissolved_ammonium_nh3_upward_flux_at_soil_surface'
-    includeList(3) = 'hzg_ecosmo_no3_flux_at_soil_surface'
+    includeList(3) = 'hzg_ecosmo_nh4_upward_flux_at_soil_surface'
 
     call MOSSCO_StateGet(exportState, fieldList, &
       include=includeList, verbose=verbose, &
@@ -317,14 +384,39 @@ end type spVariable
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount > 0) then
-      waterAmmonium%field => fieldList(1)
+      waterAmmonium%field = fieldList(1)
       call ESMF_FieldGet(fieldList(1), rank=waterAmmonium%rank, rc=localrc)
       if (waterAmmonium%rank == 1) then
         call ESMF_FieldGet(fieldList(1), farrayPtr=waterAmmonium%data1)
       elseif (waterAmmonium%rank == 2) then
         call ESMF_FieldGet(fieldList(1), farrayPtr=waterAmmonium%data2)
-        dinflux => waterAmmonium%data2
-        DINflux = convertN*val2_f2
+      endif
+      call ESMF_AttributeGet(fieldList(1), 'unit', waterAmmonium%unit, &
+        isPresent=isPresent, defaultValue='', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message, '(A)') trim(name)//' uses water ammonium '
+      call MOSSCO_FieldString(fieldList(1), message)
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      if (soilAmmonium%rank > 0) then
+        isEqual = .false.
+        !call MOSSCO_CheckUnits(soilAmmonium%unit, waterAmmonium%unit, isEqual, localrc)
+        write(message,'(A)') trim(name)//' unit mismatch '
+        call MOSSCO_MessageAdd(message, trim(soilAmmonium%unit)//' /= ')
+        call MOSSCO_MessageAdd(message, trim(waterAmmonium%unit)//' /= ')
+        if (.not.isEqual) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+
+        if (waterAmmonium%rank == 1) then
+          waterAmmonium%data1 = convertN * soilAmmonium%data1
+        elseif (waterAmmonium%rank == 2) then
+          waterAmmonium%data2 = convertN * soilAmmonium%data2
+        endif
+        write(message,'(A)') trim(name)//' connected'
+        call MOSSCO_FieldString(soilAmmonium%field, message)
+        call MOSSCO_MessageAdd(message,' to ')
+        call MOSSCO_FieldString(waterAmmonium%field, message)
+        if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
     endif
 
@@ -340,37 +432,117 @@ end type spVariable
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount > 0) then
-      waterNutrient%field => fieldList(1)
+      waterNutrient%field = fieldList(1)
       call ESMF_FieldGet(fieldList(1), rank=waterNutrient%rank, rc=localrc)
       if (waterNutrient%rank == 1) then
         call ESMF_FieldGet(fieldList(1), farrayPtr=waterNutrient%data1)
       elseif (waterNutrient%rank == 2) then
         call ESMF_FieldGet(fieldList(1), farrayPtr=waterNutrient%data2)
-        dinflux => waterNutrient%data2
-        DINflux = convertN*(val1_f2 + val2_f2)
-        ! add constant boundary flux of DIN (through groundwater, advection, rain
-        !> @todo why only here, not with separate NO3/NH4?
-        DINflux = DINflux + convertN*dinflux_const/(86400.0*365.0)
       endif
+      call ESMF_AttributeGet(fieldList(1), 'unit', waterNutrient%unit, &
+        isPresent=isPresent, defaultValue='', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message, '(A)') trim(name)//' uses water nutrient '
+      call MOSSCO_FieldString(fieldList(1), message)
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      if ((soilAmmonium%rank > 0).and.(soilNitrate%rank > 0)) then
+        isEqual = .false.
+        !call MOSSCO_CheckUnits(soilAmmonium%unit, waterNutrient%unit, isEqual, localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        write(message,'(A)') trim(name)//' unit mismatch '
+        call MOSSCO_MessageAdd(message, trim(soilAmmonium%unit)//' /= ')
+        call MOSSCO_MessageAdd(message, trim(waterNutrient%unit))
+        if (.not.isEqual) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+
+        !call MOSSCO_CheckUnits(soilNitrate%unit, waterNutrient%unit, isEqual, localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        write(message,'(A)') trim(name)//' unit mismatch '
+        call MOSSCO_MessageAdd(message, trim(soilNitrate%unit)//' /= ')
+        call MOSSCO_MessageAdd(message, trim(waterNutrient%unit))
+        if (.not.isEqual) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+
+        if (waterNutrient%rank == 1) then
+          waterNutrient%data1 = (soilAmmonium%data1 + soilNitrate%data1 &
+          !> @todo why only here, not with separate NO3/NH4?
+            + dinflux_const/(86400.0*365.0)) * convertN
+        elseif (waterNutrient%rank == 2) then
+          waterNutrient%data2 = (soilAmmonium%data2 + soilNitrate%data2 &
+            + dinflux_const/(86400.0*365.0)) * convertN
+        endif
+        write(message,'(A)') trim(name)//' connected'
+        call MOSSCO_FieldString(soilAmmonium%field, message)
+        call MOSSCO_MessageAdd(message,' + ')
+        if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+        write(message,'(A)') trim(name)//' + '
+        call MOSSCO_FieldString(soilNitrate%field, message)
+        call MOSSCO_MessageAdd(message,' to ')
+        call MOSSCO_FieldString(waterNutrient%field, message)
+        if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
+      !> todo nutrients includes P, or doubling of N species if only one is known
+    endif
+
+    !> Now on to phosphorous (which we already have for soilPhosphorous)
+    if (associated(includeList)) deallocate(includeList)
+    allocate(includeList(4))
+    includeList(1) = 'DIP_upward_flux_at_soil_surface'
+    includeList(2) = 'phosphate_upward_flux_at_soil_surface'
+    includeList(3) = 'Dissolved_Inorganic_Phosphorus_DIP_nutP_upward_flux_at_soil_surface'
+    includeList(4) = 'hzg_ecosmo_pho_upward_flux_at_soil_surface'
+
+    call MOSSCO_StateGet(exportState, fieldList, &
+      include=includeList, verbose=verbose, &
+      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (fieldCount > 0 ) then
+      waterPhosphorous%field = fieldList(1)
+      call ESMF_FieldGet(fieldList(1), rank=waterPhosphorous%rank, rc=localrc)
+      if (waterPhosphorous%rank == 1) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=waterPhosphorous%data1)
+      elseif (waterPhosphorous%rank == 2) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=waterPhosphorous%data2)
+        dipflux => waterPhosphorous%data2
+      endif
+      call ESMF_AttributeGet(fieldList(1), 'unit', waterPhosphorous%unit, &
+        isPresent=isPresent, defaultValue='', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message, '(A)') trim(name)//' uses water phosphorous '
+      call MOSSCO_FieldString(fieldList(1), message)
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    endif
+
+    if ((waterPhosphorous%rank > 0) .and. (soilPhosphorous%rank > 0)) then
+      isEqual = .false.
+      !call MOSSCO_CheckUnits(waterPhosphorous%unit, soilPhosphorous%unit, isEqual, localrc)
+      write(message,'(A)') trim(name)//' unit mismatch '
+      call MOSSCO_MessageAdd(message, trim(waterPhosphorous%unit)//' /= ')
+      call MOSSCO_MessageAdd(message, trim(soilPhosphorous%unit))
+      if (.not.isEqual) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+
+      if (.not.isEqual) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      if (waterPhosphorous%rank == 1) then
+        waterPhosphorous%data1 = convertP * (soilPhosphorous%data1 &
+          + dipflux_const/(86400.0*365.0))
+      elseif (waterPhosphorous%rank == 2) then
+        waterPhosphorous%data2 = convertP * (soilPhosphorous%data2 &
+          + dipflux_const/(86400.0*365.0))
+      endif
+      write(message,'(A)') trim(name)//' connected'
+      call MOSSCO_FieldString(soilPhosphorous%field, message)
+      call MOSSCO_MessageAdd(message,' to ')
+      call MOSSCO_FieldString(waterPhosphorous%field, message)
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     endif
 
     !> @todo from here, add unit conversions and unit checking in the connector
-
-    !   DIP flux:
-    call mossco_state_get(exportState,(/ &
-              'DIP_upward_flux_at_soil_surface                                    ', &
-              'phosphate_upward_flux_at_soil_surface                              ', &
-              'Dissolved_Inorganic_Phosphorus_DIP_nutP_upward_flux_at_soil_surface'/), &
-              DIPflux, verbose=verbose, rc=localrc)
-
-    if (localrc == 0)  then
-        call mossco_state_get(importState,(/ &
-              'mole_concentration_of_phosphate_upward_flux_at_soil_surface'/), &
-              val1_f2, verbose=verbose, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-        DIPflux = convertP*(val1_f2 + dipflux_const/(86400.0*365.0))
-    end if
 
     ! Detritus fluxes, of carbon, phosphorous and nitrogen, these are
     ! state variables defined by variants of omexdia_p and omexdia_cnp
