@@ -31,6 +31,7 @@ module soil_pelagic_connector
   implicit none
 
   private
+
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DETN=>null(),DIN=>null(),vDETN=>null()
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DIP=>null(),DETP=>null(),vDETP=>null()
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: vDETC=>null(),DETC=>null()
@@ -47,6 +48,15 @@ module soil_pelagic_connector
   real(ESMF_KIND_R8) :: NC_sdet=0.04d0
   real(ESMF_KIND_R8) :: convertP=1.0d0
   real(ESMF_KIND_R8) :: convertN=1.0d0
+
+type spVariable
+  type(ESMF_Field), pointer :: field => null()
+  real(ESMF_KIND_R8), pointer :: data1(:) => null()
+  real(ESMF_KIND_R8), pointer :: data2(:,:) => null()
+  real(ESMF_KIND_R8), pointer :: data3(:,:,:) => null()
+  integer(ESMF_KIND_I4)     :: rank
+end type spVariable
+
   public SetServices
 
   contains
@@ -195,7 +205,12 @@ module soil_pelagic_connector
     real(ESMF_KIND_R8), pointer :: farrayPtr2(:,:) => null()
     logical                     :: hasCarbon, hasNitrogen, hasPhosphorous
     type(ESMF_Field), allocatable       :: importFieldList(:)
+    type(ESMF_Field), allocatable, target :: fieldList(:)
     character(len=ESMF_MAXSTR), pointer :: includeList(:) => null()
+
+    type(spVariable) :: soilNitrate, soilAmmonium, soilLabileCarbon
+    type(spVariable) :: soilSemilabileCarbon, soilPhosphorous
+    type(spVariable) :: waterNitrate, waterAmmonium, waterNutrient
 
     rc = ESMF_SUCCESS
     call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
@@ -207,39 +222,139 @@ module soil_pelagic_connector
     verbose = .true.
     if (advanceCount > 0) verbose = .false.
 
-    !> DIN flux: require that the soil component has nitrate and
-    !  ammonium upward fluxes.
-    call mossco_state_get(importState, (/'mole_concentration_of_nitrate_upward_flux_at_soil_surface'/), &
-      val1_f2, verbose=verbose, rc=localrc)
+    !> Export fields created by OmexDia typically are:
+    !> detritus_labile_carbon, detritus_semilabile_carbon, detritus_phosphorus
+    !> and their respective z-velocities plus
+    !> mole_concentration_of_phosphate, mole_concentration_of_nitrate,
+    !> mole_concentration_of_ammonium, dissolved_oxygen, dissolved_reduced_substances
+    !> And for all the above the upward-fluxes
+    !> This coupler component deals *only* with these 8 upward fluxes
+
+    !> Import fields to ECOSMO are typically:
+    !> hzg_ecosmo_no3, hzg_ecosmo_nh4, hzg_ecosmo_pho, hzg_ecosmo_det
+    !> hzg_ecosmo_opa, hzg_ecosmo_dom
+    !> hzg_ecosmo_sil
+    !> hzg_ecosmo_oxy, hzg_ecosmo_dia, hzg_ecosmo_fla, hzg_ecosmo_bg
+    !> hzg_ecosmo_microzoo, hzg_ecosmo_mesozoo
+
+    call MOSSCO_StateGet(importState, fieldList, &
+      itemSearch='mole_concentration_of_nitrate_upward_flux_at_soil_surface', &
+      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call mossco_state_get(importState, (/'mole_concentration_of_ammonium_upward_flux_at_soil_surface'/), &
-      val2_f2, verbose=verbose, rc=localrc)
+    if (fieldCount /= 1) then
+      write(message,'(A,I1)') 'Expected exactly one complete field for mole_concentration_of_nitrate_upward_flux_at_soil_surface, received ',fieldCount
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      rc = ESMF_RC_ARG_BAD
+      return
+    else
+      soilNitrate%field => fieldList(1)
+      call ESMF_FieldGet(fieldList(1), rank=soilNitrate%rank, rc=localrc)
+      if (soilNitrate%rank == 1) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=soilNitrate%data1)
+      elseif (soilNitrate%rank == 2) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=soilNitrate%data2)
+        val1_f2 => soilNitrate%data2
+      endif
+    endif
+
+    call MOSSCO_StateGet(importState, fieldList, &
+      itemSearch='mole_concentration_of_ammonium_upward_flux_at_soil_surface', &
+      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call mossco_state_get(exportState, &
-      (/'nitrate_upward_flux_at_soil_surface'/), &
-      DINflux, ubnd=ubnd, lbnd=lbnd, verbose=verbose, rc=nitrc)
-    if (nitrc == 0) DINflux = convertN*val1_f2
+    if (fieldCount /= 1) then
+      write(message,'(A,I1)') 'Expected exactly one complete field for mole_concentration_of_ammonium_upward_flux_at_soil_surface, received ',fieldCount
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      rc = ESMF_RC_ARG_BAD
+      return
+    else
+      soilAmmonium%field => fieldList(1)
+      call ESMF_FieldGet(fieldList(1), rank=soilAmmonium%rank, rc=localrc)
+      if (soilNitrate%rank == 1) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=soilAmmonium%data1)
+      elseif (soilNitrate%rank == 2) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=soilAmmonium%data2)
+        val2_f2 => soilAmmonium%data2
+      endif
+    endif
 
-    call mossco_state_get(exportState, &
-      (/'ammonium_upward_flux_at_soil_surface               ',   &
-        'dissolved_ammonium_nh3_upward_flux_at_soil_surface '/), &
-      DINflux, ubnd=ubnd, lbnd=lbnd, verbose=verbose, rc=ammrc)
-    if (ammrc == 0) DINflux = convertN*val2_f2
+    !> Now look for nitrogen species in export states, these areas
+    !> for MAECS Dissolved_Inorganic_Nitrogen_DIN_nutN, for NPZD nutrients,
+    !> for ECOSMO hzg_ecosmo_no3, hzg_ecosmo_nh4
 
-    !RH: weak check, needs to be replaced:
-    if (nitrc /= 0) then
-        call mossco_state_get(exportState,(/ &
-              'nutrients_upward_flux_at_soil_surface                            ', &
-              'DIN_upward_flux_at_soil_surface                                  ', &
-              'Dissolved_Inorganic_Nitrogen_DIN_nutN_upward_flux_at_soil_surface'/), &
-              DINflux,ubnd=ubnd,lbnd=lbnd, verbose=verbose, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (associated(includeList)) deallocate(includeList)
+    allocate(includeList(2))
+    includeList(1) = 'nitrate_upward_flux_at_soil_surface'
+    includeList(2) = 'hzg_ecosmo_no3_flux_at_soil_surface'
+
+    call MOSSCO_StateGet(exportState, fieldList, &
+      include=includeList, verbose=verbose, &
+      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (fieldCount > 0) then
+      waterNitrate%field => fieldList(1)
+      call ESMF_FieldGet(fieldList(1), rank=waterNitrate%rank, rc=localrc)
+      if (waterNitrate%rank == 1) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=waterNitrate%data1)
+      elseif (waterNitrate%rank == 2) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=waterNitrate%data2)
+        dinflux => waterNitrate%data2
+        DINflux = convertN*val1_f2
+      endif
+    endif
+
+    if (associated(includeList)) deallocate(includeList)
+    allocate(includeList(3))
+    includeList(1) = 'ammonium_upward_flux_at_soil_surface'
+    includeList(2) = 'dissolved_ammonium_nh3_upward_flux_at_soil_surface'
+    includeList(3) = 'hzg_ecosmo_no3_flux_at_soil_surface'
+
+    call MOSSCO_StateGet(exportState, fieldList, &
+      include=includeList, verbose=verbose, &
+      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (fieldCount > 0) then
+      waterAmmonium%field => fieldList(1)
+      call ESMF_FieldGet(fieldList(1), rank=waterAmmonium%rank, rc=localrc)
+      if (waterAmmonium%rank == 1) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=waterAmmonium%data1)
+      elseif (waterAmmonium%rank == 2) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=waterAmmonium%data2)
+        dinflux => waterAmmonium%data2
+        DINflux = convertN*val2_f2
+      endif
+    endif
+
+    if (associated(includeList)) deallocate(includeList)
+    allocate(includeList(3))
+    includeList(1) = 'nutrients_upward_flux_at_soil_surface'
+    includeList(2) = 'DIN_upward_flux_at_soil_surface'
+    includeList(3) = 'Dissolved_Inorganic_Nitrogen_DIN_nutN_upward_flux_at_soil_surface'
+
+    call MOSSCO_StateGet(exportState, fieldList, &
+      include=includeList, verbose=verbose, &
+      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (fieldCount > 0) then
+      waterNutrient%field => fieldList(1)
+      call ESMF_FieldGet(fieldList(1), rank=waterNutrient%rank, rc=localrc)
+      if (waterNutrient%rank == 1) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=waterNutrient%data1)
+      elseif (waterNutrient%rank == 2) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=waterNutrient%data2)
+        dinflux => waterNutrient%data2
         DINflux = convertN*(val1_f2 + val2_f2)
         ! add constant boundary flux of DIN (through groundwater, advection, rain
+        !> @todo why only here, not with separate NO3/NH4?
         DINflux = DINflux + convertN*dinflux_const/(86400.0*365.0)
-    end if
+      endif
+    endif
+
+    !> @todo from here, add unit conversions and unit checking in the connector
 
     !   DIP flux:
     call mossco_state_get(exportState,(/ &
