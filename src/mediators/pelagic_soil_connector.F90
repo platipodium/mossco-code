@@ -260,7 +260,7 @@ module pelagic_soil_connector
 
     !> Try to obtain (optional) hydrodynamic pelagic 3D variables and map their
     !> lowest layer to the surface layer
-    call MOSSCO_MapThreeDTwoD(importState, &
+    call MOSSCO_Map3D2D(importState, &
       (/'photosynthetically_active_radiation_in_water      ',   &
         'downwelling_photosynthetic_radiative_flux_in_water'/), &
         exportState, (/'photosynthetically_active_radiation_at_soil_surface'/), &
@@ -269,13 +269,13 @@ module pelagic_soil_connector
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
 
-    call MOSSCO_MapThreeDTwoD(importState, (/'temperature_in_water'/), &
+    call MOSSCO_Map3D2D(importState, (/'temperature_in_water'/), &
       exportState, (/'temperature_at_soil_surface'/), verbose=verbose, rc=localrc)
     if (localrc /= ESMF_RC_NOT_FOUND) then
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
 
-    call MOSSCO_MapThreeDTwoD(importState, (/'practical_salinity_in_water', &
+    call MOSSCO_Map3D2D(importState, (/'practical_salinity_in_water', &
                                              'salinity_in_water          '/), &
         exportState, (/'practical_salinity_at_soil_surface'/), verbose=verbose, rc=localrc)
     if (localrc /= ESMF_RC_NOT_FOUND) then
@@ -1405,7 +1405,7 @@ module pelagic_soil_connector
 
   end subroutine Finalize
 
-  subroutine MOSSCO_MapThreeDTwoD(importState, importFieldList, exportState, &
+  subroutine MOSSCO_Map3D2D(importState, importFieldList, exportState, &
     exportFieldList, kwe, verbose, rc)
 
     type(ESMF_State), intent(in)             :: importState
@@ -1459,6 +1459,57 @@ module pelagic_soil_connector
 
     nullify(farrayPtr3)
 
-  end subroutine MOSSCO_MapThreeDTwoD
+  end subroutine MOSSCO_Map3D2D
+
+  subroutine MOSSCO_Map2D1D(importState, importFieldList, exportState, &
+    exportFieldList, kwe, verbose, rc)
+
+    type(ESMF_State), intent(in)             :: importState
+    type(ESMF_State), intent(inout)          :: exportState
+    character(len=*), intent(in)             :: importFieldList(:)
+    character(len=*), intent(in)             :: exportFieldList(:)
+    type(ESMF_KeywordEnforcer), optional, intent(in) :: kwe
+    logical, intent(in), optional            :: verbose
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)               :: localrc, fieldCount
+    type(ESMF_Field), allocatable       :: fieldList2(:), fieldList1(:)
+    logical                             :: verbose_
+
+    if (present(rc)) rc = ESMF_SUCCESS
+    if (present(verbose)) then
+      verbose_ = verbose
+    else
+      verbose_ = .false.
+    endif
+    if (present(kwe)) verbose_ = verbose_
+
+    call MOSSCO_StateGet(importState, fieldList=fieldList2, &
+      itemSearchList=importFieldList, fieldstatus=ESMF_FIELDSTATUS_COMPLETE, &
+      fieldCount=fieldCount, verbose=verbose_, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    !> Return if import field not found
+    if (fieldCount == 0) then
+      if (present(rc)) rc = ESMF_RC_NOT_FOUND
+      return
+    endif
+
+    call MOSSCO_StateGet(exportState, fieldList=fieldList1, &
+      itemSearchList=exportFieldList, verbose=verbose_, &
+      fieldCount=fieldCount, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    !> Return if export field not found
+    if (fieldCount == 0) then
+      if (present(rc)) rc = ESMF_RC_NOT_FOUND
+      return
+    endif
+
+    call MOSSCO_FieldReduce(fieldList2(1), fieldList1(1), indexmask=(/1/), &
+      owner='pelagic_soil_connector', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  end subroutine MOSSCO_Map2D1D
 
 end module pelagic_soil_connector
