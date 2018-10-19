@@ -13,8 +13,8 @@
 SCRDIR=~/kai
 #if [ $# -lt 1 ]; then
 if [[ "x$1" == "x" ]] ; then
- #nproc=178
- nproc=61
+ nproc=144
+# nproc=61
 else
   nproc=$1
 fi
@@ -71,7 +71,11 @@ rm $fname *.tmp
 #rm $fname
 
 # view results
+<<<<<<< 4b6244ac5f7742058d2bbdf39d524788aef61fa2
 ## ncview $outdir'.nc' &
+=======
+##ncview $outdir'.nc' &
+>>>>>>> script changes for jureca
 # ncview $outdir'_m.nc' &
 
 #ls -lrt

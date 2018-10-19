@@ -24,7 +24,6 @@ declare -a vnt=("Phytplankton_Phosphorus_phyP_in_water" "Phytplankton_Nitrogen_p
 declare -a vns=( "denitrification_rate_in_soil" "fast_detritus_C_in_soil" "layer_height_in_soil" "detritus-P_in_soil" "mole_concentration_of_phosphate_in_soil" "dissolved_oxygen_in_soil" "mole_concentration_of_nitrate_in_soil" "mole_concentration_of_ammonium_in_soil" )
 declare -a vnf=("dissolved_oxygen_upward_flux_at_soil_surface" "dissolved_reduced_substances_upward_flux_at_soil_surface")
 #declare -a vnf=("fast_detritus_C_upward_flux_at_soil_surface" "detritus-P_upward_flux_at_soil_surface" "slow_detritus_C_upward_flux_at_soil_surface")
-# "Dissolved_Organic_Carbon_domC_in_water""Dissolved_Organic_Nitrogen_domN_in_water"  "Detritus_Phosphorus_detP_in_water" "Detritus_Nitrogen_detN_in_water" 
 #  "N\:C_ratio__QN_in_water" "P\:C_ratio__QP_in_water" "Rubisco_fract._allocation__fracR_in_water""chlorophyll_to_carbon_ratio_in_water" "water_depth_at_soil_surface" 
 tb='denitrification_rate_in_soil,layer_height_in_soil,fast_detritus_C_in_soil,detritus-P_in_soil,mole_concentration_of_nitrate_in_soil,mole_concentration_of_phosphate_in_soil,dissolved_oxygen_in_soil,mole_concentration_of_ammonium_in_soil,slow_detritus_C_in_soil'
 
@@ -34,7 +33,7 @@ dn=1       # increment in domain-no of loop
 Nstart=1 # initial time-step; skips trailer ## 731 for 2003
 soil=0     # selects benthic BGC (TotNsoil)
 flux=0     # selects fluxes (NOAH)
-trait=0    # selects physiology 
+/bin/bash: indent: command not found
 phys=0     # selects getm-phsics
 surf=0     # adds subsurface layer to CHL 
 #prefix=netcdf_fabm_pelagic.  # Prefix of files to process
@@ -126,7 +125,10 @@ for p in $(seq -f $form $n1 $dn $nproc); do
 
 # -d getmGrid3D_3,1 \
 #	-d getmGrid3D_3,$[${dz}-1],$[${dz}+1] \
+<<<<<<< 4b6244ac5f7742058d2bbdf39d524788aef61fa2
 #  -d getmGrid3D_3,1,,$[${dz}+1]
+=======
+>>>>>>> script changes for jureca
 #	-d getmGrid3D_3,$[${dz}-1],$[${dz}] \
   ncks -F -O -v $tg,$ts \
 	-d getmGrid2D_1,1,,${dlon} \
@@ -134,8 +136,22 @@ for p in $(seq -f $form $n1 $dn $nproc); do
 	-d getmGrid3D_1,1,,${dlon} \
 	-d getmGrid3D_2,1,,${dlat} \
 	-d getmGrid3D_3,1,$[${dz}+1],${dz} \
+<<<<<<< 4b6244ac5f7742058d2bbdf39d524788aef61fa2
         -d ungridded00015,1,,13 \
+=======
+>>>>>>> script changes for jureca
 	-d time,$Nstart,$N,$dt1 $fname $outname2
+#         -d ungridded00015,1,,13 \
+
+  if [[ $surf == 1 ]]; then
+  ncks -F -O -v time,getmGrid3D_Y,getmGrid3D_X,Chl_chl_in_water \
+	-d getmGrid3D_3,$[${dz}-1],${dz} \
+	-d getmGrid3D_1,1,,${dlon} \
+	-d getmGrid3D_2,1,,${dlat} \
+	-d time,$Nstart,$N,$dt1 $fname $outnamec
+#  ncrcat -O  $outname2 $outnamec $outname2
+  fi
+
 
   if [[ $surf == 1 ]]; then
   ncks -F -O -v time,getmGrid3D_Y,getmGrid3D_X,Chl_chl_in_water \
@@ -180,10 +196,10 @@ for p in $(seq -f $form $n1 $dn $nproc); do
 #      nn=$[$nn + $nn/72]
       outname1=$na'-'$p'tmp.nc'
 #      outname1m=$na'-'$p'tmp_max.nc'
-      if [[ $soil == 1 ]]; then
-        outname1z=$na'-'$p'tmp_z.nc'
-        ncra -F -O -d time,$[$nn-$dt2],$nn  '../'$outnamez $outname1z
-      fi
+##      if [[ $soil == 1 ]]; then
+##        outname1z=$na'-'$p'tmp_z.nc'
+##        ncra -F -O -d time,$[$nn-$dt2],$nn  '../'$outnamez $outname1z
+##      fi
 ##      echo $p $[$nn-$dt+1] $nn $outname1
     # calculate mean and macimum in time slice  -v $tg,$ts
         ncra -F -O -d time,$[$nn-$dt2],$nn $outname2 $outname1

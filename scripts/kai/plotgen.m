@@ -118,16 +118,30 @@ spath= '/local/home/wirtz/sns/cut/';
 ncf0 = 'sns'; ntags=length(tags);tagn=ntags;fignov=[];
 
 %% check for tag file
-tagfile = fullfile(spath,['tag.lst']);ncs=2;
-if exist(tagfile) & 0
-  tagd =importdata(tagfile,' '); tagn=length(tagd.textdata);
-  ntagsu=ceil(tagn/(ncs-1))
-  ni=1;
-  for nsu=1:ntagsu
-   tags{nsu*ncs}='_ref';%   tags{1+(nsu-1)*ncs}='';
-   for nt=1:min(ncs-1,tagn-(nsu-1)*(ncs-1))
-     tags{0+(nsu-1)*ncs+nt}=['_' cell2mat(tagd.textdata((nsu-1)*(ncs-1)+nt,2)) num2str(tagd.data((nsu-1)*(ncs-1)+nt))];
-   end
+%tagfile = fullfile(spath,['tag.lst']);ncs=2;
+%if exist(tagfile) & 0
+%  tagd =importdata(tagfile,' '); tagn=length(tagd.textdata);
+%  ntagsu=ceil(tagn/(ncs-1))
+%  ni=1;
+%  for nsu=1:ntagsu
+%   tags{nsu*ncs}='_ref';%   tags{1+(nsu-1)*ncs}='';
+%   for nt=1:min(ncs-1,tagn-(nsu-1)*(ncs-1))
+%     tags{0+(nsu-1)*ncs+nt}=['_' cell2mat(tagd.textdata((nsu-1)*(ncs-1)+nt,2)) num2str(tagd.data((nsu-1)*(ncs-1)+nt))];
+%   end
+tags ={'';};%_a_water1.4_Pmax4'_rFast0.035';'_vir0.05';
+%tags ={'';'_vS_det24';'_sinking_factor_min0.002';};%'_getm';
+%'_vir_mu-0.08';'_vir_spor_r0.14';'_mort_zoo0.035';'_basal_resp_zoo0.045';'_vS_det24';'_sinking_factor_min0.002';
+% spath= '/local/home/wirtz/sns/cut/';
+ spath= '~/sns/cut/';
+ %spath= '~/jureca/sns/cut';%   %%spath  ='/ocean-data/wirtz/';%%%sns/cut
+ %spath='/data/wirtz/';
+  ncf0 = 'sns'; ntags=length(tags);
+  if IsNOAH
+    setvar_o2flux  % defines variables to show - and where/how to do it %setvar  
+   %% nrowm = 1; ncolm = 1;
+     ncol = 1; nrow =3; 	% number of columns in fig
+  else
+    setvar_snsPres; % %Data defines variables to show - and where/how to do it %setvar  
   end
   tagn=ncs;  % compare three scenarios
   ntags=tagn
