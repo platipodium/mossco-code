@@ -32,15 +32,10 @@ module soil_pelagic_connector
 
   private
 
-  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DETN=>null(),DIN=>null(),vDETN=>null()
-  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DIP=>null(),DETP=>null(),vDETP=>null()
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: vDETC=>null(),DETC=>null()
-  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3=>null()
-  real(ESMF_KIND_R8),dimension(:,:),   pointer :: ptr_f2=>null(),val1_f2=>null(),val2_f2=>null()
+  real(ESMF_KIND_R8),dimension(:,:),   pointer :: val1_f2=>null(),val2_f2=>null()
   real(ESMF_KIND_R8),dimension(:,:),   pointer :: DETNflux=>null(),DETPflux=>null()
   real(ESMF_KIND_R8),dimension(:,:),   pointer :: DETCflux=>null(),DINflux=>null()
-  real(ESMF_KIND_R8),dimension(:,:),   pointer :: DIPflux=>null(),OXYflux=>null()
-  real(ESMF_KIND_R8),dimension(:,:),   pointer :: ODUflux=>null(),omexDETPflux=>null()
   real(ESMF_KIND_R8),dimension(:,:),   pointer :: SDETCflux=>null(),LDETCflux=>null()
   real(ESMF_KIND_R8) :: dinflux_const=0.0
   real(ESMF_KIND_R8) :: dipflux_const=-1.
@@ -56,6 +51,7 @@ type spVariable
   !real(ESMF_KIND_R8), pointer :: data3(:,:,:) => null()
   integer(ESMF_KIND_I4)       :: rank = 0
   character(len=ESMF_MAXSTR)  :: unit = ''
+  integer(ESMF_KIND_I4), allocatable :: lbnd(:), ubnd(:)
 end type spVariable
 
   public SetServices
@@ -191,7 +187,6 @@ end type spVariable
     type(ESMF_State)     :: exportState
     type(ESMF_Clock)     :: externalclock
     integer, intent(out) :: rc
-    integer              :: ammrc, nitrc, oxyrc, odurc
 
     character(len=ESMF_MAXSTR)  :: name, message
     type(ESMF_Time)             :: currTime, stopTime
@@ -213,7 +208,8 @@ end type spVariable
     type(spVariable) :: soilNitrate, soilAmmonium, soilLabileCarbon
     type(spVariable) :: soilSemilabileCarbon, soilPhosphorous
     type(spVariable) :: waterNitrate, waterAmmonium, waterNutrient
-    type(spVariable) :: waterPhosphorous
+    type(spVariable) :: waterPhosphorous, soilOdu, waterOdu
+    type(spVariable) :: soilOxygen, waterOxygen
     logical          :: isEqual, isPresent
 
     rc = ESMF_SUCCESS
@@ -507,7 +503,6 @@ end type spVariable
         call ESMF_FieldGet(fieldList(1), farrayPtr=waterPhosphorous%data1)
       elseif (waterPhosphorous%rank == 2) then
         call ESMF_FieldGet(fieldList(1), farrayPtr=waterPhosphorous%data2)
-        dipflux => waterPhosphorous%data2
       endif
       call ESMF_AttributeGet(fieldList(1), 'unit', waterPhosphorous%unit, &
         isPresent=isPresent, defaultValue='', rc=localrc)
@@ -542,8 +537,201 @@ end type spVariable
       if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     endif
 
+    !> Now on to oxygen and odu
+    call MOSSCO_StateGet(importState, fieldList, &
+      itemSearch='dissolved_oxygen_upward_flux_at_soil_surface', &
+      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (fieldCount /= 1) then
+      write(message,'(A,I1)') 'Expected exactly one complete field for dissolved_oxygen_upward_flux_at_soil_surface, received ',fieldCount
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      rc = ESMF_RC_ARG_BAD
+      return
+    else
+      soilOxygen%field = fieldList(1)
+      call ESMF_FieldGet(fieldList(1), rank=soilOxygen%rank, rc=localrc)
+      if (soilOxygen%rank == 1) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=soilOxygen%data1)
+      elseif (soilOxygen%rank == 2) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=soilOxygen%data2)
+      endif
+      call ESMF_AttributeGet(fieldList(1), 'unit', soilOxygen%unit, &
+        isPresent=isPresent, defaultValue='', rc=localrc)
+      write(message, '(A)') trim(name)//' uses soil oxygen '
+      call MOSSCO_FieldString(fieldList(1), message)
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    endif
+
+    call MOSSCO_StateGet(importState, fieldList, &
+      itemSearch='dissolved_reduced_substances_odu_upward_flux_at_soil_surface', &
+      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (fieldCount /= 1) then
+      write(message,'(A,I1)') 'Expected exactly one complete field for dissolved_reduced_substances_odu_upward_flux_at_soil_surface, received ',fieldCount
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      rc = ESMF_RC_ARG_BAD
+      return
+    else
+      soilOdu%field = fieldList(1)
+      call ESMF_FieldGet(fieldList(1), rank=soilOdu%rank, rc=localrc)
+      if (soilOdu%rank == 1) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=soilOdu%data1)
+      elseif (soilOdu%rank == 2) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=soilOdu%data2)
+      endif
+      call ESMF_AttributeGet(fieldList(1), 'unit', soilOdu%unit, &
+        isPresent=isPresent, defaultValue='', rc=localrc)
+      write(message, '(A)') trim(name)//' uses soil ODU '
+      call MOSSCO_FieldString(fieldList(1), message)
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    endif
+
+    !> Oxygen and ODU fields in export
+    if (associated(includeList)) deallocate(includeList)
+    allocate(includeList(3))
+    includeList(1) = 'oxygen_upward_flux_at_soil_surface'
+    includeList(2) = 'dissolved_oxygen_oxy_upward_flux_at_soil_surface'
+    includeList(4) = 'hzg_ecosmo_oxy_upward_flux_at_soil_surface'
+
+    call MOSSCO_StateGet(exportState, fieldList, &
+      include=includeList, verbose=verbose, &
+      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (fieldCount > 0 ) then
+      waterOxygen%field = fieldList(1)
+      call ESMF_FieldGet(fieldList(1), rank=waterOxygen%rank, rc=localrc)
+      if (waterOxygen%rank == 1) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=waterOxygen%data1)
+      elseif (waterOxygen%rank == 2) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=waterOxygen%data2)
+      endif
+      call ESMF_AttributeGet(fieldList(1), 'unit', waterOxygen%unit, &
+        isPresent=isPresent, defaultValue='', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message, '(A)') trim(name)//' uses water oxygen '
+      call MOSSCO_FieldString(fieldList(1), message)
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    endif
+
+    if (associated(includeList)) deallocate(includeList)
+    allocate(includeList(1))
+    includeList(1) = 'dissolved_reduced_substances_odu_upward_flux_at_soil_surface'
+
+    call MOSSCO_StateGet(exportState, fieldList, &
+      include=includeList, verbose=verbose, &
+      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (fieldCount > 0 ) then
+      waterOdu%field = fieldList(1)
+      call ESMF_FieldGet(fieldList(1), rank=waterOdu%rank, rc=localrc)
+      if (waterOdu%rank == 1) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=waterOdu%data1)
+      elseif (waterOdu%rank == 2) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=waterOdu%data2)
+      endif
+      call ESMF_AttributeGet(fieldList(1), 'unit', waterOdu%unit, &
+        isPresent=isPresent, defaultValue='', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message, '(A)') trim(name)//' uses water ODU '
+      call MOSSCO_FieldString(fieldList(1), message)
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    endif
+
+    if ((waterOdu%rank > 0) .and. (waterOxygen%rank > 0)) then
+
+      isEqual = .false.
+      !call MOSSCO_CheckUnits(waterOdu%unit, soilOdu%unit, isEqual, localrc)
+      write(message,'(A)') trim(name)//' unit mismatch '
+      call MOSSCO_MessageAdd(message, trim(waterOdu%unit)//' /= ')
+      call MOSSCO_MessageAdd(message, trim(soilOdu%unit))
+      if (.not.isEqual) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+
+      if (soilOdu%rank == 1) then
+        waterOdu%data1 = soilOdu%data1
+      elseif (soilOdu%rank == 2) then
+        waterOdu%data2 = soilOdu%data2
+      endif
+      write(message,'(A)') trim(name)//' connected'
+      call MOSSCO_FieldString(soilOdu%field, message)
+      call MOSSCO_MessageAdd(message,' to ')
+      call MOSSCO_FieldString(waterOdu%field, message)
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      !call MOSSCO_CheckUnits(waterOxygen%unit, soilOxygen%unit, isEqual, localrc)
+      write(message,'(A)') trim(name)//' unit mismatch '
+      call MOSSCO_MessageAdd(message, trim(waterOxygen%unit)//' /= ')
+      call MOSSCO_MessageAdd(message, trim(soilOxygen%unit))
+      if (.not.isEqual) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+
+      if (soilOdu%rank == 1) then
+        waterOxygen%data1 = soilOxygen%data1
+      elseif (soilOdu%rank == 2) then
+        waterOxygen%data2 = soilOxygen%data2
+      endif
+      write(message,'(A)') trim(name)//' connected'
+      call MOSSCO_FieldString(soilOxygen%field, message)
+      call MOSSCO_MessageAdd(message,' to ')
+      call MOSSCO_FieldString(waterOxygen%field, message)
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    elseif (waterOdu%rank > 0) then
+      isEqual = .false.
+      !call MOSSCO_CheckUnits(waterOdu%unit, soilOxygen%unit, isEqual, localrc)
+      write(message,'(A)') trim(name)//' unit mismatch '
+      call MOSSCO_MessageAdd(message, trim(waterOdu%unit)//' /= ')
+      call MOSSCO_MessageAdd(message, trim(soilOxygen%unit))
+      if (.not.isEqual) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      !call MOSSCO_CheckUnits(waterOdu%unit, soilOdu%unit, isEqual, localrc)
+
+      if (soilOdu%rank == 1) then
+        waterOdu%data1 =  soilOdu%data1 - soilOxygen%data1
+      elseif (soilOdu%rank == 2) then
+        waterOdu%data2 = soilOdu%data2 - soilOxygen%data2
+      endif
+      write(message,'(A)') trim(name)//' connected'
+      call MOSSCO_FieldString(soilOdu%field, message)
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      write(message,'(A)') trim(name)//' - '
+      call MOSSCO_FieldString(soilOxygen%field, message)
+      call MOSSCO_MessageAdd(message,' to ')
+      call MOSSCO_FieldString(waterOdu%field, message)
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    elseif (waterOxygen%rank > 0) then
+      isEqual = .false.
+      !call MOSSCO_CheckUnits(waterOxygen%unit, soilOxygen%unit, isEqual, localrc)
+      write(message,'(A)') trim(name)//' unit mismatch '
+      call MOSSCO_MessageAdd(message, trim(waterOxygen%unit)//' /= ')
+      call MOSSCO_MessageAdd(message, trim(soilOxygen%unit))
+      if (.not.isEqual) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      !call MOSSCO_CheckUnits(waterOxygen%unit, soilOdu%unit, isEqual, localrc)
+
+      if (soilOxygen%rank == 1) then
+        waterOxygen%data1 =  soilOxygen%data1 - soilOdu%data1
+      elseif (soilOxygen%rank == 2) then
+        waterOxygen%data2 = soilOxygen%data2 - soilOdu%data2
+      endif
+      write(message,'(A)') trim(name)//' connected'
+      call MOSSCO_FieldString(soilOxygen%field, message)
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      write(message,'(A)') trim(name)//' - '
+      call MOSSCO_FieldString(soilOdu%field, message)
+      call MOSSCO_MessageAdd(message,' to ')
+      call MOSSCO_FieldString(waterOxygen%field, message)
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    endif
+
+
     !> @todo from here, add unit conversions and unit checking in the connector
 
+    ! >@todo from here
     ! Detritus fluxes, of carbon, phosphorous and nitrogen, these are
     ! state variables defined by variants of omexdia_p and omexdia_cnp
     !> Deal with carbon first
@@ -652,28 +840,6 @@ end type spVariable
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
 
-
-      !> oxygen and odu fluxes
-      call mossco_state_get(exportState,(/ &
-        'oxygen_upward_flux_at_soil_surface               ', &
-        'dissolved_oxygen_oxy_upward_flux_at_soil_surface '/),OXYflux, verbose=verbose, rc=oxyrc)
-      call mossco_state_get(exportState,(/ &
-        'dissolved_reduced_substances_odu_upward_flux_at_soil_surface'/),ODUflux, verbose=verbose, rc=odurc)
-      if (oxyrc == 0) then
-        call mossco_state_get(importState,(/'dissolved_oxygen_upward_flux_at_soil_surface'/), &
-          val1_f2, verbose=verbose, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-        OXYflux = val1_f2
-      endif
-      if ((oxyrc == 0) .or. (odurc == 0)) then
-        call mossco_state_get(importState,(/'dissolved_reduced_substances_upward_flux_at_soil_surface'/), &
-          val2_f2, verbose=verbose, rc=rc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      endif
-
-      if ((oxyrc == 0) .and. (odurc /= 0)) OXYflux = OXYflux - val2_f2
-      if (odurc == 0) ODUflux = val2_f2
 
     call MOSSCO_CompExit(cplComp, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)

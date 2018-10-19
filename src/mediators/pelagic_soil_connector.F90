@@ -44,6 +44,16 @@ module pelagic_soil_connector
   real(ESMF_KIND_R8) :: half_sedimentation_tke=1.0d3 !> [m2/s2] use 50% of prescribed sinking factor for this tke
   real(ESMF_KIND_R8) :: critical_detritus=60.0 !> [mmolC/m3] use minimum sinking for det above critical_detritus
 
+  type psVariable
+    type(ESMF_Field)            :: field
+    real(ESMF_KIND_R8), pointer :: data1(:) => null()
+    real(ESMF_KIND_R8), pointer :: data2(:,:) => null()
+    real(ESMF_KIND_R8), pointer :: data3(:,:,:) => null()
+    integer(ESMF_KIND_I4)       :: rank = 0
+    character(len=ESMF_MAXSTR)  :: unit = ''
+    integer(ESMF_KIND_I4), allocatable :: lbnd(:), ubnd(:)
+  end type psVariable
+
   public SetServices
 
   contains
@@ -248,9 +258,12 @@ module pelagic_soil_connector
     character(len=ESMF_MAXSTR), pointer :: includeList(:) => null()
     type(ESMF_Clock)                    :: clock
 
-    type(ESMF_Field)  :: soilOxygen, soilOdu, waterOxygen, waterOdu
-    logical           :: hasSoilOxygen, hasSoilOdu, hasWaterOxygen
-    logical           :: hasWaterOdu
+    type(psVariable) :: soilNitrate, soilAmmonium, soilLabileCarbon
+    type(psVariable) :: soilSemilabileCarbon, soilPhosphorous
+    type(psVariable) :: waterNitrate, waterAmmonium, waterNutrient
+    type(psVariable) :: waterPhosphorous, soilOdu, waterOdu
+    type(psVariable) :: soilOxygen, waterOxygen
+    logical          :: isEqual, isPresent
 
     rc = ESMF_SUCCESS
 
@@ -260,97 +273,340 @@ module pelagic_soil_connector
     call ESMF_ClockGet(parentClock, startTime=startTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    if (currTime > startTime) verbose=.false.
+    verbose = .true.
+    !if (currTime > startTime) verbose=.false.
 
-    !> Look for oxygen species in export
-    exportRank = 2
-    hasSoilOxygen = .false.
-    call MOSSCO_StateGet(exportState, fieldList, fieldCount=fieldCount, &
-      itemSearch='dissolved_oxygen_at_soil_surface', verbose=verbose, &
-      owner=trim(name), rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !> Look for all species in export, which is well known as long
+    !> as we have only omexdia as an export model
 
-    if (fieldCount > 0) then
-      ! this is always true for OMexDia
+    ! call MOSSCO_StateGet(exportState, fieldList, &
+    !   itemSearch='dissolved_oxygen_upward_flux_at_soil_surface', &
+    !   fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    ! _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    ! if (fieldCount /= 1) then
+    !   write(message,'(A,I1)') 'Expected exactly one complete field for dissolved_oxygen_upward_flux_at_soil_surface, received ',fieldCount
+    !   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+    !   rc = ESMF_RC_ARG_BAD
+    !   return
+    ! else
+    !   soilOxygen%field = fieldList(1)
+    !   call ESMF_FieldGet(fieldList(1), rank=soilOxygen%rank, rc=localrc)
+    !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !   if (soilOxygen%rank == 1) then
+    !     call ESMF_FieldGet(fieldList(1), farrayPtr=soilOxygen%data1)
+    !     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !   elseif (soilOxygen%rank == 2) then
+    !     call ESMF_FieldGet(fieldList(1), farrayPtr=soilOxygen%data2)
+    !     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !   endif
+    !   call ESMF_AttributeGet(fieldList(1), 'unit', soilOxygen%unit, &
+    !     isPresent=isPresent, defaultValue='', rc=localrc)
+    !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    !   allocate(soilOxygen%ubnd(rank))
+    !   allocate(soilOxygen%lbnd(rank))
+    !
+    !   call ESMF_FieldGetBounds(fieldList(1), localDe=0,  exclusiveLBound=soilOxygen%lbnd, &
+    !     exclusiveUBound=soilOxygen%ubnd, rc=localrc)
+    !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    !   write(message, '(A)') trim(name)//' uses soil oxygen '
+    !   call MOSSCO_FieldString(fieldList(1), message)
+    !   if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    ! endif
+    !
+    ! call MOSSCO_StateGet(exportState, fieldList, &
+    !   itemSearch='dissolved_reduced_substances_odu_upward_flux_at_soil_surface', &
+    !   fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    ! _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    ! if (fieldCount /= 1) then
+    !   write(message,'(A,I1)') 'Expected exactly one complete field for dissolved_reduced_substances_odu_upward_flux_at_soil_surface, received ',fieldCount
+    !   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+    !   rc = ESMF_RC_ARG_BAD
+    !   return
+    ! else
+    !   soilOdu%field = fieldList(1)
+    !   call ESMF_FieldGet(fieldList(1), rank=soilOdu%rank, rc=localrc)
+    !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !   if (soilOdu%rank == 1) then
+    !     call ESMF_FieldGet(fieldList(1), farrayPtr=soilOdu%data1)
+    !     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !   elseif (soilOdu%rank == 2) then
+    !     call ESMF_FieldGet(fieldList(1), farrayPtr=soilOdu%data2)
+    !     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !   endif
+    !   call ESMF_AttributeGet(fieldList(1), 'unit', soilOdu%unit, &
+    !     isPresent=isPresent, defaultValue='', rc=localrc)
+    !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    !   allocate(soilOdu%ubnd(rank))
+    !   allocate(soilOdu%lbnd(rank))
+    !
+    !   call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=soilOdu%lbnd, &
+    !     exclusiveUBound=soilOdu%ubnd, rc=localrc)
+    !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    !   write(message, '(A)') trim(name)//' uses soil ODU '
+    !   call MOSSCO_FieldString(fieldList(1), message)
+    !   if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    ! endif
+    !
+    ! !> Find oxygen information in import
+    ! if (associated(includeList)) deallocate(includeList)
+    ! allocate(includeList(10))
+    ! includeList(1)='concentration_of_dissolved_oxygen_at_soil_surface'
+    ! includeList(2)='concentration_of_dissolved_oxygen_in_water'
+    ! includeList(3)='oxygen_at_soil_surface'
+    ! includeList(4)='oxygen_in_water'
+    ! includeList(5)='dissolved_oxygen_oxy_at_soil_surface'
+    ! includeList(6)='dissolved_oxygen_oxy_in_water'
+    ! includeList(7)='hzg_ecosmo_oxy_at_soil_surface'
+    ! includeList(8)='hzg_ecosmo_oxy_in_water'
+    ! includeList(9)='dissolved_oxygen_at_soil_surface'
+    ! includeList(10)='dissolved_oxygen_in_water'
+    ! call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
+    !   include=includeList, verbose=verbose, owner=trim(name), rc=localrc)
+    ! _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    ! if (fieldCount > 0) then
+    !   waterOxygen%field = fieldList(1)
+    !   call ESMF_FieldGet(fieldList(1), rank=waterOxygen%rank, rc=localrc)
+    !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !   if (waterOxygen%rank == 1) then
+    !     call ESMF_FieldGet(fieldList(1), farrayPtr=waterOxygen%data1)
+    !     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !   elseif (waterOxygen%rank == 2) then
+    !     call ESMF_FieldGet(fieldList(1), farrayPtr=waterOxygen%data2)
+    !     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !   elseif (waterOxygen%rank == 3) then
+    !     call ESMF_FieldGet(fieldList(1), farrayPtr=waterOxygen%data3)
+    !     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !   endif
+    !   call ESMF_AttributeGet(fieldList(1), 'unit', waterOxygen%unit, &
+    !     isPresent=isPresent, defaultValue='', rc=localrc)
+    !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    !   allocate(waterOxygen%ubnd(rank))
+    !   allocate(waterOxygen%lbnd(rank))
+    !
+    !   call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=waterOxygen%lbnd, &
+    !     exclusiveUBound=waterOxygen%ubnd, rc=localrc)
+    !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    !   write(message, '(A)') trim(name)//' uses water oxygen '
+    !   call MOSSCO_FieldString(fieldList(1), message)
+    !   if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    ! endif
+    !
+    ! if (associated(includeList)) deallocate(includeList)
+    ! allocate(includeList(4))
+    ! includeList(1) = 'dissolved_reduced_substances_odu_at_soil_surface'
+    ! includeList(2) = 'dissolved_reduced_substances_odu_in_water'
+    ! includeList(3) = 'dissolved_reduced_substances_at_soil_surface'
+    ! includeList(4) = 'dissolved_reduced_substances_in_water'
+    ! call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
+    !   include=includeList, verbose=verbose, owner=trim(name), rc=localrc)
+    ! _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    ! if (fieldCount > 0) then
+    !   waterOdu%field = fieldList(1)
+    !   call ESMF_FieldGet(fieldList(1), rank=waterOdu%rank, rc=localrc)
+    !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !   if (waterOdu%rank == 1) then
+    !     call ESMF_FieldGet(fieldList(1), farrayPtr=waterOdu%data1)
+    !     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !   elseif (waterOdu%rank == 2) then
+    !     call ESMF_FieldGet(fieldList(1), farrayPtr=waterOdu%data2)
+    !     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !   elseif (waterOdu%rank == 3) then
+    !     call ESMF_FieldGet(fieldList(1), farrayPtr=waterOdu%data3)
+    !     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !   endif
+    !   call ESMF_AttributeGet(fieldList(1), 'unit', waterOdu%unit, &
+    !     isPresent=isPresent, defaultValue='', rc=localrc)
+    !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    !   allocate(waterOdu%ubnd(rank))
+    !   allocate(waterOdu%lbnd(rank))
+    !
+    !   call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=waterOdu%lbnd, &
+    !     exclusiveUBound=waterOdu%ubnd, rc=localrc)
+    !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    !   write(message, '(A)') trim(name)//' uses water ODU '
+    !   call MOSSCO_FieldString(fieldList(1), message)
+    !   if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    ! endif
+    !
+    ! !> Separately treat oxy and odu if they appear both on both
+    ! !> sides of the connector
+    ! if (waterOxygen%rank > 0 .and. waterOdu%rank > 0) then
+    !   if (waterOxygen%rank == 3 .and. soilOxygen%rank == 2) then
+    !     soilOxygen%data2(soilOxygen%lbnd(1):soilOxygen%ubnd(1), &
+    !       soilOxygen%lbnd(2):soilOxygen%ubnd(2)) &
+    !       = waterOxygen%data3(waterOxygen%lbnd(1):waterOxygen%ubnd(1), &
+    !       waterOxygen%lbnd(2):waterOxygen%ubnd(2),waterOxygen%lbnd(1))
+    !   elseif (waterOxygen%rank == 2 .and. soilOxygen%rank == 2) then
+    !     soilOxygen%data2(soilOxygen%lbnd(1):soilOxygen%ubnd(1), &
+    !       soilOxygen%lbnd(2):soilOxygen%ubnd(2)) &
+    !       = waterOxygen%data2(waterOxygen%lbnd(1):waterOxygen%ubnd(1), &
+    !       waterOxygen%lbnd(2):waterOxygen%ubnd(2))
+    !   elseif (waterOxygen%rank == 2 .and. soilOxygen%rank == 1) then
+    !     soilOxygen%data1(soilOxygen%lbnd(1):soilOxygen%ubnd(1)) &
+    !       = waterOxygen%data2(waterOxygen%lbnd(1):waterOxygen%ubnd(1), &
+    !       waterOxygen%lbnd(2))
+    !   elseif (waterOxygen%rank == 1 .and. soilOxygen%rank == 1) then
+    !       soilOxygen%data1(soilOxygen%lbnd(1):soilOxygen%ubnd(1)) &
+    !       = waterOxygen%data1(waterOxygen%lbnd(1):waterOxygen%ubnd(1))
+    !   endif
+    !   if (waterOdu%rank == 3 .and. soilOdu%rank == 2) then
+    !     soilOdu%data2(soilOdu%lbnd(1):soilOdu%ubnd(1), &
+    !       soilOdu%lbnd(2):soilOdu%ubnd(2)) &
+    !       = waterOdu%data3(waterOdu%lbnd(1):waterOdu%ubnd(1), &
+    !       waterOdu%lbnd(2):waterOdu%ubnd(2),waterOdu%lbnd(1))
+    !   elseif (waterOdu%rank == 2 .and. soilOdu%rank == 2) then
+    !     soilOdu%data2(soilOdu%lbnd(1):soilOdu%ubnd(1), &
+    !       soilOdu%lbnd(2):soilOdu%ubnd(2)) &
+    !       = waterOdu%data2(waterOdu%lbnd(1):waterOdu%ubnd(1), &
+    !       waterOdu%lbnd(2):waterOdu%ubnd(2))
+    !   elseif (waterOdu%rank == 2 .and. soilOdu%rank == 1) then
+    !     soilOdu%data1(soilOdu%lbnd(1):soilOdu%ubnd(1)) &
+    !       = waterOdu%data2(waterOdu%lbnd(1):waterOdu%ubnd(1), &
+    !       waterOdu%lbnd(2))
+    !   elseif (waterOdu%rank == 1 .and. soilOdu%rank == 1) then
+    !       soilOdu%data1(soilOdu%lbnd(1):soilOdu%ubnd(1)) &
+    !       = waterOdu%data1(waterOdu%lbnd(1):waterOdu%ubnd(1))
+    !   endif
+    ! elseif (waterOxygen%rank > 0) then
+    !   !> Only oxygen, not odu in water, thus split negative part
+    !   !> off into odu
+    !   if (waterOxygen%rank == 3 .and. soilOxygen%rank == 2) then
+    !     soilOxygen%data2(soilOxygen%lbnd(1):soilOxygen%ubnd(1), &
+    !       soilOxygen%lbnd(2):soilOxygen%ubnd(2)) &
+    !       = waterOxygen%data3(waterOxygen%lbnd(1):waterOxygen%ubnd(1), &
+    !       waterOxygen%lbnd(2):waterOxygen%ubnd(2),waterOxygen%lbnd(1))
+    !   elseif (waterOxygen%rank == 2 .and. soilOxygen%rank == 2) then
+    !     soilOxygen%data2(soilOxygen%lbnd(1):soilOxygen%ubnd(1), &
+    !       soilOxygen%lbnd(2):soilOxygen%ubnd(2)) &
+    !       = waterOxygen%data2(waterOxygen%lbnd(1):waterOxygen%ubnd(1), &
+    !       waterOxygen%lbnd(2):waterOxygen%ubnd(2))
+    !   elseif (waterOxygen%rank == 2 .and. soilOxygen%rank == 1) then
+    !     soilOxygen%data1(soilOxygen%lbnd(1):soilOxygen%ubnd(1)) &
+    !       = waterOxygen%data2(waterOxygen%lbnd(1):waterOxygen%ubnd(1), &
+    !       waterOxygen%lbnd(2))
+    !   elseif (waterOxygen%rank == 1 .and. soilOxygen%rank == 1) then
+    !       soilOxygen%data1(soilOxygen%lbnd(1):soilOxygen%ubnd(1)) &
+    !       = waterOxygen%data1(waterOxygen%lbnd(1):waterOxygen%ubnd(1))
+    !   endif
+    !   if (waterOxygen%rank == 3 .and. soilOdu%rank == 2) then
+    !     soilOdu%data2(soilOdu%lbnd(1):soilOdu%ubnd(1), &
+    !       soilOdu%lbnd(2):soilOdu%ubnd(2)) &
+    !       = - waterOxygen%data3(waterOxygen%lbnd(1):waterOxygen%ubnd(1), &
+    !       waterOxygen%lbnd(2):waterOxygen%ubnd(2),waterOxygen%lbnd(1))
+    !   elseif (waterOxygen%rank == 2 .and. soilOdu%rank == 2) then
+    !     soilOdu%data2(soilOdu%lbnd(1):soilOdu%ubnd(1), &
+    !       soilOdu%lbnd(2):soilOdu%ubnd(2)) &
+    !       = - waterOxygen%data2(waterOxygen%lbnd(1):waterOxygen%ubnd(1), &
+    !       waterOxygen%lbnd(2):waterOxygen%ubnd(2))
+    !   elseif (waterOxygen%rank == 2 .and. soilOdu%rank == 1) then
+    !     soilOdu%data1(soilOdu%lbnd(1):soilOdu%ubnd(1)) &
+    !       = - waterOxygen%data2(waterOxygen%lbnd(1):waterOxygen%ubnd(1), &
+    !       waterOxygen%lbnd(2))
+    !   elseif (waterOxygen%rank == 1 .and. soilOdu%rank == 1) then
+    !       soilOdu%data1(soilOdu%lbnd(1):soilOdu%ubnd(1)) &
+    !       = - waterOxygen%data1(waterOxygen%lbnd(1):waterOxygen%ubnd(1))
+    !   endif
+    !   if (soilOdu%rank == 2) then
+    !     where(soilOdu%data2(soilOdu%lbnd(1):soilOdu%ubnd(1), &
+    !       soilOdu%lbnd(2):soilOdu%ubnd(2)) < 0)
+    !       soilOdu%data2(soilOdu%lbnd(1):soilOdu%ubnd(1), &
+    !         soilOdu%lbnd(2):soilOdu%ubnd(2)) = 0.0
+    !     endwhere
+    !   elseif (soilOdu%rank == 1) then
+    !     where(soilOdu%data1(soilOdu%lbnd(1):soilOdu%ubnd(1)) < 0)
+    !       soilOdu%data1(soilOdu%lbnd(1):soilOdu%ubnd(1)) = 0.0
+    !     endwhere
+    !   endif
+    !   if (soilOxygen%rank == 2) then
+    !     where(soilOxygen%data2(soilOxygen%lbnd(1):soilOxygen%ubnd(1), &
+    !       soilOxygen%lbnd(2):soilOxygen%ubnd(2)) < 0)
+    !       soilOxygen%data2(soilOxygen%lbnd(1):soilOxygen%ubnd(1), &
+    !         soilOxygen%lbnd(2):soilOxygen%ubnd(2)) = 0.0
+    !     endwhere
+    !   elseif (soilOxygen%rank == 1) then
+    !     where(soilOxygen%data1(soilOxygen%lbnd(1):soilOxygen%ubnd(1)) < 0)
+    !       soilOxygen%data1(soilOxygen%lbnd(1):soilOxygen%ubnd(1)) = 0.0
+    !     endwhere
+    !   endif
+    ! elseif (waterOdu%rank > 0) then
+    !   !> Only odu, not oxygen in water, thus split negative part
+    !   !> off into oxygen
+    !   if (waterOdu%rank == 3 .and. soilOxygen%rank == 2) then
+    !     soilOxygen%data2(soilOxygen%lbnd(1):soilOxygen%ubnd(1), &
+    !       soilOxygen%lbnd(2):soilOxygen%ubnd(2)) &
+    !       = -waterOdu%data3(waterOdu%lbnd(1):waterOdu%ubnd(1), &
+    !       waterOdu%lbnd(2):waterOdu%ubnd(2),waterOdu%lbnd(1))
+    !   elseif (waterOdu%rank == 2 .and. soilOxygen%rank == 2) then
+    !     soilOxygen%data2(soilOxygen%lbnd(1):soilOxygen%ubnd(1), &
+    !       soilOxygen%lbnd(2):soilOxygen%ubnd(2)) &
+    !       = -waterOdu%data2(waterOdu%lbnd(1):waterOdu%ubnd(1), &
+    !       waterOdu%lbnd(2):waterOdu%ubnd(2))
+    !   elseif (waterOdu%rank == 2 .and. soilOxygen%rank == 1) then
+    !     soilOxygen%data1(soilOxygen%lbnd(1):soilOxygen%ubnd(1)) &
+    !       = -waterOdu%data2(waterOdu%lbnd(1):waterOdu%ubnd(1), &
+    !       waterOdu%lbnd(2))
+    !   elseif (waterOdu%rank == 1 .and. soilOxygen%rank == 1) then
+    !       soilOxygen%data1(soilOxygen%lbnd(1):soilOxygen%ubnd(1)) &
+    !       = -waterOdu%data1(waterOdu%lbnd(1):waterOdu%ubnd(1))
+    !   endif
+    !   if (waterOdu%rank == 3 .and. soilOdu%rank == 2) then
+    !     soilOdu%data2(soilOdu%lbnd(1):soilOdu%ubnd(1), &
+    !       soilOdu%lbnd(2):soilOdu%ubnd(2)) &
+    !       = waterOdu%data3(waterOdu%lbnd(1):waterOdu%ubnd(1), &
+    !       waterOdu%lbnd(2):waterOdu%ubnd(2),waterOdu%lbnd(1))
+    !   elseif (waterOdu%rank == 2 .and. soilOdu%rank == 2) then
+    !     soilOdu%data2(soilOdu%lbnd(1):soilOdu%ubnd(1), &
+    !       soilOdu%lbnd(2):soilOdu%ubnd(2)) &
+    !       = waterOdu%data2(waterOdu%lbnd(1):waterOdu%ubnd(1), &
+    !       waterOdu%lbnd(2):waterOdu%ubnd(2))
+    !   elseif (waterOdu%rank == 2 .and. soilOdu%rank == 1) then
+    !     soilOdu%data1(soilOdu%lbnd(1):soilOdu%ubnd(1)) &
+    !       = waterOdu%data2(waterOdu%lbnd(1):waterOdu%ubnd(1), &
+    !       waterOdu%lbnd(2))
+    !   elseif (waterOdu%rank == 1 .and. soilOdu%rank == 1) then
+    !       soilOdu%data1(soilOdu%lbnd(1):soilOdu%ubnd(1)) &
+    !       = waterOdu%data1(waterOdu%lbnd(1):waterOdu%ubnd(1))
+    !   endif
+    !   if (soilOdu%rank == 2) then
+    !     where(soilOdu%data2(soilOdu%lbnd(1):soilOdu%ubnd(1), &
+    !       soilOdu%lbnd(2):soilOdu%ubnd(2)) < 0)
+    !       soilOdu%data2(soilOdu%lbnd(1):soilOdu%ubnd(1), &
+    !         soilOdu%lbnd(2):soilOdu%ubnd(2)) = 0.0
+    !     endwhere
+    !   elseif (soilOdu%rank == 1) then
+    !     where(soilOdu%data1(soilOdu%lbnd(1):soilOdu%ubnd(1)) < 0)
+    !       soilOdu%data1(soilOdu%lbnd(1):soilOdu%ubnd(1)) = 0.0
+    !     endwhere
+    !   endif
+    !   if (soilOxygen%rank == 2) then
+    !     where(soilOxygen%data2(soilOxygen%lbnd(1):soilOxygen%ubnd(1), &
+    !       soilOxygen%lbnd(2):soilOxygen%ubnd(2)) < 0)
+    !       soilOxygen%data2(soilOxygen%lbnd(1):soilOxygen%ubnd(1), &
+    !         soilOxygen%lbnd(2):soilOxygen%ubnd(2)) = 0.0
+    !     endwhere
+    !   elseif (soilOxygen%rank == 1) then
+    !     where(soilOxygen%data1(soilOxygen%lbnd(1):soilOxygen%ubnd(1)) < 0)
+    !       soilOxygen%data1(soilOxygen%lbnd(1):soilOxygen%ubnd(1)) = 0.0
+    !     endwhere
+    !   endif
+    ! endif
 
-      hasSoilOxygen = .true.
-      soilOxygen = fieldList(1)
-
-      call ESMF_FieldGet(fieldList(1), rank=exportRank, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    endif
-
-    hasSoilOdu = .false.
-    call MOSSCO_StateGet(exportState, fieldList, fieldCount=fieldCount, &
-      itemSearch='dissolved_reduced_substances_at_soil_surface', verbose=verbose, &
-      owner=trim(name), rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    if (fieldCount > 0) then
-      ! this is always true for OMexDia
-
-      hasSoilOdu = .true.
-      soilOdu = fieldList(1)
-
-      call ESMF_FieldGet(fieldList(1), rank=exportRank, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    endif
-
-    !> Find oxygen information in import
-    rank = 3
-    hasWaterOxygen = .false.
-    if (associated(includeList)) deallocate(includeList)
-    allocate(includeList(10))
-    includeList(1)='concentration_of_dissolved_oxygen_at_soil_surface'
-    includeList(2)='concentration_of_dissolved_oxygen_in_water'
-    includeList(3)='oxygen_at_soil_surface'
-    includeList(4)='oxygen_in_water'
-    includeList(5)='dissolved_oxygen_oxy_at_soil_surface'
-    includeList(6)='dissolved_oxygen_oxy_in_water'
-    includeList(7)='hzg_ecosmo_oxy_at_soil_surface'
-    includeList(8)='hzg_ecosmo_oxy_in_water'
-    includeList(9)='dissolved_oxygen_at_soil_surface'
-    includeList(10)='dissolved_oxygen_in_water'
-    call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
-      include=includeList, verbose=verbose, owner=trim(name), rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    if (fieldCount > 0) then
-
-      hasWaterOxygen = .true.
-      waterOxygen = fieldList(1)
-
-    endif
-
-    hasWaterOdu = .false.
-    if (associated(includeList)) deallocate(includeList)
-    allocate(includeList(4))
-    includeList(1) = 'dissolved_reduced_substances_odu_at_soil_surface'
-    includeList(2) = 'dissolved_reduced_substances_odu_in_water'
-    includeList(3) = 'dissolved_reduced_substances_at_soil_surface'
-    includeList(4) = 'dissolved_reduced_substances_in_water'
-    call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
-      include=includeList, verbose=verbose, owner=trim(name), rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    if (fieldCount > 0) then
-
-      hasWaterOdu = .true.
-      waterOdu = fieldList(1)
-
-    endif
-
-    do while (.true.)
-
-      ! Don't do anything if there is no demand on the export side or
-      ! if there is no information on the import side
-      if (.not.(hasSoilOxygen .or. hasSoilOdu)) exit
-      if (.not.(hasWaterOxygen .or. hasWaterOdu)) exit
-      exit
-      !> @todo continue code revision
-    enddo
+    ! if (soilOxygen%rank > 0) deallocate(soilOxygen%lbnd, soilOxygen%ubnd)
+    ! if (waterOxygen%rank > 0) deallocate(waterOxygen%lbnd, waterOxygen%ubnd)
+    ! if (soilOdu%rank > 0) deallocate(soilOdu%lbnd, soilOdu%ubnd)
+    ! if (waterOdu%rank > 0) deallocate(waterOdu%lbnd, waterOdu%ubnd)
 
     !> Try to obtain (optional) hydrodynamic pelagic 3D variables and map their
     !> lowest layer to the surface layer
@@ -394,6 +650,8 @@ module pelagic_soil_connector
       oxyrc = ESMF_SUCCESS
       call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      if (allocated(ubnd)) deallocate(ubnd)
+      if (allocated(lbnd)) deallocate(lbnd)
       allocate(lbnd(rank), ubnd(rank))
 
       if (rank==3) then
@@ -582,6 +840,8 @@ module pelagic_soil_connector
       call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+      if (allocated(ubnd)) deallocate(ubnd)
+      if (allocated(lbnd)) deallocate(lbnd)
       allocate(ubnd(rank), lbnd(rank), stat=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -635,7 +895,7 @@ module pelagic_soil_connector
       allocate(CN_det1(RANGE1D))
       CN_det1(RANGE1D) = 106.0d0/16.0d0
     elseif (exportRank == 2) then
-      allocate(CN_det1(RANGE1D))
+      allocate(CN_det2(RANGE2D))
       CN_det2(RANGE2D) = 106.0d0/16.0d0
     endif
 
@@ -654,6 +914,8 @@ module pelagic_soil_connector
       call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+      if (allocated(ubnd)) deallocate(ubnd)
+      if (allocated(lbnd)) deallocate(lbnd)
       allocate(ubnd(rank), lbnd(rank), stat=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -1215,7 +1477,8 @@ module pelagic_soil_connector
       call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      deallocate(lbnd,ubnd)
+      if (allocated(ubnd)) deallocate(ubnd)
+      if (allocated(lbnd)) deallocate(lbnd)
       allocate(ubnd(rank), lbnd(rank))
 
       call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=lbnd, &
@@ -1254,7 +1517,8 @@ module pelagic_soil_connector
       call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      deallocate(lbnd,ubnd)
+      if (allocated(ubnd)) deallocate(ubnd)
+      if (allocated(lbnd)) deallocate(lbnd)
       allocate(ubnd(rank), lbnd(rank))
 
       call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=lbnd, &
@@ -1292,7 +1556,8 @@ module pelagic_soil_connector
       call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      deallocate(lbnd,ubnd)
+      if (allocated(ubnd)) deallocate(ubnd)
+      if (allocated(lbnd)) deallocate(lbnd)
       allocate(ubnd(rank), lbnd(rank))
 
       call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=lbnd, &
@@ -1466,7 +1731,8 @@ module pelagic_soil_connector
       call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      deallocate(lbnd,ubnd)
+      if (allocated(ubnd)) deallocate(ubnd)
+      if (allocated(lbnd)) deallocate(lbnd)
       allocate(ubnd(rank), lbnd(rank))
 
       call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=lbnd, &
