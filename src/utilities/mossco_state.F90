@@ -151,7 +151,7 @@ contains
     logical, intent(in), optional                :: verbose
     integer, intent(out), optional               :: rc
 
-    integer(ESMF_KIND_I4)         :: ubnd_(1),lbnd_(1), rc_
+    integer(ESMF_KIND_I4)         :: ubnd_(1),lbnd_(1), rc_, rank
     type(ESMF_Field)              :: field
     type(ESMF_FieldBundle)        :: fieldBundle
     integer(ESMF_KIND_I4)         :: localrc,i, fieldCount
@@ -209,7 +209,13 @@ contains
 
       if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) cycle
 
-      call ESMF_FieldGet(field,localde=0,farrayPtr=farrayPtr,exclusiveUBound=ubnd_, exclusiveLBound=lbnd_,rc=localrc)
+      call ESMF_FieldGet(field, rank=rank, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      if (rank /= 1) cycle
+
+      call ESMF_FieldGet(field,localde=0, farrayPtr=farrayPtr, &
+        exclusiveUBound=ubnd_, exclusiveLBound=lbnd_,rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       exit
@@ -250,7 +256,7 @@ contains
     logical, intent(in), optional                :: verbose
     integer, intent(out), optional               :: rc
 
-    integer(ESMF_KIND_I4)         :: ubnd_(2),lbnd_(2), rc_
+    integer(ESMF_KIND_I4)         :: ubnd_(2),lbnd_(2), rc_, rank
     type(ESMF_Field)              :: field
     type(ESMF_FieldBundle)        :: fieldBundle
     integer(ESMF_KIND_I4)         :: localrc, i, fieldCount
@@ -307,7 +313,13 @@ contains
 
       if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) cycle
 
-      call ESMF_FieldGet(field,localde=0,farrayPtr=farrayPtr,exclusiveUBound=ubnd_, exclusiveLBound=lbnd_,rc=localrc)
+      call ESMF_FieldGet(field, rank=rank, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      if (rank /= 2) cycle
+
+      call ESMF_FieldGet(field, localde=0, farrayPtr=farrayPtr, &
+        exclusiveUBound=ubnd_, exclusiveLBound=lbnd_,rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       exit
@@ -348,7 +360,7 @@ contains
     logical, intent(in), optional                :: verbose
     integer, intent(out), optional               :: rc
 
-    integer(ESMF_KIND_I4)         :: ubnd_(3),lbnd_(3), rc_
+    integer(ESMF_KIND_I4)         :: ubnd_(3),lbnd_(3), rc_, rank
     type(ESMF_Field)              :: field
     type(ESMF_FieldBundle)        :: fieldBundle
     integer(ESMF_KIND_I4)         :: localrc,i, fieldCount
@@ -405,7 +417,13 @@ contains
 
       if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) cycle
 
-      call ESMF_FieldGet(field,localde=0,farrayPtr=farrayPtr,exclusiveUBound=ubnd_, exclusiveLBound=lbnd_,rc=localrc)
+      call ESMF_FieldGet(field, rank=rank, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      if (rank /= 3) cycle
+
+      call ESMF_FieldGet(field, localde=0, farrayPtr=farrayPtr, &
+        exclusiveUBound=ubnd_, exclusiveLBound=lbnd_,rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       exit
