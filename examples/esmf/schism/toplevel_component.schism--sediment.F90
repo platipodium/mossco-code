@@ -985,7 +985,7 @@ module toplevel_component
 
       endif
     enddo
-        call ESMF_TimeIntervalSet(alarmInterval, startTime, h=1 ,rc=localrc)
+        call ESMF_TimeIntervalSet(alarmInterval, startTime, h=6 ,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     cplAlarmList(3)=ESMF_AlarmCreate(clock=clock,ringTime=startTime+alarmInterval, &
@@ -1021,7 +1021,7 @@ module toplevel_component
 
       endif
     enddo
-        call ESMF_TimeIntervalSet(alarmInterval, startTime, h=1 ,rc=localrc)
+        call ESMF_TimeIntervalSet(alarmInterval, startTime, h=6 ,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     cplAlarmList(4)=ESMF_AlarmCreate(clock=clock,ringTime=startTime+alarmInterval, &
