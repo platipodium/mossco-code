@@ -573,7 +573,7 @@ module netcdf_input_component
       endif
 
       int4=0
-      ticks=0.0
+      ticks=-1.0
       select case (trim(timeUnit))
       case ('year', 'years')
         call ESMF_TimeIntervalGet(currTime-refTime, yy=int4, rc=rc)
@@ -597,7 +597,8 @@ module netcdf_input_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (ticks == 0.0) ticks=dble(int4)
+      ! use integer except when value comes from s_r8
+      if (ticks < 0.0) ticks=dble(int4)
 
       call ESMF_AttributeGet(gridComp, 'climatology_period', isPresent=isPresent, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
