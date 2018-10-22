@@ -18,7 +18,6 @@ import numpy as np
 import sys
 
 prefix = u"schism_mesh_output"
-pattern=prefix + u'.*.nc'
 petlist=[]
 timelist=[]
 key=''
@@ -27,7 +26,7 @@ excl_variables=[]
 outfile=prefix + '_stitched.nc'
 incl_variables=[]
 
-for i in range(0,len(sys.argv)):
+for i in range(1,len(sys.argv)):
     arg=sys.argv[i]
     if arg[0:2] == '--':
         key=arg.split('=')[0]
@@ -63,6 +62,7 @@ for i in range(0,len(sys.argv)):
 
 
 #print petlist
+pattern=prefix + u'.*.nc'
 files=glob.glob(pattern)
 if len(petlist) > 0 and len(files) > 0:
     fileparts=files[0].split('.')
@@ -106,7 +106,7 @@ node_id  = np.arange(node_id_max,dtype='int32')
 node_lon = node_lon = np.zeros(node_id.shape,dtype='float')
 node_lat = node_lat = np.zeros(node_id.shape,dtype='float')
 
-elem_node_conn = np.zeros((4,len(elem_id)),dtype='int32')
+elem_node_conn = np.zeros((3,len(elem_id)),dtype='int32')
 
 for f in files:
   nc=netcdf.Dataset(f,'r')
@@ -115,11 +115,11 @@ for f in files:
   if nc.variables['mesh_global_node_id'].dimensions[0] == 'time':
       node_id_global=list(nc.variables['mesh_global_node_id'][0,:]-1)
       elem_id_global=list(nc.variables['mesh_global_element_id'][0,:]-1)
-      elem_node_conn[:,elem_id_global]=nc.variables['mesh_element_node_connectivity'][0,:,:]
+      elem_node_conn[:,elem_id_global]=nc.variables['mesh_element_node_connectivity'][0,0:3,:]
   else:
       node_id_global=list(nc.variables['mesh_global_node_id'][:]-1)
       elem_id_global=list(nc.variables['mesh_global_element_id'][:]-1)
-      elem_node_conn[:,elem_id_global]=nc.variables['mesh_element_node_connectivity'][:,:]
+      elem_node_conn[:,elem_id_global]=nc.variables['mesh_element_node_connectivity'][0:3,:]
 
   node_lon[node_id_global]=nc.variables['mesh_node_lon'][:]
   node_lat[node_id_global]=nc.variables['mesh_node_lat'][:]
@@ -283,6 +283,7 @@ for f in files[:]:
         else:
             continue
 
+
         var = ncout.variables[key]
         mesh_index_position = value.dimensions.index(mesh_location)
 
@@ -296,12 +297,14 @@ for f in files[:]:
                 else:
                     var[mesh_index] == value[:].copy()
             elif len(value.shape) == 2:
+                print (key,value.dimensions,mesh_location,len(mesh_index),mesh_index_position)
                 if mesh_index_position == 0:
                     var[mesh_index,:] = value[:].copy()
                 else:
                     if 'time' in value.dimensions and len(timelist)>0:
                         var[:,mesh_index] = value[timelist,:].copy()
                     else:
+                        #print(value.shape, var.shape,len(mesh_index))
                         var[:,mesh_index] = value[:].copy()
             elif len(value.shape) == 3:
                 if mesh_index_position == 0:
