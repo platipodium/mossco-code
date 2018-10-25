@@ -290,8 +290,6 @@ module fabm_sediment_component
       ubnd(1)=numElements
       sed%grid%inum=numElements
       sed%grid%jnum=1
-      write(message,*) trim(name)//': use unstructured grid, number of local elements:',numElements
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
     else
       call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
            value=foreignGeomFieldName, defaultValue='none',rc=localrc)
@@ -456,8 +454,8 @@ module fabm_sediment_component
     sed1d%grid%dzmin=dzmin
 
     !! Write log entries
-    !> @todo consider mesh/intformat
-    write(message,'(A,I5,A,I5,A,I5)') trim(name)//' initialize grid [inum x jnum x knum]', &
+    !> @todo consider mesh/intformat, write out GridPrint here
+    write(message,'(A,I5,A,I5,A,I5)') trim(name)//' initializes fields (i x j x k)', &
       _INUM_,' x ',_JNUM_,' x ',_KNUM_
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
@@ -1419,6 +1417,9 @@ module fabm_sediment_component
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
       importState=importState, exportState=exportState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    ubnd(1:2) = 1
+    lbnd(1:2) = 1
 
 !    !> check for PAR
 !    allocate( includelist(1) )
