@@ -643,7 +643,7 @@ module fabm_sediment_component
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         do k=1,sed%grid%knum
-          statemesh_ptr(:,k) = sed%export_states(n)%data(:,1,k)
+          statemesh_ptr(RANGE1D,k) = sed%export_states(n)%data(RANGE1D,1,k)
         enddo
 
         write(message, '(A)') trim(name)//' created for export bulk '
@@ -668,7 +668,7 @@ module fabm_sediment_component
           call ESMF_FieldGet(field=field, farrayPtr=farrayPtr1, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          farrayPtr1 = -fluxes(:,1,sed%export_states(n)%fabm_id)
+          farrayPtr1 = -fluxes(RANGE1D,lbnd(1),sed%export_states(n)%fabm_id)
 
           write(message, '(A)') trim(name)//' created for export '
           call MOSSCO_FieldString(field, message, rc=localrc)
@@ -684,7 +684,7 @@ module fabm_sediment_component
       do n=1,size(sed%model%diagnostic_variables)
         if (sed%model%diagnostic_variables(n)%output /= output_none) then
           diag => sed%diagnostic_variables(n)
-          statemesh_ptr => diag(:,1,:)
+          statemesh_ptr => diag(RANGE1D,lbnd(1),:)
           field = ESMF_FieldCreate(state_mesh,farrayPtr=statemesh_ptr, &
                    name=only_var_name(sed%model%diagnostic_variables(n)%long_name)//'_in_soil', rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -705,6 +705,8 @@ module fabm_sediment_component
 #endif
 
       !! create boundary fields in import State
+      !> @todo should we advertise the geometry here?
+      !> it is also fine to obtain a default value without geometry
       field = ESMF_FieldEmptyCreate(name='porosity_at_soil_surface', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -716,10 +718,11 @@ module fabm_sediment_component
       call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      field = ESMF_FieldCreate(surface_mesh, &
-               name='temperature_at_soil_surface', &
-               typekind=ESMF_TYPEKIND_R8, meshloc=ESMF_MESHLOC_ELEMENT, rc=localrc)
-                 _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      !> @todo should we advertise the geometry here?
+      !> it is also fine to obtain a default value without geometry
+      field = ESMF_FieldCreate(surface_mesh, name='temperature_at_soil_surface', &
+        typekind=ESMF_TYPEKIND_R8, meshloc=ESMF_MESHLOC_ELEMENT, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_FieldGet(field,farrayPtr=farrayPtr1,rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -737,6 +740,7 @@ module fabm_sediment_component
       call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+      !> Allow upper boundary for all bulk state variables to be imported
       do n=1,size(sed%export_states)
         if (sed%export_states(n)%fabm_id/=-1) then
           field = ESMF_FieldCreate(surface_mesh, &
@@ -911,7 +915,7 @@ module fabm_sediment_component
           call ESMF_AttributeSet(field,'units',trim(sed%model%diagnostic_variables(n)%units))
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          write(message, '(A)') trim(name)//' created diagnostic field'
+          write(message, '(A)') trim(name)//' created diagnostic '
           call MOSSCO_FieldString(field, message, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
@@ -1041,7 +1045,7 @@ module fabm_sediment_component
             call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-            call ESMF_AttributeSet(field,'units','m/s', rc=localrc)
+            call ESMF_AttributeSet(field,'units','m s-1', rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
             call MOSSCO_FieldInitialize(field, value=0.0_rk, rc=localrc)
@@ -1094,6 +1098,7 @@ module fabm_sediment_component
     type(ESMF_GeomType_Flag)       :: geomType
     type(ESMF_Field), allocatable  :: fieldList(:)
     integer(ESMF_KIND_I4)          :: fieldCount
+    type(ESMF_MeshLoc)             :: meshLoc
 
     !> here: * @todo: evtl. complete fields here
     !!       * check for porosity in importState and copy data
@@ -1108,10 +1113,13 @@ module fabm_sediment_component
 
     ubnd(1:2) = 1
     lbnd(1:2) = 1
+    itemType = ESMF_STATEITEM_NOTFOUND
+    isPresent = .false.
 
-    !> check for porosity
+    !> check for porosit
+    itemName = 'porosity_at_soil_surface'
     call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
-      itemSearch='porosity_at_soil_surface', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, &
+      itemSearch=itemName, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, &
       rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -1128,81 +1136,63 @@ module fabm_sediment_component
         sed%porosity(RANGE2D,1) = farrayPtr2(RANGE2D)
 
       elseif (rank == 1) then
+
+        call ESMF_FieldGet(fieldList(1), geomType=geomType, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        if (geomType == ESMF_GEOMTYPE_MESH) then
+          call ESMF_FieldGet(fieldList(1), meshLoc=meshloc, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        endif
+
         call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr1, &
           exclusiveUBound=ubnd(1:1), exclusiveLBound=lbnd(1:1), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         sed%porosity(RANGE1D,lbnd(1),1)=farrayPtr1(RANGE1D)
       endif
-    !else
+    ! else
+    !
+    !   call ESMF_StateGet(importState, itemName, itemType=itemtype, rc=localrc)
+    !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    !   if (itemType == ESMF_STATEITEM_FIELD) then
+    !
+    !     call ESMF_StateGet(importState, itemName, field=field, rc=localrc)
+    !     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    !     call ESMF_AttributeGet(field, 'default_value', defaultValue, &
+    !       defaultValue=-1D30, isPresent=isPresent, rc=localrc)
+    !     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    !     ! if (isPresent) then
+    !     !   sed%porosity(RANGE2D,1)=defaultValue
+    !     ! else
+    !     !   write(message,'(A)') trim(name)//' removed and destroyed '
+    !     !   call MOSSCO_FieldString(fieldList(1), message, rc=localrc)
+    !     !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !     !   call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+    !     !   call ESMF_StateRemove(importState,(/trim(itemname)/), rc=localrc)
+    !     !   call ESMF_FieldDestroy(fieldList(1), rc=localrc)
+    !     ! endif
+    !   endif
     endif
-
-    itemname='porosity_at_soil_surface'
-    call ESMF_StateGet(importState, trim(itemname), itemType=itemType, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    if (itemType==ESMF_STATEITEM_FIELD) then
-      call ESMF_StateGet(importState, trim(itemname), field=field, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      call ESMF_FieldGet(field, status=fieldstatus, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      if (fieldstatus==ESMF_FIELDSTATUS_COMPLETE) then
-        isPresent = .true.
-        call ESMF_FieldGet(field, farrayPtr=farrayPtr2, &
-               exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-        if  (  (ubnd(1)-lbnd(1) /= _INUM_ - 1) .or. (ubnd(2)-lbnd(2) /= _JNUM_ - 1) ) then
-          write(message,'(A)') trim(name)//' received incompatible bounds in '
-          call MOSSCO_FieldString(field, message)
-          localrc = ESMF_RC_ARG_BAD
-          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        endif
-
-        sed%porosity(RANGE2D,1)=farrayPtr2(RANGE2D)
-
-      else
-
-        call ESMF_AttributeGet(field, 'default_value', isPresent=isPresent, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-        if (.not.isPresent) then
-          write(message,'(A)') trim(name)//' received incomplete field, remove field'
-          call mossco_fieldString(field, message)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
-          call ESMF_StateRemove(importState,(/ trim(itemname) /), rc=localrc)
-          call ESMF_FieldDestroy(field)
-        else
-
-          call ESMF_AttributeGet(field, 'default_value', defaultValue, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-          sed%porosity(RANGE2D,1)=defaultValue
-        endif
-      endif
-
-      if (isPresent) then
-        call sed%update_porosity(from_surface=.true.)
-        write(message,'(A)') trim(name)//' updated porosity from'
-        call MOSSCO_FieldString(field, message, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-      endif
-
-    else
-      write(message,'(A)') trim(name)//' has no external porosity information'
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-    endif
+    !
+    ! if (fieldCount > 0 .or. (itemType == ESMF_STATEITEM_FIELD .and. isPresent)) then
+    !   call sed%update_porosity(from_surface=.true.)
+    !   write(message,'(A)') trim(name)//' updated porosity from'
+    !   call MOSSCO_FieldString(fieldList(1), message, rc=localrc)
+    !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !   call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+    ! else
+    !   write(message,'(A)') trim(name)//' has no external porosity information'
+    !   call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+    ! endif
 
     call MOSSCO_CompExit(gridComp, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP2
-
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "ReadRestart"
@@ -2300,5 +2290,85 @@ module fabm_sediment_component
 
   end subroutine check_NaN
 
-#undef ESMF_METHOD
+subroutine getSurfaceItem(state, fieldName, farray3, kwe, owner, rc)
+
+  type(ESMF_State), intent(inout)    :: state
+  character(len=*), intent(in)       :: fieldName
+  real(ESMF_KIND_R8), intent(inout)  :: farray3(:,:,:)
+  type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+  integer(ESMF_KIND_I4), intent(out), optional     :: rc
+  character(len=*), intent(in), optional           :: owner
+
+  integer(ESMF_KIND_I4)         :: localrc, rc_
+  integer(ESMF_KIND_I4)         :: rank, ubnd(2), lbnd(2)
+  real(ESMF_KIND_R8), pointer   :: farrayPtr1(:) => null()
+  real(ESMF_KIND_R8), pointer   :: farrayPtr2(:,:) => null()
+  type(ESMF_StateItem_Flag)     :: itemType
+  type(ESMF_Field)              :: field
+  type(ESMF_FieldStatus_Flag)   :: fieldStatus
+  real(ESMF_KIND_R8)            :: defaultValue
+  character(ESMF_MAXSTR)        :: message, owner_
+  logical                       :: isPresent
+
+  rc_ = ESMF_SUCCESS
+  owner_ = '--'
+  if (present(kwe)) rc_ = ESMF_SUCCESS
+  if (present(rc)) rc = ESMF_SUCCESS
+
+  call ESMF_StateGet(state, fieldName, itemType=itemType, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  if (itemType /= ESMF_STATEITEM_FIELD) then
+    return
+  endif
+
+  call ESMF_StateGet(state, fieldName, field=field, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
+
+    call ESMF_AttributeGet(field, 'default_value', defaultValue, &
+      defaultValue=-1D30, isPresent=isPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (isPresent) then
+      farray3(RANGE2D,1)=defaultValue
+      write(message,'(A)') trim(owner_)//' applied default value from '
+      call MOSSCO_FieldString(field, message, rc=localrc)
+    else
+      write(message,'(A)') trim(owner_)//' removed and destroyed '
+      call MOSSCO_FieldString(field, message, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      call ESMF_StateRemove(state,(/trim(fieldName)/), rc=localrc)
+      call ESMF_FieldDestroy(field, rc=localrc)
+    endif
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+    return
+  endif
+
+  call ESMF_FieldGet(field, rank=rank, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  if (rank == 2) then
+    call ESMF_FieldGet(field, farrayPtr=farrayPtr2, &
+      exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    farray3(RANGE2D,1) = farrayPtr2(RANGE2D)
+
+  elseif (rank == 1) then
+
+    call ESMF_FieldGet(field, farrayPtr=farrayPtr1, &
+      exclusiveUBound=ubnd(1:1), exclusiveLBound=lbnd(1:1), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    farray3(RANGE1D,lbnd(1),1)=farrayPtr1(RANGE1D)
+  endif
+
+end subroutine getSurfaceItem
+
 end module fabm_sediment_component
