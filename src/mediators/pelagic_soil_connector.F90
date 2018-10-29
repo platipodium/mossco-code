@@ -195,7 +195,7 @@ module pelagic_soil_connector
 
     integer                     :: rank, exportRank
     integer                     :: i,j,inum,jnum
-    integer(ESMF_KIND_I4), allocatable :: lbnd(:), ubnd(:)
+    integer(ESMF_KIND_I4)       :: lbnd(3), ubnd(3)
     integer(ESMF_KIND_I4), allocatable :: exportLbnd(:), exportUbnd(:)
 !    integer                     :: Clbnd(3),AMMlbnd(3),Plbnd(3)
 !    integer                     :: Cubnd(3),AMMubnd(3),Pubnd(3)
@@ -266,6 +266,8 @@ module pelagic_soil_connector
     logical          :: isEqual, isPresent
 
     rc = ESMF_SUCCESS
+    lbnd(:) = 1
+    ubnd(:) = 1
 
     call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -650,17 +652,16 @@ module pelagic_soil_connector
       oxyrc = ESMF_SUCCESS
       call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      if (allocated(ubnd)) deallocate(ubnd)
-      if (allocated(lbnd)) deallocate(lbnd)
-      allocate(lbnd(rank), ubnd(rank))
 
       if (rank==3) then
-        call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr3, exclusiveLBound=lbnd, &
-          exclusiveUbound=ubnd, rc=localrc)
+        call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr3, &
+          exclusiveLBound=lbnd(1:3), &
+          exclusiveUbound=ubnd(1:3), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       elseif (rank==2) then
-        call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr2, exclusiveLBound=lbnd, &
-          exclusiveUbound=ubnd, rc=localrc)
+        call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr2, &
+          exclusiveLBound=lbnd(1:2), &
+          exclusiveUbound=ubnd(1:2), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
     endif
@@ -682,12 +683,14 @@ module pelagic_soil_connector
       odurc = ESMF_SUCCESS
 
       if (rank==3) then
-        call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr32, exclusiveLBound=lbnd, &
-          exclusiveUbound=ubnd, rc=localrc)
+        call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr32, &
+          exclusiveLBound=lbnd(1:3), &
+          exclusiveUbound=ubnd(1:3), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       elseif (rank==2) then
-        call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr22, exclusiveLBound=lbnd, &
-          exclusiveUbound=ubnd, rc=localrc)
+        call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr22, &
+          exclusiveLBound=lbnd(1:2), &
+          exclusiveUbound=ubnd(1:2), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
     endif
@@ -794,18 +797,16 @@ module pelagic_soil_connector
           farrayPtr22(RANGE2D) = farrayPtr2(RANGE2D)
         elseif (rank==1) then
 
-          allocate(ubnd(1), lbnd(1), stat=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr1, &
-            exclusiveLBound=lbnd, exclusiveUbound=ubnd, rc=localrc)
+            exclusiveLBound=lbnd(1:1), exclusiveUbound=ubnd(1:1), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           call ESMF_FieldGet(field, farrayPtr=farrayPtr12, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           farrayPtr12(RANGE1D) = farrayPtr1(RANGE1D)
-          deallocate(ubnd, lbnd, stat=localrc)
         endif
       enddo
     endif
@@ -813,8 +814,6 @@ module pelagic_soil_connector
     !> Clean up oxygen-related fields
     if (allocated(fieldList)) deallocate(fieldList)
     if (associated(includeList)) deallocate(includeList)
-    if (allocated(ubnd)) deallocate(ubnd)
-    if (allocated(lbnd)) deallocate(lbnd)
     nullify(farrayPtr3, farrayPtr32, farrayPtr2, farrayPtr22, farrayPtr1, farrayPtr12)
 
     !> Get detritus and transfer it to the
@@ -840,22 +839,22 @@ module pelagic_soil_connector
       call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (allocated(ubnd)) deallocate(ubnd)
-      if (allocated(lbnd)) deallocate(lbnd)
-      allocate(ubnd(rank), lbnd(rank), stat=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (rank==1) then
-        call ESMF_FieldGet(fieldList(1), farrayPtr=detN1, exclusiveLBound=lbnd, &
-          exclusiveUBound=ubnd, rc=localrc)
+        call ESMF_FieldGet(fieldList(1), farrayPtr=detN1, &
+          exclusiveLBound=lbnd(1:1), &
+          exclusiveUBound=ubnd(1:1), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       elseif (rank==2) then
-        call ESMF_FieldGet(fieldList(1), farrayPtr=detN2, exclusiveLBound=lbnd, &
-          exclusiveUBound=ubnd, rc=localrc)
+        call ESMF_FieldGet(fieldList(1), farrayPtr=detN2, &
+          exclusiveLBound=lbnd(1:2), &
+          exclusiveUBound=ubnd(1:2), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       elseif (rank==3) then
-        call ESMF_FieldGet(fieldList(1), farrayPtr=detN3, exclusiveLBound=lbnd, &
-          exclusiveUBound=ubnd, rc=localrc)
+        call ESMF_FieldGet(fieldList(1), farrayPtr=detN3, &
+          exclusiveLBound=lbnd(1:3), &
+          exclusiveUBound=ubnd(1:3), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
 
@@ -875,16 +874,19 @@ module pelagic_soil_connector
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (rank==1 .and. fieldcount > 0) then
-        call ESMF_FieldGet(fieldList(1), farrayPtr=vdetN1, exclusiveLBound=lbnd, &
-          exclusiveUBound=ubnd, rc=localrc)
+        call ESMF_FieldGet(fieldList(1), farrayPtr=vdetN1, &
+          exclusiveLBound=lbnd(1:1), &
+          exclusiveUBound=ubnd(1:1), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       elseif (rank==2 .and. fieldcount > 0) then
-        call ESMF_FieldGet(fieldList(1), farrayPtr=vdetN2, exclusiveLBound=lbnd, &
-          exclusiveUBound=ubnd, rc=localrc)
+        call ESMF_FieldGet(fieldList(1), farrayPtr=vdetN2, &
+          exclusiveLBound=lbnd(1:2), &
+          exclusiveUBound=ubnd(1:2), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       elseif (rank==3 .and. fieldcount > 0) then
-        call ESMF_FieldGet(fieldList(1), farrayPtr=vdetN3, exclusiveLBound=lbnd, &
-          exclusiveUBound=ubnd, rc=localrc)
+        call ESMF_FieldGet(fieldList(1), farrayPtr=vdetN3, &
+          exclusiveLBound=lbnd(1:3), &
+          exclusiveUBound=ubnd(1:3), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
 
@@ -895,6 +897,7 @@ module pelagic_soil_connector
       allocate(CN_det1(RANGE1D))
       CN_det1(RANGE1D) = 106.0d0/16.0d0
     elseif (exportRank == 2) then
+      write(0,*) lbnd, ubnd
       allocate(CN_det2(RANGE2D))
       CN_det2(RANGE2D) = 106.0d0/16.0d0
     else
@@ -917,22 +920,22 @@ module pelagic_soil_connector
       call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (allocated(ubnd)) deallocate(ubnd)
-      if (allocated(lbnd)) deallocate(lbnd)
-      allocate(ubnd(rank), lbnd(rank), stat=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (rank == 1) then
-        call ESMF_FieldGet(fieldList(1), farrayPtr=detC1, exclusiveLBound=lbnd, &
-          exclusiveUBound=ubnd, rc=localrc)
+        call ESMF_FieldGet(fieldList(1), farrayPtr=detC1, &
+          exclusiveLBound=lbnd(1:1), &
+          exclusiveUBound=ubnd(1:1), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       elseif (rank == 2) then
-        call ESMF_FieldGet(fieldList(1), farrayPtr=detC2, exclusiveLBound=lbnd, &
-          exclusiveUBound=ubnd, rc=localrc)
+        call ESMF_FieldGet(fieldList(1), farrayPtr=detC2, &
+          exclusiveLBound=lbnd(1:2), &
+          exclusiveUBound=ubnd(1:2), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       elseif (rank == 3) then
-        call ESMF_FieldGet(fieldList(1), farrayPtr=detC3, exclusiveLBound=lbnd, &
-          exclusiveUBound=ubnd, rc=localrc)
+        call ESMF_FieldGet(fieldList(1), farrayPtr=detC3, &
+          exclusiveLBound=lbnd(1:3), &
+          exclusiveUBound=ubnd(1:3), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
     endif
@@ -1453,12 +1456,8 @@ module pelagic_soil_connector
         call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        if (allocated(lbnd)) deallocate(lbnd)
-        if (allocated(ubnd)) deallocate(ubnd)
-        allocate(lbnd(rank), ubnd(rank))
-
-        call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=lbnd, &
-          exclusiveUBound=ubnd, rc=localrc)
+        call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=lbnd(1:rank), &
+          exclusiveUBound=ubnd(1:rank), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         if (rank == 1) call ESMF_FieldGet(fieldList(1), farrayPtr=detP1, rc=localrc)
@@ -1496,12 +1495,8 @@ module pelagic_soil_connector
       call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (allocated(ubnd)) deallocate(ubnd)
-      if (allocated(lbnd)) deallocate(lbnd)
-      allocate(ubnd(rank), lbnd(rank))
-
-      call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=lbnd, &
-        exclusiveUBound=ubnd, rc=localrc)
+      call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=lbnd(1:rank), &
+        exclusiveUBound=ubnd(1:rank), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (rank == 1) then
@@ -1536,12 +1531,8 @@ module pelagic_soil_connector
       call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (allocated(ubnd)) deallocate(ubnd)
-      if (allocated(lbnd)) deallocate(lbnd)
-      allocate(ubnd(rank), lbnd(rank))
-
-      call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=lbnd, &
-        exclusiveUBound=ubnd, rc=localrc)
+      call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=lbnd(1:rank), &
+        exclusiveUBound=ubnd(1:rank), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (rank == 1) then
@@ -1575,12 +1566,8 @@ module pelagic_soil_connector
       call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (allocated(ubnd)) deallocate(ubnd)
-      if (allocated(lbnd)) deallocate(lbnd)
-      allocate(ubnd(rank), lbnd(rank))
-
-      call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=lbnd, &
-        exclusiveUBound=ubnd, rc=localrc)
+      call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=lbnd(1:rank), &
+        exclusiveUBound=ubnd(1:rank), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (rank == 1) then
@@ -1833,12 +1820,8 @@ module pelagic_soil_connector
       call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (allocated(ubnd)) deallocate(ubnd)
-      if (allocated(lbnd)) deallocate(lbnd)
-      allocate(ubnd(rank), lbnd(rank))
-
-      call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=lbnd, &
-        exclusiveUBound=ubnd, rc=localrc)
+      call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=lbnd(1:rank), &
+        exclusiveUBound=ubnd(1:rank), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (rank == 1) then
