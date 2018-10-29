@@ -32,11 +32,6 @@ module soil_pelagic_connector
 
   private
 
-  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: vDETC=>null(),DETC=>null()
-  real(ESMF_KIND_R8),dimension(:,:),   pointer :: val1_f2=>null(),val2_f2=>null()
-  real(ESMF_KIND_R8),dimension(:,:),   pointer :: DETNflux=>null(),DETPflux=>null()
-  real(ESMF_KIND_R8),dimension(:,:),   pointer :: DETCflux=>null(),DINflux=>null()
-  real(ESMF_KIND_R8),dimension(:,:),   pointer :: SDETCflux=>null(),LDETCflux=>null()
   real(ESMF_KIND_R8) :: dinflux_const=0.0
   real(ESMF_KIND_R8) :: dipflux_const=-1.
   real(ESMF_KIND_R8) :: NC_ldet=0.20d0
@@ -51,7 +46,7 @@ type spVariable
   !real(ESMF_KIND_R8), pointer :: data3(:,:,:) => null()
   integer(ESMF_KIND_I4)       :: rank = 0
   character(len=ESMF_MAXSTR)  :: unit = ''
-  integer(ESMF_KIND_I4), allocatable :: lbnd(:), ubnd(:)
+  integer(ESMF_KIND_I4)       :: lbnd(2) = 1, ubnd(2) = 1
 end type spVariable
 
   public SetServices
@@ -200,13 +195,14 @@ end type spVariable
     integer(ESMF_KIND_I4)       :: rank, ubnd(2), lbnd(2), itemCount
     logical                     :: verbose
     real(ESMF_KIND_R8), pointer :: farrayPtr2(:,:) => null()
+    real(ESMF_KIND_R8), pointer :: farrayPtr1(:) => null()
     logical                     :: hasCarbon, hasNitrogen, hasPhosphorous
     type(ESMF_Field), allocatable       :: importFieldList(:)
     type(ESMF_Field), allocatable       :: fieldList(:)
     character(len=ESMF_MAXSTR), pointer :: includeList(:) => null()
 
-    type(spVariable) :: soilNitrate, soilAmmonium, soilLabileCarbon
-    type(spVariable) :: soilSemilabileCarbon, soilPhosphorous
+    type(spVariable) :: soilNitrate, soilAmmonium
+    type(spVariable) :: soilPhosphorous, waterCarbon, waterNitrogen
     type(spVariable) :: waterNitrate, waterAmmonium, waterNutrient
     type(spVariable) :: waterPhosphorous, soilOdu, waterOdu
     type(spVariable) :: soilOxygen, waterOxygen
@@ -220,7 +216,7 @@ end type spVariable
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     verbose = .true.
-    !if (advanceCount > 0) verbose = .false.
+    if (advanceCount > 0) verbose = .false.
 
     !> Export fields created by OmexDia typically are:
     !> detritus_labile_carbon, detritus_semilabile_carbon, detritus_phosphorus
@@ -243,13 +239,15 @@ end type spVariable
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount /= 1) then
-      write(message,'(A,I1)') 'Expected exactly one complete field for mole_concentration_of_phosphate_upward_flux_at_soil_surface, received ',fieldCount
+      write(message,'(A,I1)') trim(name)//' expected exactly one field for mole_concentration_of_phosphate_upward_flux_at_soil_surface, received ',fieldCount
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       rc = ESMF_RC_ARG_BAD
       return
     else
       soilPhosphorous%field = fieldList(1)
       call ESMF_FieldGet(fieldList(1), rank=soilPhosphorous%rank, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
       if (soilPhosphorous%rank == 1) then
         call ESMF_FieldGet(fieldList(1), farrayPtr=soilPhosphorous%data1)
       elseif (soilPhosphorous%rank == 2) then
@@ -268,7 +266,7 @@ end type spVariable
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount /= 1) then
-      write(message,'(A,I1)') 'Expected exactly one complete field for mole_concentration_of_nitrate_upward_flux_at_soil_surface, received ',fieldCount
+      write(message,'(A,I1)') trim(name)//' expected exactly one field for mole_concentration_of_nitrate_upward_flux_at_soil_surface, received ',fieldCount
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       rc = ESMF_RC_ARG_BAD
       return
@@ -293,7 +291,7 @@ end type spVariable
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount /= 1) then
-      write(message,'(A,I1)') 'Expected exactly one complete field for mole_concentration_of_ammonium_upward_flux_at_soil_surface, received ',fieldCount
+      write(message,'(A,I1)') trim(name)//' expected exactly one field for mole_concentration_of_ammonium_upward_flux_at_soil_surface, received ',fieldCount
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       rc = ESMF_RC_ARG_BAD
       return
@@ -547,7 +545,7 @@ end type spVariable
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount /= 1) then
-      write(message,'(A,I1)') 'Expected exactly one complete field for dissolved_oxygen_upward_flux_at_soil_surface, received ',fieldCount
+      write(message,'(A,I1)') trim(name)//' expected exactly one field for dissolved_oxygen_upward_flux_at_soil_surface, received ',fieldCount
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       rc = ESMF_RC_ARG_BAD
       return
@@ -567,12 +565,12 @@ end type spVariable
     endif
 
     call MOSSCO_StateGet(importState, fieldList, &
-      itemSearch='dissolved_reduced_substances_odu_upward_flux_at_soil_surface', &
+      itemSearch='dissolved_reduced_substances_upward_flux_at_soil_surface', &
       fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount /= 1) then
-      write(message,'(A,I1)') 'Expected exactly one complete field for dissolved_reduced_substances_odu_upward_flux_at_soil_surface, received ',fieldCount
+      write(message,'(A,I1)') trim(name)//' expected exactly one field for dissolved_reduced_substances_upward_flux_at_soil_surface, received ',fieldCount
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       rc = ESMF_RC_ARG_BAD
       return
@@ -596,7 +594,7 @@ end type spVariable
     allocate(includeList(3))
     includeList(1) = 'oxygen_upward_flux_at_soil_surface'
     includeList(2) = 'dissolved_oxygen_oxy_upward_flux_at_soil_surface'
-    includeList(4) = 'hzg_ecosmo_oxy_upward_flux_at_soil_surface'
+    includeList(3) = 'hzg_ecosmo_oxy_upward_flux_at_soil_surface'
 
     call MOSSCO_StateGet(exportState, fieldList, &
       include=includeList, verbose=verbose, &
@@ -623,7 +621,7 @@ end type spVariable
 
     if (associated(includeList)) deallocate(includeList)
     allocate(includeList(1))
-    includeList(1) = 'dissolved_reduced_substances_odu_upward_flux_at_soil_surface'
+    includeList(1) = 'dissolved_reduced_substances_upward_flux_at_soil_surface'
 
     call MOSSCO_StateGet(exportState, fieldList, &
       include=includeList, verbose=verbose, &
@@ -731,44 +729,35 @@ end type spVariable
 
     endif
 
+    !> Detrital nitrogen
+    if (associated(includeList)) deallocate(includeList)
+    allocate(includeList(3))
+    includeList(1) = 'detritus_upward_flux_at_soil_surface'
+    includeList(2) = 'detN_upward_flux_at_soil_surface'
+    includeList(3) = 'Detritus_Nitrogen_detN_upward_flux_at_soil_surface'
 
-    !> @todo from here, add unit conversions and unit checking in the connector
+    call MOSSCO_StateGet(exportState, fieldList, &
+      include=includeList, &
+      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    ! >@todo from here
-    ! Detritus fluxes, of carbon, phosphorous and nitrogen, these are
-    ! state variables defined by variants of omexdia_p and omexdia_cnp
-    !> Deal with carbon first
-    hasCarbon = .false.
-    call mossco_state_get(exportState,(/ &
-      'Detritus_Carbon_detC_upward_flux_at_soil_surface'/),DETCflux, &
-      verbose=verbose, rc=localrc)
-    if (localrc == ESMF_SUCCESS) then
-      if (associated(includeList)) deallocate(includeList)
-      allocate(includeList(1))
-      includeList(1) = 'detritus*carbon_upward_flux_at_soil_surface'
+    if (fieldCount == 1) then
 
-      call MOSSCO_StateGet(importState, importFieldList, fieldCount=fieldCount, &
-        include=includeList, verbose=verbose, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      waterNitrogen%field = fieldList(1)
+      call ESMF_FieldGet(fieldList(1), rank=waterNitrogen%rank, rc=localrc)
+      if (waterNitrogen%rank == 1) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=waterNitrogen%data1)
+      elseif (waterNitrogen%rank == 2) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=waterNitrogen%data2)
+      endif
+      call ESMF_AttributeGet(fieldList(1), 'unit', waterNitrogen%unit, &
+        isPresent=isPresent, defaultValue='', rc=localrc)
+      write(message, '(A)') trim(name)//' uses water nitrogen '
+      call MOSSCO_FieldString(fieldList(1), message)
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      if (fieldCount > 0) hasCarbon = .true.
-      DETCflux(RANGE2D) = 0.0
-      do i=1,fieldCount
-        call ESMF_FieldGet(importFieldList(i), farrayPtr=farrayPtr2, rc=localrc)
-        DETCflux(RANGE2D) = DETCflux(RANGE2D) + farrayPtr2(RANGE2D)
-      enddo
-    elseif (localrc /= ESMF_RC_NOT_FOUND) then
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-    endif
-
-    !> Now look for nitrogen
-    hasNitrogen = .false.
-    call mossco_state_get(exportState,(/ &
-      'detritus_upward_flux_at_soil_surface              ', &
-      'detN_upward_flux_at_soil_surface                  ', &
-      'Detritus_Nitrogen_detN_upward_flux_at_soil_surface'/), &
-      DETNflux, verbose=verbose, rc=localrc)
-    if (localrc == ESMF_SUCCESS) then
+      !> Look for detritus nitrogen species in soil and sum them up to send
+      !> them to the pelagic
       if (associated(includeList)) deallocate(includeList)
       allocate(includeList(1))
       includeList(1) = 'detritus*nitrogen_upward_flux_at_soil_surface'
@@ -777,25 +766,145 @@ end type spVariable
         include=includeList, verbose=verbose, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (fieldCount > 0) hasNitrogen = .true.
-      DETNflux(RANGE2D) = 0.0
+      if (waterNitrogen%rank == 1) then
+        waterNitrogen%data1 = 0.0
+      elseif (waterNitrogen%rank == 2) then
+        waterNitrogen%data2 = 0.0
+      endif
+
       do i=1,fieldCount
-        call ESMF_FieldGet(importFieldList(i), farrayPtr=farrayPtr2, rc=localrc)
-        DETNflux(RANGE2D) = DETNflux(RANGE2D) + convertN*farrayPtr2(RANGE2D)
+
+        call ESMF_FieldGet(importFieldList(i), rank=rank, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        if (rank /= waterNitrogen%rank) then
+          write(message, '(A)') trim(name)//' rank mismatch for water nitrogen'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+          rc = ESMF_RC_ARG_BAD
+          return
+        endif
+
+        call ESMF_FieldGetBounds(importFieldList(i), &
+          exclusiveUbound=ubnd(1:rank), exclusiveLBound=lbnd(1:rank), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        !> @todo check bounds
+
+        if (rank == 1) then
+          call ESMF_FieldGet(importFieldList(i), farrayPtr=farrayPtr1, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          waterNitrogen%data1 = waterNitrogen%data1  + farrayPtr1
+        elseif (rank == 2) then
+          call ESMF_FieldGet(importFieldList(i), farrayPtr=farrayPtr2, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          waterNitrogen%data2 = waterNitrogen%data2  + farrayPtr2
+        endif
       enddo
-    elseif (localrc /= ESMF_RC_NOT_FOUND) then
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
     endif
 
-    !> Now look for phosphorous
-    call mossco_state_get(exportState,(/ &
-      'detP_upward_flux_at_soil_surface                    ', &
-      'Detritus_Phosphorus_detP_upward_flux_at_soil_surface'/), DETPflux, &
-      verbose=verbose, rc=localrc)
+    !> Now on to detritus, deal with carbon first
+    call MOSSCO_StateGet(exportState, fieldList, &
+      itemSearch='Detritus_Carbon_detC_upward_flux_at_soil_surface', &
+      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    hasPhosphorous = .false.
-    if (localrc == ESMF_SUCCESS) then
+    !> Only if carbon is needed do we consider detritus carbon
+    if (fieldCount == 1) then
 
+      waterCarbon%field = fieldList(1)
+      call ESMF_FieldGet(fieldList(1), rank=waterCarbon%rank, rc=localrc)
+      if (waterCarbon%rank == 1) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=waterCarbon%data1)
+      elseif (waterCarbon%rank == 2) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=waterCarbon%data2)
+      endif
+      call ESMF_AttributeGet(fieldList(1), 'unit', waterCarbon%unit, &
+        isPresent=isPresent, defaultValue='', rc=localrc)
+      write(message, '(A)') trim(name)//' uses water carbon '
+      call MOSSCO_FieldString(fieldList(1), message)
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      !> Look for detritus carbon species in soil and sum them up to send
+      !> them to the pelagic
+      if (associated(includeList)) deallocate(includeList)
+      allocate(includeList(1))
+      includeList(1) = 'detritus*carbon_upward_flux_at_soil_surface'
+
+      call MOSSCO_StateGet(importState, importFieldList, fieldCount=fieldCount, &
+        include=includeList, verbose=verbose, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (waterCarbon%rank == 1) then
+        waterCarbon%data1 = 0.0
+      elseif (waterCarbon%rank == 2) then
+        waterCarbon%data2 = 0.0
+      endif
+
+      do i=1,fieldCount
+
+        call ESMF_FieldGet(importFieldList(i), rank=rank, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        if (rank /= waterCarbon%rank) then
+          write(message, '(A)') trim(name)//' rank mismatch for water carbon'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+          rc = ESMF_RC_ARG_BAD
+          return
+        endif
+
+        call ESMF_FieldGetBounds(importFieldList(i), &
+          exclusiveUbound=ubnd(1:rank), exclusiveLBound=lbnd(1:rank), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        !> @todo check bounds
+
+        if (rank == 1) then
+          call ESMF_FieldGet(importFieldList(i), farrayPtr=farrayPtr1, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          waterCarbon%data1 = waterCarbon%data1  + farrayPtr1
+        elseif (rank == 2) then
+          call ESMF_FieldGet(importFieldList(i), farrayPtr=farrayPtr2, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          waterCarbon%data2 = waterCarbon%data2  + farrayPtr2
+        endif
+      enddo
+
+    endif
+
+
+    !> Detrital phosphorous
+    if (associated(includeList)) deallocate(includeList)
+    allocate(includeList(2))
+    includeList(1) = 'detP_upward_flux_at_soil_surface'
+    includeList(2) = 'Detritus_Phosphorus_detP_upward_flux_at_soil_surface'
+
+    call MOSSCO_StateGet(exportState, fieldList, &
+      include=includeList, &
+      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (fieldCount == 1) then
+
+      waterPhosphorous%field = fieldList(1)
+      call ESMF_FieldGet(fieldList(1), rank=waterPhosphorous%rank, rc=localrc)
+      if (waterPhosphorous%rank == 1) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=waterPhosphorous%data1)
+      elseif (waterPhosphorous%rank == 2) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=waterPhosphorous%data2)
+      endif
+      call ESMF_AttributeGet(fieldList(1), 'unit', waterPhosphorous%unit, &
+        isPresent=isPresent, defaultValue='', rc=localrc)
+      write(message, '(A)') trim(name)//' uses water phosphorous '
+      call MOSSCO_FieldString(fieldList(1), message)
+      if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      !> Look for detritus nitrogen species in soil and sum them up to send
+      !> them to the pelagic
       if (associated(includeList)) deallocate(includeList)
       allocate(includeList(1))
       includeList(1) = 'detritus*phosphorous_upward_flux_at_soil_surface'
@@ -804,45 +913,66 @@ end type spVariable
         include=includeList, verbose=verbose, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (fieldCount > 0) hasPhosphorous = .true.
-      DETPflux(RANGE2D) = 0.0
+      if (waterPhosphorous%rank == 1) then
+        waterPhosphorous%data1 = 0.0
+      elseif (waterPhosphorous%rank == 2) then
+        waterPhosphorous%data2 = 0.0
+      endif
+
       do i=1,fieldCount
-        call ESMF_FieldGet(importFieldList(i), farrayPtr=farrayPtr2, rc=localrc)
-        DETPflux(RANGE2D) = DETPflux(RANGE2D) + convertP*farrayPtr2(RANGE2D)
+
+        call ESMF_FieldGet(importFieldList(i), rank=rank, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        if (rank /= waterPhosphorous%rank) then
+          write(message, '(A)') trim(name)//' rank mismatch for water phosphorous'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+          rc = ESMF_RC_ARG_BAD
+          return
+        endif
+
+        call ESMF_FieldGetBounds(importFieldList(i), &
+          exclusiveUbound=ubnd(1:rank), exclusiveLBound=lbnd(1:rank), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        !> @todo check bounds
+
+        if (rank == 1) then
+          call ESMF_FieldGet(importFieldList(i), farrayPtr=farrayPtr1, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          waterPhosphorous%data1 = waterPhosphorous%data1  + farrayPtr1
+        elseif (rank == 2) then
+          call ESMF_FieldGet(importFieldList(i), farrayPtr=farrayPtr2, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          waterPhosphorous%data2 = waterPhosphorous%data2  + farrayPtr2
+        endif
       enddo
-    elseif (localrc /= ESMF_RC_NOT_FOUND) then
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
-    if (associated(includeList)) deallocate(includeList)
+
 
     !> For omexdia_p, get detritus N from detritus C, could be streamlined with variables
     !> gathered above, but left from old code for now
     !> if nitrogen did not match so far, use the carbon flux
     !> as used in the sediment by omexdia for the nitrogen detritus.
-    if ( (.not. hasNitrogen) .and. associated(detNFlux) ) then
+    ! if ( (.not. hasNitrogen) .and. associated(detNFlux) ) then
+    !
+    !   call mossco_state_get(importState,(/'detritus_semilabile_carbon_upward_flux_at_soil_surface'/), &
+    !     SDETCflux, verbose=verbose, rc=localrc)
+    !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    !   call mossco_state_get(importState,(/'detritus_labile_carbon_upward_flux_at_soil_surface'/), &
+    !      LDETCflux, verbose=verbose, rc=localrc)
+    !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    !   DETNflux = convertN*(NC_ldet*LDETCflux + NC_sdet*SDETCflux)
+    ! endif
 
-      call mossco_state_get(importState,(/'detritus_semilabile_carbon_upward_flux_at_soil_surface'/), &
-        SDETCflux, verbose=verbose, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      call mossco_state_get(importState,(/'detritus_labile_carbon_upward_flux_at_soil_surface'/), &
-         LDETCflux, verbose=verbose, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      DETNflux = convertN*(NC_ldet*LDETCflux + NC_sdet*SDETCflux)
-    endif
-
-    !> For models that lack phosphorous, add this according to Redfield
-    if ( associated(detNflux) .and. (.not. hasPhosphorous) .and. associated(detPFlux) ) then
-      DETPflux(RANGE2D) = DETNflux(RANGE2D) / 16.0
-    elseif ( associated(detCflux) .and. (.not. hasPhosphorous) .and. associated(detPFlux) ) then
-      DETPflux(RANGE2D) = DETCflux(RANGE2D) / 106.0
-    endif
+    !> @todo For models that lack phosphorous, add this according to Redfield
 
     call MOSSCO_Reallocate(importFieldList, 0, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-
 
     call MOSSCO_CompExit(cplComp, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
