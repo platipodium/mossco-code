@@ -1880,8 +1880,6 @@ module fabm_sediment_component
 !        (/'turbulent_kinetic_energy_at_soil_surface'/), tke, verbose=verbose, rc=localrc)
 !tke(lbnd(1):ubnd(1),lbnd(2):ubnd(2))
 
-            write(0,*)
-
             fluxes(RANGE2D,n) = -(sed%conc(RANGE2D,1,n)-bdys(RANGE2D,n+1))/ &
               sed%grid%dz(RANGE2D,1)*(sed%bioturbation + sed%diffusivity+bdys(RANGE2D,1) * &
               0.035d0)*sed%porosity(RANGE2D,1)/86400._rk/10000._rk

@@ -215,8 +215,8 @@ end type spVariable
     call ESMF_ClockGet(externalClock, advanceCount=advanceCount, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    verbose = .true.
-    if (advanceCount > 0) verbose = .false.
+    verbose = .false.
+    if (advanceCount == 0) verbose = .true.
 
     !> Export fields created by OmexDia typically are:
     !> detritus_labile_carbon, detritus_semilabile_carbon, detritus_phosphorus

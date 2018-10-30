@@ -637,7 +637,7 @@ subroutine get_rhs(rhs_driver, rhs)
               bcup, bcdown, rhs_driver%diff, rhs_driver%porosity, intFlux, &
               rhs_driver%transport(:,:,:,n))
       ! set fluxes for output
-      write(0,*) shape(rhs_driver%fluxes(:,:,n)), shape(intFlux(:,:,1))
+      !write(0,*) shape(rhs_driver%fluxes(:,:,n)), shape(intFlux(:,:,1))
       rhs_driver%fluxes(:,:,n) = intFlux(:,:,1)
     end if
   end do

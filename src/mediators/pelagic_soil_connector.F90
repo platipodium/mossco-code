@@ -253,7 +253,7 @@ module pelagic_soil_connector
     character(len=ESMF_MAXSTR)  :: name, message, fieldName
     type(ESMF_Time)             :: currTime, stopTime
     integer                     :: localrc, oxyrc, odurc, fieldCount
-    logical                             :: verbose=.true.
+    logical                             :: verbose=.false.
     type(ESMF_Field), allocatable       :: fieldList(:)
     character(len=ESMF_MAXSTR), pointer :: includeList(:) => null()
     type(ESMF_Clock)                    :: clock
@@ -275,8 +275,8 @@ module pelagic_soil_connector
     call ESMF_ClockGet(parentClock, startTime=startTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    verbose = .true.
-    !if (currTime > startTime) verbose=.false.
+    verbose = .false.
+    if (currTime == startTime) verbose=.true.
 
     !> Look for all species in export, which is well known as long
     !> as we have only omexdia as an export model
