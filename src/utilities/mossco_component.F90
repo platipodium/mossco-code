@@ -1,7 +1,7 @@
 !> @brief Implementation of ESMF Component utilities
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !> @author Knut Klingbeil <knut.klingbeil@io-warnemuende.de>
 !
@@ -15,6 +15,8 @@
 #define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "mossco_component.F90"
+
+#define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 #define MOSSCO_MAXLEN_COMPNAME 15
 
@@ -1645,42 +1647,38 @@ subroutine MOSSCO_GridCompStateRemoveCreated(gridComp, state, rc)
   rc_ = ESMF_SUCCESS
 
   call ESMF_GridCompGet(gridComp, name=name, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   call ESMF_StateGet(state, itemCount=itemCount, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-  call MOSSCO_Reallocate(itemNameList, itemCount, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  if (itemCount > 0) then
 
-   call MOSSCO_Reallocate(itemTypeList, itemCount, rc=localrc)
-   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call MOSSCO_Reallocate(itemNameList, itemCount, keep=.false., rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call MOSSCO_Reallocate(itemTypeList, itemCount, keep=.false., rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  endif
 
    do i = 1, itemCount
 
      if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
 
        call ESMF_StateGet(state, trim(itemNameList(i)), field, rc=localrc)
-       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
        call ESMF_StateRemove(state, trim(itemNameList(i)) , rc=localrc)
-       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
        call ESMF_AttributeGet(field, 'creator', isPresent=isPresent, rc=localrc)
-       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
        if (.not.isPresent) cycle
 
        call ESMF_AttributeGet(field, 'creator', creator, rc=localrc)
-       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
        if (trim(creator) /= trim(name)) cycle
 
@@ -1689,44 +1687,35 @@ subroutine MOSSCO_GridCompStateRemoveCreated(gridComp, state, rc)
        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
        call ESMF_FieldDestroy(field, rc=localrc)
-       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
 
        call ESMF_StateGet(state, trim(itemNameList(i)), fieldBundle, rc=localrc)
-       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
        call ESMF_StateRemove(state, trim(itemNameList(i)), rc=localrc)
-       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
        call ESMF_FieldBundleGet(fieldBundle, fieldCount=fieldCount, rc=localrc)
-       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       call MOSSCO_Reallocate(fieldList, fieldCount, keep=.false., rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
        call ESMF_FieldBundleGet(fieldBundle, fieldList=fieldList, rc=localrc)
-       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
        do j = lbound(fieldList,1), ubound(fieldList,1)
 
          call ESMF_FieldGet(fieldList(j), name=fieldName, rc=localrc)
-         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
          call ESMF_FieldBundleRemove(fieldBundle, (/trim(fieldName)/), rc=localrc)
-         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
          call ESMF_AttributeGet(fieldList(j), 'creator', isPresent=isPresent, rc=localrc)
-         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
          if (.not.isPresent) cycle
 
@@ -1735,20 +1724,17 @@ subroutine MOSSCO_GridCompStateRemoveCreated(gridComp, state, rc)
          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
          call ESMF_FieldDestroy(fieldList(j), rc=localrc)
-         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
        enddo
 
       call ESMF_AttributeGet(fieldBundle, 'creator', isPresent=isPresent, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       if (.not.isPresent) cycle
 
       call ESMF_AttributeGet(field, 'creator', creator, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       if (trim(creator) /= trim(name)) cycle
 
@@ -1756,30 +1742,25 @@ subroutine MOSSCO_GridCompStateRemoveCreated(gridComp, state, rc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       call ESMF_FieldBundleDestroy(fieldBundle, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     else
 
       call ESMF_StateRemove(state, trim(itemNameList(i)), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     endif
 
   enddo
 
   call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   call MOSSCO_Reallocate(itemNameList, 0, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   call MOSSCO_Reallocate(itemTypeList, 0, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   if (present(rc)) rc = rc_
 

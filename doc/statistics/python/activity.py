@@ -3,7 +3,7 @@
 from matplotlib import dates
 import datetime
 import pylab
-import numpy
+import numpy as np
 import csv
 import sys
 from matplotlib import pyplot
@@ -11,18 +11,20 @@ from matplotlib import pyplot
 # Map of author names to columns
 
 authorinstitute={'Carsten Lemmen':'HZG','Richard Hofmeister':'HZG',
-  'Ulrich Körner':'HZG','Knut Klingbeil':'IOW','Hassan Nasermoaddeli':'BAW',
+  u'Ulrich Körner':'HZG','Knut Klingbeil':'IOW','Hassan Nasermoaddeli':'BAW',
   'Markus Kreus':'HZG', 'Onur Kerimoglu':'HZG', 'Kai Wirtz':'HZG',
-  'Nils Weiher':'HZG'}
+  'Nils Weiher':'HZG','Ryan O\'Kuinghttons':'HZG', 'Johannes Bieser':'HZG'}
 
-authoralias={'Carsten Lemmen':'Carsten Lemmen', 'Richard Hofmeister':
+authoralias={'Johannes Bieser':'Johannes Bieser', 'Carsten Lemmen':'Carsten Lemmen', 'Richard Hofmeister':
   'Richard Hofmeister','Richard':'Richard Hofmeister','hofmeist':
-  'Richard Hofmeister','Ulrich Koerner':'Ulrich Koerner','Ulrich Körner':
-  'Ulrich Koerner','mhnaserm':'Hassan Nasermoaddeli','hnaserm':'Hassan Nasermoaddeli',
+  'Richard Hofmeister','Richard Hofmeister richard.hofmeister@hzg.de':'Richard Hofmeister','Richard H':'Richard Hofmeister',
+  'Ulrich Koerner':u'Ulrich Körner','Ulrich Körner':
+  u'Ulrich Körner','mhnaserm':'Hassan Nasermoaddeli','hnaserm':'Hassan Nasermoaddeli','Markus Kreus markus.kreus@baw.de':'Markus Kreus',
   'Mohammed Hassan Nasermoaddeli':'Hassan Nasermoaddeli','Hassan Nasermoaddeli':
   'Hassan Nasermoaddeli','Knut':'Knut Klingbeil','Kai Wirtz':'Kai Wirtz',
   'Onur Kerimoglu':'Onur Kerimoglu','Markus Kreus':'Markus Kreus','Onur':'Onur Kerimoglu',
-  'Nils Weiher':'Nils Weiher'}
+  'Nils Weiher':'Nils Weiher','Kai Wirtz kai.wirtz@hzg.de':'Kai Wirtz',
+  'Ryan O\'Kuinghttons':'Ryan O\'Kuinghttons'}
 
 # Get committer names from one of the output gnuplot files
 with open('../gitstats/lines_of_code_by_author.plot', 'r') as fid:
@@ -43,26 +45,26 @@ for counter in counters:
   reader=csv.DictReader(fid,fieldnames=fieldnames,delimiter=' ')
   fields=[]
   for row in reader:
-    fields.append(map(numpy.int,row.values()))
+    fields.append(map(np.int,row.values()))
   fid.close()
-  fields=numpy.array(fields)
+  fields=np.array(fields)
   fieldnames=row.keys()
 
   authorfields={}
   for author in pylab.unique(authoralias.values()):
-    #print author
     af=[]
-    for i in range(1,numpy.size(fieldnames)):
+    for i in range(1,np.size(fieldnames)):
       if authoralias.has_key(fieldnames[i]):
         if authoralias[fieldnames[i]]==author:
           af.append(i)
     authorfields[author]=af
 
+  print (authorfields)
   institutefields={}
   for institute in pylab.unique(authorinstitute.values()):
     #print institute
     af=[]
-    for i in range(0,numpy.size(fieldnames)):
+    for i in range(0,np.size(fieldnames)):
       if fieldnames[i]=='time':
         continue
       if authorinstitute.has_key(authoralias[fieldnames[i]]):
@@ -72,6 +74,7 @@ for counter in counters:
 
   contrib={}
   for key in authorfields:
+    if pylab.size(authorfields[key]) < 1: continue
     contrib[key]=fields[:,authorfields[key][0]]
     for i in range(1,pylab.size(authorfields[key])):
       contrib[key]=contrib[key] + fields[:,authorfields[key][i]]
@@ -92,9 +95,13 @@ for counter in counters:
   fig.clf()
   ax = pylab.axes([0.1, 0.1, 0.8, 0.8])
   labels = authorfields.keys()
-  fracs=[]
-  for author in labels:
-    fracs.append(contrib[author][-1])
+  fracs=np.zeros((len(labels),1))
+  for i,author in enumerate(labels):
+    if author in contrib: fracs[i]=contrib[author][-1]
+
+  fracs = fracs / sum(fracs) * 100.0
+  sort_index = sorted(range(len(fracs)), key=fracs.__getitem__, reverse=True)
+
   pylab.pie(fracs, labels=labels, autopct='%1.1f%%', shadow=True, startangle=90)
   pylab.title(titles[counter].capitalize() + ' by author', bbox={'facecolor':'0.8', 'pad':15})
   #pylab.show()
@@ -119,7 +126,7 @@ for counter in counters:
   ax = pylab.axes([0.1, 0.2, 0.8, 0.7])
   labels = institutefields.keys()
 
-  fracs=numpy.zeros((pylab.size(labels),time.size))
+  fracs=np.zeros((pylab.size(labels),time.size))
   for i in range(0,pylab.size(labels)):
     fracs[i,:]=contrib[labels[i]]
 
@@ -149,9 +156,9 @@ for counter in counters:
   ax = pylab.axes([0.1, 0.2, 0.8, 0.7])
   labels = authorfields.keys()
 
-  fracs=numpy.zeros((pylab.size(labels),time.size))
+  fracs=np.zeros((pylab.size(labels),time.size))
   for i in range(0,pylab.size(labels)):
-    fracs[i,:]=contrib[labels[i]]
+    if labels[i] in contrib: fracs[i,:]=contrib[labels[i]]
 
   pyplot.stackplot(fds,fracs,colors=colormap)
   p = []
@@ -177,11 +184,11 @@ for counter in counters:
   ax = pylab.axes([0.1, 0.2, 0.8, 0.7])
   labels = authorfields.keys()
 
-  fracs=numpy.zeros((pylab.size(labels),time.size))
+  fracs=np.zeros((pylab.size(labels),time.size))
   for i in range(0,pylab.size(labels)):
-    fracs[i,:]=contrib[labels[i]]
+    if labels[i] in contrib: fracs[i,:]=contrib[labels[i]]
 
-  pyplot.plot(fds,numpy.sum(fracs,0),'k-',linewidth=3)
+  pyplot.plot(fds,np.sum(fracs,0),'k-',linewidth=3)
 
   ax=pylab.gca()
   ax.xaxis.set_major_formatter(hfmt)
@@ -192,6 +199,3 @@ for counter in counters:
   pylab.title(titles[counter].capitalize(), bbox={'facecolor':'0.8', 'pad':15})
   #pylab.show()
   pylab.savefig(titles[counter].replace(' ','_') + '.pdf',transparent=True,format='pdf')
-
-
-

@@ -1,0 +1,110 @@
+# This travis configuration file is part of MOSSCO
+#
+# @copyright (C) 2017, 2018 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
+#
+# MOSSCO is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
+
+language: c # There is no Fortran support yet in travis, so we emulate it
+python:
+  - 2.7
+
+dist: trusty
+sudo: false
+git:
+  depth: 3
+
+branches:
+  only: master
+  # @todo, add other branches once they are merged with master containing travis
+
+cache:
+  - brew: true
+  - pip: true
+  - apt: true
+  - directories:
+    - ${MOSSCO_DIR}/../esmf-code
+    - ${MOSSCO_DIR}/../esmf
+    - ${MOSSCO_DIR}/external/getm
+    - ${MOSSCO_DIR}/external/gotm
+    - ${MOSSCO_DIR}/external/fabm
+
+addons:
+  pip:
+    - numpy
+    - basemap
+    - netCDF4
+    - pyyaml
+
+  # A list of trusty packages is provided at https://packages.ubuntu.com/trusty/allpackages?format=txt.gz
+  apt:
+    packages:
+      - gfortran
+      #- clang # is provided by default
+      - libopenmpi-dev
+      - libnetcdff5
+      - libnetcdf-dev
+      - libnetcdfc7
+      - netcdf-bin
+      - cvsutils
+      - doxygen
+      - doxygen-latex
+      - libxerces-c-dev
+      - gnutls-bin
+      - libgnutls-dev
+      - libgnutls-openssl27
+      #- libmpich-dev
+      #- mpich
+
+os:
+  - linux
+#  - osx
+
+#osx_image: xcode9.3beta
+
+before_install:
+  # - brew update
+  # - brew install netcdf
+  # - brew install json-fortran
+  # - brew install doxygen
+
+notifications:
+  email: true
+
+env:
+  - global:
+    - MAKEFLAGS="--silent" # "-j 2"
+    - MOSSCO_FFLAGS="-w   -fprofile-arcs -ftest-coverage -O0"
+    - EXTRA_FFLAGS="-D_TEST_TRACERFLUXES_"
+    - FFLAGS="-DESMF_UNRELEASED"
+    - MOSSCO_DIR=${TRAVIS_BUILD_DIR}
+    - ESMF_DIR=${MOSSCO_DIR}/../esmf-code
+    - ESMF_INSTALL_PREFIX=${MOSSCO_DIR}/../esmf
+    - NETCDFINC=$(nc-config --includedir)
+    - NETCDFLIBDIR=$(nc-config --prefix)/lib
+    - NETCDFLIBNAME=$(nc-config --flibs)
+    - NETCDF_VERSION=NETCDF4
+    - COMMS="openmpi"       # @todo make this a matrix with mpich
+    - COMPS="gfortranclang" # @todo make this a matrix with gfortran
+    - TAGS="ESMF_7_1_0r"
+    - ESMFMKFILE=${ESMF_INSTALL_PREFIX}/lib/libg/Linux.gfortranclang.64.openmpi.ESMF_7_1_0r/esmf.mk
+
+install:
+  - rm -rf ${ESMF_DIR}
+  - bash  ${MOSSCO_DIR}/scripts/install/install_esmf_versions.sh
+  - make -s external
+
+before_script:
+
+script:
+  - make -s all
+  - make -s install
+  - make -s doc
+
+after_success:
+  # - cd $TRAVIS_BUILD_DIR
+  # - git config --global user.name "TRAVIS-CI-for-$(git --no-pager show -s --format='%cn' $TRAVIS_COMMIT)"
+  # - git config --global user.email "$(git --no-pager show -s --format='%ce' $TRAVIS_COMMIT)"

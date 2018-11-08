@@ -47,7 +47,7 @@
    logical  :: temp_from_file,par_from_file,salt_from_file
 
    !> Environment
-   real(rk),target         :: temp,salt,par,current_depth,dens,wind_sf,taub   
+   real(rk),target         :: temp,salt,par,current_depth,dens,wind_sf,taub
    real(rk)                :: par_sf,par_bt,par_ct,column_depth
 
    real(rk),allocatable      :: totals(:,:,:,:)
@@ -69,7 +69,7 @@
        real(rk),dimension(:,:,:),pointer   :: conc
        real(rk),dimension(:,:,:),pointer   :: ws
    end type
-   
+
    type(type_fabm0d),public        :: zerod
 
    interface
@@ -142,7 +142,7 @@
    dt = 0.0_rk
    ode_method = 1
    read(namlst,nml=model_setup,err=91)
-   
+
    ! Read environment namelist
    env_file = ''
    swr_method = 0
@@ -193,7 +193,7 @@
    end if
    column_depth = depth ! For now we have a single depth value only. Use that for both column depth and evaluation depth.
    call update_depth(CENTER)
-   
+
    ! If longitude and latitude are used, make sure they have been provided and are valid.
    if (swr_method==0) then
       if (latitude<-90._rk.or.latitude>90._rk) then
@@ -206,7 +206,7 @@
          stop 'init_run'
       end if
    end if
-   
+
    if (output_file=='') then
       FATAL 'run.nml: "output_file" must be set to a valid file path in "output" namelist.'
       stop 'init_run'
@@ -363,13 +363,13 @@
 
    subroutine update_depth(location)
       integer, intent(in) :: location
-      
+
       select case (location)
          case (SURFACE)
             current_depth = 0.0_rk
             zerod%par = par_sf
          case (BOTTOM)
-            current_depth = column_depth            
+            current_depth = column_depth
             zerod%par = par_bt
          case (CENTER)
             current_depth = 0.5_rk*column_depth
@@ -460,7 +460,7 @@ end subroutine get_rhs
       else
           ! get tempa from inportState
       end if
-      
+
       if (salt_from_file) then
           zerod%salt=salt
       else
@@ -484,25 +484,25 @@ end subroutine get_rhs
          call write_time_string(julianday,secondsofday,timestr)
          write (out_unit,FMT='(A)',ADVANCE='NO') timestr
          if (add_environment) then
-            write (out_unit,FMT='(A,E15.8E3)',ADVANCE='NO') separator,zerod%par(1,1,1)
-            write (out_unit,FMT='(A,E15.8E3)',ADVANCE='NO') separator,zerod%temp(1,1,1)
-            write (out_unit,FMT='(A,E15.8E3)',ADVANCE='NO') separator,zerod%salt(1,1,1)
+            write (out_unit,FMT='(A,E16.8E3)',ADVANCE='NO') separator,zerod%par(1,1,1)
+            write (out_unit,FMT='(A,E16.8E3)',ADVANCE='NO') separator,zerod%temp(1,1,1)
+            write (out_unit,FMT='(A,E16.8E3)',ADVANCE='NO') separator,zerod%salt(1,1,1)
          end if
          do i=1,(size(zerod%model%info%state_variables)+size(zerod%model%info%state_variables_ben))
-            write (out_unit,FMT='(A,E15.8E3)',ADVANCE='NO') separator,zerod%conc(1,1,1,i)
+            write (out_unit,FMT='(A,E16.8E3)',ADVANCE='NO') separator,zerod%conc(1,1,1,i)
          end do
          if (add_diagnostic_variables) then
             do i=1,size(zerod%model%info%diagnostic_variables)
-               write (out_unit,FMT='(A,E15.8E3)',ADVANCE='NO') separator,fabm_get_bulk_diagnostic_data(zerod%model,i)
+               write (out_unit,FMT='(A,E16.8E3)',ADVANCE='NO') separator,fabm_get_bulk_diagnostic_data(zerod%model,i)
             end do
             do i=1,size(zerod%model%info%diagnostic_variables_hz)
-               write (out_unit,FMT='(A,E15.8E3)',ADVANCE='NO') separator,fabm_get_horizontal_diagnostic_data(zerod%model,i)
+               write (out_unit,FMT='(A,E16.8E3)',ADVANCE='NO') separator,fabm_get_horizontal_diagnostic_data(zerod%model,i)
             end do
          end if
          if (add_conserved_quantities) then
             call fabm_get_conserved_quantities(zerod%model,1,1,1,totals(1,1,1,:))
             do i=1,size(zerod%model%info%conserved_quantities)
-               write (out_unit,FMT='(A,E15.8E3)',ADVANCE='NO') separator,totals(1,1,1,i)
+               write (out_unit,FMT='(A,E16.8E3)',ADVANCE='NO') separator,totals(1,1,1,i)
             end do
          end if
          write (out_unit,*)
@@ -519,7 +519,7 @@ end subroutine get_rhs
    LEVEL1 'clean_up'
    call close_input()
    close(out_unit)
-   
+
    end subroutine clean_up
 
 !> Initializes a FABM0d export state by FABM state_variable id
@@ -585,4 +585,3 @@ end subroutine get_rhs
    end subroutine update_export_states
 
    end module mossco_fabm0d
-

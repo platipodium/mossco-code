@@ -1,0 +1,41 @@
+!--------------
+! run_nml
+!
+! numyears - number of years (y)
+! dt - timestep (s)
+! output - number of timesteps (#)
+! numlayers - number of sediment layers (#)
+! bcup_dissolved_variables - type of boundary condition
+!                            for dissolved variables:
+!                            1: fluxes given at boundary
+!                            2: concentrations given ar boundary
+! presimulation_years - number of years to pre-simulate (y)
+!--------------
+&run_nml
+  numyears=1
+  dt=720.
+  numlayers=15
+  dzmin=0.004
+  dt_min=1
+  ode_method=2
+  bcup_dissolved_variables=1
+  presimulation_years=-2
+  pel_Temp=5.0
+  pel_NO3=14.0
+  pel_NH4=4.0
+  pel_PO4=0.6
+  pel_O2=250
+  pflux_fDet=2.0
+  pflux_sDet=24.0
+  pflux_DetP=0.08
+/
+
+&sed_nml
+  diffusivity   = 0.9
+  bioturbation  = 4.5
+  bioturbation_profile = 0
+  bioturbation_depth=11.0
+  bioturbation_min=1.0
+  porosity_max  = 0.7
+  porosity_fac  = 0.9
+/

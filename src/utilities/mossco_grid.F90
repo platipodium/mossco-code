@@ -1,7 +1,7 @@
 !> @brief Implementation of grid utilities
 !!
 !! This computer program is part of MOSSCO.
-!! @copyright Copyright 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+!! @copyright Copyright 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 !! @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !! @author Hartmut Kapitza <hartmut.kapitza@hzg.de>
 !
@@ -19,6 +19,8 @@
 #define RANGE3D lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)
 #define RANGE3DDIM lbnd(1):ubnd(1)-1,lbnd(2):ubnd(2)-1,lbnd(3):ubnd(3)
 
+#define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
 module mossco_grid
 
   use esmf
@@ -28,6 +30,12 @@ module mossco_grid
 
   public MOSSCO_GridCopyCoords
   public MOSSCO_GridCreateFromOtherGrid
+  !public MOSSCO_GridAddCorners
+  public MOSSCO_GridGetDepth
+  public MOSSCO_GridIsConformable
+  public MOSSCO_GridString
+
+  private
 
 contains
 
@@ -402,6 +410,115 @@ end function MOSSCO_GridCreateRegional2D
   end function MOSSCO_GridCreateFromOtherGrid
 
 #undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_GridCreateWithVertical3"
+  function MOSSCO_GridCreateWithVertical3(grida, kwe, farrayPtr3, rc) result(gridb)
+
+    implicit none
+
+    type(ESMF_Grid), intent(in)                  :: gridA
+    logical, intent(in), optional                :: kwe
+    real(ESMF_KIND_R8), pointer                  :: farrayPtr3(:,:,:)
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+    type(ESMF_Grid)                              :: gridB
+
+    integer(ESMF_KIND_I4)                     :: rc_, localrc, rank, deCount, nlayer_, i
+    type(ESMF_DistGrid)                       :: distGridA, distGridB
+    type(ESMF_CoordSys_Flag)                  :: coordSys
+    integer(ESMF_KIND_I4)                     :: coordDimCount2(2), coordDimMap2(2,2)
+    integer(ESMF_KIND_I4)                     :: coordDimCount3(3), coordDimMap3(3,3)
+    integer(ESMF_KIND_I4), allocatable        :: ubnd(:), lbnd(:)
+    type(ESMF_DeLayout)                       :: deLayout
+    integer(ESMF_KIND_I4)                     :: ubndb(3), lbndb(3)
+    !integer(ESMF_KIND_I4)                     :: distGridToArrayMap(2)
+    integer,dimension(:,:)  ,allocatable,target :: minIndexPDe,maxIndexPDe
+    integer,dimension(:,:,:),allocatable,target :: deBlockList
+    character(len=ESMF_MAXSTR)                :: message, nameA, nameB
+    real(ESMF_KIND_R8), pointer               :: coordB3(:,:,:) => null()
+
+
+    nameA='gridA'
+    nameB='gridB'
+
+    rc_ = ESMF_SUCCESS
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+
+    call ESMF_GridGet(grida, rank=rank, distGrid=distGridA, name=nameA, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if ((rank) /= 2) then
+      write(message,'(A)') '  only rank 2 is allowed'
+      if (present(rc)) rc = ESMF_RC_ARG_BAD
+      return
+    endif
+
+    allocate(ubnd(rank))
+    allocate(lbnd(rank))
+
+    call ESMF_DistGridGet(distGridA, deLayout=deLayout, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_DeLayoutGet(deLayout, deCount=deCount, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_GridGet(grida, coordSys=coordSys, coordDimCount=coordDimCount2, &
+      coordDimMap=coordDimMap2, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    coordDimCount3 = (/coordDimCount2(1), coordDimCount2(2), 3/)
+    coordDimMap3(1:2,1:2) = coordDimMap2(:,:)
+    coordDimMap3(3,:) = (/1,2,3/)
+    coordDimMap3(:,3) = 3
+
+    if (.not.associated(farrayPtr3)) then
+      localrc = ESMF_RC_ARG_BAD
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
+    allocate(minIndexPDe(2,deCount))
+    allocate(maxIndexPDe(2,deCount))
+    allocate(deBlockList(3,2,deCount))
+
+    call ESMF_DistGridGet(distGridA, minIndexPDe=minIndexPDe, &
+      maxIndexPDe=maxIndexPDe, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    deBlockList(1:rank,1,:) = minIndexPDe
+    deBlockList(1:rank,2,:) = maxIndexPDe
+    deBlockList(rank+1,1,:) = 1
+    deBlockList(rank+1,2,:) = size(farrayPtr3, dim=3)
+
+
+    distGridB = ESMF_DistGridCreate(minval(deBlockList(:,1,:),2), &
+      maxval(deBlockList(:,2,:),2), deBlockList, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    gridb = ESMF_GridCreate(distGridB, name=trim(nameB), gridAlign=(/1,1,1/), &
+      coordSys=coordSys, coordDimCount=coordDimCount3, &
+      coordDimMap=int(coordDimMap3(:,:)), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_GridAddCoord(gridb, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call MOSSCO_GridCopyCoords(grida, gridb, coordDims=(/1,2/), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_GridGetCoordBounds(gridb,coordDim=3,localDE=0, &
+      exclusiveLBound=lbndB, exclusiveUBound=ubndB, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_GridGetCoord(gridb, coordDim=3, localDE=0, &
+      staggerloc=ESMF_STAGGERLOC_CENTER, farrayPtr=coordB3, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    coordB3(lbndB(1):ubndB(1),lbndB(2):ubndB(2),lbndB(3):ubndB(3)) &
+      = farrayPtr3(:,:,:)
+
+    if (present(rc)) rc = rc_
+
+  end function MOSSCO_GridCreateWithVertical3
+
+#undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_GridCopyCoords"
   subroutine MOSSCO_GridCopyCoords(grida, gridb, coordDims, rc)
 
@@ -556,62 +673,126 @@ end function MOSSCO_GridCreateRegional2D
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_GridString"
-subroutine MOSSCO_GridString(grid, message, kwe, length, rc)
+subroutine MOSSCO_GridString(grid, message, kwe, length, options, staggerLoc, rc)
 
   type(ESMF_Grid), intent(in)                    :: grid
   character(len=ESMF_MAXSTR), intent(inout)      :: message
   logical, intent(in), optional                  :: kwe
   integer(ESMF_KIND_I4), intent(inout), optional :: length
+  character(len=ESMF_MAXSTR), intent(in), allocatable, optional :: options(:)
   integer(ESMF_KIND_I4), intent(out), optional   :: rc
+  type(ESMF_StaggerLoc), intent(in), optional    :: staggerLoc
 
-  integer(ESMF_KIND_I4)   :: rc_, length_, rank, localrc
-  character(ESMF_MAXSTR)  :: stringValue, name
+  integer(ESMF_KIND_I4)   :: rc_, length_, rank, localrc, i
+  character(ESMF_MAXSTR)  :: string, name, formatString
 
-  logical                     :: isPresent
+  logical                            :: isPresent
   integer(ESMF_KIND_I4), allocatable :: ubnd(:), lbnd(:)
+  character(len=ESMF_MAXSTR), allocatable  :: options_(:)
+  type(ESMF_StaggerLoc)              :: staggerLoc_
+  integer(ESMF_KIND_I4), pointer     :: mask1(:) => null()
+  integer(ESMF_KIND_I4), pointer     :: mask2(:,:) => null()
+  integer(ESMF_KIND_I4), pointer     :: mask3(:,:,:) => null()
 
   rc_ = ESMF_SUCCESS
+  staggerLoc_ = ESMF_STAGGERLOC_CENTER
+
   if (present(kwe)) rc_ = ESMF_SUCCESS
+  if (present(options)) then
+    if (allocated(options)) then
+      allocate(options_(size(options)), stat=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      do i=lbound(options,1),ubound(options,1)
+        call MOSSCO_StringCopy(options_(i),options(i))
+      enddo
+    endif
+  else
+    allocate(options_(1))
+    options_(1)='creator'
+  endif
+  if (present(staggerLoc)) staggerLoc_ = staggerLoc
 
   call ESMF_GridGet(grid, name=name, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   call ESMF_AttributeGet(grid, name='creator', isPresent=isPresent, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   if (isPresent) then
-    call ESMF_AttributeGet(grid, name='creator', value=stringValue, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call MOSSCO_MessageAdd(message, ' ['//stringValue)
+    call ESMF_AttributeGet(grid, name='creator', value=string, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    call MOSSCO_MessageAdd(message, ' ['//string)
     call MOSSCO_MessageAdd(message, ']'//name)
   else
-    call MOSSCO_MessageAdd(message,' '//name)
+    call MOSSCO_MessageAdd(message,name)
   endif
 
   call ESMF_GridGet(grid, rank=rank, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-  if (len_trim(message) + 7 <=len(message)) write(message,'(A,X,I1)') trim(message)//' rank',rank
-  allocate(ubnd(rank))
-  allocate(lbnd(rank))
+  write(formatString,'(A)') '(A,'//intformat(rank)//')'
+  write(string, formatString) '(r=',rank
+
+  call MOSSCO_MessageAdd(message, string)
+
+  allocate(ubnd(rank), stat=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  allocate(lbnd(rank), stat=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   call ESMF_GridGetFieldBounds(grid, totalUBound=ubnd, &
         totalLBound=lbnd, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-  if (rank>0 .and. (len_trim(message) + 5 <=len(message))) write(message,'(A,I3)') trim(message)//' (', ubnd(1)-lbnd(1)+1
-  if (rank>1 .and. (len_trim(message) + 4 <=len(message))) write(message,'(A,X,I3)') trim(message), ubnd(2)-lbnd(2)+1
-  if (rank>2 .and. (len_trim(message) + 4 <=len(message))) write(message,'(A,X,I3)') trim(message), ubnd(3)-lbnd(3)+1
-  if (rank>3 .and. (len_trim(message) + 4 <=len(message))) write(message,'(A,X,I3)') trim(message), ubnd(4)-lbnd(4)+1
-  if (len_trim(message) + 1 <=len(message)) write(message,'(A)') trim(message)//')'
+  write(formatString,'(A)') '(X,'//intformat(ubnd(1)-lbnd(1)+1)//')'
+  write(string,formatString) ubnd(1)-lbnd(1)+1
+  do i=2, rank
+    write(formatString,'(A)') '(A,'//intformat(ubnd(i)-lbnd(i)+1)//')'
+    write(string,formatString) trim(string)//'x',ubnd(i)-lbnd(i)+1
+  enddo
 
-  deallocate(ubnd)
-  deallocate(lbnd)
+  call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, &
+    staggerLoc=staggerLoc, isPresent=isPresent, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  !> @todo add GRIDITEM_AREA
+  if (isPresent) then
+    if (rank==1) then
+      call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask1, &
+        staggerLoc=staggerLoc, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      write(formatString,'(A)') '(A,'//intformat(count(mask1>0))//')'
+      write(string,formatString) trim(string)//' m=',count(mask1>0)
+
+    elseif (rank==2) then
+      call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask2, &
+        staggerLoc=staggerLoc, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      write(formatString,'(A)') '(A,'//intformat(count(mask2>0))//')'
+      write(string,formatString) trim(string)//' m=',count(mask2>0)
+
+    elseif (rank==3) then
+      call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask3, &
+        staggerLoc=staggerLoc, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      write(formatString,'(A)') '(A,'//intformat(count(mask3>0))//')'
+      write(string,formatString) trim(string)//' m=',count(mask3>0)
+
+    endif
+  endif
+
+  call MOSSCO_MessageAdd(message, trim(string)//')', rc=localrc)
+
+  nullify(mask1)
+  nullify(mask2)
+  nullify(mask3)
+  deallocate(ubnd, stat=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  deallocate(lbnd, stat=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   length_=len_trim(message)
   if (present(length)) length=length_
@@ -630,12 +811,10 @@ subroutine MOSSCO_GridPrintBlockList(grid, rc)
   type(ESMF_DistGrid)            :: distGrid
 
   call ESMF_GridGet(grid, distGrid=distGrid, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   call MOSSCO_DistGridPrintBlockList(distGrid, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   if (present(rc)) rc = rc_
 
@@ -652,17 +831,14 @@ subroutine MOSSCO_DistGridPrintBlockList(distGrid, rc)
   type(ESMF_DeLayout)            :: deLayout
 
   call ESMF_DistGridGet(distGrid, deLayout=deLayout, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   call MOSSCO_DeLayoutPrintBlockList(deLayout, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   if (present(rc)) rc = rc_
 
 end subroutine MOSSCO_DistGridPrintBlockList
-
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_DeLayoutPrintBlockList"
@@ -676,8 +852,7 @@ subroutine MOSSCO_DeLayoutPrintBlockList(deLayout, rc)
   character(len=ESMF_MAXSTR)         :: message
 
   call ESMF_DeLayoutGet(deLayout, deCount=deCount, localDeCount=localDeCount, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   if (localDeCount /= 1 ) then
     write(message, '(A,I3)') '  cannot handle localDeCount /= 1'
@@ -688,17 +863,15 @@ subroutine MOSSCO_DeLayoutPrintBlockList(deLayout, rc)
   if (allocated(deBlockList)) deallocate(deBlockList)
   if (deCount<=0) then
     write(message, '(A,I3)') '  cannot handle deCount less than 1 (',deCount,')'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-    call ESMF_Finalize()
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
   endif
 
   allocate(deBlockList(rank,2,deCount))
   !call MOSSCO_MatrixFilePrint(deBlocklist(:,1,:), filename, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
   !call MOSSCO_MatrixFilePrint(deBlocklist(:,1,:), filename, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   call ESMF_DeLayoutPrint(deLayout, rc=localrc)
 
@@ -730,8 +903,7 @@ subroutine MOSSCO_VmGetRectangleDecomposition(vm, decomposition, rc)
   endif
 
   call ESMF_VmGet(vm, petCount=petCount, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   i = int(sqrt(petCount*1.0)) + 1
   j = petCount / i + 1
@@ -792,84 +964,84 @@ subroutine MOSSCO_GridGetDepth(grid, kwe, depth, height, interface, rc)
   allocate(ifubnd(3), stat=localrc)
   allocate(iflbnd(3), stat=localrc)
 
+  call ESMF_GridGetCoordBounds(grid, coordDim=3, staggerloc=ESMF_STAGGERLOC_CENTER, &
+    exclusiveLBound=lbnd, exclusiveUbound=ubnd, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
   call ESMF_GridGetCoordBounds(grid, coordDim=3, staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
     exclusiveLBound=iflbnd, exclusiveUbound=ifubnd, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  if (ubnd(1) /= ifubnd(1) .or. lbnd(1) /= iflbnd(1) &
+      .or. ubnd(2) /= ifubnd(2) .or. lbnd(2) /= iflbnd(2)) then
+      write(0,*) '  ubnd = ', ubnd
+      write(0,*) 'ifubnd = ', ifubnd
+      write(0,*) '  lbnd = ', lbnd
+      write(0,*) 'iflbnd = ', iflbnd
+      if (ESMF_LogFoundError(ESMF_RC_VAL_ERRBOUND, ESMF_ERR_PASSTHRU, &
+          ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  endif
 
   call ESMF_GridGetCoord(grid, coordDim=3, staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
     farrayPtr=interface_, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-  i = 0
-  j = 0
+  !call ESMF_GridValidate(grid, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  !call ESMF_GridPrint(grid) ! interface not implemented (but needed...)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    !write(0,*) lbound(interface_),ubound(interface_)
+    !write(0,*) iflbnd, ifubnd
+    !> @todo something is wrong with iflbnd and ifubnd
+    !> we correct them here to the dimensions of interface_, but really
+    !> this should come from the grid itself
+  iflbnd=lbound(interface_)
+  ifubnd=ubound(interface_)
 
   if (present(height)) then
     if (associated(height)) then
-      ubnd=ubound(height)
-      lbnd=lbound(height)
-      if (ubnd(1) <= ifUbnd(1) .and. lbnd(1) >= ifLbnd(1)) then
-        i = lbnd(1) - iflbnd(1)
-      else
-        rc_ = ESMF_RC_NOT_IMPL
-        if (present(rc)) rc = rc_
-        write(0,*) 'height: ', lbound(height), ubound(height), size(height), shape(height)
-        write(0,*) 'iface: ', lbound(interface_), ubound(interface_), size(interface_), shape(interface_)
-        write(0,*) 'l/ubnd: ',lbnd, ubnd, iflbnd, ifubnd
-        return
-      endif
-      if (ubnd(2) <= ifUbnd(2) .and. lbnd(2) >= ifLbnd(2)) then
-        j = lbnd(2) - iflbnd(2)
-      else
-        rc_ = ESMF_RC_NOT_IMPL
-        if (present(rc)) rc = rc_
-        return
+
+      !> Make sure that allocated height is the same dimensions
+      !> as the grid_center stagger
+      if (any(ubound(height) /= ubnd) .or. any(lbound(height) /= lbnd)) then
+        if (ESMF_LogFoundError(ESMF_RC_VAL_ERRBOUND, ESMF_ERR_PASSTHRU, &
+          ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
     else
-      Ubnd=ifubnd
-      ubnd(3)=ifubnd(3)
-      lbnd=iflbnd(3)+1
       allocate(height(RANGE3D), stat=localrc)
     endif
 
-    !write(0,*) 'height: ', lbound(height), ubound(height), size(height), shape(height)
-    !write(0,*) 'iface: ', lbound(interface_), ubound(interface_), size(interface_), shape(interface_)
     do k = 0, ubnd(3) - lbnd(3)
-      height(RANGE2D,lbnd(3)+k) &
-        = interface_(RANGE2D, lbnd(3) + i) - interface_(RANGE2D, lbnd(3) + i - 1)
+      !write(0,*) 'k=',k,'h=',lbound(height,3),ubound(height,3), 'if=',lbound(interface_,3),ubound(interface_,3)
+      !write(0,*) 'h=',lbnd(3)+k, 'if=',iflbnd(3) + k, iflbnd(3) + k + 1
+      height(RANGE2D,lbnd(3)+k) =  interface_(RANGE2D, iflbnd(3) + k + 1) &
+        - interface_(RANGE2D, iflbnd(3) + k)
     enddo
   endif
 
   if (present(depth)) then
 
     if (associated(depth)) then
-      ubnd=ubound(depth)
-      lbnd=lbound(depth)
-      if (ubnd(1) <= ifUbnd(1) .and. lbnd(1) >= ifLbnd(1)) then
-        i = lbnd(1) - iflbnd(1)
-      else
-        rc_ = ESMF_RC_NOT_IMPL
-        if (present(rc)) rc = rc_
-        return
-      endif
-      if (ubnd(2) <= ifUbnd(2) .and. lbnd(2) >= ifLbnd(2)) then
-        j = lbnd(2) - iflbnd(2)
-      else
-        rc_ = ESMF_RC_NOT_IMPL
-        if (present(rc)) rc = rc_
-        return
+
+      !> Make sure that allocated depth is the same dimensions
+      !> as the grid_center stagger
+      if (any(ubound(depth) /= ubnd) .or. any(lbound(depth) /= lbnd)) then
+        if (ESMF_LogFoundError(ESMF_RC_VAL_ERRBOUND, ESMF_ERR_PASSTHRU, &
+          ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
     else
-      Ubnd=ifubnd
-      ubnd(3)=ifubnd(3)
-      lbnd=iflbnd(3)+1
       allocate(depth(RANGE3D), stat=localrc)
     endif
 
     do k = 0, ubnd(3) - lbnd(3)
-      depth(RANGE2D,lbnd(3)+k) = 0.5  &
-        * (interface_(RANGE2D, lbnd(3) + i) + interface_(RANGE2D, lbnd(3) + i - 1))
+      depth(RANGE2D,lbnd(3)+k) =  0.5 * ( &
+      interface_(RANGE2D, iflbnd(3) + k + 1) &
+        + interface_(RANGE2D, iflbnd(3) + k))
     enddo
   endif
 
@@ -878,7 +1050,7 @@ subroutine MOSSCO_GridGetDepth(grid, kwe, depth, height, interface, rc)
   if (allocated(ifubnd)) deallocate(ifubnd)
   if (allocated(iflbnd)) deallocate(iflbnd)
 
-  if (present(interface)) interface = interface_
+  if (present(interface)) interface => interface_
 
 end subroutine MOSSCO_GridGetDepth
 
@@ -908,12 +1080,10 @@ subroutine MOSSCO_GridIsConformable(gridA, gridB, isConformable, rc)
   endif
 
   call ESMF_GridGet(gridA, rank=rankA, coordSys=coordSysA, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   call ESMF_GridGet(gridB, rank=rankB, coordSys=coordSysB, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   ! Grids with different rank are not conformable
   if (rankA /= rankB) return
@@ -933,18 +1103,134 @@ subroutine MOSSCO_GridIsConformable(gridA, gridB, isConformable, rc)
 
   call ESMF_GridGet(gridA, staggerloc=ESMF_STAGGERLOC_CENTER, &
     localDe=0, exclusiveLBound=lbndA, exclusiveUBound=ubndA, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   call ESMF_GridGet(gridB, staggerloc=ESMF_STAGGERLOC_CENTER, &
     localDe=0, exclusiveLBound=lbndB, exclusiveUBound=ubndB, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   !write(0,*) 'gridbounds: ',lbndA,':',ubndA,' .ne. ',lbndB,':',ubndB
   if (all(ubndA - lbndA == ubndB - lbndB)) isConformable = .true.
 
 end subroutine MOSSCO_GridIsConformable
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_GridAddCorners"
+subroutine MOSSCO_GridAddCorners(grid, kwe, rc)
+
+  type(ESMF_Grid), intent(inout)                    :: grid
+  type(ESMF_KeywordEnforcer), intent(in), optional  :: kwe
+  integer(ESMF_KIND_I4),  intent(out), optional     :: rc
+
+  integer(ESMF_KIND_I4), allocatable, dimension(:)  :: ubnd, lbnd
+
+  integer(ESMF_KIND_I4)              :: rc_, localrc, i, rank, dimCount
+  integer(ESMF_KIND_I4), allocatable :: coordDimCount(:)
+  character(len=ESMF_MAXSTR)         :: message
+
+  type(ESMF_CoordSys_Flag)       :: coordSys
+  type(ESMF_TypeKind_Flag)       :: coordTypeKind
+  type(ESMF_Index_Flag)          :: indexFlag
+  type(ESMF_StaggerLoc)          :: staggerLoc
+  type(ESMF_GridStatus_Flag)     :: status
+  integer(ESMF_KIND_I4)          :: localDe = 0
+  logical                        :: isPresent
+
+  rc_ = ESMF_SUCCESS
+  if (present(rc))  rc = rc_
+  if (present(kwe)) rc_ = ESMF_SUCCESS
+
+  call ESMF_GridGet(grid, coordTypeKind=coordTypeKind, dimCount=dimCount, &
+    coordSys=coordSys, rank=rank, indexFlag=indexFlag, status=status, rc=localrc)
+
+  !> Return if corner staggers are present or if center staggers are not present.
+  if (rank==2) then
+    call ESMF_GridGetCoord(grid, staggerLoc=ESMF_STAGGERLOC_CORNER, &
+      isPresent=isPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (isPresent) return
+
+    staggerLoc = ESMF_STAGGERLOC_CENTER
+    call ESMF_GridGetCoord(grid, staggerLoc=staggerLoc, &
+      isPresent=isPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (.not.isPresent) return
+  endif
+
+  if (rank == 3) then
+    call ESMF_GridGetCoord(grid, staggerLoc=ESMF_STAGGERLOC_CORNER_VFACE, &
+      isPresent=isPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (isPresent) return
+
+    call ESMF_GridGetCoord(grid, staggerLoc=ESMF_STAGGERLOC_CENTER_VFACE, &
+      isPresent=isPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (isPresent) return
+
+    staggerloc=ESMF_STAGGERLOC_CENTER_VFACE
+    call ESMF_GridGetCoord(grid, staggerLoc=staggerLoc, &
+      isPresent=isPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (.not.isPresent) then
+
+      staggerloc=ESMF_STAGGERLOC_CENTER_VCENTER
+      call ESMF_GridGetCoord(grid, staggerLoc=staggerLoc, &
+        isPresent=isPresent, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      if (.not.isPresent) return
+    endif
+  endif
+
+  if (staggerLoc == ESMF_STAGGERLOC_CENTER) then
+    call ESMF_GridAddCoord(grid, staggerLoc=ESMF_STAGGERLOC_CORNER)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  elseif (staggerLoc == ESMF_STAGGERLOC_CENTER_VFACE) then
+    call ESMF_GridAddCoord(grid, staggerLoc=ESMF_STAGGERLOC_CORNER_VFACE)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  elseif (staggerLoc == ESMF_STAGGERLOC_CENTER_VCENTER) then
+    call ESMF_GridAddCoord(grid, staggerLoc=ESMF_STAGGERLOC_CORNER_VCENTER)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  endif
+
+  allocate(coordDimCount(dimCount))
+  call ESMF_GridGet(grid, coordDimCount=coordDimCount, rc=localrc)
+
+  do i = 1, dimCount
+
+    allocate(ubnd(coordDimCount(i)))
+    allocate(lbnd(coordDimCount(i)))
+
+    ! if (coordDimCount(i) == 1) then
+    !   call ESMF_GridGetCoord(grid, coordDim=i, localDe=localDe, &
+    !     staggerLoc=staggerLoc, farrayPtr=farrayPtr1, rc=localrc)
+    ! elseif (coordDimCount(i) == 2) then
+    !   call ESMF_GridGetCoord(grid, coordDim=i, localDe=localDe, &
+    !     staggerLoc=staggerLoc, farrayPtr=farrayPtr2, rc=localrc)
+    ! elseif (coordDimCount(i) == 3) then
+    !   call ESMF_GridGetCoord(grid, coordDim=i, localDe=localDe, &
+    !     staggerLoc=staggerLoc, farrayPtr=farrayPtr3, rc=localrc)
+    ! endif
+
+    deallocate(ubnd)
+    deallocate(lbnd)
+
+  end do
+
+  ! if (rank == 3) then
+  !   write(message, '(A)') '-- rank 3 GriddAddCorners not yet implemented'
+  !   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+  !   return
+  ! endif
+
+
+end subroutine MOSSCO_GridAddCorners
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_GridGetWidth"
@@ -969,8 +1255,7 @@ subroutine MOSSCO_GridGetWidth(grid, kwe, xwidth, ywidth, rc)
   if (present(rc))  rc = rc_
 
   call ESMF_GridGet(grid, rank=rank, coordSys=coordSys, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   if ( (coordSys /= ESMF_COORDSYS_SPH_DEG)) then
     rc_ = ESMF_RC_NOT_IMPL
@@ -979,14 +1264,12 @@ subroutine MOSSCO_GridGetWidth(grid, kwe, xwidth, ywidth, rc)
   endif
 
   call ESMF_GridGet(grid, dimCount=dimCount, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   allocate(coordDimCount(dimCount), stat=localrc)
 
   call ESMF_GridGet(grid, coordDimCount=coordDimCount, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   !write(0,*) 'dimCount', rank, dimCount, coordDimCount
 
@@ -999,28 +1282,23 @@ subroutine MOSSCO_GridGetWidth(grid, kwe, xwidth, ywidth, rc)
 
   call ESMF_GridGetCoordBounds(grid, coordDim=1, staggerloc=ESMF_STAGGERLOC_CENTER, &
     exclusiveLBound=lbnd, exclusiveUbound=ubnd, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   call ESMF_GridGetCoord(grid, coordDim=1, staggerloc=ESMF_STAGGERLOC_CORNER, &
     farrayPtr=crnlon, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   call ESMF_GridGetCoord(grid, coordDim=2, staggerloc=ESMF_STAGGERLOC_CORNER, &
     farrayPtr=crnlat, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   call ESMF_GridGetCoord(grid, coordDim=1, staggerloc=ESMF_STAGGERLOC_CENTER, &
     farrayPtr=lon, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   call ESMF_GridGetCoord(grid, coordDim=2, staggerloc=ESMF_STAGGERLOC_CENTER, &
     farrayPtr=lat, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   allocate(dlat(RANGE2D), stat=localrc)
   allocate(dlon(RANGE2D), stat=localrc)

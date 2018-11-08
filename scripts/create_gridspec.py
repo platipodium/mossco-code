@@ -3,8 +3,8 @@
 # This script is is part of MOSSCO. It creates from basic grid parameters
 # a GRIDSPEC compliant NetCDF file.
 #
-# @copyright (C) 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen
+# @copyright (C) 2014, 2015, 2016 ,2017, 2018 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -15,23 +15,42 @@
 
 import netCDF4
 import sys
-import numpy
+import numpy as np
 import time
 
-if (1==1):
-  ll_lon = -4.		#lower left of cell corner 4°W
-  ll_lat = 50.
-  ur_lon = 15.
-  ur_lat = 61.
-  delta_lon = 0.035		#delta lon in dezimalgrad
-  delta_lat = 0.02
-if (2==2): ## spherical box / deep lake test case
+if True:
+
+  ll_lon = 7.8		#lower left of cell corner 4°W
+  ll_lat = 54.49
+  ur_lon = 8.3
+  ur_lat = 54.52
+  delta_lon = 0.05		#delta lon in dezimalgrad
+  delta_lat = 0.003
+if False:
+  ll_lon = -15.		#lower left of cell corner 4°W
+  ll_lat = 40.
+  ur_lon = 25.
+  ur_lat = 65.
+  delta_lon = 5.0		#delta lon in dezimalgrad
+  delta_lat = 2.5
+elif False: ## spherical box / deep lake test case
   delta_lon=0.01250
   delta_lat=0.25/30.0
   ll_lon=0.0
   ur_lon=1.25
   ll_lat=45.0
   ur_lat=45.25
+elif False: ## 1x12 box, mussel experiment
+  delta_lon=0.5
+  delta_lat=1
+  ll_lon=0.0
+  ur_lon=10.0
+  ll_lat=54
+  ur_lat=55
+elif False: # Alpha Ventus Wind park 54.008333°, 6.598333°
+  delta_lon,delta_lat = 0.05, 0.05
+  ll_lon, ll_lat = 6.2, 52.6
+  ur_lon, ur_lat = 7.0, 53.4
 
 if __name__ == '__main__':
 
@@ -81,8 +100,8 @@ if __name__ == '__main__':
   nc.copyright = 'Helmholtz-Zentrum Geesthacht'
   nc.Conventions = 'CF-1.6'
 
-  ilon=numpy.array(range(0,nlon))
-  jlat=numpy.array(range(0,nlat))
+  ilon=np.array(range(0,nlon))
+  jlat=np.array(range(0,nlat))
 
   lon[:]=ll_lon+(ilon+0.5)*delta_lon
   lat[:]=ll_lat+(jlat+0.5)*delta_lat
@@ -92,5 +111,14 @@ if __name__ == '__main__':
   lat_bnds[:,1]=lat[:]+0.5*delta_lat
 
   print lon_bnds[0,:], lat_bnds[-1,:]
+
+  # add a dummy variable
+  if True:
+      var = nc.createVariable('dummy','f4',('lat','lon'))
+      var.coordinates='lon lat'
+      var.units=''
+      lon.standard_name='dummy'
+      xx, yy = np.meshgrid(lon[:]*np.pi/180, lat[:]*np.pi/180)
+      var[:] = np.sin(xx**2 + yy**2)
 
   nc.close()

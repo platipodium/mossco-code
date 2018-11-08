@@ -1,11 +1,11 @@
 PRAGMA foreign_keys=ON;
 BEGIN TRANSACTION;
- DROP TABLE IF EXISTS "tblSubstancesEquivalents";    
+ DROP TABLE IF EXISTS "tblSubstancesEquivalents";
  DROP TABLE IF EXISTS "tblAppendix";
  DROP TABLE IF EXISTS "tblEquivalents";
  DROP TABLE IF EXISTS "tblRulesets";
  DROP TABLE IF EXISTS "tblSubstances";
-   
+
 CREATE TABLE IF NOT EXISTS "tblSubstances" (
     "ID" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "SubstanceName" TEXT NOT NULL
@@ -54,88 +54,88 @@ INSERT INTO "tblSubstances" (SubstanceName) VALUES ("NO_3");
 INSERT INTO "tblSubstances" (SubstanceName) VALUES ("nitrate");
 INSERT INTO "tblSubstances" (SubstanceName) VALUES ("dissolved_reduced_substances");
 INSERT INTO "tblSubstances" (SubstanceName) VALUES ("detritus");
-INSERT INTO "tblSubstances" (SubstanceName) VALUES ("detritus-P");
-INSERT INTO "tblSubstances" (SubstanceName) VALUES ("slow_detritus_C");
-INSERT INTO "tblSubstances" (SubstanceName) VALUES ("fast_detritus_C");
+INSERT INTO "tblSubstances" (SubstanceName) VALUES ("detritus_phosphorus");
+INSERT INTO "tblSubstances" (SubstanceName) VALUES ("detritus_semilabile_carbon");
+INSERT INTO "tblSubstances" (SubstanceName) VALUES ("detritus_labile_carbon");
 INSERT INTO "tblSubstances" (SubstanceName) VALUES ("phosphate");
 INSERT INTO "tblSubstances" (SubstanceName) VALUES ("nutrients");
 
 INSERT INTO "tblAppendix" (Substance_ID,	Location, Unit) VALUES (
-	(SELECT ID FROM tblSubstances WHERE SubstanceName="O_2"), 
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="O_2"),
 	"_at_soil_surface","x");
 INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location, Unit) VALUES (
-	(SELECT ID FROM tblSubstances WHERE SubstanceName="O_2"), 
-	"_upward_flux", "_at_soil_surface","x");	
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="O_2"),
+	"_upward_flux", "_at_soil_surface","x");
 
 	INSERT INTO "tblAppendix" (Substance_ID,	Location, Unit) VALUES (
-	(SELECT ID FROM tblSubstances WHERE SubstanceName="nitrate"), 
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="nitrate"),
 	"_at_soil_surface","x");
 INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location, Unit) VALUES (
-	(SELECT ID FROM tblSubstances WHERE SubstanceName="nitrate"), 
-	"_upward_flux", "_at_soil_surface","x");	
-	
-INSERT INTO "tblAppendix" (Substance_ID,	Location, Unit) VALUES (
-	(SELECT ID FROM tblSubstances WHERE SubstanceName="N"), 
-	"_at_soil_surface","x");
-INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location, Unit) VALUES (
-	(SELECT ID FROM tblSubstances WHERE SubstanceName="N"), 
-	"_upward_flux", "_at_soil_surface","x");			
-	
-INSERT INTO "tblAppendix" (Substance_ID,	Location, Unit) VALUES (
-	(SELECT ID FROM tblSubstances WHERE SubstanceName="NH_3"), 
-	"_at_soil_surface","x");
-INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location, Unit) VALUES (
-	(SELECT ID FROM tblSubstances WHERE SubstanceName="NH_3"), 
-	"_upward_flux", "_at_soil_surface","x");	
-	
-INSERT INTO "tblAppendix" (Substance_ID,	Location, Unit) VALUES (
-	(SELECT ID FROM tblSubstances WHERE SubstanceName="slow_detritus_C"), 
-	"_at_soil_surface","x");
-INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location, Unit) VALUES (
-	(SELECT ID FROM tblSubstances WHERE SubstanceName="slow_detritus_C"), 
-	"_upward_flux", "_at_soil_surface","x");	
-	
-INSERT INTO "tblAppendix" (Substance_ID,	Location, Unit) VALUES (
-	(SELECT ID FROM tblSubstances WHERE SubstanceName="fast_detritus_C"), 
-	"_at_soil_surface","x");
-INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location, Unit) VALUES (
-	(SELECT ID FROM tblSubstances WHERE SubstanceName="fast_detritus_C"), 
-	"_upward_flux", "_at_soil_surface","x");	
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="nitrate"),
+	"_upward_flux", "_at_soil_surface","x");
 
 INSERT INTO "tblAppendix" (Substance_ID,	Location, Unit) VALUES (
-	(SELECT ID FROM tblSubstances WHERE SubstanceName="detritus-P"), 
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="N"),
 	"_at_soil_surface","x");
 INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location, Unit) VALUES (
-	(SELECT ID FROM tblSubstances WHERE SubstanceName="detritus-P"), 
-	"_upward_flux", "_at_soil_surface","x");		
-	
-INSERT INTO "tblAppendix" (Substance_ID,	Location, Unit) VALUES (
-	(SELECT ID FROM tblSubstances WHERE SubstanceName="phosphate"), 
-	"_at_soil_surface","x");
-INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location, Unit) VALUES (
-	(SELECT ID FROM tblSubstances WHERE SubstanceName="phosphate"), 
-	"_upward_flux", "_at_soil_surface","x");			
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="N"),
+	"_upward_flux", "_at_soil_surface","x");
 
 INSERT INTO "tblAppendix" (Substance_ID,	Location, Unit) VALUES (
-	(SELECT ID FROM tblSubstances WHERE SubstanceName="dissolved_reduced_substances"), 
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="NH_3"),
 	"_at_soil_surface","x");
 INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location, Unit) VALUES (
-	(SELECT ID FROM tblSubstances WHERE SubstanceName="dissolved_reduced_substances"), 
-	"_upward_flux", "_at_soil_surface","x");		
-	
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="NH_3"),
+	"_upward_flux", "_at_soil_surface","x");
+
 INSERT INTO "tblAppendix" (Substance_ID,	Location, Unit) VALUES (
-	(SELECT ID FROM tblSubstances WHERE SubstanceName="detritus"), 
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="detritus_semilabile_carbon"),
 	"_at_soil_surface","x");
 INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location, Unit) VALUES (
-	(SELECT ID FROM tblSubstances WHERE SubstanceName="detritus"), 
-	"_upward_flux", "_at_soil_surface","x");		
-	
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="detritus_semilabile_carbon"),
+	"_upward_flux", "_at_soil_surface","x");
+
 INSERT INTO "tblAppendix" (Substance_ID,	Location, Unit) VALUES (
-	(SELECT ID FROM tblSubstances WHERE SubstanceName="nutrients"), 
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="detritus_labile_carbon"),
 	"_at_soil_surface","x");
 INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location, Unit) VALUES (
-	(SELECT ID FROM tblSubstances WHERE SubstanceName="nutrients"), 
-	"_upward_flux", "_at_soil_surface","x");		
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="detritus_labile_carbon"),
+	"_upward_flux", "_at_soil_surface","x");
+
+INSERT INTO "tblAppendix" (Substance_ID,	Location, Unit) VALUES (
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="detritus_phosphorus"),
+	"_at_soil_surface","x");
+INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location, Unit) VALUES (
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="detritus-phosphorus"),
+	"_upward_flux", "_at_soil_surface","x");
+
+INSERT INTO "tblAppendix" (Substance_ID,	Location, Unit) VALUES (
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="phosphate"),
+	"_at_soil_surface","x");
+INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location, Unit) VALUES (
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="phosphate"),
+	"_upward_flux", "_at_soil_surface","x");
+
+INSERT INTO "tblAppendix" (Substance_ID,	Location, Unit) VALUES (
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="dissolved_reduced_substances"),
+	"_at_soil_surface","x");
+INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location, Unit) VALUES (
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="dissolved_reduced_substances"),
+	"_upward_flux", "_at_soil_surface","x");
+
+INSERT INTO "tblAppendix" (Substance_ID,	Location, Unit) VALUES (
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="detritus"),
+	"_at_soil_surface","x");
+INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location, Unit) VALUES (
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="detritus"),
+	"_upward_flux", "_at_soil_surface","x");
+
+INSERT INTO "tblAppendix" (Substance_ID,	Location, Unit) VALUES (
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="nutrients"),
+	"_at_soil_surface","x");
+INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location, Unit) VALUES (
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="nutrients"),
+	"_upward_flux", "_at_soil_surface","x");
 
 
 
@@ -153,9 +153,9 @@ INSERT INTO "tblEquivalents" (EquivalentName) VALUES ("mole_concentration_of_pho
 INSERT INTO "tblEquivalents" (EquivalentName) VALUES ("Dissolved_Inorganic_Phosphorus_DIP_nutP");
 INSERT INTO "tblEquivalents" (EquivalentName) VALUES ("Dissolved_Inorganic_Nitrogen_DIN_nutN");
 INSERT INTO "tblEquivalents" (EquivalentName) VALUES ("detritus");
-INSERT INTO "tblEquivalents" (EquivalentName) VALUES ("slow_detritus_C");
-INSERT INTO "tblEquivalents" (EquivalentName) VALUES ("fast_detritus_C");
-INSERT INTO "tblEquivalents" (EquivalentName) VALUES ("detritus-P");
+INSERT INTO "tblEquivalents" (EquivalentName) VALUES ("detritus_semilabile_carbon");
+INSERT INTO "tblEquivalents" (EquivalentName) VALUES ("detritus_labile_carbon");
+INSERT INTO "tblEquivalents" (EquivalentName) VALUES ("detritus_phosphorus");
 INSERT INTO "tblEquivalents" (EquivalentName) VALUES ("Detritus_Phosphorus_detP");
 INSERT INTO "tblEquivalents" (EquivalentName) VALUES ("nutrients");
 INSERT INTO "tblEquivalents" (EquivalentName) VALUES ("dissolved_reduced_substances");
@@ -177,23 +177,23 @@ INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID)
 	(SELECT ID FROM tblRulesets WHERE RulesetName="General"),
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="O_2"),
 	(SELECT ID FROM tblEquivalents WHERE EquivalentName="dissolved_oxygen"));
-	
+
 INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID) VALUES (
 	(SELECT ID FROM tblRulesets WHERE RulesetName="HZG KW"),
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="O_2"),
 	(SELECT ID FROM tblEquivalents WHERE EquivalentName="dissolved_oxygen_oxy"));
-	
-	
+
+
 INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID) VALUES (
 	(SELECT ID FROM tblRulesets WHERE RulesetName="General"),
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="nitrate"),
-	(SELECT ID FROM tblEquivalents WHERE EquivalentName="nitrate"));	
-	
+	(SELECT ID FROM tblEquivalents WHERE EquivalentName="nitrate"));
+
 INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID) VALUES (
 	(SELECT ID FROM tblRulesets WHERE RulesetName="General"),
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="nitrate"),
-	(SELECT ID FROM tblEquivalents WHERE EquivalentName="mole_concentration_of_nitrate"));	
-	
+	(SELECT ID FROM tblEquivalents WHERE EquivalentName="mole_concentration_of_nitrate"));
+
 INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID) VALUES (
 	(SELECT ID FROM tblRulesets WHERE RulesetName="Fallback"),
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="nitrate"),
@@ -202,94 +202,94 @@ INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID)
 INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID) VALUES (
 	(SELECT ID FROM tblRulesets WHERE RulesetName="Fallback"),
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="nitrate"),
-	(SELECT ID FROM tblEquivalents WHERE EquivalentName="nutrients"));	
-	
-	
+	(SELECT ID FROM tblEquivalents WHERE EquivalentName="nutrients"));
+
+
 INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID) VALUES (
 	(SELECT ID FROM tblRulesets WHERE RulesetName="General"),
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="N"),
-	(SELECT ID FROM tblEquivalents WHERE EquivalentName="nitrogen"));	
-	
-	
+	(SELECT ID FROM tblEquivalents WHERE EquivalentName="nitrogen"));
+
+
 INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID) VALUES (
 	(SELECT ID FROM tblRulesets WHERE RulesetName="General"),
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="NH_3"),
-	(SELECT ID FROM tblEquivalents WHERE EquivalentName="ammonium"));	
-	
+	(SELECT ID FROM tblEquivalents WHERE EquivalentName="ammonium"));
+
 INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID) VALUES (
 	(SELECT ID FROM tblRulesets WHERE RulesetName="General"),
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="NH_3"),
 	(SELECT ID FROM tblEquivalents WHERE EquivalentName="dissolved_ammonium_nh3"));
-	
+
 INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID) VALUES (
 	(SELECT ID FROM tblRulesets WHERE RulesetName="General"),
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="NH_3"),
-	(SELECT ID FROM tblEquivalents WHERE EquivalentName="mole_concentration_of_ammonium"));	
+	(SELECT ID FROM tblEquivalents WHERE EquivalentName="mole_concentration_of_ammonium"));
 
-	
+
 INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID) VALUES (
 	(SELECT ID FROM tblRulesets WHERE RulesetName="General"),
-	(SELECT ID FROM tblSubstances WHERE SubstanceName="slow_detritus_C"),
-	(SELECT ID FROM tblEquivalents WHERE EquivalentName="slow_detritus_C"));	
-	
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="detritus_semilabile_carbon"),
+	(SELECT ID FROM tblEquivalents WHERE EquivalentName="detritus_semilabile_carbon"));
+
 INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID) VALUES (
 	(SELECT ID FROM tblRulesets WHERE RulesetName="General"),
-	(SELECT ID FROM tblSubstances WHERE SubstanceName="fast_detritus_C"),
-	(SELECT ID FROM tblEquivalents WHERE EquivalentName="fast_detritus_C"));	
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="detritus_labile_carbon"),
+	(SELECT ID FROM tblEquivalents WHERE EquivalentName="detritus_labile_carbon"));
 
 	INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID) VALUES (
 	(SELECT ID FROM tblRulesets WHERE RulesetName="General"),
-	(SELECT ID FROM tblSubstances WHERE SubstanceName="detritus-P"),
-	(SELECT ID FROM tblEquivalents WHERE EquivalentName="detritus-P"));	
-	
-	
-INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID) VALUES (
-	(SELECT ID FROM tblRulesets WHERE RulesetName="General"),
-	(SELECT ID FROM tblSubstances WHERE SubstanceName="phosphate"),
-	(SELECT ID FROM tblEquivalents WHERE EquivalentName="phosphate"));		
-	
-INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID) VALUES (
-	(SELECT ID FROM tblRulesets WHERE RulesetName="General"),
-	(SELECT ID FROM tblSubstances WHERE SubstanceName="phosphate"),
-	(SELECT ID FROM tblEquivalents WHERE EquivalentName="mole_concentration_of_phosphate"));		
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="detritus_phosphorus"),
+	(SELECT ID FROM tblEquivalents WHERE EquivalentName="detritus_phosphorus"));
+
 
 INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID) VALUES (
 	(SELECT ID FROM tblRulesets WHERE RulesetName="General"),
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="phosphate"),
-	(SELECT ID FROM tblEquivalents WHERE EquivalentName="Dissolved_Inorganic_Phosphorus_DIP_nutP"));	
-	
+	(SELECT ID FROM tblEquivalents WHERE EquivalentName="phosphate"));
+
+INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID) VALUES (
+	(SELECT ID FROM tblRulesets WHERE RulesetName="General"),
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="phosphate"),
+	(SELECT ID FROM tblEquivalents WHERE EquivalentName="mole_concentration_of_phosphate"));
+
+INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID) VALUES (
+	(SELECT ID FROM tblRulesets WHERE RulesetName="General"),
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="phosphate"),
+	(SELECT ID FROM tblEquivalents WHERE EquivalentName="Dissolved_Inorganic_Phosphorus_DIP_nutP"));
+
 
 INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID) VALUES (
 	(SELECT ID FROM tblRulesets WHERE RulesetName="General"),
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="dissolved_reduced_substances"),
 	(SELECT ID FROM tblEquivalents WHERE EquivalentName="dissolved_reduced_substances"));
-	
+
 INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID) VALUES (
 	(SELECT ID FROM tblRulesets WHERE RulesetName="General"),
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="dissolved_reduced_substances"),
-	(SELECT ID FROM tblEquivalents WHERE EquivalentName="dissolved_reduced_substances_odu"));	
-	
-	
+	(SELECT ID FROM tblEquivalents WHERE EquivalentName="dissolved_reduced_substances_odu"));
+
+
 INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID) VALUES (
 	(SELECT ID FROM tblRulesets WHERE RulesetName="General"),
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="detritus"),
-	(SELECT ID FROM tblEquivalents WHERE EquivalentName="detritus"));		
-	
+	(SELECT ID FROM tblEquivalents WHERE EquivalentName="detritus"));
+
 
 INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID) VALUES (
 	(SELECT ID FROM tblRulesets WHERE RulesetName="General"),
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="detritus-P"),
-	(SELECT ID FROM tblEquivalents WHERE EquivalentName="detritus-P"));	
-	
+	(SELECT ID FROM tblEquivalents WHERE EquivalentName="detritus-P"));
+
 	INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID) VALUES (
 	(SELECT ID FROM tblRulesets WHERE RulesetName="General"),
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="detritus-P"),
 	(SELECT ID FROM tblEquivalents WHERE EquivalentName="Detritus_Phosphorus_detP"));
-	
+
 INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID) VALUES (
 	(SELECT ID FROM tblRulesets WHERE RulesetName="General"),
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="nutrients"),
-	(SELECT ID FROM tblEquivalents WHERE EquivalentName="nutrients"));		
+	(SELECT ID FROM tblEquivalents WHERE EquivalentName="nutrients"));
 
 COMMIT;
 

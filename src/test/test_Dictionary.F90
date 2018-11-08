@@ -4,7 +4,7 @@
 !!
 !! create dictionary, add keys and dump dictionary
 
-program test_Netcdf
+program test
 use mossco_dictionary
 
 type(type_mossco_dictionary) :: dict,dict2

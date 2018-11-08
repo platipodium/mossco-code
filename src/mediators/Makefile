@@ -1,7 +1,7 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -46,18 +46,24 @@ endif
 
 libpelagicbenthic_mediator: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(pelagic_benthic_mediator.o)
 
-libverticalreduction: prefix $(MOSSCO_LIBRARY_PATH)/libverticalreduction.a
+libverticalreduction: libmossco_util prefix $(MOSSCO_LIBRARY_PATH)/libverticalreduction.a(vertical_reduction.o)
 libinoutcoupler: prefix $(MOSSCO_LIBRARY_PATH)/libinoutcoupler.a
 libxgridcoupler: prefix $(MOSSCO_LIBRARY_PATH)/libxgridcoupler.a
 libcopycoupler: prefix $(MOSSCO_LIBRARY_PATH)/libcopycoupler.a
 libredistcoupler: prefix $(MOSSCO_LIBRARY_PATH)/libredistcoupler.a
-libregridcoupler: prefix $(MOSSCO_LIBRARY_PATH)/libregridcoupler.a
+libregridcoupler: prefix $(MOSSCO_LIBRARY_PATH)/libregridcoupler.a(regrid_coupler.o) \
+	$(MOSSCO_MODULE_PATH)/regrid_coupler.mod
 libremtc: prefix $(MOSSCO_LIBRARY_PATH)/libremtc.a(remtc_atmos_ocean_coupler.o)
 liboceansedimentcoupler: prefix $(MOSSCO_LIBRARY_PATH)/liboceansedimentcoupler.a
 libsurfacescoupler: prefix $(MOSSCO_LIBRARY_PATH)/libsurfacescoupler.a(surfaces_coupler.o)
 pelagicbenthiccoupler: libmossco_util $(MOSSCO_LIBRARY_PATH)/libpelagicbenthiccoupler.a(pelagic_benthic_coupler.o)
-pelagicsoilconnector: libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(pelagic_soil_connector.o)
-pelagicsoilconnector: libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(soil_pelagic_connector.o)
+pelagicsoilconnector: libmossco_util \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(pelagic_soil_connector.o) \
+	$(MOSSCO_MODULE_PATH)/pelagic_soil_connector.mod
+pelagicsoilconnector: libmossco_util \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(soil_pelagic_connector.o) \
+	$(MOSSCO_MODULE_PATH)/soil_pelagic_connector.mod
+
 ifeq ($(MOSSCO_SQLITE),true)
 soilpelagicmediator: libmossco_util libmossco_db $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(soil_pelagic_mediator.o)
 endif
@@ -72,7 +78,7 @@ libmossco_util libmossco_db:
 $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(pelagic_benthic_mediator.o): pelagic_benthic_mediator.F90 pelagic_benthic_mediator.o
 	$(AR) cruvs $@ pelagic_benthic_mediator.o
 
-$(MOSSCO_LIBRARY_PATH)/libregridcoupler.a: regrid_coupler.o
+$(MOSSCO_LIBRARY_PATH)/libregridcoupler.a: regrid_coupler.o regrid_coupler.F90
 	$(AR) cruvs $@ regrid_coupler.o
 
 $(MOSSCO_LIBRARY_PATH)/libverticalreduction.a: vertical_reduction.o
@@ -104,6 +110,18 @@ $(MOSSCO_LIBRARY_PATH)/libpelagicbenthiccoupler.a: pelagic_benthic_coupler.o ben
 $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a: pelagic_soil_connector.o pelagic_benthic_mediator.o soil_pelagic_connector.o
 	$(AR) cruvs $@ $?
 
+$(MOSSCO_MODULE_PATH)/regrid_coupler.mod:
+	@touch regrid_coupler.F90
+	$(MAKE) regrid_coupler.o
+
+$(MOSSCO_MODULE_PATH)/pelagic_soil_connector.mod:
+	@touch pelagic_soil_connector.F90
+	$(MAKE) pelagic_soil_connector.o
+
+$(MOSSCO_MODULE_PATH)/soil_pelagic_connector.mod:
+	@touch soil_pelagic_connector.F90
+	$(MAKE) soil_pelagic_connector.o
+
 ifeq ($(MOSSCO_SQLITE),true)
 $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(soil_pelagic_mediator.o): soil_pelagic_mediator.F90 soil_pelagic_mediator.o
 	$(AR) cruvs $@ soil_pelagic_mediator.o
@@ -130,3 +148,10 @@ test: test_regrid_coupler
 
 test_regrid_coupler: regrid_coupler.o
 	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS) -lesmf
+
+ifneq ($(wildcard *.make),)
+  include *.make
+endif
+ifneq ($(wildcard *.mk),)
+  include *mk
+endif

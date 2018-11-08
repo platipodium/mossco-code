@@ -52,6 +52,12 @@ ifeq ($(MOSSCO_HAMSOM),true)
   CPPFLAGS += -I$(HAMSOM_DIR)/src
 endif
 
+ifeq ($(MOSSCO_CMAQ),true)
+include $(MOSSCO_DIR)/src/include/cmaq.mk
+  TARGETS += libmossco_cmaq
+  CPPFLAGS += -I$(CMAQ_DIR)/src
+endif
+
 .PHONY: $(TARGETS)
 
 # Make targets
@@ -229,6 +235,7 @@ else
 libmossco_hamsom_dependencies:
 endif
 
+
 libmossco_hamsom: prefix libmossco_hamsom_dependencies \
   $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a(hamsom_driver.o)
 
@@ -240,10 +247,24 @@ hamsom_driver.F90: empty_driver.F90
 	@echo "Creating dummy HAMSOM driver $@"
 	sed 's/empty/hamsom/g' $< > $@
 
+libmossco_cmaq_dependencies:
+
+libmossco_cmaq: prefix libmossco_cmaq_dependencies \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_cmaq.a(cmaq_driver.o)
+
+cmaq_driver.o: driver.F # cmaq_driver.F90
+	@echo "Compiling $<"
+	#$(F90)  $(CMAQ_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
+	#$(F90)  $(CMAQ_CPPFLAGS) $(CPPFLAGS) $(F_FLAGS) -c $< -o $@
+	$(FC) -c $(F_FLAGS) $(CPP_FLAGS) $(INCLUDES) $< -o $@
+
+
 # Generic section
 
 
 clean: extraclean
+	$(RM) *.o
+
 extraclean:
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_getm.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a
@@ -252,6 +273,8 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/fabm_sediment_driver.mod
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a
 	@-rm -f $(MOSSCO_MODULE_PATH)/fabm0d_driver.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/hamsom_driver.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/cmaq_driver.mod
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_fabmgotm.a
 	@-rm -f $(MOSSCO_MODULE_PATH)/fabm_gotm_driver.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/erosed_driver.mod

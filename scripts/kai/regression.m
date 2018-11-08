@@ -1,1 +1,11 @@
-/home/wirtz/data/HelgolandReede/regression.m
+[r,p1]=corrcoef(x1,x2);
+r=r(1,2);
+p=p1(1,2);
+%co= cov(x1,x2)  ;
+%c=co(1,2)/(std(x1)*std(x1));
+xreg=[min(x1)*0.95 1.055*max(x1)];
+c=r*std(x2)/std(x1);
+yreg=mean(x2)+c*(xreg-mean(x1));
+%chi2=(x2-x1)'*(x2-x1);
+%r=c*std(x1)/std(x2);
+r2=r*r;

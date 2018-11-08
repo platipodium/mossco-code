@@ -1,16 +1,13 @@
-#!/bin/bash
-#
-#original:
-#ncrcat -d rlat,min_lat_index,max_lat_index -d rlon,min_lon_index,max_lon_index cDII.00.kss.*.nc  output.nc
+#author: onur.kerimoglu@hzg.de 
 
 inpdir='/ocean-data/trim/dat_atla_nordsee/CLM_HINDCAST'
-outdir='/home/wirtz/ocean/data/clm'
+outdir='/ocean-data/kerimogl/Forcing/sns/Meteo/CLM/'
 
 do_extract=1
 do_modify=1
-yB=1951
-yE=2010
-#yE=1951
+append_nextframe=1
+yB=2000
+yE=2015
 lons='-d rlon,39,74,1' #0,131
 lats='-d rlat,50,85,1' #0,140
 times='-d time,1,,6'
@@ -27,6 +24,11 @@ for y in $(seq $yB $yE); do
     echo 'cut: ' $fraw '->' $fcut
     ncrcat -C $vars $lats $lons $times ${fraw} ${fcut}
   fi
+ 
+  #if [ "$append_nextframe" == "1" ]; then
+    #cut  next file
+    #append it
+  #fi
   
   if [ $do_modify == "1" ]; then
     echo 'mod: ' $fcut '->' $fmod
@@ -47,5 +49,3 @@ for y in $(seq $yB $yE); do
     #rm $fcut $fmod
   fi
 done
-
-

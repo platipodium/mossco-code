@@ -1,0 +1,54 @@
+# ---
+# author: Carsten Lemmen
+# copyright: 2018 Helmholtz-Zentrum Geesthacht
+# license: CC-by-SA 4.0
+# description: "This test case describes a coupling between the SCHISM ocean
+# component (containing a FABM pelagic ecosystem model) and the FABM component for
+# the sediment (running OMExDia).  Ecosystem models are defined on the SCHISM grid
+# and exchange data via the specific soil--pelagic and pelagic--soil connectors.
+# As a fall back, static ecosystem data is provided by the default component."
+# ...
+
+# Name all the models and tell the system what base component these instances
+# are derived from
+instances:
+  - schism_mesh_output: netcdf
+  - schism: schism_esmf
+  - restart_sediment: netcdf_input
+
+# Define the dependencies of
+dependencies:
+  - fabm_sediment:
+    - component: schism
+      grid: temperature_at_soil_surface
+  - restart_sediment:
+    - component: schism
+      grid: temperature_at_soil_surface
+
+coupling:
+  - components:
+    - restart_sediment
+    - fabm_sediment
+    interval: none
+  - components:
+    - default
+    - fabm_sediment
+    interval: none
+  - components:
+    - fabm_sediment
+    - schism_mesh_output
+    interval: 1 h
+  - components:
+    - schism
+    - schism_mesh_output
+    interval: 1 h
+  - components:
+    - schism
+    - pelagic_soil_connector
+    - fabm_sediment
+    interval: 30 m
+  - components:
+    - fabm_sediment
+    - soil_pelagic_connector
+    - schism
+    interval: 30 m

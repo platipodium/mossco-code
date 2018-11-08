@@ -1,8 +1,8 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht, Institut für Ostseeforschung Warnemünde
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
-# @author Knut Klingbeil, Institut für Ostseeforschung Warnemünde
+# @author Knut Klingbeil <knut.klingbeil@io-warnemuende.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -20,64 +20,82 @@ SUBDIRS =
 
 CVS?=$(shell which cvs)
 SVN?=$(shell which svn)
-GIT?=$(shell which git)
+
+# Test for the version of git and decide whether to make
+# a shallow copy (from version 2)
+ifeq ($(MOSSCO_GIT),true)
+  GIT?=$(shell which git)
+  ifneq ($(MOSSCO_GIT_VERSION_MAJOR),1)
+		GIT_CLONE:=$(GIT) clone --depth=1
+	else
+	  GIT_CLONE:=$(GIT) clone
+	endif
+endif
+
 PYTHON?=$(shell which python)
 PREFIX?=$(HOME)/opt
 
+include include/*mk
+
 ifeq ($(GIT),)
   $(error "could not find `git´ executable")
-  GIT_CLONE_TARGETS=
-else
-  GIT_CLONE_TARGETS=git-clone
 endif
 
 ifeq ($(PYTHON),)
-  $(error "could not find `git´ executable")
-  PYTHON_CLONE_TARGETS=
-else
-  PYTHON_CLONE_TARGETS=python-clone
+  $(warning "could not find `python´ executable")
 endif
 
 ifeq ($(SVN),)
   $(warning "could not find `svn´ executable")
-  SVN_CLONE_TARGETS=
-else
-  SVN_CLONE_TARGETS=svn-clone
 endif
 
 ifeq ($(CVS),)
   $(warning "could not find `cvs´ executable")
-  CVS_CLONE_TARGETS=
-else
-  CVS_CLONE_TARGETS=cvs-clone
 endif
 
-.PHONY: all clean extraclean subdirs $(SUBDIRS) clone update
-.PHONY: fabm_clone  gotm_clone  getm_clone  erosed-svn-clone flibs-cvs-clone json_clone
-.PHONY: fabm_update gotm_update getm_update erosed-svn-update flibs-cvs-update json_update
+.PHONY: all clean external_clean subdirs $(SUBDIRS) clone update
+.PHONY: fabm gotm erosed flibs json
 .PHONY: sqlite-zip sqlite
 
-all: clone
 
-clone: $(GIT_CLONE_TARGETS) $(SVN_CLONE_TARGETS) $(CVS_CLONE_TARGETS)
+all: fabm gotm getm version
+clone: all
+update: all
+version: fabm_version gotm_version getm_version
 
-git-clone: fabm_clone  gotm_clone  getm_clone  #json_clone
-cvs-clone: flibs-cvs-clone #json_clone
-svn-clone: #erosed-svn-clone
+clean:
 
-update: fabm_update gotm_update getm_update \
-  flibs-cvs-update #json_update #erosed-svn-update
-
-clean: extraclean
-
-distclean: getm_distclean gotm_clean fabm_clean #json_clean
-
-extraclean:
+external_clean: fabm_distclean gotm_distclean getm_distclean
 
 subdirs: $(SUBDIRS)
 
 $(SUBDIRS):
 	$(MAKE) -C $@
+
+json:
+ifeq ($(wildcard $(external_JSONDIR)/src/json_module.F90),)
+	$(GIT_CLONE) https://github.com/jacobwilliams/json-fortran.git $(external_JSONDIR)
+else
+	( cd $(external_JSONDIR) && $(GIT) pull )
+endif
+
+erosed:
+ifeq ($(wildcard $(MOSSCO_DIR)/external/erosed-svn),)
+	svn co --depth empty https://svn.oss.deltares.nl/repos/openearthtools/trunk/programs/SandMudBedModule/03_Fortran/example/example $(MOSSCO_DIR)/external/erosed-svn
+endif
+	$(MAKE) erosed-svn-update
+	$(MAKE) flow2d3d-svn-export
+
+erosed-svn-update:
+	svn update --set-depth infinity $(MOSSCO_DIR)/external/erosed-svn/include
+	svn update --set-depth infinity $(MOSSCO_DIR)/external/erosed-svn/modules
+	svn update --set-depth infinity $(MOSSCO_DIR)/external/erosed-svn/source
+
+flow2d3d-svn-export:
+	svn export --force https://svn.oss.deltares.nl/repos/delft3d/tags/2399/src/engines_gpl/flow2d3d/packages/kernel/src/compute_sediment/bedbc1993.f90 $(MOSSCO_DIR)/external/erosed-svn/source/bedbc1993.f90
+	svn export --force https://svn.oss.deltares.nl/repos/delft3d/tags/2399/src/engines_gpl/flow2d3d/packages/kernel/src/compute_sediment/soursin_3d.f90 $(MOSSCO_DIR)/external/erosed-svn/source/soursin_3d.f90
+	svn export --force https://svn.oss.deltares.nl/repos/delft3d/tags/2399/src/engines_gpl/flow2d3d/packages/kernel/src/compute_sediment/compbsskin.f90 $(MOSSCO_DIR)/external/erosed-svn/source/compbsskin.f90
+	svn export --force https://svn.oss.deltares.nl/repos/delft3d/tags/2399/src/utils_lgpl/deltares_common/packages/deltares_common/src/mathconsts.f90 $(MOSSCO_DIR)/external/erosed-svn/source/mathconsts.f90
 
 sqlite: sqlite/sqlite3.c
 sqlite/sqlite3.c: sqlite-zip
@@ -87,81 +105,18 @@ sqlite-zip:
 	unzip -u -d sqlite -j sqlite3.zip
 	rm -f sqlite3.zip
 
-fabm_clone fabm_update:
-ifeq ($(wildcard $(external_FABMDIR)/src/fabm.F90),)
-	$(GIT) clone http://git.code.sf.net/p/fabm/code $(external_FABMDIR)
-else
-	( cd $(external_FABMDIR) && $(GIT) pull )
-endif
-ifeq ($(wildcard $(external_FABMDIR)/.git/refs/remotes/mossco/master),)
-	( cd $(external_FABMDIR) && $(GIT) remote add -f mossco http://git.code.sf.net/p/mossco/fabm && $(GIT) checkout -b mossco mossco/master )
-endif
-
-json_clone json_update:
-ifeq ($(wildcard $(external_JSONDIR)/src/json_module.F90),)
-	$(GIT) clone https://github.com/jacobwilliams/json-fortran.git $(external_JSONDIR)
-else
-	( cd $(external_JSONDIR) && $(GIT) pull )
-endif
-
-gotm_clone gotm_update:
-ifeq ($(wildcard $(external_GOTMDIR)/src/CMakeLists.txt),)
-	$(GIT) clone https://github.com/gotm-model/code.git $(external_GOTMDIR)
-else
-	( cd $(external_GOTMDIR) ; $(GIT) pull )
-endif
-
-getm_clone:
-ifeq ($(wildcard $(external_GETMDIR)/src/Makefile),)
-	$(GIT) clone http://git.code.sf.net/p/getm/code $(external_GETMDIR)
-	( cd $(external_GETMDIR) ; $(GIT) checkout -b iow origin/iow )
-else
-	$(MAKE) getm_update
-endif
-
-getm_update:
-ifneq ($(wildcard $(external_GETMDIR)/src/Makefile),)
-	( cd $(external_GETMDIR) ; $(GIT) pull origin iow)
-endif
-
-getm_distclean:
-ifneq ($(wildcard $(external_GETMDIR)/src/Makefile),)
-	( unset FABM ; $(MAKE) -C $(external_GETMDIR) distclean )
-endif
-
-erosed-svn-clone:
-ifeq ($(wildcard $(MOSSCO_DIR)/external/erosed-svn),)
-	svn co --depth empty https://svn.oss.deltares.nl/repos/openearthtools/trunk/programs/SandMudBedModule/03_Fortran/example/example $(MOSSCO_DIR)/external/erosed-svn
-	$(MAKE) erosed-svn-update
-	$(MAKE) flow2d3d-svn-export
-endif
-
-erosed-svn-update:
-ifneq ($(wildcard $(MOSSCO_DIR)/external/erosed-svn),)
-	svn update --set-depth infinity $(MOSSCO_DIR)/external/erosed-svn/include
-	svn update --set-depth infinity $(MOSSCO_DIR)/external/erosed-svn/modules
-	svn update --set-depth infinity $(MOSSCO_DIR)/external/erosed-svn/source
-endif
-
-flow2d3d-svn-export:
-	svn export --force https://svn.oss.deltares.nl/repos/delft3d/tags/2399/src/engines_gpl/flow2d3d/packages/kernel/src/compute_sediment/bedbc1993.f90 $(MOSSCO_DIR)/external/erosed-svn/source
-	svn export --force https://svn.oss.deltares.nl/repos/delft3d/tags/2399/src/engines_gpl/flow2d3d/packages/kernel/src/compute_sediment/soursin_3d.f90 $(MOSSCO_DIR)/external/erosed-svn/source
-	svn export --force https://svn.oss.deltares.nl/repos/delft3d/tags/2399/src/engines_gpl/flow2d3d/packages/kernel/src/compute_sediment/compbsskin.f90 $(MOSSCO_DIR)/external/erosed-svn/source
-	svn export --force https://svn.oss.deltares.nl/repos/delft3d/tags/2399/src/utils_lgpl/deltares_common/packages/deltares_common/src/mathconsts.f90 $(MOSSCO_DIR)/external/erosed-svn/source
-
-flibs-cvs-clone:
+flibs:
 ifeq ($(wildcard $(MOSSCO_DIR)/external/flibs-cvs),)
 	mkdir -p $(MOSSCO_DIR)/external/flibs-cvs
 	echo "/1 :pserver:anonymous@flibs.cvs.sourceforge.net:2401/cvsroot/flibs A" >> $(HOME)/.cvspass
 	#cvs -d:pserver:anonymous@flibs.cvs.sourceforge.net:/cvsroot/flibs login
 	$(MAKE) flibs-cvs-update
-endif
-
-flibs-cvs-update:
+else
 	(cd $(MOSSCO_DIR)/external/flibs-cvs; \
 	cvs -z3 -d:pserver:anonymous@flibs.cvs.sourceforge.net:/cvsroot/flibs checkout configure.sh config src make )
+endif
 
-pyyaml-svn-clone pyyaml-svn-update:
+pyyaml:
 ifeq ($(wildcard $(MOSSCO_DIR)/external/pyyaml-svn),)
 	svn checkout http://svn.pyyaml.org/pyyaml/trunk pyyaml-svn
 else
@@ -171,9 +126,9 @@ endif
 	(cd $(MOSSCO_DIR)/external/pyyaml-svn;  $(PYTHON) setup.py install --prefix=$(PREFIX))
 	export PYTHONPATH=$(PYTHONPATH):$(PREFIX)
 
-gitstats-git-clone gitstats-git-update:
+gitstats:
 ifeq ($(wildcard $(external_GITSTATSDIR)/src),)
-	$(GIT) clone git://github.com/hoxu/gitstats.git $(external_GITSTATSDIR)
+	$(GIT_CLONE) git://github.com/hoxu/gitstats.git $(external_GITSTATSDIR)
 else
 	( cd $(external_GITSTATSDIR) && $(GIT) pull )
 endif

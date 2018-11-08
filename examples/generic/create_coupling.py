@@ -1,13 +1,18 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
 # This script is is part of MOSSCO. It creates from YAML descriptions of
 # couplings a toplevel_component.F90 source file
 #
-# @copyright (C) 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 
+from __future__ import absolute_import, division, unicode_literals
 import sys
 import os
 
@@ -16,7 +21,42 @@ def sequential_iterator(obj):
     return obj if isinstance(obj, dict) else xrange(len(obj))
 
 try:
-    import yaml
+  import yaml
+
+  class Loader(yaml.Loader):
+    # The loader class was suggested by David Hall (Oxford)
+    # on https://higgshunter.wordpress.com, and adapted to python3
+    def __init__(self, stream):
+        self._root = os.path.split(stream.name)[0]
+        super(Loader, self).__init__(stream)
+        Loader.add_constructor('!include', Loader.include)
+        Loader.add_constructor('!import',  Loader.include)
+
+    def include(self, node):
+        if   isinstance(node, yaml.ScalarNode):
+            return self.extractFile(self.construct_scalar(node))
+
+        elif isinstance(node, yaml.SequenceNode):
+            result = []
+            for filename in self.construct_sequence(node):
+                result += self.extractFile(filename)
+            return result
+
+        elif isinstance(node, yaml.MappingNode):
+            result = {}
+            for k,v in self.construct_mapping(node).items():
+                result[k] = self.extractFile(v)
+            return result
+
+        else:
+            print ("Error:: unrecognised node type in !include statement")
+            raise yaml.constructor.ConstructorError
+
+    def extractFile(self, filename):
+        filepath = os.path.join(self._root, filename)
+        with open(filepath, 'r') as f:
+            return yaml.load(f, Loader)
+
 except:
     print('Please install the python-yaml package or set your PYTHONPATH variable\n')
     print('to the location of the python yaml package.')
@@ -25,25 +65,19 @@ except:
 if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
-     filename = 'fabm_benthic_pelagic+wave.yaml'
-     #filename = 'constant_fabm_sediment_netcdf.yaml'
-     filename = 'constant_constant_netcdf.yaml'
-     filename = 'getm--fabm_pelagic--netcdf.yaml'
      filename='gotm--fabm_pelagic--fabm_sediment'
 
 if not filename.endswith('yaml'):
   filename = filename + '.yaml'
 
-print sys.argv, len(sys.argv)
+print (sys.argv, len(sys.argv))
 if not os.path.exists(filename):
-    print 'File ' + filename + ' does not exist.'
-    exit(1)
+    print ('File ' + filename + ' does not exist.')
+    sys.exit(1)
 
-print 'Using ' + filename + ' ...'
-
-fid = file(filename,'rU')
-config = yaml.load(fid)
-fid.close()
+with open(filename,'rU') as fid:
+    print ('Using ' + filename + ' ...')
+    config = yaml.load(fid)
 
 # Search for the key with name "coupling".  If part of the filename is the word "coupling" then assume that the first item on the list read is the name of the coupling
 coupling_name = os.path.splitext(os.path.basename(filename))[0]
@@ -57,34 +91,32 @@ variables = []
 coupling_properties = []
 
 if not type(config) is dict:
-  print 'File ' + filename + ' does not contain data or does not contain a'
-  print 'dictionary.'
-  exit(1)
+  print ('File ' + filename + ' does not contain data or does not contain a dictionary.')
+  sys.exit(1)
 
-if config.has_key('author'):
+if 'author' in config.keys():
     author = config.pop('author')
 else:
     author = 'Carsten Lemmen <carsten.lemmen@hzg.de>'
 
-if config.has_key('copyright'):
+if 'copyright' in config.keys():
     copyright = config.pop('copyright')
 else:
-    copyright = 'Copyright (C) 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht'
+    copyright = 'Copyright (C) 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht'
 
-if config.has_key('dependencies'):
+if 'dependencies' in config.keys():
   dependencies = config.pop('dependencies')
 else:
   dependencies=[]
 
-if config.has_key('instances'):
+if 'instances' in config.keys():
   instances = config.pop('instances')
 else:
   instances=[]
 
 componentList=[]
 gridCompList=[]
-cplCompList=['link_connector','rename_connector']
-#cplCompList=['link_connector']
+cplCompList=['link_connector']
 couplingList=[]
 petList=[]
 foreignGrid={}
@@ -92,10 +124,10 @@ foreignGrid={}
 intervals =[]
 directions = []
 
-if not config.has_key('coupling'):
-  print 'File ' + filename + ' must contain a coupling dictionary.'
-  print 'Try adding a first line consisting only of the word "coupling:".'
-  exit(1)
+if not 'coupling' in config.keys():
+  print ('File ' + filename + ' must contain a coupling dictionary.')
+  print ('Try adding a first line consisting only of the word "coupling:".')
+  sys.exit(1)
 
 coupling = config.pop("coupling")
 
@@ -104,16 +136,19 @@ if not (type(coupling) is list):
   coupling=[coupling]
 
 if len(coupling)<1:
-  print 'File ' + filename + ' contains an empty coupling list.'
-  print coupling
-  exit(1)
+  print ('File ' + filename + ' contains an empty coupling list.')
+  print (coupling)
+  sys.exit(1)
 
-# Loop over the list of couuplings.  Each entry in this list is a dictionary
+# Loop over the list of couplings.  Each entry in this list is a dictionary
 # that has at least the key 'components:'
 # todo: we could shortcut this by allowing comp1:comp2 to
-for item in coupling:
+# Set a default coupling alarm interval of 6 minutes
+intervals=['6 m'] * len(coupling)
+
+for i, item in enumerate(coupling):
     if type(item) is dict:
-        if item.has_key("components"):
+        if 'components' in item.keys():
             gridCompList.extend([item["components"][0], item["components"][-1]])
             n=len(item["components"])
             if n>2:
@@ -123,21 +158,19 @@ for item in coupling:
                 cplCompList.append("link_connector")
             for i in range(1,n-1):
                 cplCompList.append(item["components"][i])
-            if item.has_key("interval"):
-                intervals.append(item["interval"])
-            else:
-                intervals.append("6 m")
-            if item.has_key("direction"):
+            if 'interval' in item.keys():
+                intervals[i] = item["interval"]
+            if 'direction' in item.keys():
                 directions.append(item["direction"])
         else:
           gridComplist.extend(item.keys())
           gridCompList.extend(item.values())
-          for key,value in item.iteritems():
+          for key,value in item.items():
              couplingList.append(key, "link_connector",value)
           cplCompList.append("link_connector")
 
     else:
-        print 'Warning, dictionary expected for item ' + item + ', it is of type ',  type(item)
+        print ('Warning, dictionary expected for item ' + item + ', it is of type ',  type(item))
 
 gridCompSet=set(gridCompList)
 gridCompList=list(gridCompSet)
@@ -146,10 +179,6 @@ cplCompList=list(cplCompSet)
 componentSet=gridCompSet.union(cplCompSet)
 componentList=list(componentSet)
 
-# Set a default coupling alarm interval of 6 minutes
-if len(intervals) == 0:
-    intervals=len(cplCompList) * ['6 m']
-
 # if there are any dependencies specified, go through the list of components
 # and sort this list
 if type(dependencies) is dict:
@@ -157,18 +186,18 @@ if type(dependencies) is dict:
 
 gridOrder=[]
 for item in dependencies:
-  for key,value in item.iteritems():
+  for key,value in item.items():
     if type(value) is list:
       value=value[0]
     if type(value) is dict:
-      if value.has_key('grid'):
+      if 'grid' in value.keys():
         donator=value['component']
         if key not in gridOrder:
           gridOrder.append(key)
         if donator not in gridOrder:
           gridOrder.insert(gridOrder.index(key),donator)
         if gridOrder.index(donator) > gridOrder.index(key):
-          print "ERROR: cyclic grid dependencies"
+          print ("ERROR: cyclic grid dependencies")
           sys.exit(1)
 
 dependencyDict={}
@@ -176,17 +205,17 @@ for component in componentSet:
     for item in dependencies:
         compdeps=[]
         if type(item) is dict:
-          if not item.has_key(component):
+          if not component in item.keys():
             continue
           for jtem in item.values():
               if type(jtem) is list and len(jtem) == 1:
                   jtem=jtem[0]
               if type(jtem) is str:
                  compdeps.append(jtem)
-              elif (type(jtem) is dict) and jtem.has_key('component'):
+              elif (type(jtem) is dict) and 'component' in jtem.keys():
                  compdeps.append(jtem['component'])
-                 if jtem.has_key('grid'):
-                    foreignGrid[item.keys()[0]]=jtem['grid']
+                 if 'grid' in jtem.keys():
+                    foreignGrid[list(item.keys())[0]]=jtem['grid']
           for compdep in compdeps:
             if componentList.index(component)< componentList.index(compdep):
               if component in gridOrder and compdep in gridOrder:
@@ -194,12 +223,12 @@ for component in componentSet:
                   continue
               c=componentList.pop(componentList.index(component))
               componentList.insert(componentList.index(compdep)+1,c)
-          if dependencyDict.has_key(item.keys()[0]):
-            dependencyDict[item.keys()[0]].extend(compdeps)
+          if list(item.keys())[0] in dependencyDict.keys():
+            dependencyDict[list(item.keys())[0]].extend(compdeps)
           else:
-            dependencyDict[item.keys()[0]]=compdeps
+            dependencyDict[list(item.keys())[0]]=compdeps
 
-for key,value in dependencyDict.iteritems():
+for key,value in dependencyDict.items():
     unique=[]
     for item in value:
       if item not in unique:
@@ -224,41 +253,39 @@ instancePetDict={}
 if type(instances) is list:
   for i in range(0,len(instances)):
     item=instances[i]
-    if item.has_key('component'):
-       instanceDict[item.keys()[0]]=item['component']
+    if 'component' in item.keys():
+       instanceDict[list(item.keys())[0]]=item['component']
     else:
-      instanceDict[item.keys()[0]]=item.values()[0]
+      instanceDict[list(item.keys())[0]]=list(item.values())[0]
 
-    if item.has_key('petList'):
-      instancePetDict[item.keys()[0]]=item['petList']
-    if item.has_key('petlist'):
-      instancePetDict[item.keys()[0]]=item['petlist']
+    if 'petList' in item.keys():
+      instancePetDict[list(item.keys())[0]]=item['petList']
 else:
-  for key,value in instances.iteritems():
+  for key,value in instances.items():
     if type(value) is str:
       instanceDict[key] = value
-    elif type(value) is dict and value.has_key('component'):
+    elif type(value) is dict and 'component' in value.keys():
       instanceDict[key] = value['component']
-      if value.has_key('petList'):
+      if 'petList' in value.keys():
           instancePetDict[key]=value['petList']
 
 if len(instanceDict)>0:
-  for key,value in instanceDict.iteritems():
+  for key,value in instanceDict.items():
     sys.stdout.write(key + ' is running as an instance of ' + value)
-    if instancePetDict.has_key(key):
+    if key in instancePetDict.keys():
       sys.stdout.write(' on PET ' + str(instancePetDict[key]))
     sys.stdout.write('\n')
 if len(dependencyDict)>0:
-  for key,value in dependencyDict.iteritems():
+  for key,value in dependencyDict.items():
     sys.stdout.write(key + ' depends on ')
-    print value
+    print (value)
 
 if len(foreignGrid)>0:
-  for key,value in foreignGrid.iteritems():
+  for key,value in foreignGrid.items():
     print(key + ' obtains grid information from ' + value + ' field')
 
 for item in gridCompList:
-  if not instanceDict.has_key(item):
+  if not item in instanceDict.keys():
     instanceDict[item]=item
 
 cplCompList=[]
@@ -267,7 +294,7 @@ petList=[]
 
 for item in componentList:
   i=componentList.index(item)
-  if dependencyDict.has_key(item):
+  if item in dependencyDict.keys():
     for dep in dependencyDict[item]:
       j=componentList.index(dep)
       if j>i:
@@ -278,7 +305,7 @@ for item in componentList:
 for item in componentList:
     if item in gridCompSet:
         gridCompList.append(item)
-        if instanceDict.has_key(item) and instancePetDict.has_key(item):
+        if item in instanceDict.keys() and item in instancePetDict.keys():
             petList.append(str(instancePetDict[item]))
         else:
             petList.append('all')
@@ -288,30 +315,37 @@ for item in componentList:
 # sort netcdf instances to the beginning of the gridCompList
 sortedGridCompList = []
 for item in gridCompList:
-  if item=='netcdf' or (instanceDict.has_key(item) and instanceDict[item]=='netcdf'):
+  if item=='netcdf' or (item in instanceDict.keys() and instanceDict[item]=='netcdf'):
     sortedGridCompList.insert(0,item)
   else:
     sortedGridCompList.append(item)
 gridCompList = sortedGridCompList
 
-if 'rename_connector' in cplCompList:
-  c=cplCompList.pop(cplCompList.index('rename_connector'))
-  cplCompList.insert(0,c)
+#if 'rename_connector' in cplCompList:
+#  c=cplCompList.pop(cplCompList.index('rename_connector'))
+#  cplCompList.insert(0,c)
 
 if 'link_connector' in cplCompList:
   c=cplCompList.pop(cplCompList.index('link_connector'))
   cplCompList.insert(0,c)
 
+for item in cplCompList:
+  if not item in instanceDict.keys():
+    instanceDict[item]=item
+
 instanceList=list(set(instanceDict.values()))
-print 'Components to process:', componentList
-print 'Grid components to process:', gridCompList
-print 'Couple components to process:', cplCompList
-print 'Base instances to process:', instanceList
+print ('Components to process:', componentList)
+print ('Grid components to process:', gridCompList)
+print ('Couple components to process:', cplCompList)
+print ('Base instances to process:', instanceList)
+#print(' '.join('{}:{}'.format(*k) for k in enumerate(gridCompList)))
+#print(' '.join('{}:{}'.format(*k) for k in enumerate(cplCompList)))
+#print(' '.join('{}:{}'.format(*k) for k in enumerate(instanceList)))
 
 # Done parsing the list, now write the new toplevel_component file
 
 outfilename = os.path.join( os.path.dirname( os.path.realpath(__file__) ) , 'toplevel_component.F90' )
-fid = file(outfilename,'w')
+fid = open(outfilename,'w')
 
 fid.write('''!> @brief Implementation of an ESMF toplevel coupling
 !>
@@ -336,6 +370,9 @@ fid.write('''
 #define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "toplevel_component.F90"
+
+#define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
 ''')
 
 fid.write('module ' + 'toplevel_component\n')
@@ -348,12 +385,9 @@ fid.write('''
 
 for jtem in instanceList:
 
-    if jtem.find('mediator')>0:
+    if jtem.find('_mediator')>0 or jtem.find('_connector')>0 or jtem == 'vertical_reduction' or jtem == 'calculator' or jtem.find('_coupler')>0:
       fid.write('  use ' + jtem + ', only : ' + jtem + '_SetServices => SetServices \n')
     else: fid.write('  use ' + jtem + '_component, only : ' + jtem + '_SetServices => SetServices \n')
-
-for jtem in cplCompList:
-    fid.write('  use ' + jtem + ', only : ' + jtem + '_SetServices => SetServices \n')
 
 fid.write('\n  implicit none\n\n  private\n\n  public SetServices\n')
 fid.write('''
@@ -461,7 +495,7 @@ fid.write('''
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(len=19)       :: timestring
+    character(len=19)       :: timeString
     type(ESMF_Time)         :: startTime, currTime
     type(ESMF_Time)         :: ringTime, time
     type(ESMF_TimeInterval) :: alarmInterval
@@ -650,8 +684,16 @@ fid.write('''
         name=trim(gridCompNameList(i))//'Export')
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_LogWrite(trim(myName)//' reconciles '//trim(gridCompNameList(i))//'Export', ESMF_LOGMSG_INFO)
+      call ESMF_StateReconcile(gridExportStateList(i), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       gridImportStateList(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED, &
         name=trim(gridCompNameList(i))//'Import')
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_LogWrite(trim(myName)//' reconciles '//trim(gridCompNameList(i))//'Import', ESMF_LOGMSG_INFO)
+      call ESMF_StateReconcile(gridImportStateList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
@@ -659,7 +701,7 @@ fid.write('''
 
 for i in range(0, len(gridCompList)):
   item=gridCompList[i]
-  if instanceDict.has_key(item):
+  if item in instanceDict.keys():
     if instanceDict[item] != 'netcdf': continue
   else:
     continue
@@ -686,7 +728,7 @@ fid.write('''
 
 for i in range(0, len(gridCompList)):
     item=gridCompList[i]
-    if instanceDict.has_key(item):
+    if item in instanceDict.keys():
         item=instanceDict[item]
     fid.write('    call ESMF_GridCompSetServices(gridCompList(' + str(i+1) + '), ' +item + '_SetServices, rc=localrc)\n')
     fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
@@ -721,7 +763,11 @@ fid.write('''
 
 ''')
 for i in range(0,len(cplCompList)):
-    fid.write('    call ESMF_CplCompSetServices(cplCompList(' + str(i+1) + '), ' + cplCompList[i] + '_SetServices, rc=localrc)\n')
+    item = cplCompList[i]
+    if item in instanceDict.keys():
+            item=instanceDict[item]
+
+    fid.write('    call ESMF_CplCompSetServices(cplCompList(' + str(i+1) + '), ' + item + '_SetServices, rc=localrc)\n')
     fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
     fid.write('      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n')
 
@@ -744,7 +790,7 @@ fid.write('''
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       gridCompPhaseCountList(i)=phaseCount
-      GridCompHasPhaseZeroList(i)=hasPhaseZero
+      gridCompHasPhaseZeroList(i)=hasPhaseZero
     enddo
 
     !! Go through all phase 0 if components have it
@@ -786,7 +832,7 @@ for item in gridCompList:
     if jtem[-1]==item:
       ifrom=gridCompList.index(jtem[0])
   j=gridCompList.index(item)
-  if (foreignGrid.has_key(item)):
+  if (item in foreignGrid.keys()):
     #print item
     fid.write('    call ESMF_AttributeSet(gridImportStateList(' + str(ito+1)+'), name="foreign_grid_field_name", value="'+foreignGrid[item]+'", rc=localrc)\n')
     fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
@@ -799,7 +845,7 @@ for item in gridCompList:
     fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
     fid.write('      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
 
-  if dependencyDict.has_key(item) and len(dependencyDict[item]) > 0:
+  if item in dependencyDict.keys() and len(dependencyDict[item]) > 0:
     fid.write('    allocate(charValueList(' + str(len(dependencyDict[item])) + '), intValueList(' + str(len(dependencyDict[item])) + '))\n')
     for i,jtem in enumerate(dependencyDict[item]):
       fid.write('    charValueList(' + str(i+1) + ') = \'' + jtem + '\'\n')
@@ -841,7 +887,7 @@ if (True):
     fid.write('      !! Initializing ' + item + '\n')
     ito=gridCompList.index(item)
 
-    if dependencyDict.has_key(item):
+    if item in dependencyDict.keys():
       for jtem in dependencyDict[item]:
         ifrom=gridCompList.index(jtem)
         fid.write('      !! linking ' + jtem + 'Export to ' + item + 'Import\n')
@@ -884,7 +930,8 @@ if (True):
         fid.write('      !! linking ' + item + ' and ' + jtem + '\n')
         fid.write('      if (gridCompPhaseCountList( ' + str(i+1) + ')>= phase .or. gridCompPhaseCountList( ' + str(j+1) + ')>= phase) then\n')
         for c in couplingList:
-          if c[1]=='nudge_connector': continue
+          if instanceDict[c[1]] == 'nudge_connector' : continue
+          if instanceDict[c[1]] == 'regrid_coupler' : continue
           if c[0]==item and c[-1]==jtem:
             fid.write('        !! linking ' + item + 'Export to ' + jtem + 'Import\n')
             fid.write('        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(' + str(i+1) +'))//"Export to "//trim(gridCompNameList(' + str(j+1)+'))//"Import"\n')
@@ -965,7 +1012,7 @@ if (True):
 
 # Go through all output components and link toplevel metadata to it
 for item in gridCompList:
-  if instanceDict.has_key(item):
+  if item in instanceDict.keys():
     if not instanceDict[item] == 'netcdf' : continue
   elif not item == 'netcdf' : continue
   ito=gridCompList.index(item)
@@ -997,7 +1044,8 @@ fid.write('''
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_LogOpen(stateLog,'states_'//trim(message), rc=localrc)
+      call ESMF_LogOpen(stateLog,'PET.states_'//trim(message), appendFlag=.false., &
+        logkindFlag=ESMF_LOGKIND_SINGLE, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1031,30 +1079,50 @@ fid.write('''
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
+
+    !! Establish number of phases for all components
+    !! @> todo this interface will likely change in the future and will
+    !! be integrated with GridCompGet
+
+    if (.not.allocated(gridCompPhaseCountList)) &
+      allocate(gridCompPhaseCountList(numGridComp), stat=localrc)
+
+    do i = 1, numGridComp
+      call ESMF_GridCompGetEPPhaseCount(gridCompList(i), ESMF_METHOD_READRESTART, &
+        phaseCount=phaseCount, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      gridCompPhaseCountList(i)=phaseCount
+    enddo
 ''')
 
-# Go through ReadRestart (assumed only phase 1)
+# Go through ReadRestart only if (1) a netcdf_input is connected
+# and (2) a ReadRestart phase is defined.
 for item in gridCompList:
   ito=gridCompList.index(item)
   for coupling in couplingList:
     if coupling[-1] != item: continue
     jtem=coupling[0]
     ifrom=gridCompList.index(jtem)
-    if not instanceDict.has_key(jtem): continue
+    if not jtem in instanceDict.keys(): continue
     if not instanceDict[jtem] == 'netcdf_input' : continue
     if coupling[1] == 'nudge_connector' : continue
     fid.write('    !! ReadRestarting ' + item + ' with data from ' + jtem + '\n')
-    fid.write('    call ESMF_GridCompReadRestart(gridCompList(' + str(ito+1) + '), importState=gridExportStateList(' + str(ifrom+1) + '), &\n')
-    fid.write('      exportState=gridExportStateList(' + str(ito+1) + '), clock=clock, phase=1, rc=localrc)\n')
-    fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
-    fid.write('      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
+    fid.write('    if (gridCompPhaseCountList(' + str(ito+1) + ') > 0) then\n')
+    fid.write('      call ESMF_GridCompReadRestart(gridCompList(' + str(ito+1) + '), importState=gridExportStateList(' + str(ifrom+1) + '), &\n')
+    fid.write('        exportState=gridExportStateList(' + str(ito+1) + '), clock=clock, phase=1, rc=localrc)\n')
+    fid.write('      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
+    fid.write('        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n')
+    fid.write('    endif\n\n')
 fid.write('    !! End of ReadRestart \n\n')
 
 fid.write('''
     do i=1, numGridComp
-      !call ESMF_StateReconcile(state=gridImportStateList(i), rc=localrc)
+      call ESMF_LogWrite(trim(myName)//' reconciles '//trim(gridCompNameList(i))//'Import', ESMF_LOGMSG_INFO)
+      call ESMF_StateReconcile(state=gridImportStateList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      !call ESMF_StateReconcile(state=gridExportStateList(i), rc=localrc)
+      call ESMF_LogWrite(trim(myName)//'reconciles '//trim(gridCompNameList(i))//'Export', ESMF_LOGMSG_INFO)
+      call ESMF_StateReconcile(state=gridExportStateList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
  ''')
@@ -1077,6 +1145,11 @@ fid.write('''
 # Go through all components and log their import and export states
 fid.write('''
     !> Go through all components and log their import and export states
+    call ESMF_LogOpen(stateLog,'PET.states_'//trim(message), appendFlag=.false., &
+      logkindFlag=ESMF_LOGKIND_SINGLE, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_LogWrite('====== Status at end of child readrestarting ======', ESMF_LOGMSG_INFO, log=stateLog)
 
     !do i=1,numGridComp
@@ -1084,6 +1157,8 @@ fid.write('''
     !  call MOSSCO_StateLog(gridImportStateList(i))
     !  call MOSSCO_StateLog(gridExportStateList(i))
     !enddo
+
+    call ESMF_LogClose(stateLog, rc=localrc)
 ''')
 
 #fid.write('''
@@ -1180,16 +1255,25 @@ fid.write('''
 
 for i in range(0,len(couplingList)):
 
-    string = intervals[i].split()
-    number = string[0]
+    unit = 'h' # default unit is hours
+    value = intervals[i]
+
+    if isinstance(value,str) or isinstance(value,unicode):
+      string = value.split()
+      number = string[0]
+      if len(string)>1: unit = string[1]
+
+    elif isinstance(value,int):
+      number = str(value)
+
+    else:
+        print ('Unknown interval specification "' + intervals[i] + '"')
+        sys.exit(1)
+
+      # Special case infinity
     if (number == 'inf') or (number == 'none') or (number == '0'):
         unit = 'yy'
         number = '99999'
-    else:
-      if len(string)>1:
-        unit = string[1]
-      else:
-        unit = 'h'
 
     fid.write('    call ESMF_TimeIntervalSet(alarmInterval, startTime, ' + unit + '=' + number + ' ,rc=localrc)\n')
     fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
@@ -1257,7 +1341,7 @@ fid.write('''
     do i=1,ubound(alarmList,1)
       call ESMF_AlarmGet(alarmList(i), ringTime=time, name=alarmName, rc=localrc)
 
-      call ESMF_TimeGet(time,timeStringISOFrac=timestring)
+      call ESMF_TimeGet(time,timeStringISOFrac=timeString)
       !write(message,'(A)') trim(myName)//' alarm '//trim(alarmName)//' rings at '//trim(timestring)
       !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
@@ -1281,6 +1365,13 @@ fid.write('''
     write(message,'(A)') trim(myName)//' '//trim(childName)//' alarms ring next at '//trim(timestring)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
+    stringList(1,1)='Name';               stringList(1,2)='Carsten Lemmen'
+    stringList(2,1)='Abbreviation';       stringList(2,2)='cl'
+    stringList(3,1)='PhysicalAddress';    stringList(3,2)='Helmholtz-Zentrum Geesthacht'
+    stringList(4,1)='EmailAddress';       stringList(4,2)='carsten.lemmen@hzg.de'
+    stringList(5,1)='ResponsiblePartyRole';   stringList(5,2)='Contact'
+    stringList(6,1)='URL';   stringList(6,2)='http://www.hzg.de'
+
     !> @todo te following code throws attribute warnings in ESMF7, this needs
     !> to be investigated and is disabled for now.
 
@@ -1288,12 +1379,6 @@ fid.write('''
     !> Write Responsible party ISO 19115 attributes
     convention = 'ISO 19115'
     purpose    = 'RespParty'
-    stringList(1,1)='Name';               stringList(1,2)='Carsten Lemmen'
-    stringList(2,1)='Abbreviation';       stringList(2,2)='cl'
-    stringList(3,1)='PhysicalAddress';    stringList(3,2)='Helmholtz-Zentrum Geesthacht'
-    stringList(4,1)='EmailAddress';       stringList(4,2)='carsten.lemmen@hzg.de'
-    stringList(5,1)='ResponsiblePartyRole';   stringList(5,2)='Contact'
-    stringList(6,1)='URL';   stringList(6,2)='http://www.hzg.de'
 
     do i=1,6
       call ESMF_AttributeSet(gridComp, trim(stringList(i,1)), trim(stringList(i,2)), &
@@ -1368,13 +1453,15 @@ fid.write('''
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(len=ESMF_MAXSTR) :: timestring, cplName, myName, childName
+    character(len=ESMF_MAXSTR) :: timeString, cplName, myName, childName
     type(ESMF_Time)            :: stopTime, currTime, ringTime, time
+    type(ESMF_Time)            :: startTime
     type(ESMF_TimeInterval)    :: timeInterval, ringInterval
     integer(ESMF_KIND_I8)      :: i, j, k, l, advanceCount
     integer(ESMF_KIND_I4)      :: alarmCount
-    integer(ESMF_KIND_I4)      :: numGridComp, numCplComp
+    integer(ESMF_KIND_I4)      :: numGridComp, numCplComp, numComp
     integer(ESMF_KIND_I4)      :: hours, minutes, seconds, localPet
+    real(ESMF_KIND_R8)         :: ms_r8, realValue
     type(ESMF_Log)             :: stateLog
 
     type(ESMF_Alarm), dimension(:), allocatable :: alarmList
@@ -1383,7 +1470,10 @@ fid.write('''
     type(ESMF_State)        :: impState, expState
     integer(ESMF_KIND_I4)   :: localrc
 
+    real(ESMF_KIND_R8), allocatable, dimension(:) :: wallTimeStart, wallTimeStop
+
     character(len=ESMF_MAXSTR) :: message, compName, alarmName, name1, name2
+    character(len=ESMF_MAXSTR) :: formatString
 
     integer(ESMF_KIND_I4)  :: phase, phaseCount
     integer(ESMF_KIND_I4), dimension(:), allocatable :: gridCompPhaseCountList,CplCompPhaseCountList
@@ -1395,93 +1485,115 @@ fid.write('''
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=myName, currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_GridCompGet(gridComp, clock=myClock, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    numGridComp=ubound(gridCompList,1)-lbound(gridCompList,1)+1
-    numCplComp =ubound(cplCompList ,1)-lbound(cplCompList ,1)+1
+    numGridComp = ubound(gridCompList,1)-lbound(gridCompList,1)+1
+    numCplComp  = ubound(cplCompList ,1)-lbound(cplCompList ,1)+1
+    numComp = numGridComp + numCplComp
+
+    if (allocated(wallTimeStart)) deallocate(wallTimeStart)
+    if (allocated(wallTimeStop)) deallocate(wallTimeStop)
+    allocate(wallTimeStart(0:numComp), stat=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    allocate(wallTimeStop(0:numComp), stat=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !! Establish number of phases and zero phase for all components
     !! @> todo this interface will likely change in the future and will
     !! be integrated with GridCompGet
 
-    allocate(GridCompHasPhaseZeroList(numGridComp))
-    allocate(gridCompPhaseCountList(numGridComp))
+    allocate(GridCompHasPhaseZeroList(numGridComp), stat=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    allocate(gridCompPhaseCountList(numGridComp), stat=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     do i = 1, numGridComp
       call ESMF_GridCompGetEPPhaseCount(gridCompList(i), ESMF_METHOD_RUN, &
         phaseCount=phaseCount, phaseZeroFlag=hasPhaseZero, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
       gridCompPhaseCountList(i)=phaseCount
       GridCompHasPhaseZeroList(i)=hasPhaseZero
     enddo
 
-    allocate(CplCompPhaseCountList(numCplComp))
-    !!> @todo reenable if ESMF new enough
-    CplCompPHaseCountList(:)=1
+    allocate(CplCompPhaseCountList(numCplComp), stat=localrc )
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    !do i = 1, numCplComp
-    !  call ESMF_CplCompGetEPPhaseCount(cplCompList(i), ESMF_METHOD_RUN, &
-    !    phaseCount=CplCompPhaseCountList(i), phaseZeroFlag=hasPhaseZero, rc=localrc)
-    !  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    !    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    !  if (.not.hasPhaseZero) cycle
-    !enddo
+#if ESMF_MAJOR_VERSION > 6
+    do i = 1, numCplComp
+      call ESMF_CplCompGetEPPhaseCount(cplCompList(i), ESMF_METHOD_RUN, &
+        phaseCount=CplCompPhaseCountList(i), phaseZeroFlag=hasPhaseZero, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (.not.hasPhaseZero) cycle
+    enddo
+#else
+    CplCompPHaseCountList(:)=1
+#endif
 
     call ESMF_ClockGetAlarmList(myClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
       alarmCount=alarmCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !! Run until the clock's stoptime is reached
     do
 
-      call ESMF_ClockGet(myClock,currTime=currTime, stopTime=stopTime, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call cpu_time(wallTimeStart(0))
 
-      if (currTime>stopTime) then
+      call ESMF_ClockGet(myClock,currTime=currTime, stopTime=stopTime, &
+        startTime=startTime, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (currTime > stopTime .or. currTime < startTime) then
         call ESMF_LogWrite(trim(myName)//' clock out of scope', ESMF_LOGMSG_ERROR)
         call ESMF_FINALIZE(endflag=ESMF_END_ABORT, rc=localrc)
       endif
 
-      !! Loop through all components and check whether their clock is currently at the
-      !! same time as my own clock's currTime, if yes, then run the respective couplers
-      do i=1,numGridComp
+      !! Loop through all components and check whether their clock is currently
+      !! at the same time as my own clock's currTime, if yes, then run the
+      !! respective couplers
+      do i=1, numGridComp
+
         !! Determine for each child the clock
-        call ESMF_GridCompGet(gridCompList(i),name=compName, clockIsPresent=clockIsPresent, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_GridCompGet(gridCompList(i),name=compName, &
+          clockIsPresent=clockIsPresent, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         if (.not.clockIsPresent) then
-          call ESMF_LogWrite(trim(myName)//' required clock not found in '//trim(compName), ESMF_LOGMSG_ERROR)
+          call ESMF_LogWrite(trim(myName)//' required clock not found in ' &
+            //trim(compName), ESMF_LOGMSG_ERROR)
           call ESMF_FINALIZE(endflag=ESMF_END_ABORT, rc=localrc)
         endif
 
         call ESMF_GridCompGet(gridCompList(i), clock=childClock, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        call ESMF_ClockGet(childClock,currTime=time, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc))  &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_ClockGet(childClock, currTime=time, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        ! write(message,'(A)') trim(myName)//' '//trim(compName)//' now at '//trim(timestring)
-        !  call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
+        call ESMF_TimeGet(time, timeStringISOFrac=timeString, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+        !> Do not write out this message, as it probes for time in the
+        !> participating components of a coupling (multiple times per timestep)
+        ! write(message,'(A)') trim(myName)//' '//trim(compName)//' now at '&
+        !  //trim(timeString)
+        ! call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
+
+        !> If the child component has advanced beyond the current time, then
+        !> don't execute the couplers to this component
         if (time>currTime) cycle
 
         !! Find all the alarms in this child and call all the couplers that
         !! have ringing alarms at this stage
 
+        !> @todo Why not rely on ALARMLIST_RINGING?
         call ESMF_ClockGetAlarmList(childClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
           alarmCount=alarmCount, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         if (alarmCount==0) then
           timeInterval=stopTime-currTime
@@ -1489,16 +1601,17 @@ fid.write('''
         endif
 
         if (allocated(alarmList)) deallocate(alarmList)
-        allocate(alarmList(alarmCount))
+        allocate(alarmList(alarmCount), stat=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+        !> @todo Why not rely on ALARMLIST_RINGING? see above
         call ESMF_ClockGetAlarmList(childClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
            alarmList=alarmList, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         do j=1,alarmCount
           call ESMF_AlarmGet(alarmList(j), name=alarmName, ringTime=ringTime, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           !! Skip this alarm if it is not a cplAlarm
           if (index(trim(alarmName),'cplAlarm') < 1) cycle
@@ -1507,12 +1620,13 @@ fid.write('''
           if (trim(alarmName(1:index(alarmName,'--')-1))/=trim(compName)) cycle
 
           !! Skip this alarm if it is not ringing now
+          !> @todo Why not rely on ALARMLIST_RINGING?, see above
           !if (ringTime > currTime) cycle
 
-          call ESMF_TimeGet(ringTime,timeStringISOFrac=timeString)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call ESMF_TimeGet(ringTime, timeStringISOFrac=timeString, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+          !> @todo debug time_aggregation from here
           !write(message,'(A)') trim(myName)//' '//trim(compName)//' '//trim(alarmName)//' rings at '//trim(timeString)
           !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
@@ -1544,12 +1658,13 @@ fid.write('''
 
           !call ESMF_GridCompGet(gridCompList(i), exportState=impState, rc=localrc)
           impState=gridExportStateList(i)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           !! Search the gridCompList for other's name
           do k=1, ubound(gridCompList,1)
               call ESMF_GridCompGet(gridCompList(k), name=childName, rc=localrc)
-              if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+              _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
               if (trim(childName)==trim(name2)) exit
           enddo
 
@@ -1576,6 +1691,7 @@ fid.write('''
 
           !call ESMF_GridCompGet(gridCompList(k), importState=expState, rc=localrc)
           expState=gridImportStateList(k)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
           !> @todo the following is a hack and makes the nudge_connector special by
           !> receiving two export States (the latter to manipulate)
           if (trim(cplCompNameList(l)) == 'nudge_connector') expState=gridExportStateList(k)
@@ -1587,13 +1703,27 @@ fid.write('''
           write(message,'(A)') trim(myName)//' '//trim(timeString)//' calling '//trim(cplCompNameList(l))
 
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
-''')
 
-fid.write('''
+          call cpu_time(wallTimeStart(numgridComp + l))
+
           call ESMF_CplCompRun(cplCompList(l), importState=impState, &
             exportState=expState, clock=controlClock, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          call ESMF_LogFlush()
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          call cpu_time(wallTimeStop(numgridComp + l))
+
+          write(message,'(A)') trim(myName)//' executed ' &
+            //trim(cplCompNameList(l))//' in '
+          ms_r8 = 1000.0d0 * (wallTimeStop(numgridComp + l) - wallTimeStart(numgridComp + l))
+
+          if (ms_r8 < 9999.0d0) then
+            write(formatString,'(A)') '(A,X,'//intformat(int(ms_r8))//',X,A)'
+            write(message, formatString) trim(message), int(ms_r8), 'mseconds'
+          else
+            write(formatString,'(A)') '(A,X,'//intformat(int(ms_r8/1000.0d0))//',X,A)'
+            write(message, formatString) trim(message), int(ms_r8/1000.0d0), 'seconds'
+          endif
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
         enddo
       enddo
@@ -1605,40 +1735,38 @@ fid.write('''
 
       call ESMF_ClockGetAlarmList(myClock, alarmListFlag=ESMF_ALARMLIST_RINGING, &
         alarmCount=alarmCount, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (alarmCount>0) then
         if (allocated(alarmList)) deallocate(alarmList)
         allocate(alarmList(alarmCount))
         call ESMF_ClockGetAlarmList(myClock, alarmListFlag=ESMF_ALARMLIST_RINGING, &
           alarmList=alarmList, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
         call ESMF_TimeGet(time,timeStringISOFrac=timeString)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
         write(message,'(A,I2,A)') trim(myName)//'  '//trim(timeString)//' has',alarmCount,' ringing alarms'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
       endif
 
       do j=1,alarmCount
         call ESMF_AlarmGet(alarmList(j), name=alarmName, ringTime=time, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
         if (index(trim(alarmName),'cplAlarm')<1) cycle
 
         call ESMF_TimeGet(time,timeStringISOFrac=timeString)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
         write(message,'(A)') trim(myName)//'  '//trim(alarmName)//' is ringing now at '//trim(timestring)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
       enddo
 
       call ESMF_ClockGetAlarmList(myClock, alarmListFlag=ESMF_ALARMLIST_NEXTRINGING, &
         alarmCount=alarmCount, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (alarmCount>0) then
         if (allocated(alarmList)) deallocate(alarmList)
@@ -1652,7 +1780,7 @@ fid.write('''
       do i=1,numGridComp
         !! Determine for each child the clock
         call ESMF_GridCompGet(gridCompList(i),name=compName, clockIsPresent=clockIsPresent, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         if (.not.clockIsPresent) then
           call ESMF_LogWrite(trim(myName)//' required clock not found in '//trim(compName), ESMF_LOGMSG_ERROR)
@@ -1660,24 +1788,23 @@ fid.write('''
         endif
 
         call ESMF_GridCompGet(gridCompList(i), clock=childClock, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call ESMF_ClockGet(childClock,currTime=time, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
         call ESMF_TimeGet(time,timeStringISOFrac=timeString)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         if (time>currTime) then
           call ESMF_TimeGet(time,timeStringISOFrac=timeString)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           !write(message,'(A)') trim(myName)//' '//trim(compName)//' now at '//trim(timestring)//', but'
           !call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
 
           call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           !write(message,'(A)') trim(myName)//' now at '//trim(timestring)//', cycling ...'
           !call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
@@ -1690,8 +1817,7 @@ fid.write('''
 
         call ESMF_ClockGetAlarmList(childClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
           alarmCount=alarmCount, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         if (alarmCount==0) then
           !! This case seems problematic and causing the non-monotonic time warning in netcdf
@@ -1702,8 +1828,7 @@ fid.write('''
           allocate(alarmList(alarmCount))
           call ESMF_ClockGetAlarmList(childClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
              alarmList=alarmList, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         endif
 
         !! Set the default ringTime to the stopTime of local clock, then get all Alarms
@@ -1711,18 +1836,17 @@ fid.write('''
         !! and look for the earliest ringtime in all coupling alarms.  Save that in the
         !! ringTime
         call ESMF_ClockGet(myClock, stopTime=ringTime, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         do j=1,alarmCount
           call ESMF_AlarmGet(alarmList(j), name=alarmName, ringTime=time, &
             ringInterval=ringInterval, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
           if (index(trim(alarmName),'cplAlarm')<1) cycle
 
           call ESMF_TimeGet(time,timeStringISOFrac=timeString)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           !write(message,'(A)') trim(myName)//' '//trim(compName)//' '//trim(alarmName)//' rings at '//trim(timestring)
           !call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
@@ -1736,23 +1860,22 @@ fid.write('''
         enddo
 
         !call ESMF_TimeGet(ringTime,timeStringISOFrac=timestring, rc=localrc)
-        !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         !write(message,'(A)') trim(myName)//' setting child''s stopTime to'//trim(timeString)
         !call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=localrc);
 
-!       TODO: do not modify childClock
-!             (components need to inquire stopTime not from their own clock!)
+        !> @todo: do not modify childClock,  (components need to inquire
+        !> stopTime not from their own clock!)
         call ESMF_ClockSet(childClock, stopTime=ringTime, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call ESMF_ClockGet(childClock, timeStep=timeInterval, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
         if (timeInterval>ringTime-currTime) then
           !call ESMF_ClockSet(childClock, timeStep=ringTime-currTime, rc=localrc)
-          !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
           !call ESMF_LogWrite(trim(myName)//"  must be implemented in "//trim(compName),ESMF_LOGMSG_WARNING)
         endif
 
@@ -1765,12 +1888,10 @@ fid.write('''
           timeInterval=ringTime-currTime
 
           call ESMF_ClockSet(controlClock, currTime=currTime, timeStep=timeInterval, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           call ESMF_TimeIntervalGet(timeInterval, h=hours, m=minutes, s=seconds, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           write(message,'(A,A,I5.5,A,I2.2,A,I2.2,A)') trim(myName)//' '//trim(timeString)//' calling '//trim(compName), &
             ' to run for ', hours, ':', minutes, ':', seconds, ' hours'
@@ -1780,32 +1901,68 @@ fid.write('''
         endif
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=localrc)
         call ESMF_ClockSet(controlClock, currTime=currTime,  rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
 
         !! Loop over all run phases, disregarding any action that could be taken between
         !! phases
         do phase=1,gridCompPhaseCountList(i)
           !call MOSSCO_GridCompFieldsTable(gridCompList(i), importState=gridImportStateList(i), exportState=gridExportStateList(i),rc=localrc)
+          call ESMF_LogWrite(trim(myName)//' reconciles '//trim(gridCompNameList(i))//'Import', ESMF_LOGMSG_INFO)
+          call ESMF_StateReconcile(gridImportStateList(i), rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          call ESMF_LogWrite(trim(myName)//' reconciles '//trim(gridCompNameList(i))//'Export', ESMF_LOGMSG_INFO)
+          call ESMF_StateReconcile(gridExportStateList(i), rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          call cpu_time(wallTimeStart(i))
+
           call ESMF_GridCompRun(gridCompList(i),importState=gridImportStateList(i),&
             exportState=gridExportStateList(i), clock=controlClock, phase=phase, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          call cpu_time(wallTimeStop(i))
+
+          ms_r8=1000.0d0 * (wallTimeStop(i) - wallTimeStart(i))
+
+          write(message,'(A)') trim(myName)//' executed '//trim(gridCompNameList(i))//' in '
+          if (ms_r8 < 9999.0d0) then
+            write(formatString,'(A)') '(A,X,'//intformat(int(ms_r8))//',X,A)'
+            write(message, formatString) trim(message), int(ms_r8), 'mseconds'
+          else
+            write(formatString,'(A)') '(A,X,'//intformat(int(ms_r8/1000.0d0))//',X,A)'
+            write(message, formatString) trim(message), int(ms_r8/1000.0d0), 'seconds'
+          endif
+
+          call ESMF_TimeIntervalGet(timeInterval, ms_r8=realValue, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          if (ms_r8>0.0d0 .and. realValue>0.0d0) then
+            realValue = realValue / ms_r8
+            write(formatString,'(A)') '(A,X,'//intformat(int(realValue))//')'
+            write(message, formatString) trim(message)//' with speedup ', int(realValue)
+          endif
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
           !call MOSSCO_GridCompFieldsTable(gridCompList(i), importState=gridImportStateList(i), exportState=gridExportStateList(i),rc=localrc)
           !call ESMF_LogFlush()
         enddo
 
         call ESMF_ClockGet(childClock, currTime=time, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        if (time == currTime) then
-          !! This child component did not advance its clock in its Run() routine
+        if (time <= currTime) then
+          !> This child component did not advance its clock in its Run() routine.
+          !> This is expected behaviour for components that do not have their own
+          !> timestep, such as calculators, aggregators, input or output.
           !! We do that here
-          call ESMF_LogWrite(trim(myName)//' '//trim(compName)//' did not advance its clock',ESMF_LOGMSG_WARNING)
-          !call ESMF_LogWrite("... but this assumption is weird - skipping further action!",ESMF_LOGMSG_WARNING)
 
-          !call ESMF_ClockAdvance(childClock, timeStep=timeInterval, rc=localrc)
-          !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call ESMF_ClockAdvance(childClock, timeStep=timeInterval, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          call ESMF_LogWrite(trim(myName)//' advanced clock of '//trim(compName), &
+            ESMF_LOGMSG_INFO)
         endif
       enddo
 
@@ -1814,7 +1971,7 @@ fid.write('''
 
       call ESMF_ClockGetAlarmList(myClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
         alarmCount=alarmCount, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (alarmCount==0) then
         !call ESMF_LogWrite('No alarm found in '//trim(myName), ESMF_LOGMSG_WARNING)
@@ -1825,14 +1982,14 @@ fid.write('''
 
         call ESMF_ClockGetAlarmList(myClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
           alarmList=alarmList, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call ESMF_AlarmGet(alarmList(1), ringTime=ringTime, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         do j=2,alarmCount
           call ESMF_AlarmGet(alarmList(j), ringTime=time, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           if (time<ringTime) ringTime=time
         enddo
@@ -1842,81 +1999,93 @@ fid.write('''
 
       !> Log current and next ring time
       call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       write(message,'(A)') trim(myName)//' '//trim(timeString)//' '//trim(myName)//' stepping to'
       call ESMF_TimeGet(ringTime,timeStringISOFrac=timestring, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       write(message,'(A)') trim(message)//' '//trim(timeString)
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=localrc)
 
       call ESMF_ClockGet(myClock, advanceCount=advanceCount, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
       call ESMF_GridCompGet(gridComp, localPet=localPet, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       !> If advanceCount==1 then go through all components and log their import and export states
 
       if (localPet==0 .and. advanceCount==0) then
         call ESMF_AttributeGet(importState, name='simulation_title', value=message, defaultvalue='Untitled', rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        call ESMF_LogOpen(stateLog,'states_'//trim(message), rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_LogOpen(stateLog,'PET.states_'//trim(message), appendFlag=.true., &
+          logkindFlag=ESMF_LOGKIND_SINGLE, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call ESMF_LogWrite('====== Status at end of first run loop  ======', ESMF_LOGMSG_INFO, log=stateLog)
 
         do i=1,numGridComp
           call ESMF_LogWrite('====== States of '//trim(gridCompNameList(i))//' ======', ESMF_LOGMSG_INFO, log=stateLog)
           call MOSSCO_StateLog(gridImportStateList(i), deep=.true., log=stateLog, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
           call MOSSCO_StateLog(gridExportStateList(i), deep=.true., log=stateLog, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         enddo
 
         call ESMF_LogWrite('====== States of '//trim(myName)//' ======', ESMF_LOGMSG_INFO, log=stateLog)
         call MOSSCO_StateLog(importState, log=stateLog, deep=.true.,  rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        call MOSSCO_StateLog(exportState, log=stateLog, deep=.true., rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        call ESMF_LogClose(stateLog)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call MOSSCO_StateLog(exportState, log=stateLog, deep=.true., rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        call ESMF_LogClose(stateLog, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
 
       !> Set new time interval and advance clock, stop if end of
       !! simulation reached
       call ESMF_ClockSet(myClock, timeStep=timeInterval, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_ClockAdvance(myClock, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call cpu_time(wallTimeStop(0))
+      ms_r8 = 1000.0d0 * (wallTimeStop(0)- wallTimeStart(0))
+
+      write(message,'(A)') trim(myName)//' executed in '
+      if (ms_r8 < 9999.0d0) then
+        write(formatString,'(A)') '(A,X,'//intformat(int(ms_r8))//',X,A)'
+        write(message, formatString) trim(message), int(ms_r8), 'mseconds'
+      else
+        write(formatString,'(A)') '(A,X,'//intformat(int(ms_r8/1000.0d0))//',X,A)'
+        write(message, formatString) trim(message), int(ms_r8/1000.0d0), 'seconds'
+      endif
+
+      call ESMF_TimeIntervalGet(timeInterval, ms_r8=realValue, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (ms_r8>0.0d0 .and. realValue > 0.0d0) then
+        realValue = realValue / ms_r8
+        write(formatString,'(A)') '(A,X,'//intformat(int(realValue))//')'
+        write(message, formatString) trim(message)//' with speedup ', int(realValue)
+      endif
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       if (ESMF_ClockIsStopTime(myClock, rc=localrc)) exit
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     enddo
+
 ''')
 
 for coupling in couplingList:
   jtem = coupling[-1]
 
-  if instanceDict.has_key(jtem):
+  if jtem in instanceDict.keys():
     if instanceDict[jtem] != 'netcdf': continue
 
   item = coupling[0]
@@ -1927,29 +2096,27 @@ for coupling in couplingList:
   fid.write('\n    !! Running final netcdf output coupling ' + item + ' to ' + jtem + '\n')
   fid.write('    call ESMF_CplCompRun(cplCompList(' + str(icpl+1) + '), importState=gridImportStateList(' + str(ifrom + 1) + '), &\n')
   fid.write('      exportState=gridExportStateList(' + str(ito+1) + '), clock=controlClock, rc=localrc)\n')
-  fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
-  fid.write('      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
-
+  fid.write('    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)\n')
   fid.write('    do phase=1,gridCompPhaseCountList(' + str(ito+1) + ')\n')
   fid.write('      call ESMF_GridCompRun(gridCompList(' + str(ito+1) + '), importState=gridImportStateList(' + str(ito + 1) + '), &\n')
   fid.write('        exportState=gridExportStateList(' + str(ito+1) + '), clock=controlClock, rc=localrc)')
   fid.write('''
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     enddo
 ''')
 
 fid.write('''
     call ESMF_StateValidate(importState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_StateValidate(exportState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (allocated(wallTimeStart)) deallocate(wallTimeStart)
+    if (allocated(wallTimeStop)) deallocate(wallTimeStop)
 
     call MOSSCO_CompExit(gridComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Run
 
@@ -2099,7 +2266,7 @@ end module toplevel_component
 fid.close()
 
 outfilename = os.path.join( os.path.dirname( os.path.realpath(__file__) ) , 'Makefile.coupling' )
-fid = file(outfilename,'w')
+fid = open(outfilename,'w')
 
 fid.write('# This Makefile is part of MOSSCO\n#\n')
 fid.write('# Do not edit this file, it is automatically generated by\n')
@@ -2126,7 +2293,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 conditionals = {'gotm' : 'GOTM', 'fabm' : 'FABM', 'erosed' : 'EROSED',
                 'fabm_gotm' : 'GOTM_FABM', 'getm' : 'GETM', 'gotmfabm' : 'GOTM_FABM'}
 for item in gridCompSet.union(cplCompSet):
-    if conditionals.has_key(item):
+    if item in conditionals.keys():
         fid.write('ifneq ($(MOSSCO_' + conditionals[item] + '),true)\n')
         fid.write('$(error This example only works with MOSSCO_' + conditionals[item] + ' = true)\n')
         fid.write('endif\n')
@@ -2139,12 +2306,14 @@ libs = {'gotm'       : ['solver', 'mossco_gotm'] ,
         'fabm_benthic' : ['mossco_fabmbenthic', 'util', 'solver'],
         'constant'   : ['constant', 'mossco_util'],
         'default'   :  ['default'],
+        'random'    : ['random'],
         'clm_netcdf' : ['mossco_clm'],
         'benthos'    : ['mossco_benthos'],
         'grid'       : ['mossco_grid'],
         'location'   : ['mossco_location'],
         'erosed'     : ['mossco_erosed'],
         'filtration'     : ['mossco_filtration'],
+        'schism'     : ['mossco_schism'],
         'hamsom'     : ['mossco_hamsom'],
         'tracer'     : ['mossco_tracer'],
         'netcdf'     : ['mossco_netcdf'],
@@ -2152,8 +2321,10 @@ libs = {'gotm'       : ['solver', 'mossco_gotm'] ,
         'test'       : ['mossco_test'],
         'simplewave' : ['mossco_simplewave'],
         'river'      : ['mossco_river'],
-        'empty'      : ['empty'],
-        'inout'      : ['mossco_inout'],
+        'time_aggregation'      : ['mossco_aggregation'],
+        'empty'      : ['mossco_technical'],
+        'dummy'      : ['mossco_technical'],
+        'inout'      : ['mossco_technical'],
         'info'       : ['mossco_info'],
         'fabm0d'     : ['mossco_fabm0d', 'solver', 'airsea',
                         'input', 'util', 'fabm'],
@@ -2161,6 +2332,7 @@ libs = {'gotm'       : ['solver', 'mossco_gotm'] ,
         'pelagic_soil_connector' : ['mossco_mediator'],
         'soil_pelagic_connector' : ['mossco_mediator'],
         'vertical_reduction' : ['verticalreduction'],
+        'calculator' : ['mossco_calculator'],
         'pelagic_benthic_coupler' : ['pelagicbenthiccoupler'],
         'benthic_pelagic_coupler' : ['pelagicbenthiccoupler'],
         'xgrid_coupler' : ['xgridcoupler'],
@@ -2180,6 +2352,7 @@ libs = {'gotm'       : ['solver', 'mossco_gotm'] ,
 deps = {'clm_netcdf' : ['libmossco_clm'],
         'benthos'    : ['libmossco_benthos'],
         'hamsom'     : ['libmossco_hamsom'],
+        'schism'     : ['libmossco_schism'],
         'tracer'     : ['libmossco_tracer'],
         'erosed'     : ['libmossco_erosed'],
         'fabm0d'     : ['libmossco_fabm0d'],
@@ -2191,11 +2364,14 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'netcdf_input'      : ['libmossco_netcdf'],
         'test'       : ['libmossco_test'],
         'info'       : ['libmossco_info'],
-        'empty'      : ['libempty'],
+        'time_aggregation'      : ['libmossco_aggregation'],
+        'empty'      : ['libmossco_technical'],
         'river'      : ['libmossco_river'],
-        'inout'      : ['libmossco_inout'],
+        'inout'      : ['libmossco_technical'],
+        'dummy'      : ['libmossco_technical'],
         'constant'   : ['libconstant libmossco_util'],
         'default'  : ['libdefault'],
+        'random'  : ['libmossco_random'],
         'gotm'       : ['libmossco_gotm', 'libsolver'],
         'fabm_gotm'                : ['libmossco_fabmgotm'],
         'gotmfabm'       : ['libmossco_gotmfabm', 'libsolver'],
@@ -2205,6 +2381,7 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'pelagic_benthic_coupler' : ['libpelagicbenthiccoupler'],
         'benthic_pelagic_coupler' : ['libpelagicbenthiccoupler'],
         'vertical_reduction' : ['libverticalreduction'],
+        'calculator' : ['libmossco_calculator'],
         'xgrid_coupler' : ['libxgridcoupler'],
         'link_connector' : ['libmossco_connector'],
         'nudge_connector' : ['libmossco_connector'],
@@ -2224,9 +2401,9 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
 #fid.write('\nNC_LIBS += $(shell nf-config --flibs)\n\n')
 fid.write('LDFLAGS += -L$(MOSSCO_LIBRARY_PATH)\n')
 for item in gridCompSet.union(cplCompSet):
-    if instanceDict.has_key(item):
+    if item in instanceDict.keys():
         item=instanceDict[item]
-    if libs.has_key(item):
+    if item in libs.keys():
         fid.write('LDFLAGS +=')
         for lib in libs[item]:
             fid.write(' -l' + lib)
@@ -2259,9 +2436,9 @@ fid.write('.PHONY: all exec ' + coupling_name + '\n\n')
 fid.write('all: exec\n\n')
 fid.write('exec: libmossco_util libmossco_connector ')
 for item in gridCompSet.union(cplCompSet):
-    if instanceDict.has_key(item):
+    if item in instanceDict.keys():
         item=instanceDict[item]
-    if deps.has_key(item):
+    if item in deps.keys():
         for dep in deps[item]:
             fid.write(' ' + dep)
 fid.write(' ' + coupling_name + '\n\n')
@@ -2281,25 +2458,28 @@ libmossco_util libsolver:
 
 libsediment libconstant libdefault libmossco_clm libmossco_erosed \
 libmossco_fabm0d libmossco_fabmpelagic libmossco_filtration libmossco_grid \
-libmossco_fabmbenthic:
+libmossco_fabmbenthic libmossco_random:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
-libempty libmossco_inout libmossco_getm libmossco_simplewave libmossco_netcdf libmossco_benthos:
+libmossco_technical libmossco_getm libmossco_simplewave libmossco_netcdf libmossco_benthos:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
-libmossco_info libmossco_test libmossco_river libmossco_hamsom libmossco_location:
+libmossco_aggregation:
+	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
+
+libmossco_info libmossco_test libmossco_river libmossco_hamsom libmossco_location libmossco_schism:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libmossco_sediment:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
-libsurfacescouplerlibaocoupler liblinkcoupler libxgridcoupler libregridcoupler libcopycoupler libmossco_coupler:
+libsurfacescouplerlibaocoupler liblinkcoupler libxgridcoupler libregridcoupler libcopycoupler libmossco_coupler libmossco_mediator:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
 libmossco_connector:
 	$(MAKE) -C $(MOSSCO_DIR)/src/connectors $@
 
-libmossco_mediator libverticalreduction:
+libverticalreduction libmossco_calculator:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
 libremtc:

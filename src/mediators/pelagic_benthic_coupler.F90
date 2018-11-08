@@ -396,20 +396,20 @@ module pelagic_benthic_coupler
       fac_sdet = (1.0d0-NC_fdet*CN_det)/(NC_sdet-NC_fdet)
 
       call mossco_state_get(exportState, &
-        (/'fast_detritus_C_at_soil_surface'/), ptr_f2, rc=localrc)
+        (/'detritus_labile_carbon_at_soil_surface'/), ptr_f2, rc=localrc)
       if (localrc==0) ptr_f2 = fac_fdet * DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
       call mossco_state_get(exportState, &
-        (/'slow_detritus_C_at_soil_surface'/), ptr_f2, rc=localrc)
+        (/'detritus_semilabile_carbon_at_soil_surface'/), ptr_f2, rc=localrc)
       if(localrc==0) ptr_f2 = fac_sdet * DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
 
-      call mossco_state_get(exportState,(/'fast_detritus_C_z_velocity_at_soil_surface'/),ptr_f2,rc=localrc)
+      call mossco_state_get(exportState,(/'detritus_labile_carbon_z_velocity_at_soil_surface'/),ptr_f2,rc=localrc)
       if (localrc==0) ptr_f2 = sinking_factor * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
-      call mossco_state_get(exportState,(/'slow_detritus_C_z_velocity_at_soil_surface'/),ptr_f2,rc=localrc)
+      call mossco_state_get(exportState,(/'detritus_semilabile_carbon_z_velocity_at_soil_surface'/),ptr_f2,rc=localrc)
       if (localrc==0) ptr_f2 = sinking_factor * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
 
       !> check for Detritus-P and calculate flux either N-based
       !> or as present through the Detritus-P pool
-      call mossco_state_get(exportState,(/'detritus-P_at_soil_surface'/),ptr_f2,rc=localrc)
+      call mossco_state_get(exportState,(/'detritus_phosphorus_at_soil_surface'/),ptr_f2,rc=localrc)
       call mossco_state_get(importState,(/ &
           'detP_in_water                    ', &
           'Detritus_Phosphorus_detP_in_water'/),DETP,lbnd=Plbnd,ubnd=Pubnd,rc=localrc)
@@ -419,7 +419,7 @@ module pelagic_benthic_coupler
         ptr_f2 = 1.0d0/16.0d0 * DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
       end if
 
-      call mossco_state_get(exportState,(/'detritus-P_z_velocity_at_soil_surface'/),ptr_f2,rc=localrc)
+      call mossco_state_get(exportState,(/'detritus-phosphorus_z_velocity_at_soil_surface'/),ptr_f2,rc=localrc)
       call mossco_state_get(importState,(/ &
               'detP_z_velocity_in_water                    ', &
               'Detritus_Phosphorus_detP_z_velocity_in_water'/),vDETP,rc=localrc)

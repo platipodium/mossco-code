@@ -15,7 +15,7 @@ nam='../mossco_gfbfrr.'
 echo 'retrieving last time step from ' $nam$[$ncpu -1]'.nc' 
 N=$(ncdump -h $nam$[$ncpu -1]'.nc' |grep '= UNLIMITED' |cut -f2 -d'(' |cut -f1 -d' ')
 N=$[$N -1]
-#N=
+N=790
 echo $N
 for p in $(seq -f $fg 0 1 $[$ncpu-1]); do fname=$nam$p'.nc'; ncks -O -d time,$N,$N $fname tmp.$p.nc; done 
 
@@ -40,4 +40,4 @@ done
 #for p in $(seq -f $fg 0 1 $[$ncpu-1]); do ncap -O -s "Dissolved_Organic_Phosphorus_domP_in_water=0.3*Dissolved_Organic_Phosphorus_domP_in_water" tmp.$p.nc tmp.$p.nc; done
 
 
-for p in $(seq -f $fg 0 1 $[$ncpu-1]); do mv tmp.$p.nc 'restart'$ncpu'Mar_20.'$p'.nc' ; done
+for p in $(seq -f $fg 0 1 $[$ncpu-1]); do mv tmp.$p.nc 'restart'$ncpu'Apr_20.'$p'.nc' ; done

@@ -1,0 +1,9 @@
+!-------------
+!dinflux_const - constant DIN flux into water body [mmol-N/m2/y]
+!-------------
+
+&soil_pelagic_connector
+  dinflux_const=0.
+  NC_ldet=0.22
+  NC_sdet=0.005
+/
