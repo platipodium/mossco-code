@@ -574,19 +574,27 @@ module netcdf_input_component
 
       int4=0
       ticks=-1.0
+      !> @todo if the unit is months, then this routine complains as it needs a
+      !starting time. 
       select case (trim(timeUnit))
       case ('year', 'years')
-        call ESMF_TimeIntervalGet(currTime-refTime, yy=int4, rc=rc)
+        call ESMF_TimeIntervalGet(currTime-refTime, &
+          !calKindFlagIn=ESMF_CALKIND_GREGORIAN, yy=int4, rc=localrc)
+          startTimeIn=refTime, yy=int4, rc=localrc)
       case ('month', 'months')
-        call ESMF_TimeIntervalGet(currTime-refTime, mm=int4, rc=rc)
+        call ESMF_TimeIntervalGet(currTime-refTime, &
+          !calKindFlagIn=ESMF_CALKIND_GREGORIAN, mm=int4, rc=localrc)
+          startTimeIn=refTime, mm=int4, rc=localrc)
       case ('day', 'days')
-        call ESMF_TimeIntervalGet(currTime-refTime, d=int4, rc=rc)
+        call ESMF_TimeIntervalGet(currTime-refTime, &
+          !calKindFlagIn=ESMF_CALKIND_GREGORIAN, d=int4, rc=localrc)
+          startTimeIn=refTime, d=int4, rc=localrc)
       case ('hour', 'hours')
-        call ESMF_TimeIntervalGet(currTime-refTime, m=int4, rc=rc)
+        call ESMF_TimeIntervalGet(currTime-refTime, m=int4, rc=localrc)
       case ('minute', 'minutes')
-        call ESMF_TimeIntervalGet(currTime-refTime, m=int4, rc=rc)
+        call ESMF_TimeIntervalGet(currTime-refTime, m=int4, rc=localrc)
       case ('second', 'seconds')
-        call ESMF_TimeIntervalGet(currTime-refTime, s_r8=ticks, rc=rc)
+        call ESMF_TimeIntervalGet(currTime-refTime, s_r8=ticks, rc=localrc)
       case default
         write(message,'(A)')  trim(name)//' invalid or not implemented unit for time '//trim(timeUnit)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
