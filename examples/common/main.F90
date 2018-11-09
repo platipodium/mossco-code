@@ -33,7 +33,7 @@ program main
   type(ESMF_TimeInterval)    :: runDuration, timeStep
   integer                    :: localrc, rc,nmlunit=2013
   double precision           :: seconds, runseconds
-  character(len=40)          :: timestring, logKind='multi', name='main'
+  character(len=40)          :: timestring, name='main'
   character(len=40)          :: start='2000-01-01 00:00:00'
   character(len=40)          :: stop='2000-01-05 00:00:00'
   character(len=ESMF_MAXSTR) :: title='Untitled'
@@ -43,7 +43,7 @@ program main
   type(ESMF_VM)              :: vm
   integer(ESMF_KIND_I4)      :: localPet, petCount,argc,i
   logical                    :: ClockIsPresent
-  character(len=ESMF_MAXSTR) :: message, formatstring, pidString
+  character(len=ESMF_MAXSTR) :: message, formatstring, pidString, logKind
   type(ESMF_LogMsg_Flag), allocatable :: logMsgList(:)
   type(ESMF_LogKind_Flag)    :: logKindFlag
   logical                    :: fileIsPresent, labelIsPresent
@@ -60,7 +60,6 @@ program main
 !> 1. `start`: the start date of the simulation in YYYY-MM-DD hh:mm:ss format
 !> 2. `stop` : the stop date of the simulation in the same format
 !> 3. `title`: the title of the simulation.
-!> 4. `logkind`: an ESMF LOGKIND, multi | single | none, default is multi
 !> 5. `loglevel`: an ESMF LOGMSGFLAG, none | error | warning | all | one  default is all
 !> 6. `logflush`: a logical, .false. | .true. , default is .true.
 !> 5. `loglevelzero`: an ESMF LOGMSGFLAG for the first PET
@@ -68,6 +67,7 @@ program main
 !> If this file is not present, then the default simulation with title "Untitled"
 !> will be executed for the time 2000-01-01 00:00:00 to 2000-01-05 00:00:00
 
+  !> @todo logKind is deprecated, to be removed from nml
   namelist /mossco_run/ title,start,stop,logkind,loglevel,logflush,loglevelzero
 
   configfilename='mossco.cfg'
@@ -127,29 +127,18 @@ program main
   !write(title,'(A,A)') trim(title), '-'//trim(adjustl(pidString))
 
   !> Find out what kind of log to write, the default is MULTI
-  if (logKind == 'none') then
-    logKindFlag=ESMF_LOGKIND_NONE
-  elseif (logKind == 'single') then
-    logKindFlag=ESMF_LOGKIND_SINGLE
-  else
-    logKindFlag=ESMF_LOGKIND_MULTI
-  endif
+  logKindFlag=ESMF_LOGKIND_MULTI
 
   ! Initialize ESMF, get resources, and log this to a file beginning with PET
-  if (logKindFlag==ESMF_LOGKIND_SINGLE) then
-    call ESMF_Initialize(defaultLogFileName='PET.'//trim(title), rc=localrc, &
-      logkindflag=logKindFlag,defaultCalKind=ESMF_CALKIND_GREGORIAN, vm=vm)
-  else
-    call ESMF_Initialize(defaultLogFileName=trim(title), rc=localrc, &
-      logkindflag=logKindFlag,defaultCalKind=ESMF_CALKIND_GREGORIAN, vm=vm)
-  endif
+  call ESMF_Initialize(defaultLogFileName=trim(title), rc=localrc, &
+    defaultCalKind=ESMF_CALKIND_GREGORIAN, vm=vm)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   config = ESMF_ConfigCreate(rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-  ! Read parameters from mossco.cfg (overriding those in the namelist, except for the
-  ! logKindFlag, which cannot be set after ESMF_Initialize for the default log
+  ! Read parameters from mossco.cfg (overriding those in the namelist)
+
   configfilename='mossco.cfg'
   inquire(file=trim(configfilename), exist=fileIsPresent)
 
@@ -264,11 +253,11 @@ program main
   if (allocated(logMsgList)) deallocate(logMsgList)
 
   write(message,'(A)')  'MOSSCO '//trim(title)//" coupled system starts"
-  if (localPet==0 .or. logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+  call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
   write(formatstring,'(A)') '(A,'//intformat(petCount)//',A,'//intformat(petCount)//')'
-  write(message,formatstring) 'Creating multiple logs, this is processor ',localPet,' of ', petCount
-  if (logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+  write(message,formatstring) 'This is processor ',localPet,' of ', petCount
+  call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
   ! Initialize the system clock (which measures CPU time)
   call system_clock(count_rate=system_clock_rate)
@@ -285,7 +274,7 @@ program main
   call ESMF_TimeGet(time1,timeStringISOFrac=timestring, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-  if (localPet==0 .or. logKindFlag==ESMF_LOGKIND_MULTI) write(message,'(A)')  "Program starts at wall clock "//trim(timestring)
+  write(message,'(A)')  "Program starts at wall clock "//trim(timestring)
   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
   ! Create and initialize a clock from mossco_run.nml
@@ -308,12 +297,12 @@ program main
   call ESMF_TimeGet(startTime,timeStringISOFrac=timestring, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-  if (localPet==0 .or. logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite("Simulation starts at "//timestring, ESMF_LOGMSG_INFO)
+  call ESMF_LogWrite("Simulation starts at "//timestring, ESMF_LOGMSG_INFO)
 
   call ESMF_TimeGet(stopTime,timeStringISOFrac=timestring, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-  if (localPet==0 .or. logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite("Simulation ends at "//timestring, ESMF_LOGMSG_INFO)
+  call ESMF_LogWrite("Simulation ends at "//timestring, ESMF_LOGMSG_INFO)
 
   write(formatString,'(A)') '(A,'//intformat(digits(1.0_ESMF_KIND_R8))//',A)'
   write(message,formatString) 'ESMF double precision (KIND_R8) has ', &
@@ -375,9 +364,6 @@ program main
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   call ESMF_AttributeSet(topState, 'simulation_stop', trim(stop), rc=localrc)
-  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-  call ESMF_AttributeSet(topState, 'simulation_log_kind', trim(logKind), rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   call ESMF_GridCompGet(topComp,clockIsPresent=ClockIsPresent, rc=localrc)
@@ -445,26 +431,24 @@ program main
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   write(message,'(A,ES10.3,A)') trim(title)//' needed ',seconds,' seconds to run'
-  if (localPet == 0 .or. logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+  call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
   call ESMF_TimeIntervalGet(runduration, s_r8=runseconds, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   if (seconds > 0) then
     write(message,'(A,ES10.3,A)') trim(title)//' total speedup is ',runseconds/seconds
-    if (localPet == 0 .or. logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
     write(message,'(A,ES10.3,A)') trim(title)//' speedup per CPU is ',runseconds/seconds/petCount
-    if (localPet == 0 .or. logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
   endif
 
   system_clock_duration = (system_clock_stop - system_clock_start) / system_clock_rate
   write(message,'(A,ES10.3,A)') trim(title)//' CPU time ',dble(system_clock_duration),' seconds'
 
-  if (localPet == 0 .or. logKindFlag==ESMF_LOGKIND_MULTI) then
-    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-    call ESMF_LogWrite('MOSSCO '//trim(title)//' finished at wall clock '//timestring,ESMF_LOGMSG_INFO)
-  endif
+  call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+  call ESMF_LogWrite('MOSSCO '//trim(title)//' finished at wall clock '//timestring,ESMF_LOGMSG_INFO)
 
   call ESMF_StateDestroy(topState,rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
