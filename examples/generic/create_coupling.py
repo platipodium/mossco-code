@@ -685,7 +685,7 @@ fid.write('''
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_LogWrite(trim(myName)//' reconciles '//trim(gridCompNameList(i))//'Export', ESMF_LOGMSG_INFO)
-      call ESMF_StateReconcile(gridExportStateList(i), rc=localrc)
+      !call ESMF_StateReconcile(gridExportStateList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       gridImportStateList(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED, &
@@ -693,7 +693,7 @@ fid.write('''
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_LogWrite(trim(myName)//' reconciles '//trim(gridCompNameList(i))//'Import', ESMF_LOGMSG_INFO)
-      call ESMF_StateReconcile(gridImportStateList(i), rc=localrc)
+      !call ESMF_StateReconcile(gridImportStateList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
@@ -1119,10 +1119,10 @@ fid.write('    !! End of ReadRestart \n\n')
 fid.write('''
     do i=1, numGridComp
       call ESMF_LogWrite(trim(myName)//' reconciles '//trim(gridCompNameList(i))//'Import', ESMF_LOGMSG_INFO)
-      call ESMF_StateReconcile(state=gridImportStateList(i), rc=localrc)
+      !call ESMF_StateReconcile(state=gridImportStateList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_LogWrite(trim(myName)//'reconciles '//trim(gridCompNameList(i))//'Export', ESMF_LOGMSG_INFO)
-      call ESMF_StateReconcile(state=gridExportStateList(i), rc=localrc)
+      !call ESMF_StateReconcile(state=gridExportStateList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
  ''')
@@ -1909,11 +1909,11 @@ fid.write('''
         do phase=1,gridCompPhaseCountList(i)
           !call MOSSCO_GridCompFieldsTable(gridCompList(i), importState=gridImportStateList(i), exportState=gridExportStateList(i),rc=localrc)
           call ESMF_LogWrite(trim(myName)//' reconciles '//trim(gridCompNameList(i))//'Import', ESMF_LOGMSG_INFO)
-          call ESMF_StateReconcile(gridImportStateList(i), rc=localrc)
+          !call ESMF_StateReconcile(gridImportStateList(i), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           call ESMF_LogWrite(trim(myName)//' reconciles '//trim(gridCompNameList(i))//'Export', ESMF_LOGMSG_INFO)
-          call ESMF_StateReconcile(gridExportStateList(i), rc=localrc)
+          !call ESMF_StateReconcile(gridExportStateList(i), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           call cpu_time(wallTimeStart(i))
@@ -1941,7 +1941,12 @@ fid.write('''
           if (ms_r8>0.0d0 .and. realValue>0.0d0) then
             realValue = realValue / ms_r8
             write(formatString,'(A)') '(A,X,'//intformat(int(realValue))//')'
-            write(message, formatString) trim(message)//' with speedup ', int(realValue)
+            write(message, formatString, iostat=localrc) trim(message)//' with speedup ', int(realValue)
+  	    if (localrc /= ESMF_SUCCESS) then 
+              write(0,*,iostat=localrc) trim(formatString), realValue, int(realValue)
+              write(0,*,iostat=localrc) trim(message)
+            endif
+
           endif
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
