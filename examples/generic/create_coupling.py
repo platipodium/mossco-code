@@ -156,8 +156,8 @@ for i, item in enumerate(coupling):
             elif n==2:
                 couplingList.append([item["components"][0], "link_connector", item["components"][-1]])
                 cplCompList.append("link_connector")
-            for i in range(1,n-1):
-                cplCompList.append(item["components"][i])
+            for j in range(1,n-1):
+                cplCompList.append(item["components"][j])
             if 'interval' in item.keys():
                 intervals[i] = item["interval"]
             if 'direction' in item.keys():
@@ -178,6 +178,7 @@ cplCompSet=set(cplCompList)
 cplCompList=list(cplCompSet)
 componentSet=gridCompSet.union(cplCompSet)
 componentList=list(componentSet)
+
 
 # if there are any dependencies specified, go through the list of components
 # and sort this list
@@ -320,6 +321,7 @@ for item in gridCompList:
   else:
     sortedGridCompList.append(item)
 gridCompList = sortedGridCompList
+
 
 #if 'rename_connector' in cplCompList:
 #  c=cplCompList.pop(cplCompList.index('rename_connector'))
