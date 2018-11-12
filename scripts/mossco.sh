@@ -26,7 +26,7 @@ NP=NONE
 LOGLEVEL='undefined'
 WAITTIME=0
 QUEUE='undefined'
-RECURSION=NONE
+RESTART=0
 
 # Function for printing usage of this script
 function usage {
@@ -49,7 +49,7 @@ function usage {
   echo "            the default is <system>_postprocess.h"
   echo "    [-q QUEUE] :  Selects a queue/partition with name QUEUE"
   echo "    [-r] :  Rebuilds the [generic] example and MOSSCO coupled system"
-#  echo "    [-R H|D|M|Y] :  Restart simulation every hour, day, month, year, default is NONE"
+#  echo "    [-R X] :  Restart simulation X times, default is zero"
   echo "    [-s M|S|J|F|B|P]: exeute batch queue for a specific system, which is"
   echo "            autodetected by default"
   echo
@@ -78,6 +78,33 @@ function select_sge_queue {
   #fi
 }
 
+# Function for predicting simulation time, gives back the number of days
+# between two times given as positional arguments
+function timeInterval() {
+
+  # Replace TZ markers with space to separate date from time
+  timeB=${2//[A-z]/ }
+  timeA=${1//[A-z]/ }
+
+  #echo $timeB $timeA
+
+  YMDA=$(echo ${START} | cut -d" " -f1)
+  YMDB=$(echo ${STOP} | cut -d" " -f1)
+
+  YA=$(echo ${YMDA} | cut -d"-" -f1)
+  YB=$(echo ${YMDB}  | cut -d"-" -f1)
+  MA=$(echo ${YMDA} | cut -d"-" -f2)
+  MB=$(echo ${YMDB}  | cut -d"-" -f2)
+  DA=$(echo ${YMDA} | cut -d"-" -f3)
+  DB=$(echo ${YMDB}  | cut -d"-" -f3)
+  if [[ "x$DA" == "x" ]]; then
+    echo "Check your input file, make sure it uses apostrophes around dates"
+    exit
+  fi
+  D=$(expr \( ${YB} - ${YA} \) \* 365 + \( ${MB} - ${MA} \) \* 31 + ${DB} - ${DA} + 1)
+  echo  $D
+}
+
 # Function for predicting simulation time (adjusted for slurm)
 function predict_time() {
 
@@ -85,37 +112,23 @@ function predict_time() {
   case ${SYSTEM} in
     PBS)  S=1000;;
     SGE)  S=300;;
-    SLURM) S=1500;;
+    SLURM) S=1000;;
   esac
 
   S=1500
   NP=$1
-  START=$(cat ${NML} | grep -v --regexp ' *!'| grep stop | awk -F"'" '{print $2}' | awk -F" " '{print $1}')
+  START=$(cat ${NML} | grep -v --regexp ' *!'| grep start | awk -F"'" '{print $2}' | awk -F" " '{print $1}')
   STOP=$(cat ${NML} | grep -v --regexp ' *!'| grep stop | awk -F"'" '{print $2}' | awk -F" " '{print $1}')
 
-  # Replace TZ markers with space to separate date from time
-  STOP=${STOP//[A-z]/ }
-  START=${START//[A-z]/ }
 
-  YMD1=$(echo ${START} | cut -d" " -f1)
-  YMD2=$(echo ${STOP} | cut -d" " -f1)
-
-  Y1=$(echo ${YMD1} | cut -d"-" -f1)
-  Y2=$(echo ${YMD2}  | cut -d"-" -f1)
-  M1=$(echo ${YMD1} | cut -d"-" -f2)
-  M2=$(echo ${YMD2}  | cut -d"-" -f2)
-  D1=$(echo ${YMD1} | cut -d"-" -f3)
-  D2=$(echo ${YMD2}  | cut -d"-" -f3)
-  if [[ "x$D1" == "x" ]]; then
-    echo "Check your input file, make sure it uses apostrophes around dates"
-    exit
-  fi
-  D=$(expr \( ${Y2} - ${Y1} \) \* 365 + \( ${M2} - ${M1} \) \* 31 + ${D2} - ${D1} + 1)
+  D=$(timeInterval "$START" "$STOP")
   M=$(expr $D \* 200000 / ${NP} / ${S} + 2)
   H=$(expr $M / 60)
   M=$(expr $M % 60)
   echo  $H:$M:00
 }
+
+
 
 # Getopts parsing of command line arguments
 while getopts ":rt:bcn:s:l:w:p:q:z:R:" opt; do
@@ -409,6 +422,13 @@ if [[ "x${WALLTIME}" == "x00:00:00" ]] ; then
   WALLTIME=$(predict_time $NP $SYSTEM)
 fi
 
+if test -f ${NML}; then
+  START=$(cat ${NML} | grep -v --regexp ' *!'| grep start | awk -F"'" '{print $2}' | awk -F" " '{print $1}')
+  STOP=$(cat ${NML} | grep -v --regexp ' *!'| grep stop | awk -F"'" '{print $2}' | awk -F" " '{print $1}')
+
+  echo $(timeInterval "$START" "$STOP")
+fi
+
 case ${SYSTEM} in
   PBS)
     QUEUE=mpi_64
@@ -560,7 +580,7 @@ esac
 SED=${SED:-$(which gsed 2> /dev/null )}
 SED=${SED:-$(which sed 2> /dev/null )}
 
-if ! test -f ${NML} ; then cp mossco_run.nml ${NML}; fi
+#if ! test -f ${NML} ; then cp mossco_run.nml ${NML}; fi
 
 if test -f ${NML} ; then
   if [[ "${LOGLEVEL}" != "undefined" ]] ; then
