@@ -48,13 +48,14 @@ program main
   type(ESMF_LogKind_Flag)    :: logKindFlag
   logical                    :: fileIsPresent, labelIsPresent
   type(ESMF_Config)          :: config
-  character(len=ESMF_MAXSTR) :: configFileName='mossco.cfg', argv
+  character(len=ESMF_MAXSTR) :: configFileName
   character(len=ESMF_MAXSTR) :: logLevel='all'
   character(len=ESMF_MAXSTR) :: logLevelZero='not_given'
   logical                    :: logFlush=.false.
 
   integer(ESMF_KIND_I8)      :: system_clock_start, system_clock_stop, system_clock_max
   integer(ESMF_KIND_I8)      :: system_clock_rate, system_clock_duration
+  character(len=ESMF_MAXSTR), allocatable :: configFileNameList(:), argValueList(:)
 
 !> Read the namelist `mossco_run.nml`and evaluate five parameters:
 !> 1. `start`: the start date of the simulation in YYYY-MM-DD hh:mm:ss format
@@ -70,49 +71,61 @@ program main
   !> @todo logKind is deprecated, to be removed from nml
   namelist /mossco_run/ title,start,stop,logkind,loglevel,logflush,loglevelzero
 
-  configfilename='mossco.cfg'
+  !> Predefine possible config file names, if one is given
+  !> on the command line as an argument, then this will be
+  !> inserted in position 1
+  allocate(configFileNameList(4), stat=localrc)
+  configFileNameList(1:2) = 'mossco.cfg'
+  configFileNameList(3)   = 'mossco.nml'
+  configFileNameList(4  ) = 'mossco_run.nml'
 
+  !> Parse command line arguments
   argc = command_argument_count()
-  !if (argc == 0) then
-    !call ESMF_LogWrite('No command arguments present', ESMF_LOGMSG_INFO)
-  !endif
-
-  do i=1,argc
-    call get_command_argument(i,argv)
-    write(message,'(A,I1.1,A)') 'Command argument ',i,' is "'//trim(argv)//'"'
-    !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-    if (len_trim(argv) == 0) exit
-    inquire(file=trim(argv), exist=fileIsPresent)
-    if (fileIsPresent) configFileName=trim(argv)
+  allocate(argValueList(argc + 1), stat=localrc)
+  do i = 0, argc
+    call get_command_argument(i, argValueList(i+1))
+    !write(0,'(A,I1.1,A,I1.1,A)') 'Command argument ',i,' of ',argc, &
+    !  ' is "'//trim(argValueList(i+1))//'"'
   enddo
 
-  inquire(file=trim(configfilename), exist=fileIsPresent)
-  if (.not.fileIsPresent) configfilename='mossco.cfg'
-
-  inquire(file=trim(configfilename), exist=fileIsPresent)
-  if (.not.fileIsPresent) configfilename='mossco_run.nml'
-
-  inquire(file=trim(configfilename), exist=fileIsPresent)
-  if (.not.fileIsPresent) configfilename='mossco.nml'
-
-  inquire(file=trim(configfilename), exist=fileIsPresent)
-  if (.not.fileIsPresent) then
-    configfilename=''
-    stop 'Required configuration file (mossco.cfg or mossco_run.nml or mossco.nml) missing'
-    !call ESMF_LogWrite('Not using a configuration file', ESMF_LOGMSG_WARNING)
+  !> Positional second argument could be the name of a config file
+  if (argc > 0) then
+    configFileNameList(1)=trim(argValueList(2))
+    inquire(file=configFileNameList(1), exist=fileIsPresent)
+    if (.not.fileIsPresent) then
+      write(0, '(A)') 'Fatal error. Could not find '//trim(configFileNameList(1))
+      stop
+    endif
   endif
 
-  if (index(configFileName, '.nml') > 1) then
-    inquire(file=trim(configfilename), exist=fileIsPresent)
+  !> Try finding config file names and parse them for the title
+  !> of the simulation, needed for initializing ESMF
+
+  do i=1, ubound(configFileNameList,1)
+    configFileName = configfilenameList(i)
+    inquire(file=configFileName, exist=fileIsPresent)
+    if (fileIsPresent) exit
+  enddo
+
+  !write(0,'(4(A,X))') (trim(configFileNameList(i)), i=1,4)
+
+  title = adjustl(trim(argValueList(1)))
+
+  !> .nml can be read before ESMF is Initialized
+  if (fileIsPresent .and. index(configFileName, '.nml') > 1) then
+
     open(nmlunit,file=trim(configfilename), status='old', action='read', iostat=localrc)
-    if (localrc .eq. 0) then
-      read(nmlunit, nml=mossco_run)
-      close(nmlunit)
-    else
+    if (localrc /= ESMF_SUCCESS) then
       write(0, '(A)') 'Fatal problem reading namelist from '//trim(configFileName)
       stop
-      !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-    end if
+    endif
+
+    read(nmlunit, nml=mossco_run, iostat=localrc)
+    close(nmlunit)
+    if (localrc /= ESMF_SUCCESS) then
+      write(0, '(A)') 'Fatal problem reading namelist from '//trim(configFileName)
+      stop
+    endif
   endif
 
   !> Get the process id for tagging the PET log
@@ -137,12 +150,20 @@ program main
   config = ESMF_ConfigCreate(rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-  ! Read parameters from mossco.cfg (overriding those in the namelist)
+  do i=1, ubound(argValueList,1)
+    write(message,'(A,I1.1,A)') 'MOSSCO command line argument ',i-1, &
+      ' is "'//trim(argValueList(i))//'"'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+  enddo
 
-  configfilename='mossco.cfg'
-  inquire(file=trim(configfilename), exist=fileIsPresent)
+  if (.not. fileIsPresent) then
+    write(message,'(A)') 'No configuration file was provided or could be read'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-  if (fileIsPresent) then
+  !> Read the remaining parameters from the ESMF resource file
+  ! or read ESMF resource files ending in .rc or .cfg
+  elseif (index(configFileName, '.cfg') > 1 .or. &
+    index(configFileName, '.rc') > 1) then
 
     write(message,'(A)')  trim(name)//' reads configuration from '//trim(configFileName)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
@@ -215,7 +236,18 @@ program main
       write(message,'(A)')  trim(name)//' found in file '//trim(configFileName)//' loglevelzero: '//trim(loglevelzero)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     endif
+  else
+    write(message,'(A)') 'Read namelist mossco_run from '//trim(configFileName)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+  !> Read the remaining parameters from the ESMF resource file
   endif
+
+  deallocate(argValueList, stat=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  deallocate(configFileNameList, stat=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   call ESMF_VMGet(vm, petCount=petCount, localPet=localPet, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -250,13 +282,14 @@ program main
   call ESMF_LogSet(logMsgList=logMsgList, flush=logFlush, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-  if (allocated(logMsgList)) deallocate(logMsgList)
+  if (allocated(logMsgList)) deallocate(logMsgList, stat=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   write(message,'(A)')  'MOSSCO '//trim(title)//" coupled system starts"
   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
   write(formatstring,'(A)') '(A,'//intformat(petCount)//',A,'//intformat(petCount)//')'
-  write(message,formatstring) 'This is processor ',localPet,' of ', petCount
+  write(message,formatstring) 'MOSSCO PET ',localPet,' of ', petCount
   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
   ! Initialize the system clock (which measures CPU time)
@@ -274,7 +307,7 @@ program main
   call ESMF_TimeGet(time1,timeStringISOFrac=timestring, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-  write(message,'(A)')  "Program starts at wall clock "//trim(timestring)
+  write(message,'(A)')  'MOSSCO starts at wall clock '//trim(timestring)
   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
   ! Create and initialize a clock from mossco_run.nml
@@ -286,8 +319,8 @@ program main
 
   runDuration = stopTime - startTime
 
-  mainClock = ESMF_ClockCreate(timeStep=runDuration, startTime=startTime, stopTime=stopTime, &
-    name=trim(title), rc=localrc)
+  mainClock = ESMF_ClockCreate(timeStep=runDuration, startTime=startTime, &
+    stopTime=stopTime, name=trim(title), rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
 !> @todo feature request sent to ESMF for supporting clock attributes (not implemented)
@@ -336,10 +369,10 @@ program main
     topClock = ESMF_ClockCreate(mainClock, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_ClockSet(topClock,name="toplevel", rc=localrc)
+    call ESMF_ClockSet(topClock, name="toplevel", rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    topComp = ESMF_GridCompCreate(name="toplevel",clock=topClock,rc=localrc)
+    topComp = ESMF_GridCompCreate(name="toplevel", clock=topClock, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   else
