@@ -1469,7 +1469,14 @@ contains
 
       if (trim(owner) == trim(creator)) then
         call ESMF_FieldBundleRemove(fieldBundle, (/itemNameList(i)/), rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+        !> @todo this fails frequently, we might need several cleanup phases?
+        !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+        if (localrc /= ESMF_SUCCESS) then
+          write(message,'(A)') trim(owner)//' could not remove from fieldBundle '
+          call MOSSCO_MessageAdd(message,' '//trim(name))
+          call MOSSCO_MessageAdd(message,' item '//trim(itemNameList(i)))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        endif
       endif
 
     enddo
