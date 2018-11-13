@@ -1415,6 +1415,9 @@ module pelagic_soil_connector
 
     if (fieldCount > 0) then
 
+      call ESMF_FieldGet(fieldList(1), rank=exportRank, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
       !> Assume Redfield at first, later overwrite with actual data,
       !> if this is found in import state
       if (exportRank == 1) then
@@ -1427,7 +1430,7 @@ module pelagic_soil_connector
           farrayPtr1 = 1.0d0/16.0d0 * convertN*detN1(RANGE1D)
         endif
 
-      elseif (rank == 2) then
+      elseif (exportRank == 2) then
         call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr2, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
