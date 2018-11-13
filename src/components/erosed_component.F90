@@ -507,6 +507,8 @@ module erosed_component
       if (istat /= 0) then
         write(message,'(A)') trim(name)//' cannot read file sedparams.txt'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        write(message,'(A)') trim(name)//' hint: check nfrac is consistent in fabm.nml, benthic.nml and sedparams.txt'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         call MOSSCO_CompExit(gridComp, localrc)
         localrc = ESMF_RC_NOT_FOUND
         return
@@ -1670,7 +1672,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       return
     end if
 endif
-  
+
   !> @todo Why do we allow localrc /= 0? (if there is no grid?)
   if (localrc == 0) then
 
