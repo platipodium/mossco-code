@@ -2,9 +2,13 @@
 
 %%fprintf('in figure %d\n',get(gcf,'Number'));
 dm=1; % eliminate borders
-statm={'mean','std_t','std-z'}; timl={'all','Mar-May','Jun-Aug','Sep-Oct','Nov-Jan'};
+statm={'mean','std_t','std-z'}; 
 ytl=[0.01 0.1 0.5 1 3 10 30 100 1E3 1E4 1E5 1E6];
 cc='kw';
+timl={'all','Mar-May','Jun-Aug','Sep-Nov','Dec-Feb'}; %% {'all','Mar-May','Jun-Aug','Sep-Oct','Nov-Jan'};
+%timl={'all','Feb-Mar','Apr-May','Jul-Sep','Oct-Dec','Jan-Mar'};
+%lonlimit =[4.6 9.1];   latlimit =[53.0 55.7];
+
 %ii=find(time>= datenum('2003-03-01','yyyy-mm-dd') & time<datenum('2004-03-01','yyyy-mm-dd') );
 sval=[];
 % layer index
@@ -15,7 +19,10 @@ if IsData
 end
 if si>1
   mi=min(ceil(4*(day1+30.25)/365.25),4);
+%  mi=min(ceil(6*(day1+30.25)/365.25),6);
   ii=find(mi==1+mod(si-1,4));
+    fprintf(' %d %d\t',si,1+mod(si-1,4));
+    fprintf(' day= %d %d\n',day1(ii(1)),day1(ii(end)));
 else
   ii=1:length(day1);
 end
@@ -30,7 +37,6 @@ if IsData
    sval(2,:,:)=squeeze(nanstd(value,1))./(squeeze(sval(1,:,:))+1E-3); % average TODO: layer depth
    length(isnan(sval(1,:,:)))
    length(isnan(sval(2,:,:)))
-
    lo=lon;
    la=lat;
 else
@@ -56,7 +62,7 @@ end
 % goes to new figure (if required)
 %vt{np-nfig}=[varshort0 tag];
 ncols=cell2mat(var{i}(8));
-figure(300+ns*5+i+IsData*50);
+gcf=figure(300+ns*5+i+IsData*50);
 set(gcf, 'visible',vis,'Color','w','Position',[0 0 150+ncols*350 470]); hold on
 
 for(ix=1:ncols)
@@ -100,7 +106,7 @@ for(ix=1:ncols)
 
 %%  colormap(ssec);  %% choose color map
  %        set(p,'MeshStyle','both','EdgeAlpha',0);
-  for ili=1:size(loc,1)*(timp~=2)*(ncols==1)
+  for ili=1:size(loc,1)*(timp~=2 & timp~=3 & timp<6)*(ncols==1)
 %    m_plot(loc(ili,2),loc(ili,1),'o','markersize',9,'MarkerFaceColor','none','Color','w','Linewidth',2);normal
  %   m_plot(lon(i_loc(ili,1),i_loc(ili,2)),lat(i_loc(ili,1),i_loc(ili,2)),'o','Color','w','MarkerSize',6,'Linewidth',2)
     for rad=6:2:14
@@ -112,11 +118,15 @@ for(ix=1:ncols)
   m_grid('box','off','color','k','backcolor','w','tickdir','out','linestyle','none','xtick',[],'ytick',[],'xticklabel','','yticklabel','');
   m_usercoast('sns_coast','color',ones(3,1)*0.5,'linewidth',1.0,'linestyle','-');
 
-  if(ix>=1 & ~IsData) %2-IsNOAH
+  if(ix==1 & ~IsData &(si<=2 | timp==8) ) %2-IsNOAH
 %% colorbar settings
     cb=colorbar;
-    title(cb,units,'FontSize',fs+2,'Color','k','FontWeight','bold');%
-    set(cb, 'Position', [x0+0.72 y0+0.08 .025 0.28],'FontSize',fs+2);
+    title(cb,units,'FontSize',fs+4,'Color','k','FontWeight','bold');%
+    if latlimit(2)-latlimit(1)>4
+      set(cb, 'Position', [x0+0.72 y0+0.08 .025 0.28],'FontSize',fs+4);
+    else
+      set(cb, 'Position', [x0+0.84 y0-0.025 .025 0.22],'FontSize',fs+2);
+    end
     if(str2num(VerMat)<8.4)
        labAtt='YTicklabels';
     else
@@ -130,7 +140,7 @@ for(ix=1:ncols)
     end
   end
   if si>=1   %[num2str(min(day1(ii))) '-' num2str(max(day1(ii))) ]
-     m_text(lonlimit(1)-0.2,latlimit(2)-0.4,timl{si},'HorizontalAlignment','left','FontSize',fs+6,'FontWeight','bold','FontName','Helvetica','Interpreter','none');
+     m_text(lonlimit(1)-0.02,latlimit(2)-0.07,timl{si},'HorizontalAlignment','left','FontSize',fs+12,'FontWeight','bold','FontName','Helvetica','Interpreter','none');
   end
   if(ix==-1) m_text(lonlimit(1)-0.5,latlimit(2)-0.12,[varshort0 ' ' tag],'HorizontalAlignment','left','FontSize',fs+4,'FontWeight','bold','FontName','Helvetica','Interpreter','none'); end
   set(axs,'FontSize',fs);
@@ -150,6 +160,5 @@ pause(0.6)
 %export_fig(fnam,'-png','-r600'); %,'PaperUnits','cm','PaperSize',[30,40],'PaperPosition',[0 0 30 40],'-r300'
 %fnam=fullfile(figdir,[fnam0 '.pdf']);
 print(gcf,'-dpng',fnam);
-)
 figure(np);
 %%fprintf('out figure %d\n',get(gcf,'Number'));
