@@ -583,81 +583,57 @@ contains
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    character(len=ESMF_MAXSTR)  :: name, message
+    character(len=ESMF_MAXSTR)  :: name, message, fieldName
     type(ESMF_Time)             :: currTime
-    integer                     :: localrc, i, itemCount
+    integer                     :: localrc, i
 
-    type(ESMF_FieldStatus_Flag)    :: fieldstatus
-    type(ESMF_StateItem_Flag)      :: itemtype
-    type(ESMF_Field)               :: exportField, importField
-    character(len=ESMF_MAXSTR), allocatable     :: itemNameList(:)
+    character(len=ESMF_MAXSTR), pointer :: includeList(:)
+    type(ESMF_Field), allocatable       :: exportFieldList(:), importFieldList(:)
+    integer(ESMF_KIND_I4)               :: exportFieldCount, importFieldCount
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
-      exportState=exportState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, &
+      importState=importState, exportState=exportState, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    !> @todo
-    !> 1. Go through  / create list of variables in export state
-    !> 2. Get these variables from import state
-    !> 2. Get the pointer to these fields
-    !> 3. Copy the values
+    allocate(includeList(4))
+    includeList(1)='Effect_of_Mbalthica_on_critical_bed_shearstress'
+    includeList(2)='Effect_of_Mbalthica_on_sediment_erodibility'
+    includeList(3)='Effect_of_MPB_on_critical_bed_shearstress'
+    includeList(4)='Effect_of_MPB_on_sediment_erodibility'
 
-    itemCount=4
+    do i=1, ubound(includeList,1)
+      includeList(i) = trim(includeList(i))//'_at_soil_surface'
+    enddo
 
-    allocate(itemNameList(itemCount))
-    itemNameList(1)='Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface'
-    itemNameList(2)='Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface'
-    itemNameList(3)='Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface'
-    itemNameList(4)='Effect_of_MPB_on_sediment_erodibility_at_soil_surface'
+    call MOSSCO_StateGet(exportState, exportFieldList, &
+      fieldCount=exportFieldCount, include=includeList, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    do i=1,itemCount
+    do i=1, exportFieldCount
 
-      call ESMF_StateGet(exportState, trim(itemNameList(i)), itemType=itemType, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc,   endflag=ESMF_END_ABORT)
-      if (itemType /= ESMF_STATEITEM_FIELD) cycle
+      call ESMF_FieldGet(exportFieldList(i), name=fieldName, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_StateGet(exportState, trim(itemNameList(i)), field=exportField, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc,   endflag=ESMF_END_ABORT)
+      call MOSSCO_StateGet(importState, importFieldList, &
+        fieldCount=importFieldCount, itemSearch=trim(fieldName), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_StateGet(importState, trim(itemNameList(i)), itemType=itemType, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc,   endflag=ESMF_END_ABORT)
-      if (itemType /= ESMF_STATEITEM_FIELD) then
-        write(message,'(A)') trim(name)//' skipped hotstart for item '//trim(itemNameList(i))
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        cycle
-      endif
+      if (importFieldCount < 1) cycle
 
-      call ESMF_StateGet(importState, trim(itemNameList(i)), field=importField, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc,   endflag=ESMF_END_ABORT)
-      call ESMF_FieldGet(importField, status=fieldstatus, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc,   endflag=ESMF_END_ABORT)
+      call MOSSCO_FieldCopy(exportFieldList(i), importFieldList(1), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (fieldstatus /= ESMF_FIELDSTATUS_COMPLETE) then
-        write(message,'(A)') trim(name)//' skipped hotstart for incomplete field'
-        call MOSSCO_FieldString(importField, message)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
-        cycle
-      endif
-
-      !@todo implement MOSSCO_FieldComplete(importField, exportField, rc=localrc)
-      !! implement call MOSSCO_FieldCopyValues(importField, exportField, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    end do
-
-    if (allocated(itemNameList)) deallocate(itemNameList)
+      write(message,'(A)') trim(name)//' hotstarted'
+      call MOSSCO_FieldString(exportFieldList(i), message)
+      call MOSSCO_MessageAdd(message,' from')
+      call MOSSCO_FieldString(importFieldList(1), message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    enddo
 
     call MOSSCO_CompExit(gridComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine ReadRestart
 
