@@ -3334,7 +3334,7 @@ end subroutine MOSSCO_FieldCopyAttribute
     integer(ESMF_KIND_I4), optional :: rc
 
     integer(ESMF_KIND_I4)           :: localRc, i, j, maxDigits, count, itemCount
-    character(len=ESMF_MAXPATHLEN)  :: string, message 
+    character(len=ESMF_MAXPATHLEN)  :: string, message
     character(len=ESMF_MAXSTR)      :: name, attributeName, formatString
     integer(ESMF_KIND_I4)           :: totalLWidth(7), totalUWidth(7)
     type(ESMF_TypeKind_Flag)        :: typeKind
@@ -3446,7 +3446,7 @@ end subroutine MOSSCO_FieldCopyAttribute
         do j=2, itemCount-1
           call MOSSCO_MessageAdd(message,', '//trim(intString(integer8ValueList(1))))
         enddo
-        
+
         deallocate(integer8ValueList)
       elseif (typekind==ESMF_TYPEKIND_R4) then
         call MOSSCO_MessageAdd(message,' (R4)')
@@ -3785,6 +3785,7 @@ end subroutine MOSSCO_FieldCopyAttribute
     integer(ESMF_KIND_I4)           :: rc_, localrc, ubnd3(3), lbnd3(3), i
     integer(ESMF_KIND_I4)           :: ubnd2(2), lbnd2(2), rank2, rank3
     integer(ESMF_KIND_I4), allocatable  :: indexMask_(:)
+    integer(ESMF_KIND_I4)           :: gubnd3(3), glbnd3(3), gubnd2(2), glbnd2(2)
 
     type(ESMF_Grid)                 :: grid2, grid3
     character(ESMF_MAXSTR)          :: name2, name3, message, operator_, owner_
@@ -3904,11 +3905,18 @@ end subroutine MOSSCO_FieldCopyAttribute
 
     if (isPresent) then
       call ESMF_GridGetItem(grid3, ESMF_GRIDITEM_MASK, &
-      staggerloc=staggerloc, farrayPtr=gridmask3, rc=localrc)
+        staggerloc=staggerloc, farrayPtr=gridmask3, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call ESMF_GridGetItemBounds(grid3, ESMF_GRIDITEM_MASK,  &
+        staggerloc=staggerLoc, localDE=0, &
+        exclusiveLBound=glbnd3, exclusiveUBound=gubnd3, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       if (associated(mask3)) deallocate(mask3)
       allocate(mask3(RANGE33D))
-      mask3 = gridmask3
+      mask3(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2),lbnd3(3):ubnd3(3)) &
+        = gridmask3(glbnd3(1):gubnd3(1),glbnd3(2):gubnd3(2),glbnd3(3):gubnd3(3))
     else
       if (associated(mask3)) deallocate(mask3)
       allocate(mask3(RANGE33D))
