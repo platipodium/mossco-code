@@ -44,18 +44,17 @@ interface MOSSCO_CompEntry
     module procedure MOSSCO_GridCompEntry
 end interface
 
+!> An interface is not allowed for these ESMF routines
+public MOSSCO_GridCompFinalize
+public MOSSCO_CplCompFinalize
 
-interface MOSSCO_Finalize
-    module procedure MOSSCO_GridCompFinalize
-    module procedure MOSSCO_CplCompFinalize
-end interface
 
 public MOSSCO_CompExit
 public MOSSCO_CompEntry
 public MOSSCO_CompLog
 public MOSSCO_GridCompExitLog
 public MOSSCO_GridCompEntryLog
-public MOSSCO_Finalize
+
 
 private
 
