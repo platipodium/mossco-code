@@ -470,7 +470,8 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
       if (exportFieldCount == 0) then
 
-        call ESMF_FieldBundleAdd(exportFieldBundle, importFieldList, multiflag=.true., rc=localrc)
+        call ESMF_FieldBundleAdd(exportFieldBundle, importFieldList, &
+          multiflag=.true., rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
         write(message,'(A)') trim(name)//' added to empty fieldBundle '//trim(itemNameList(i))
@@ -1376,245 +1377,311 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 !>
 !> Complete fields that don't exist in exportState are linked there
 !> Fields that identically exist in exporState are skipped
-!> Complete fields that exist in exportState with identical attributes are overwritten
-!> Complete fields whose name matches a FieldBundles ...
-!> FieldBundles that don't exist in exportState are linked there
-!> Fields in fieldBundles that don't exist in exportState are linked there
-!> ...
-  subroutine  MOSSCO_link_fields_in_states(importState, exportState, rc)
+!> Everything that is not matched is added to a bundle
+
+  subroutine  MOSSCO_link_fields_in_states(importState, exportState, &
+    kwe, owner, rc)
 
     type(ESMF_State), intent(in)    :: importState
     type(ESMF_State), intent(inout) :: exportState
-    integer, intent(out), optional  :: rc
+    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+    character(len=*), intent(in), optional           :: owner
+    integer, intent(out), optional                   :: rc
 
-    integer                     :: localrc, rc_
-    integer(ESMF_KIND_I4)       :: i, itemCount
-    integer(ESMF_KIND_I4)       :: j, k, fieldCount, differCount
-    character (len=ESMF_MAXSTR) :: message
+    integer(ESMF_KIND_I4)       :: localrc, rc_
+    integer(ESMF_KIND_I4)       :: i, itemCount, j, k
+    integer(ESMF_KIND_I4)       :: importFieldCount, exportFieldCount
+    character (len=ESMF_MAXSTR) :: message, itemName, owner_
     character(len=ESMF_MAXSTR), dimension(:), allocatable :: itemNameList
     type(ESMF_StateItem_Flag),  dimension(:), allocatable :: itemTypeList
-    type(ESMF_Field), allocatable, dimension(:)           :: importFieldList, exportFieldList
-    type(ESMF_Field)            :: importField, exportField
+    type(ESMF_Field), allocatable, dimension(:)           :: importFieldList
+    type(ESMF_Field), allocatable, dimension(:)           :: exportFieldList
     type(ESMF_FieldBundle)      :: importFieldBundle, exportFieldBundle
     type(ESMF_StateItem_Flag)   :: exportItemType, importItemType
     type(ESMF_FieldStatus_Flag) :: exportFieldStatus, importFieldStatus
-    logical                     :: found
+    logical                     :: isPresent, verbose
 
     rc_ = ESMF_SUCCESS
+    verbose = .true.
+    owner_ = '--'
+
     if (present(rc)) rc = rc_
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
 
     call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (itemCount < 1) return
 
     call MOSSCO_Reallocate(itemTypeList, itemCount, keep=.false., rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call MOSSCO_Reallocate(itemNameList, itemCount, keep=.false., rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_StateGet(importState, itemTypeList=itemTypeList, &
       itemNameList=itemNameList, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     !! Loop over items
     do i=1, itemCount
 
       call MOSSCO_StateGetFieldList(importState, itemSearch=trim(itemNameList(i)), &
-        fieldList=importFieldList, fieldStatus=importFieldStatus, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        fieldList=importFieldList, fieldStatusList=(/ &
+        ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      call ESMF_StateGet(exportState, trim(itemNameList(i)), &
+      !> Do not link empty or gridset fields
+      if (importFieldCount < 1 ) cycle
+
+      importItemType = itemTypeList(i)
+      itemName = trim(itemNameList(i))
+
+      if (importItemType == ESMF_STATEITEM_FIELDBUNDLE) then
+        call ESMF_StateGet(importState, itemName=itemName, &
+          fieldBundle=importFieldBundle, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      endif
+
+      call ESMF_StateGet(exportState, itemName=itemName, &
         itemType=exportItemType, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      call MOSSCO_StateGetFieldList(exportState, itemSearch=trim(itemNameList(i)), &
-        fieldList=exportFieldList, fieldStatus=exportFieldStatus, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (exportItemType /= ESMF_STATEITEM_FIELDBUNDLE .and. &
+        exportItemType /= ESMF_STATEITEM_FIELD .and. &
+        exportItemType /= ESMF_STATEITEM_NOTFOUND) then
+        write(message,'(A)') trim(owner_)//' name collision linking '
+        call MOSSCO_FieldString(importFieldList(1), message)
+        if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      endif
+
+      call MOSSCO_StateGetFieldList(exportState, itemSearch=itemName, &
+        fieldList=exportFieldList, fieldStatusList=(/ESMF_FIELDSTATUS_GRIDSET, &
+        ESMF_FIELDSTATUS_COMPLETE, ESMF_FIELDSTATUS_EMPTY/), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      if (exportItemType == ESMF_STATEITEM_FIELDBUNDLE) then
+        call ESMF_StateGet(exportState, itemName, &
+          fieldBundle=exportFieldBundle, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      endif
 
       ! If the item does not exist in export state, then simply link it into the
       ! export state
-      if (exportItemType == ESMF_STATEITEM_NOTFOUND) then
+      if (exportItemType == ESMF_STATEITEM_NOTFOUND .and. &
+        importItemType == ESMF_STATEITEM_FIELD) then
 
-        if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
+        call ESMF_StateAddReplace(exportState, importFieldList(i:i), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-          ! Do not link an empty field
-          if (importfieldStatus /= ESMF_FIELDSTATUS_COMPLETE) cycle
+        write(message,'(A)') trim(owner_)//' linked over from '
+        call MOSSCO_FieldString(importFieldList(1), message)
+        if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-          call ESMF_StateAdd(exportState, importFieldList, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        cycle
 
-        elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
+      elseif (exportItemType == ESMF_STATEITEM_NOTFOUND .and. &
+        importItemType == ESMF_STATEITEM_FIELDBUNDLE) then
 
-          ! Do not link an empty fieldBundle
-          call ESMF_StateGet(importState, trim(itemNameList(i)), importFieldBundle, rc=localrc)
-          call ESMF_FieldBundleGet(importFieldBundle, fieldCount=fieldCount, rc=localrc)
-          if (fieldCount < 1) cycle
+        call ESMF_StateAddReplace(exportState, (/importFieldBundle/), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-          call ESMF_StateAdd(exportState, (/importFieldBundle/), rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        else
-          write(message,'(A)') '  cannot link to non-field or non-fieldBundle '//trim(itemNameList(i))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-        endif
+        write(message,'(A)') trim(owner_)//' linked over from '
+        call MOSSCO_FieldBundleString(importfieldBundle, message)
+        if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      elseif (exportItemType == ESMF_STATEITEM_FIELD) then
+        cycle
+      endif
 
-        if (importItemType == ESMF_STATEITEM_FIELD) then
+      !> From here on, items exist in both, first check for equal fields
+      !> and do nothing but cycle
+      if (importItemType == ESMF_STATEITEM_FIELD .and. exportItemType &
+        == ESMF_STATEITEM_FIELD) then
 
-          ! Don't do anything if the fields are identical
-          if (importFieldList(1) == exportFieldList(1)) cycle
+        if (importFieldList(1) == exportfieldList(1)) cycle
+      endif
 
-          ! Don't do anything if the import field is not complete
-          if (importFieldStatus .ne. ESMF_FIELDSTATUS_COMPLETE) cycle
+      !> Move a blocking field in export to fieldBundle
+      if (exportItemType == ESMF_STATEITEM_FIELD) then
 
-          differCount = MOSSCO_FieldAttributesIdentical(importFieldList(1), exportFieldList(1), rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_StateRemove(exportState, (/itemName/), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-          if (differCount > 0) then
-            write(message,'(A)') '  field attributes are not identical for '
-            call MOSSCO_FieldString(importFieldList(1), message)
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-          endif
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        exportFieldBundle = ESMF_FieldBundleCreate(name=itemName, &
+          multiflag=.true., rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-          ! if (exportFieldStatus /= ESMF_FIELDSTATUS_EMPTY) then
-          !   if (MOSSCO_FieldGeometryConformal(importFieldList(1), exportFieldList(1), rc=localrc) > 0) then
-          !     write(message,'(A)') '  field geometry not conformal for '
-          !     call MOSSCO_FieldString(importFieldList(1), message)
-          !     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-          !     cycle
-          !   endif
-          ! endif
-          call MOSSCO_FieldCopyAttributes(importField, exportField, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_FieldBundleAdd(exportfieldBundle, exportFieldList(1:1), &
+          multiflag=.true., rc=localrc)
 
-          call ESMF_StateAddReplace(exportState,(/importField/), rc=localrc)
-          write(message,'(A)') '    replaced '
-          call MOSSCO_FieldString(exportField, message)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-          write(message,'(A)') '    with '
-          call MOSSCO_FieldString(importField, message)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        call ESMF_StateAddReplace(exportState, (/exportFieldBundle/), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-        elseif (itemTypeList(i)==ESMF_STATEITEM_FIELDBUNDLE) then
-          write(message,'(A)') '  not implemented: link fieldBundle to field '//trim(itemNameList(i))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        exportItemType = ESMF_STATEITEM_FIELDBUNDLE
 
-        else
-          write(message,'(A)') '  cannot link non-field or non-fieldBundle '//trim(itemNameList(i))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-        endif
+        write(message,'(A)') trim(owner_)//' moved to  bundle  '
+        call MOSSCO_FieldString(exportfieldList(1), message)
+        if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      elseif (exportItemType == ESMF_STATEITEM_FIELDBUNDLE) then
+      endif
 
-        if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
+      do j = 1, importFieldCount
 
-        elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
+        isPresent = .false.
 
-          if (size(importFieldList) < 1) cycle
+        do k = 1, exportFieldCount
+          if (importFieldList(j) /= exportFieldList(k)) cycle
+          isPresent = .true.
+          exit
+        enddo
 
-          call ESMF_StateGet(exportState, trim(itemNameList(i)), exportFieldBundle, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        !> Skip existing fields
+        if (isPresent) cycle
 
-          if (size(exportFieldList) < 1) then
-            call ESMF_FieldBundleAdd(exportFieldBundle, importFieldList, multiflag=.true., rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-            cycle
-          endif
+        call ESMF_FieldBundleAdd(exportFieldBundle, importFieldList(j:j), &
+          multiflag=.true., rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-          do j=lbound(importFieldList,1), ubound(importFieldList,1)
+        write(message,'(A)') trim(owner_)//' added to bundle  '
+        call MOSSCO_FieldString(importfieldList(j), message)
+        if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-            ! Test for finding an identical field, if found, then skip
-            ! this field, as it is already there
-            found=.false.
-            do k=lbound(exportFieldList,1), ubound(exportFieldList,1)
-              if (importFieldList(j) == exportFieldList(k)) then
-                found = .true.
-                exit
-              endif
-            enddo
-            if (found) cycle
+      enddo
 
-            ! Test for finding a field with identical properties.
-            found=.false.
-            differCount = 0
-
-            do k=lbound(exportFieldList,1), ubound(exportFieldList,1)
-              differCount = MOSSCO_FieldAttributesIdentical(importFieldList(j), exportFieldList(k), rc=localrc)
-              if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-                call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-              if (differCount == 0) then
-                found = .true.
-                exit
-              endif
-            enddo
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-            if (found) then
-              ! If found then replace
-              write(message,'(A)') '  replaced '//trim(itemNameList(i))//' in bundle'
-              exportFieldList(k)=importFieldList(j)
-            else
-              ! else add this field
-              call MOSSCO_Reallocate(exportFieldList, size(exportFieldList) + 1, keep=.true., rc=localrc)
-              if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-                call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-              exportFieldList(size(exportFieldList)) = importFieldList(j)
-
-              write(message,'(A)') '  added '//trim(itemNameList(i))//' to bundle'
-
-            endif
-
-            call ESMF_FieldBundleReplace(exportFieldBundle, exportFieldList, multiflag=.true., rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-          enddo ! loop over importFieldList
-        else ! importItemType
-          write(message,'(A)') '  cannot link  non-field, non-fieldBundle import item '//trim(itemNameList(i))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-        endif ! importItemType
-      else
-        write(message,'(A)') '  cannot link  non-field, non-fieldBundle export item '//trim(itemNameList(i))
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-      endif ! exportItemType
+      !     differCount = MOSSCO_FieldAttributesIdentical(importFieldList(1), exportFieldList(1), rc=localrc)
+      !     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      !       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !
+      !     if (differCount > 0) then
+      !       write(message,'(A)') '  field attributes are not identical for '
+      !       call MOSSCO_FieldString(importFieldList(1), message)
+      !       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      !     endif
+      !     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      !       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !
+      !     ! if (exportFieldStatus /= ESMF_FIELDSTATUS_EMPTY) then
+      !     !   if (MOSSCO_FieldGeometryConformal(importFieldList(1), exportFieldList(1), rc=localrc) > 0) then
+      !     !     write(message,'(A)') '  field geometry not conformal for '
+      !     !     call MOSSCO_FieldString(importFieldList(1), message)
+      !     !     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      !     !     cycle
+      !     !   endif
+      !     ! endif
+      !     call MOSSCO_FieldCopyAttributes(importField, exportField, rc=localrc)
+      !     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      !       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !
+      !     call ESMF_StateAddReplace(exportState,(/importField/), rc=localrc)
+      !     write(message,'(A)') '    replaced '
+      !     call MOSSCO_FieldString(exportField, message)
+      !     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      !     write(message,'(A)') '    with '
+      !     call MOSSCO_FieldString(importField, message)
+      !     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      !
+      !   elseif (itemTypeList(i)==ESMF_STATEITEM_FIELDBUNDLE) then
+      !     write(message,'(A)') '  not implemented: link fieldBundle to field '//trim(itemNameList(i))
+      !     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      !
+      !   else
+      !     write(message,'(A)') '  cannot link non-field or non-fieldBundle '//trim(itemNameList(i))
+      !     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      !   endif
+      !
+      ! elseif (exportItemType == ESMF_STATEITEM_FIELDBUNDLE) then
+      !
+      !   if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
+      !
+      !   elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
+      !
+      !     if (size(importFieldList) < 1) cycle
+      !
+      !     call ESMF_StateGet(exportState, trim(itemNameList(i)), exportFieldBundle, rc=localrc)
+      !     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      !       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !
+      !     if (size(exportFieldList) < 1) then
+      !       call ESMF_FieldBundleAdd(exportFieldBundle, importFieldList, multiflag=.true., rc=localrc)
+      !       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      !         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !       cycle
+      !     endif
+      !
+      !     do j=lbound(importFieldList,1), ubound(importFieldList,1)
+      !
+      !       ! Test for finding an identical field, if found, then skip
+      !       ! this field, as it is already there
+      !       found=.false.
+      !       do k=lbound(exportFieldList,1), ubound(exportFieldList,1)
+      !         if (importFieldList(j) == exportFieldList(k)) then
+      !           found = .true.
+      !           exit
+      !         endif
+      !       enddo
+      !       if (found) cycle
+      !
+      !       ! Test for finding a field with identical properties.
+      !       found=.false.
+      !       differCount = 0
+      !
+      !       do k=lbound(exportFieldList,1), ubound(exportFieldList,1)
+      !         differCount = MOSSCO_FieldAttributesIdentical(importFieldList(j), exportFieldList(k), rc=localrc)
+      !         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      !           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !
+      !         if (differCount == 0) then
+      !           found = .true.
+      !           exit
+      !         endif
+      !       enddo
+      !       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      !         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !
+      !       if (found) then
+      !         ! If found then replace
+      !         write(message,'(A)') '  replaced '//trim(itemNameList(i))//' in bundle'
+      !         exportFieldList(k)=importFieldList(j)
+      !       else
+      !         ! else add this field
+      !         call MOSSCO_Reallocate(exportFieldList, size(exportFieldList) + 1, keep=.true., rc=localrc)
+      !         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      !           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !
+      !         exportFieldList(size(exportFieldList)) = importFieldList(j)
+      !
+      !         write(message,'(A)') '  added '//trim(itemNameList(i))//' to bundle'
+      !
+      !       endif
+      !
+      !       call ESMF_FieldBundleReplace(exportFieldBundle, exportFieldList, multiflag=.true., rc=localrc)
+      !       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      !         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !
+      !       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      !     enddo ! loop over importFieldList
+      !   else ! importItemType
+      !     write(message,'(A)') '  cannot link  non-field, non-fieldBundle import item '//trim(itemNameList(i))
+      !     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      !   endif ! importItemType
+      ! else
+      !   write(message,'(A)') '  cannot link  non-field, non-fieldBundle export item '//trim(itemNameList(i))
+      !   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      ! endif ! exportItemType
     enddo ! importItemCount
 
     call MOSSCO_Reallocate(importFieldList, 0, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call MOSSCO_Reallocate(exportFieldList, 0, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call MOSSCO_Reallocate(itemTypeList, 0, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call MOSSCO_Reallocate(itemNameList, 0, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   end subroutine MOSSCO_link_fields_in_states
 
