@@ -724,7 +724,7 @@ subroutine MOSSCO_GridString(grid, message, kwe, length, options, staggerLoc, rc
     call MOSSCO_MessageAdd(message, ' ['//string)
     call MOSSCO_MessageAdd(message, ']'//name)
   else
-    call MOSSCO_MessageAdd(message,name)
+    call MOSSCO_MessageAdd(message,' '//name)
   endif
 
   call ESMF_GridGet(grid, rank=rank, rc=localrc)

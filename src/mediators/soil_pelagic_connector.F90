@@ -235,7 +235,7 @@ end type spVariable
 
     call MOSSCO_StateGet(importState, fieldList, &
       itemSearch='mole_concentration_of_phosphate_upward_flux_at_soil_surface', &
-      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      fieldCount=fieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount /= 1) then
@@ -262,7 +262,7 @@ end type spVariable
 
     call MOSSCO_StateGet(importState, fieldList, &
       itemSearch='mole_concentration_of_nitrate_upward_flux_at_soil_surface', &
-      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      fieldCount=fieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount /= 1) then
@@ -287,7 +287,7 @@ end type spVariable
 
     call MOSSCO_StateGet(importState, fieldList, &
       itemSearch='mole_concentration_of_ammonium_upward_flux_at_soil_surface', &
-      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      fieldCount=fieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount /= 1) then
@@ -321,7 +321,7 @@ end type spVariable
 
     call MOSSCO_StateGet(exportState, fieldList, &
       include=includeList, verbose=verbose, &
-      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      fieldCount=fieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount > 0) then
@@ -377,7 +377,7 @@ end type spVariable
 
     call MOSSCO_StateGet(exportState, fieldList, &
       include=includeList, verbose=verbose, &
-      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      fieldCount=fieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount > 0) then
@@ -425,7 +425,7 @@ end type spVariable
 
     call MOSSCO_StateGet(exportState, fieldList, &
       include=includeList, verbose=verbose, &
-      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      fieldCount=fieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount > 0) then
@@ -494,7 +494,7 @@ end type spVariable
 
     call MOSSCO_StateGet(exportState, fieldList, &
       include=includeList, verbose=verbose, &
-      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      fieldCount=fieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount > 0 ) then
@@ -541,7 +541,7 @@ end type spVariable
     !> Now on to oxygen and odu
     call MOSSCO_StateGet(importState, fieldList, &
       itemSearch='dissolved_oxygen_upward_flux_at_soil_surface', &
-      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      fieldCount=fieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount /= 1) then
@@ -566,7 +566,7 @@ end type spVariable
 
     call MOSSCO_StateGet(importState, fieldList, &
       itemSearch='dissolved_reduced_substances_upward_flux_at_soil_surface', &
-      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      fieldCount=fieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount /= 1) then
@@ -598,7 +598,7 @@ end type spVariable
 
     call MOSSCO_StateGet(exportState, fieldList, &
       include=includeList, verbose=verbose, &
-      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      fieldCount=fieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount > 0 ) then
@@ -625,7 +625,7 @@ end type spVariable
 
     call MOSSCO_StateGet(exportState, fieldList, &
       include=includeList, verbose=verbose, &
-      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      fieldCount=fieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount > 0 ) then
@@ -738,7 +738,7 @@ end type spVariable
 
     call MOSSCO_StateGet(exportState, fieldList, &
       include=includeList, &
-      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      fieldCount=fieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount == 1) then
@@ -808,7 +808,7 @@ end type spVariable
     !> Now on to detritus, deal with carbon first
     call MOSSCO_StateGet(exportState, fieldList, &
       itemSearch='Detritus_Carbon_detC_upward_flux_at_soil_surface', &
-      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      fieldCount=fieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !> Only if carbon is needed do we consider detritus carbon
@@ -885,7 +885,7 @@ end type spVariable
 
     call MOSSCO_StateGet(exportState, fieldList, &
       include=includeList, &
-      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      fieldCount=fieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount == 1) then

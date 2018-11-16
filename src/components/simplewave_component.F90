@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF component for simplewave
 !!
 !! This computer program is part of MOSSCO.
-!! @copyright Copyright 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
+!! @copyright 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 !! @author Knut Klingbeil <knut.klingbeil@uni-hamburg.de>
 !! @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
@@ -195,7 +195,8 @@ module simplewave_component
 
       inquire(file=trim(gridFileName), exist=isPresent)
       if (isPresent) then
-        grid = ESMF_GridCreate(trim(gridFileName),ESMF_FILEFORMAT_SCRIP,(/1,1/), &
+        grid = ESMF_GridCreate(filename=trim(gridFileName), &
+          fileformat=ESMF_FILEFORMAT_SCRIP, regDecomp=(/1,1/), &
           addCornerStagger=.true., rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -210,8 +211,8 @@ module simplewave_component
     endif
 
     if (.not.hasGrid) then
-        grid = ESMF_GridCreateNoPeriDim(maxIndex=(/1,1/),coordDep1=(/1/),coordDep2=(/2/), &
-          name="simplewaveGrid2D_"//trim(name),rc=localrc)
+        grid = ESMF_GridCreateNoPeriDim(maxIndex=(/1,1/), coordDep1=(/1/), &
+          coordDep2=(/2/), name="simplewaveGrid2D_"//trim(name), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call ESMF_AttributeSet(grid,'creator',trim(name), rc=localrc)

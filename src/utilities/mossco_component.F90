@@ -44,11 +44,17 @@ interface MOSSCO_CompEntry
     module procedure MOSSCO_GridCompEntry
 end interface
 
+!> An interface is not allowed for these ESMF routines
+public MOSSCO_GridCompFinalize
+public MOSSCO_CplCompFinalize
+
+
 public MOSSCO_CompExit
 public MOSSCO_CompEntry
 public MOSSCO_CompLog
 public MOSSCO_GridCompExitLog
 public MOSSCO_GridCompEntryLog
+
 
 private
 
@@ -1765,5 +1771,125 @@ subroutine MOSSCO_GridCompStateRemoveCreated(gridComp, state, rc)
   if (present(rc)) rc = rc_
 
 end subroutine MOSSCO_GridCompStateRemoveCreated
+
+!> Provide a generic Finalize routine for all MOSSCO components,
+!> systematically and robustly cleaning up all contents of a component
+#undef ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_GridCompFinalize"
+subroutine MOSSCO_GridCompFinalize(gridComp, importState, exportState, parentClock, rc)
+
+  type(ESMF_GridComp)   :: gridComp
+  type(ESMF_State)      :: importState, exportState
+  type(ESMF_Clock)      :: parentClock
+  integer, intent(out)  :: rc
+
+  character(ESMF_MAXSTR)  :: name
+  type(ESMF_Time)         :: currTime
+  integer(ESMF_KIND_I4)   :: localrc
+  logical                 :: isPresent
+  type(ESMF_Config)       :: config
+
+  rc = ESMF_SUCCESS
+
+  call MOSSCO_CompEntry(gridComp, parentClock, name=name, &
+    importState=importState, exportState=exportState, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  call ESMF_GridCompGet(gridComp, configIsPresent=isPresent, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  if (isPresent) then
+
+    call ESMF_GridCompGet(gridComp, config=config, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_ConfigDestroy(config, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  end if
+
+  call ESMF_GridCompGet(gridComp, importStateIsPresent=isPresent, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  if (isPresent) then
+    call ESMF_StateValidate(importState, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call MOSSCO_DestroyOwn(importState, trim(name), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+  endif
+
+  call ESMF_GridCompGet(gridComp, exportStateIsPresent=isPresent, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  if (isPresent) then
+    call ESMF_StateValidate(exportState, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call MOSSCO_DestroyOwn(exportState, trim(name), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+  endif
+
+  !> @todo deal with everything that is not in states, i.e. geometries and clock
+
+  call MOSSCO_CompExit(gridComp, localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+end subroutine MOSSCO_GridCompFinalize
+
+#undef ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_CplCompFinalize"
+subroutine MOSSCO_CplCompFinalize(CplComp, importState, exportState, parentClock, rc)
+
+  type(ESMF_CplComp)    :: CplComp
+  type(ESMF_State)      :: importState, exportState
+  type(ESMF_Clock)      :: parentClock
+  integer, intent(out)  :: rc
+
+  character(ESMF_MAXSTR)  :: name, itemName, message
+  integer(ESMF_KIND_I4)   :: localrc
+  logical                 :: isPresent
+  type(ESMF_Config)       :: config
+  type(ESMF_Clock)        :: clock
+
+  rc = ESMF_SUCCESS
+
+  call MOSSCO_CompEntry(CplComp, parentClock, name=name, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  call ESMF_CplCompGet(CplComp, configIsPresent=isPresent, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  if (isPresent) then
+
+    call ESMF_CplCompGet(CplComp, config=config, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_ConfigDestroy(config, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  end if
+
+  call ESMF_CplCompGet(CplComp, clockIsPresent=isPresent, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  if (isPresent) then
+
+    call ESMF_CplCompGet(CplComp, clock=clock, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_ClockGet(clock, name=itemName, rc=localrc)
+
+    if (trim(name) == itemName(1:len_trim(name))) then
+      call ESMF_ClockDestroy(clock, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    endif
+
+  end if
+
+  call MOSSCO_CompExit(CplComp, localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+end subroutine MOSSCO_CplCompFinalize
 
 end module mossco_component

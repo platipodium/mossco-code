@@ -2,7 +2,7 @@
 !
 !  This computer program is part of MOSSCO.
 !> @copyright Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
-!> @author Hassan Nasermoaddeli, Bundesanstalt für Wasserbau
+!> @author M. Hassan Nasermoaddeli, Bundesanstalt für Wasserbau
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -435,10 +435,11 @@ module erosed_component
     !allocation of temporal variables
     allocate ( eropartmp (nfrac),tcrdeptmp(nfrac),tcrerotmp(nfrac),fractmp(nfrac), &
              & depefftmp(nfrac), depfactmp(nfrac),parfluff0tmp(nfrac), &
-             & parfluff1tmp(nfrac), tcrflufftmp(nfrac),wstmp(nfrac),spm_const(nfrac), stat =istat)
+             & parfluff1tmp(nfrac), tcrflufftmp(nfrac),wstmp(nfrac),spm_const(nfrac), stat=localrc)
 
-    if (istat /= 0) then
-      call ESMF_LogWrite('Allocation of temporal variables in InitializeP1 failed', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+    if (localrc /= 0) then
+      write(message, '(A)') trim(name)//' failed to allocate temporal variables'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
@@ -506,6 +507,8 @@ module erosed_component
       if (istat ==0.and. bedmodel ) read (UnitNr,*, iostat = istat) porosity
       if (istat /= 0) then
         write(message,'(A)') trim(name)//' cannot read file sedparams.txt'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        write(message,'(A)') trim(name)//' hint: check nfrac is consistent in fabm.nml, benthic.nml and sedparams.txt'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         call MOSSCO_CompExit(gridComp, localrc)
         localrc = ESMF_RC_NOT_FOUND
@@ -654,11 +657,11 @@ module erosed_component
       call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      write(message, '(A)') trim(name)//' created '
+      write(message, '(A)') trim(name)//' created for import'
       call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      call ESMF_StateAdd(importState,(/field/),rc=localrc)
+      call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     end do
@@ -1016,7 +1019,9 @@ module erosed_component
          end if
       end do
       if (i .ne. -1) then
-        call ESMF_LogWrite(' export to external field concentration_of_SPM_upward_flux_at_soil_surface',ESMF_LOGMSG_INFO)
+        write(message,'(A)') trim(name)// &
+        ' exports to external field concentration_of_SPM_upward_flux_at_soil_surface'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         call ESMF_FieldGet(spm_flux_fieldList(i),status=status, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -1026,7 +1031,7 @@ module erosed_component
 
           if (.not. (      all(lbound(size_classes_of_upward_flux_of_pim_at_bottom(n)%ptr) .eq. (/   1,   1/) ) &
                      .and. all(ubound(size_classes_of_upward_flux_of_pim_at_bottom(n)%ptr) .eq. (/inum,jnum/) ) ) ) then
-            call ESMF_LogWrite('invalid field bounds',ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
+            call ESMF_LogWrite('invalid field bounds',ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
             call ESMF_Finalize(endflag=ESMF_END_ABORT)
           end if
         else
@@ -1034,7 +1039,8 @@ module erosed_component
           call ESMF_Finalize(endflag=ESMF_END_ABORT)
         end if
       else
-        call ESMF_LogWrite(' export to internal field concentration_of_SPM_upward_flux_at_soil_surface',ESMF_LOGMSG_INFO)
+        write(message,'(A)') trim(name)//' expors to internal field concentration_of_SPM_upward_flux_at_soil_surface'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         !> @todo This allocation might be critical if the field has totalwidth (halo zones)
         !>        We might have to allocate with these halo zones (not until we get into trouble)
         allocate (size_classes_of_upward_flux_of_pim_at_bottom(n)%ptr(inum, jnum))
@@ -1052,10 +1058,10 @@ module erosed_component
 
        nullify(ptr_f2) !we don't need it anymore
 
-       call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
+       call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-       write(message,'(A)') trim(name)//' created'
+       write(message,'(A)') trim(name)//' created bundled '
        call MOSSCO_FieldString(field, message, options=options, rc=localrc)
        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
@@ -1079,7 +1085,7 @@ module erosed_component
     call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    write(message,'(A)') trim(name)//' created'
+    write(message,'(A)') trim(name)//' created for export '
     call MOSSCO_FieldString(field, message, options=options, rc=localrc)
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
@@ -1099,7 +1105,7 @@ module erosed_component
     call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    write(message,'(A)') trim(name)//' created'
+    write(message,'(A)') trim(name)//' created for export'
     call MOSSCO_FieldString(field, message, options=options, rc=localrc)
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
@@ -1117,7 +1123,7 @@ module erosed_component
     call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    write(message,'(A)') trim(name)//' created'
+    write(message,'(A)') trim(name)//' created for export '
     call MOSSCO_FieldString(field, message, options=options, rc=localrc)
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
@@ -1135,7 +1141,7 @@ module erosed_component
     call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    write(message,'(A)') trim(name)//' created'
+    write(message,'(A)') trim(name)//' created for export '
     call MOSSCO_FieldString(field, message, options=options, rc=localrc)
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
@@ -1155,10 +1161,10 @@ module erosed_component
     call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    write(message,'(A)') trim(name)//' created'
+    write(message,'(A)') trim(name)//' created for export '
     call MOSSCO_FieldString(field, message, options=options, rc=localrc)
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-    call ESMF_AttributeSet(field,'units',trim('g m**-3'),rc=localrc)
+    call ESMF_AttributeSet(field,'units','g.m-3',rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 !   call ESMF_AttributeSet(field,'missing_value',sed%missing_value,rc=localrc)
 !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -1166,7 +1172,7 @@ module erosed_component
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     depth_avg_spm_concentration(:,:,:)= 0.0_fp
 
-    call ESMF_StateAdd(exportState,(/field/), rc=localrc)
+    call ESMF_StateAddReplace(exportState,(/field/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     sum_depth_avg_spm_concentration(:,:) =0.0_fp
@@ -1175,7 +1181,7 @@ module erosed_component
         name='Sum_depth_average_concentration_of_SPM_in_water', rc=localrc)
     call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-    write(message,'(A)') trim(name)//' created'
+    write(message,'(A)') trim(name)//' created for export'
     call MOSSCO_FieldString(field, message, options=options, rc=localrc)
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
@@ -1230,7 +1236,8 @@ module erosed_component
     !> @todo possibly read 2D field and partition reasonably
 
     call MOSSCO_StateGetFieldList(importState, importFieldList, fieldCount=importFieldCount, &
-      itemSearch='sediment_mass_in_bed', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      itemSearch='sediment_mass_in_bed', &
+      fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (importFieldCount < 1) then
@@ -1315,7 +1322,8 @@ module erosed_component
     enddo
 
     call MOSSCO_StateGetFieldList(exportState, exportFieldList, fieldCount=exportFieldCount, &
-      itemSearch='sediment_mass_in_bed', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      itemSearch='sediment_mass_in_bed', &
+      fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (exportFieldCount < 1) then
@@ -1481,7 +1489,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           call ESMF_AttributeGet(field,'external_index',external_index, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         else
-          write(message,'(A)')  trim(name)//' did not find "external_index" attribute in field '
+          write(message,'(A)')  trim(name)//' did not find "external_index" attribute in'
           call MOSSCO_FieldString(field, message, rc=localrc)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
           external_index=1
@@ -1547,7 +1555,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       !> get sinking velocities
       call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
         itemSearch='concentration_of_SPM_z_velocity_in_water', &
-        fieldStatus=ESMF_FIELDSTATUS_COMPLETE,  rc=localrc)
+        fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/),  rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       do n=1,fieldCount
@@ -1670,7 +1678,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       return
     end if
 endif
-  
+
   !> @todo Why do we allow localrc /= 0? (if there is no grid?)
   if (localrc == 0) then
 

@@ -957,7 +957,7 @@ module regrid_coupler
     if (allocated (fieldList)) deallocate(fieldList)
 
     call MOSSCO_StateGet(state, fieldList, fieldCount=fieldCount_, &
-        fieldStatus=ESMF_FIELDSTATUS_COMPLETE, include=filterIncludeList, &
+        fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), include=filterIncludeList, &
         exclude=filterExcludeList, verbose=verbose_, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
