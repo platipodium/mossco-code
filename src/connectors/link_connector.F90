@@ -1488,7 +1488,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
         write(message,'(A)') trim(owner_)//' linked over from '
-        call MOSSCO_FieldBundleString(importfieldBundle, message)
+        !call MOSSCO_FieldBundleString(importfieldBundle, message)
         if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
         cycle
