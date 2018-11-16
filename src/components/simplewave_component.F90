@@ -146,8 +146,8 @@ module simplewave_component
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (isPresent) then
-      write(message,'(A)') trim(name)//' found grid in component'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      write(message,'(A)') trim(name)//' found grid within component'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       call ESMF_GridCompGet(gridComp, grid=grid, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -464,6 +464,17 @@ module simplewave_component
           rc = ESMF_RC_ARG_BAD
           return
         end if
+
+        if(sum(importList(i)%data, mask > 0) /= sum(importList(i)%data, mask > 0)) then
+          write(message, '(A)') trim(name)//' got invalid data in  '
+          call MOSSCO_FieldString(field, message)
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+
+          rc = ESMF_RC_ARG_OUTOFRANGE
+          call MOSSCO_CompExit(gridComp, localrc)
+          return
+        endif
+
       else
         write(message, '(A)') trim(message)//' encountered unexpected empty'
         call MOSSCO_FieldString(field, message)
@@ -482,6 +493,7 @@ module simplewave_component
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (status == ESMF_FIELDSTATUS_GRIDSET) then
+
         write(message, '(A)') trim(name)//' exports to internal field '
         call MOSSCO_FieldString(field, message)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
@@ -522,6 +534,8 @@ module simplewave_component
 
   end subroutine InitializeP2
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Run"
   subroutine Run(gridComp, importState, exportState, clock, rc)
 
     type(ESMF_GridComp)  :: gridComp
@@ -529,15 +543,15 @@ module simplewave_component
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
 
-    character(ESMF_MAXSTR) :: name
+    character(ESMF_MAXSTR) :: name, message
     type(ESMF_Time)        :: currTime
     integer                :: localrc
 
     type(ESMF_Clock)        :: myClock
     type(ESMF_Time)         :: nextTime
     real(ESMF_KIND_R8),dimension(:,:),pointer :: waveH,waveT,waveK,waveDir
-    real(ESMF_KIND_R8),dimension(:,:),pointer :: depth,windx,windy
-    real(ESMF_KIND_R8)           :: wdepth,wind,wwind
+    real(ESMF_KIND_R8),dimension(:,:),pointer :: depth, windx, windy
+    real(ESMF_KIND_R8)           :: wdepth, wind, wwind
     real(ESMF_KIND_R8),parameter :: max_depth_windwaves=30.0
     real(ESMF_KIND_R8),parameter :: kD_deepthresh = 100.0d0
     integer,dimension(2)         :: totalLBound,totalUBound
@@ -550,12 +564,36 @@ module simplewave_component
     call ESMF_GridCompGet(gridcomp, clock=myClock, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_ClockGetNextTime(clock,nextTime, rc=localrc)
+    call ESMF_ClockGetNextTime(clock, nextTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     depth   => importList(1)%data
     windx   => importList(2)%data
     windy   => importList(3)%data
+
+    if (sum(windx, mask > 0)/count(mask>0) /= sum(windx, mask > 0)/count(mask>0)) then
+      write(message,'(A)') trim(name)//' obtained invalid wind x data'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      rc = ESMF_RC_ARG_OUTOFRANGE
+      call MOSSCO_CompExit(gridComp, localrc)
+      return
+    endif
+
+    if (sum(windy, mask > 0)/count(mask>0) /= sum(windy, mask > 0)/count(mask>0)) then
+      write(message,'(A)') trim(name)//' obtained invalid wind y data'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      rc = ESMF_RC_ARG_OUTOFRANGE
+      call MOSSCO_CompExit(gridComp, localrc)
+      return
+    endif
+
+    if (sum(depth, mask > 0)/count(mask>0) /= sum(depth, mask > 0)/count(mask>0)) then
+      write(message,'(A)') trim(name)//' obtained invalid depth data'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      rc = ESMF_RC_ARG_OUTOFRANGE
+      call MOSSCO_CompExit(gridComp, localrc)
+      return
+    endif
 
     waveH   => exportList(1)%data
     waveT   => exportList(2)%data
@@ -584,6 +622,38 @@ module simplewave_component
         end if
       end do
     end do
+
+    if (sum(waveH, mask > 0)/count(mask>0) /= sum(waveH, mask > 0)/count(mask>0)) then
+      write(message,'(A)') trim(name)//' calculated invalid wave height'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      rc = ESMF_RC_ARG_OUTOFRANGE
+      call MOSSCO_CompExit(gridComp, localrc)
+      return
+    endif
+
+    if (sum(waveT, mask > 0)/count(mask>0) /= sum(waveT, mask > 0)/count(mask>0)) then
+      write(message,'(A)') trim(name)//' calculated invalid wave period'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      rc = ESMF_RC_ARG_OUTOFRANGE
+      call MOSSCO_CompExit(gridComp, localrc)
+      return
+    endif
+
+    if (sum(waveK, mask > 0)/count(mask>0) /= sum(waveK, mask > 0)/count(mask>0)) then
+      write(message,'(A)') trim(name)//' calculated invalid wave number'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      rc = ESMF_RC_ARG_OUTOFRANGE
+      call MOSSCO_CompExit(gridComp, localrc)
+      return
+    endif
+
+    if (sum(waveDir, mask > 0)/count(mask>0) /= sum(waveDir, mask > 0)/count(mask>0)) then
+      write(message,'(A)') trim(name)//' calculated invalid wave direction'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      rc = ESMF_RC_ARG_OUTOFRANGE
+      call MOSSCO_CompExit(gridComp, localrc)
+      return
+    endif
 
     call ESMF_ClockAdvance(myClock, timeStep=nextTime-currTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
