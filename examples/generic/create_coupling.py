@@ -1944,7 +1944,7 @@ fid.write('''
             realValue = realValue / ms_r8
             write(formatString,'(A)') '(A,X,'//intformat(int(realValue))//')'
             write(message, formatString, iostat=localrc) trim(message)//' with speedup ', int(realValue)
-  	    if (localrc /= ESMF_SUCCESS) then 
+            if (localrc /= ESMF_SUCCESS) then 
               write(0,*,iostat=localrc) trim(formatString), realValue, int(realValue)
               write(0,*,iostat=localrc) trim(message)
             endif
