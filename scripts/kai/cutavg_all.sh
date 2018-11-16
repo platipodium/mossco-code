@@ -41,8 +41,6 @@ $SCRDIR/catnml
 N=$(ncdump -h $fname |grep '= UNLIMITED' |cut -f2 -d'(' |cut -f1 -d' ')
 N=$[$N - 1]
 #echo 'cutting until time step ' $N
-##N=30
-=======
 #N=1218
 echo 'cutting until time step ' $N
 
