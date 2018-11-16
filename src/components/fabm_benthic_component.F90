@@ -1012,7 +1012,7 @@ module fabm_benthic_component
 
     !> get volume_flux pointer
     call MOSSCO_StateGetFieldList(importState, fieldList, itemSearch='volume_flux_in_water', &
-      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      fieldCount=fieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1373,7 +1373,8 @@ module fabm_benthic_component
         do k = 1, size(suffixList)
 
           call MOSSCO_StateGetFieldList(importState, fieldList, itemSearch=trim(prefix)//trim(suffixList(k)), &
-            fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+            fieldCount=fieldCount, &
+            fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1411,7 +1412,8 @@ module fabm_benthic_component
 
         do k = 1, size(suffixList)
           call MOSSCO_StateGetFieldList(importState, fieldList, itemSearch=trim(prefix)//trim(suffixList(k)), &
-            fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+            fieldCount=fieldCount, &
+            fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
           if (fieldCount /= 1 .and. fieldCount /= exportFieldCount ) cycle
 
           nmatch = nmatch + fieldCount
@@ -1693,7 +1695,7 @@ module fabm_benthic_component
 
       call MOSSCO_StateGetFieldList(importState, fieldList, &
         itemSearch=trim(varname)//'_flux_at_soil_surface', fieldCount=fieldCount, &
-        fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+        fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 

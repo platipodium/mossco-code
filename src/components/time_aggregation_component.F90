@@ -402,7 +402,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
       include(1)=trim(itemNameList(i))
       call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
-        include=include, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+        include=include, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (fieldCount < 1) then

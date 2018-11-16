@@ -487,7 +487,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     !> Get all fields irrespective of bundle and that satisfy include/exclude
     call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
-        fieldStatus=ESMF_FIELDSTATUS_COMPLETE, include=filterIncludeList, &
+        fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), include=filterIncludeList, &
         exclude=filterExcludeList, verbose=verbose, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -503,7 +503,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       !> We need to know whether this field occurs multiple times
       itemSearch(1)=trim(fieldName)
       call MOSSCO_StateGet(importState, itemfieldList, &
-        fieldCount=itemfieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, &
+        fieldCount=itemfieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), &
         include=itemSearch, verbose=verbose,  rc=localrc)
 
       !> Simple case: field occurs only once
@@ -562,7 +562,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         itemSearch(1)=trim(fieldNameList(i))
 
         call MOSSCO_StateGet(importState, itemfieldList, &
-          fieldCount=itemfieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, &
+          fieldCount=itemfieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), &
           include=itemSearch, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 

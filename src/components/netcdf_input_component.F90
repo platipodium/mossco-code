@@ -575,7 +575,7 @@ module netcdf_input_component
       int4=0
       ticks=-1.0
       !> @todo if the unit is months, then this routine complains as it needs a
-      !starting time. 
+      !starting time.
       select case (trim(timeUnit))
       case ('year', 'years')
         call ESMF_TimeIntervalGet(currTime-refTime, &
@@ -1113,7 +1113,7 @@ module netcdf_input_component
     ! Get all the fields in export state, including those in fieldBundles,
     ! make sure that only complete fields are obtained
     call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
-      fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !> Go through list of export variables and fill their pointers with values from the file
@@ -1479,7 +1479,7 @@ module netcdf_input_component
     ! Get all the fields in export state, including those in fieldBundles,
     ! make sure that only complete fields are obtained
     call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
-      fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !> Go through list of export variables and fill their pointers with values from the file

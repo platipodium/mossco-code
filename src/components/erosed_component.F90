@@ -1236,7 +1236,8 @@ module erosed_component
     !> @todo possibly read 2D field and partition reasonably
 
     call MOSSCO_StateGetFieldList(importState, importFieldList, fieldCount=importFieldCount, &
-      itemSearch='sediment_mass_in_bed', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      itemSearch='sediment_mass_in_bed', &
+      fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (importFieldCount < 1) then
@@ -1321,7 +1322,8 @@ module erosed_component
     enddo
 
     call MOSSCO_StateGetFieldList(exportState, exportFieldList, fieldCount=exportFieldCount, &
-      itemSearch='sediment_mass_in_bed', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      itemSearch='sediment_mass_in_bed', &
+      fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (exportFieldCount < 1) then
@@ -1553,7 +1555,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       !> get sinking velocities
       call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
         itemSearch='concentration_of_SPM_z_velocity_in_water', &
-        fieldStatus=ESMF_FIELDSTATUS_COMPLETE,  rc=localrc)
+        fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/),  rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       do n=1,fieldCount

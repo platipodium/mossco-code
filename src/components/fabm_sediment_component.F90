@@ -1119,7 +1119,7 @@ module fabm_sediment_component
     !> check for porosit
     itemName = 'porosity_at_soil_surface'
     call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
-      itemSearch=itemName, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, &
+      itemSearch=itemName, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), &
       rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -1416,7 +1416,7 @@ module fabm_sediment_component
 !    includelist(1) = 'photosynthetically_active_radiation_at_soil_surface'
 !    !includelist(2) = 'bottom_downwelling_photosynthetic_radiative_flux'
 !    call MOSSCO_StateGet(importState, fieldList=fieldList, &
-!      fieldCount=fieldCount, fieldstatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+!      fieldCount=fieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
 !    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 !    nullify(includelist)
 !

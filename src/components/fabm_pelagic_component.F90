@@ -1308,7 +1308,7 @@ module fabm_pelagic_component
     allocate(nameList(1))
     nameList(1) = 'volume_flux_in_water'
     call MOSSCO_StateGetFieldList(importState, fieldList, include=nameList, &
-      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      fieldCount=fieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount > 0) then
@@ -1722,7 +1722,8 @@ module fabm_pelagic_component
         do k = 1, size(suffixList)
 
           call MOSSCO_StateGetFieldList(importState, fieldList, itemSearch=trim(prefix)//trim(suffixList(k)), &
-            fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+            fieldCount=fieldCount, &
+            fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           if (fieldCount == 0) cycle
@@ -1756,7 +1757,8 @@ module fabm_pelagic_component
 
         do k = 1, size(suffixList)
           call MOSSCO_StateGetFieldList(importState, fieldList, itemSearch=trim(prefix)//trim(suffixList(k)), &
-            fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+            fieldCount=fieldCount, &
+            fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
           if (fieldCount /= 1 .and. fieldCount /= exportFieldCount ) cycle
 
           nmatch = nmatch + fieldCount
@@ -2165,7 +2167,7 @@ module fabm_pelagic_component
 
       call MOSSCO_StateGet(importState, fieldList, &
         itemSearch=trim(varname)//'_flux_in_water', fieldCount=fieldCount, &
-        fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+        fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       !> If the item is not found, return
