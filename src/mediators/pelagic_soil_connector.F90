@@ -267,7 +267,7 @@ module pelagic_soil_connector
 
     ! call MOSSCO_StateGet(exportState, fieldList, &
     !   itemSearch='dissolved_oxygen_upward_flux_at_soil_surface', &
-    !   fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    !   fieldCount=fieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     ! _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     !
     ! if (fieldCount /= 1) then
@@ -304,7 +304,7 @@ module pelagic_soil_connector
     !
     ! call MOSSCO_StateGet(exportState, fieldList, &
     !   itemSearch='dissolved_reduced_substances_odu_upward_flux_at_soil_surface', &
-    !   fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    !   fieldCount=fieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     ! _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     !
     ! if (fieldCount /= 1) then
@@ -1562,9 +1562,8 @@ module pelagic_soil_connector
     endif
 
     ! Dissolved inorganic matter, i.e. nitrate, ammonium or DIN
-    call MOSSCO_StateGet(importState, fieldList, itemSearchList= (/ &
-      'nitrate_in_water'/), &
-      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    call MOSSCO_StateGet(importState, fieldList, itemSearch='nitrate_in_water', &
+      fieldCount=fieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount > 0) then
@@ -1604,7 +1603,7 @@ module pelagic_soil_connector
     includeList(2) = 'DIN_in_water'
     includeList(3) = 'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water'
     call MOSSCO_StateGet(importState, fieldList, include=includeList, &
-      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      fieldCount=fieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount > 0) then
@@ -1643,7 +1642,7 @@ module pelagic_soil_connector
     includeList(1) = 'ammonium_in_water'
     includeList(2) = 'dissolved_ammonium_nh3_in_water'
     call MOSSCO_StateGet(importState, fieldList, include=includeList, &
-      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      fieldCount=fieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount > 0) then
@@ -1684,7 +1683,7 @@ module pelagic_soil_connector
 
     call MOSSCO_StateGet(exportState, fieldList, &
       itemSearch='mole_concentration_of_ammonium_at_soil_surface', &
-      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      fieldCount=fieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount /= 1) then
@@ -1907,7 +1906,7 @@ module pelagic_soil_connector
     includeList(2) = 'phosphate_in_water'
     includeList(3) = 'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water'
     call MOSSCO_StateGet(importState, fieldList, include=includeList, &
-      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      fieldCount=fieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount > 0) then
@@ -2071,9 +2070,10 @@ module pelagic_soil_connector
     logical, intent(in), optional            :: verbose
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
-    integer(ESMF_KIND_I4)               :: localrc, fieldCount
+    integer(ESMF_KIND_I4)               :: localrc, fieldCount, i
     type(ESMF_Field), allocatable       :: fieldList3(:), fieldList2(:)
     logical                             :: verbose_
+    character(len=ESMF_MAXSTR), pointer :: includeList(:)
 
     if (present(rc)) rc = ESMF_SUCCESS
     if (present(verbose)) then
@@ -2083,10 +2083,17 @@ module pelagic_soil_connector
     endif
     if (present(kwe)) verbose_ = verbose_
 
+    allocate(includeList(size(importFieldList)))
+    do i=1,ubound(importFieldList,1)
+      includeList(i) = trim(importFieldList(i))
+    enddo
+
     call MOSSCO_StateGet(importState, fieldList=fieldList3, &
-      itemSearchList=importFieldList, fieldstatus=ESMF_FIELDSTATUS_COMPLETE, &
+      include=includeList, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), &
       fieldCount=fieldCount, verbose=verbose_, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (associated(includeList)) deallocate(includeList)
 
     !> Return if import field not found
     if (fieldCount == 0) then
@@ -2122,9 +2129,10 @@ module pelagic_soil_connector
     logical, intent(in), optional            :: verbose
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
-    integer(ESMF_KIND_I4)               :: localrc, fieldCount
+    integer(ESMF_KIND_I4)               :: localrc, fieldCount, i
     type(ESMF_Field), allocatable       :: fieldList2(:), fieldList1(:)
     logical                             :: verbose_
+    character(len=ESMF_MAXSTR), pointer :: includeList(:)
 
     if (present(rc)) rc = ESMF_SUCCESS
     if (present(verbose)) then
@@ -2134,10 +2142,17 @@ module pelagic_soil_connector
     endif
     if (present(kwe)) verbose_ = verbose_
 
+    allocate(includeList(size(importFieldList)))
+    do i=1,ubound(importFieldList,1)
+      includeList(i) = trim(importFieldList(i))
+    enddo
+
     call MOSSCO_StateGet(importState, fieldList=fieldList2, &
-      itemSearchList=importFieldList, fieldstatus=ESMF_FIELDSTATUS_COMPLETE, &
+      include=includeList, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), &
       fieldCount=fieldCount, verbose=verbose_, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (associated(includeList)) deallocate(includeList)
 
     !> Return if import field not found
     if (fieldCount == 0) then

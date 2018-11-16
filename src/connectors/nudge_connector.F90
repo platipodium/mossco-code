@@ -2,7 +2,7 @@
 !> @file nudge_connector.F90
 !!
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2016 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -390,7 +390,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     endif
 
     call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
-      fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -467,14 +467,15 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
       endif
 
       call MOSSCO_StateGetFieldList(importState, importFieldList, fieldCount=importFieldCount, &
-        itemSearch=trim(itemName), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+        itemSearch=trim(itemName), &
+        fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (importFieldCount < 1) cycle
 
       call MOSSCO_StateGetFieldList(exportState, exportFieldList, fieldCount=exportFieldCount, &
-        itemSearch=trim(itemName), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+        itemSearch=trim(itemName), fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
