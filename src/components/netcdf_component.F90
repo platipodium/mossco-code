@@ -468,14 +468,15 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         write(message, '(A)')  trim(name)//' '//trim(timeString)//' cannot insert time before'
-        localrc = ESMF_RC_NOT_IMPL
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call ESMF_TimeGet(maxTime, timeStringISOFrac=timeString, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call MOSSCO_MessageAdd(message,' '//trim(timeString))
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+
+        localrc = ESMF_RC_NOT_IMPL
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         itemCount=0
       endif
