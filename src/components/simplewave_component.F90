@@ -523,7 +523,7 @@ module simplewave_component
           call ESMF_Finalize(endflag=ESMF_END_ABORT)
         end if
       else
-        write(message, '(A)') trim(message)//' encountered unexpected empty field '//trim(importList(i)%name)
+        write(message, '(A)') trim(message)//' encountered unexpected empty field '//trim(exportList(i)%name)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       end if
