@@ -42,7 +42,7 @@ function mircophyto_crit_shear_func ( Chl, inum, jnum) result (fcr_microphyto)
 
   select case (trim(Chl%units))
 
-    case ( 'mgg**-1' ) ! according to Knaapen et al (2003)
+    case ( 'mg g-1' ) ! according to Knaapen et al (2003)
 
       do j = 1, jnum
         do i = 1, inum
@@ -93,7 +93,7 @@ function Mbalthica_crit_shear_func (Mbalthica, inum, jnum) result (fcr_macrofaun
   fcr_macrofauna = 1.0
 
   select case (trim(Mbalthica%units))
-    case ( 'm**-2' ) ! according to Knaapen et al (2003)
+    case ( 'm-2' ) ! according to Knaapen et al (2003)
 
       do j = 1, jnum
         do i = 1, inum

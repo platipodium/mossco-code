@@ -42,7 +42,7 @@ function mircophyto_erodibility_func ( Chl, inum, jnum) result (g_erod_microphyt
 
   select case (trim(Chl%units))
 
-    case ( 'mgg**-1' ) ! according to Paarlberg et al (2005)
+    case ( 'mg g-1' ) ! according to Paarlberg et al (2005)
 
       do j = 1, jnum
         do i = 1, inum
@@ -95,7 +95,7 @@ function Mbalthica_erodibility_func (Mbalthica, inum, jnum)  result (g_erod_macr
   g_erod_Macrofauna = 1.0
 
   select case (trim(Mbalthica%units))
-    case ( 'm**-2' ) ! according to Paarlberg et al (2005)
+    case ( 'm-2' ) ! according to Paarlberg et al (2005)
 
       do j = 1, jnum
         do i = 1, inum

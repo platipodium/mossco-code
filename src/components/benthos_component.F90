@@ -723,11 +723,11 @@ contains
     call Macrofauna_run(Total_Bioturb, inum, jnum)
 
     if (verbose) then
-      write(message,'(A,F5.4,X,F5.4)') trim(name)// &
+      write(message,'(A,es10.3,X,es10.3)') trim(name)// &
       ' microphyto erodibility/critical shear ', &
       Micro%ErodibilityEffect, Micro%TauEffect
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      write(message,'(A,F5.4,X,F5.4)') trim(name)// &
+      write(message,'(A,es10.3,X,es10.3)') trim(name)// &
       ' macrozoo erodibility/critical shear ', &
       Total_Bioturb%ErodibilityEffect, Total_Bioturb%TauEffect
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
