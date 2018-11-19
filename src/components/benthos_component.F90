@@ -203,7 +203,7 @@ contains
                    maxIndex=(/inum,jnum/), &
                    regDecomp=(/1,1/), &
                    coordSys=ESMF_COORDSYS_SPH_DEG, &
-                   indexflag=ESMF_INDEX_GLOBAL,  &
+                   indexflag=ESMF_INDEX_DELOCAL,  &
                    name="benthos grid", &
                    coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/), &
                    coorddep2=(/2/),rc=localrc)
@@ -264,7 +264,7 @@ contains
                    maxIndex=ubnd3(1:2), &
                    regDecomp=(/1,1/), &
                    coordSys=ESMF_COORDSYS_SPH_DEG, &
-                   indexflag=ESMF_INDEX_GLOBAL,  &
+                   indexflag=ESMF_INDEX_DELOCAL,  &
                    name="benthos grid", &
                    coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/), &
                    coorddep2=(/2/),rc=localrc)
@@ -302,13 +302,14 @@ contains
       field = ESMF_FieldEmptyCreate(name=trim(importList(i)%name), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_FieldEmptySet(field, grid, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
+      call ESMF_FieldEmptySet(field, grid, staggerloc=ESMF_STAGGERLOC_CENTER, &
+        rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_AttributeSet(field,'units',trim(importList(i)%units), rc=localrc)
+      call ESMF_AttributeSet(field, 'units', trim(importList(i)%units), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_AttributeSet(field,'creator',trim(name), rc=localrc)
+      call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
@@ -335,7 +336,8 @@ contains
       field = ESMF_FieldEmptyCreate(name=trim(exportList(i)%name), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_FieldEmptySet(field, grid, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
+      call ESMF_FieldEmptySet(field, grid, staggerloc=ESMF_STAGGERLOC_CENTER, &
+        rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_AttributeSet(field,'creator',trim(name), rc=localrc)
