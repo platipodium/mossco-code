@@ -948,6 +948,27 @@ module fabm_pelagic_component
 
     enddo
 
+    if (associated(pel%par)) then
+
+      ptr_f2 => pel%par(:,:,1) !> @todo this is the center of the lowest layer
+      field = ESMF_FieldCreate(horizontal_grid, farrayPtr=ptr_f2, name= &
+        'downwelling_photosynthetic_radiative_flux_at_soil_surface', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_AttributeSet(field,'units','W m-2')
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message,'(A)') trim(name)//' created diagnostic field '
+      call MOSSCO_FieldString(field, message, rc=localrc)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+      call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    endif
+
     !> this will not work, is state_grid contains halo zones
     do n=1, size(pel%model%diagnostic_variables)
       diag => pel%diagnostic_variables(n)
