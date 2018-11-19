@@ -1,7 +1,8 @@
 !> @brief Implementation of an ESMF component that calculates benthos effects
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht, Bundesanstalt für Wasserbau
+!> @copyright Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018
+!>  Helmholtz-Zentrum Geesthacht, Bundesanstalt für Wasserbau
 !> @author M. Hassan Nasermoaddeli
 !> @author Carsten Lemmen
 !
@@ -42,13 +43,13 @@ module benthos_component
   !! @todo hn: read CF documnetation for correct name
   type(MOSSCO_VariableFArray2d),dimension(:),allocatable :: importList,exportList
   ! Dimensions (x,y,z)
-  integer(ESMF_KIND_I4),dimension(:,:),pointer           :: mask=>NULL()
-  integer                        :: lbnd(3)
+  integer(ESMF_KIND_I4),pointer   :: mask(:,:)=>NULL()
+  integer                         :: lbnd(3)
 
-  type (microphytobenthos) ,save :: Micro
-  type (BioturbationEffect),save :: Total_Bioturb
-  integer                        :: inum, jnum
-  logical                        :: forcing_from_coupler=.false.
+  type (microphytobenthos) , save :: Micro
+  type (BioturbationEffect), save :: Total_Bioturb
+  integer                         :: inum, jnum
+  logical                         :: forcing_from_coupler=.false.
 contains
 
 
@@ -217,7 +218,7 @@ contains
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       foreignGridIsPresent=.true.
-      write(message,*) trim(name)//' uses foreign grid '//trim(foreignGridFieldName)
+      write(message,'(A)') trim(name)//' uses foreign grid '//trim(foreignGridFieldName)
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
       call ESMF_StateGet(importState, trim(foreignGridFieldName), field, rc=localrc)
@@ -290,7 +291,7 @@ contains
     importList(1)%name  = 'tellina_fabula_mean_abundance'
     importList(1)%units = 'm-2'
     importList(2)%name  = 'microphytobenthos_at_soil_surface'
-    importList(2)%units = 'mg-1 g-1' ! from mgg**-1, correct?
+    importList(2)%units = 'mg g-1' ! from mgg**-1, correct?
 
      do i=1, size(importList)
 
@@ -395,8 +396,8 @@ contains
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_GridGet(grid, staggerloc=ESMF_STAGGERLOC_CENTER, &
-     localDe=0, exclusiveLBound=exclusiveLBound,exclusiveUBound=exclusiveUBound, &
-     rc=localrc)
+     localDe=0, exclusiveLBound=exclusiveLBound,  &
+     exclusiveUBound=exclusiveUBound, rc=localrc)
    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_GridGet(grid,coordDimCount=coordDimCount, coordDimMap=coordDimMap, &
@@ -461,7 +462,7 @@ contains
 
         allocate(importList(i)%data(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)))
 
-        call ESMF_FieldEmptyComplete(field,importList(i)%data,ESMF_INDEX_DELOCAL)
+        call ESMF_FieldEmptyComplete(field,importList(i)%data)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         importList(i)%data = 0.0d0
@@ -530,7 +531,7 @@ contains
       if (status.eq.ESMF_FIELDSTATUS_GRIDSET) then
         call ESMF_LogWrite(' export to internal field '//trim(exportList(i)%name),ESMF_LOGMSG_INFO)
         allocate(exportList(i)%data(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)))
-        call ESMF_FieldEmptyComplete(field,exportList(i)%data,ESMF_INDEX_DELOCAL)
+        call ESMF_FieldEmptyComplete(field,exportList(i)%data)
         exportList(i)%data = 1.0d0
       else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
         call ESMF_LogWrite(' export to external field '//trim(exportList(i)%name),ESMF_LOGMSG_INFO)
@@ -560,8 +561,6 @@ contains
     Total_Bioturb%ErodibilityEffect => exportList(3)%data
     Total_Bioturb%TauEffect         => exportList(4)%data
 
-
-
 !#define DEBUG
 #ifdef DEBUG
     call ESMF_StatePrint(exportstate, nestedFlag=.true.,rc=rc)
@@ -571,6 +570,7 @@ contains
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP2
+
 #undef  ESMF_METHOD
 #define ESMF_METHOD "ReadRestart"
   subroutine ReadRestart(gridComp, importState, exportState, parentClock, rc)
@@ -656,6 +656,13 @@ contains
     integer(ESMF_KIND_I4)  :: localrc
     logical                :: verbose
 
+    real(ESMF_KIND_R8), pointer   :: farrayPtr2(:,:) => null()
+    type(ESMF_Field), allocatable :: fieldlist(:)
+    integer(ESMF_KIND_I4)         :: fieldCount
+    type(ESMF_GeomType_Flag)      :: geomType
+    type(ESMF_Grid)               :: grid
+    logical                       :: isPresent
+
     rc = ESMF_SUCCESS
     verbose = .false.
 
@@ -667,15 +674,52 @@ contains
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_ClockGet(clock, currTime=currTime, advanceCount=advanceCount,&
-      runTimeStepCount=runtimestepcount,timeStep=timestep, rc=localrc)
+      runTimeStepCount=runtimestepcount, timeStep=timestep, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    if (advanceCount < 1) verbose = .true.
+    !if (advanceCount < 1)
+    verbose = .true.
 
-    call ESMF_TimeIntervalGet(timestep,s_r8=dt,rc=localrc)
+    call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
+      itemSearch='microphytobenthos_at_soil_surface', rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call Micro%run()
+    ! if (fieldCount > 0) then
+    !
+    !   call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr2, &
+    !     rc=localrc)
+    !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    !   if (geomType == ESMF_GEOMTYPE_GRID) then
+    !
+    !     call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, isPresent=isPresent, &
+    !       rc=localrc)
+    !     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    !     if (isPresent) then
+    !       call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=farrayPtr2, &
+    !         rc=localrc)
+    !       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    !       mask = farrayPtr2
+    !     else
+    !       mask(:,:) = 1.0
+    !     endif
+    !
+    !   endif
+    !
+    !   call Micro%set(farrayPtr2)
+      call Micro%run()
+
+    ! elseif (verbose) then
+    !   write(message,'(A)') trim(name)// &
+    !   ' obtained no information on microphytobentos'
+    !   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+    ! endif
+
+    call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
     call Macrofauna_run(Total_Bioturb, inum, jnum)
 
     if (verbose) then
@@ -689,14 +733,8 @@ contains
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     endif
 
-#ifdef DEBUG
-    write(0,*) '==== in Benthos ======'
-    write(0,*) 'Mircrophy. erodibility effect', Micro%ErodibilityEffect
-    write(0,*) 'Mircrophy. Tau effect', Micro%TauEffect
-    write(0,*) ' Macro. erodibility effect', Total_Bioturb%ErodibilityEffect
-    write(0,*) ' Macro. Critical bed Shear stress', Total_Bioturb%TauEffect
-    write(0,*)'======================'
-#endif
+    call ESMF_TimeIntervalGet(timestep,s_r8=dt,rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_ClockGet(clock, stopTime=stopTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -705,12 +743,6 @@ contains
       call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
-
-    call ESMF_StateValidate(importState, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    call ESMF_StateValidate(exportState, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_CompExit(gridComp, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
