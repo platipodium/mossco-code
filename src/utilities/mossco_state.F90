@@ -1124,11 +1124,13 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_StateGetForeignGrid"
-  subroutine MOSSCO_StateGetForeignGrid(state, grid, kwe, owner, other, &
-     attributeName, rank, totalLWidth, totalUWidth, rc)
+  subroutine MOSSCO_StateGetForeignGrid(state, geomType, kwe, owner, other, &
+     attributeName, rank, totalLWidth, totalUWidth, grid, mesh, rc)
 
     type(ESMF_State), intent(in)                  :: state
-    type(ESMF_Grid),  intent(out)                 :: grid
+    type(ESMF_GeomType_Flag), intent(out)         :: geomType
+    type(ESMF_Grid),  intent(out), optional       :: grid
+    type(ESMF_Mesh),  intent(out), optional       :: mesh
     type(ESMF_KeywordEnforcer), optional          :: kwe
     character(len=*), optional, intent(in)        :: owner
     type(ESMF_Grid), intent(out), optional        :: other
@@ -1151,7 +1153,9 @@ contains
     integer(ESMF_KIND_I4)               :: totalLWidth2(2,1), totalUWidth2(2,1)
 
     rc_ = ESMF_SUCCESS
+    owner_ = '--'
     if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
 
     attributeName_ = 'foreign_grid_field_name'
     if (present(attributeName)) attributeName_ = trim(attributeName)
@@ -1162,37 +1166,54 @@ contains
 
     call MOSSCO_StateGetFieldList(state, fieldList, fieldCount=fieldCount, &
       itemSearch=trim(attributeValue), &
-      fieldStatusList=(/ESMF_FIELDSTATUS_GRIDSET, ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
+      fieldStatusList=(/ESMF_FIELDSTATUS_GRIDSET, ESMF_FIELDSTATUS_COMPLETE/), &
+      rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (fieldCount == 0) then
-      if (present(owner)) then
-        write(message,'(A)') trim(owner)//' needs a foreign grid, which was not found.'
-      else
-        write(message,'(A)') '  needs a foreign grid, which was not found.'
-      endif
+      write(message,'(A)') trim(owner_)//' needs a foreign geometry, which was not found.'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       rc = ESMF_RC_NOT_FOUND
       return
     endif
 
-    call ESMF_FieldGet(fieldList(1), grid=grid, rc=localrc)
+    call ESMF_FieldGet(fieldList(1), geomType=geomType, grid=grid, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_GridGet(grid, rank=rank_, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-    if (present(rank)) rank = rank_
-
-    if (rank_ < 2 .or. rank_ > 3) then
-      if (present(owner)) then
-        write(message,'(A)') trim(owner)//' needs a foreign grid of rank 2 or 3'
-      else
-        write(message,'(A)') '  needs a foreign grid of rank 2 or 3'
-      endif
+    if (geomType == ESMF_GEOMTYPE_GRID .neqv. present(grid)) then
+      write(message,'(A)') trim(owner_)//' returns a grid, which is not requested'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       rc = ESMF_RC_ARG_BAD
       return
+    elseif (geomType == ESMF_GEOMTYPE_MESH .neqv. present(mesh)) then
+      write(message,'(A)') trim(owner_)//' returns a mesh, which is not requested'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      rc = ESMF_RC_ARG_BAD
+      return
+    endif
+
+    if (geomType == ESMF_GEOMTYPE_GRID) then
+
+      call ESMF_FieldGet(fieldList(1), grid=grid, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call ESMF_GridGet(grid, rank=rank_, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      if (present(rank)) rank = rank_
+
+      if (rank_ < 2 .or. rank_ > 3) then
+        write(message,'(A)') trim(owner_)//' needs a foreign grid of rank 2 or 3'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        rc = ESMF_RC_ARG_BAD
+        return
+      endif
+
+    elseif (geomType == ESMF_GEOMTYPE_MESH) then
+
+      call ESMF_FieldGet(fieldList(1), mesh=mesh, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
     endif
 
     !> Look at the zones that are present in the field but
@@ -1219,14 +1240,10 @@ contains
           totalUWidth=totalUWidth2, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       else
-          if (present(owner)) then
-            write(message,'(A)') trim(owner)//' needs a foreign grid of rank 2 or 3'
-          else
-            write(message,'(A)') '  needs a foreign grid of rank 2 or 3'
-          endif
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-          rc = ESMF_RC_ARG_BAD
-          return
+        write(message,'(A)') trim(owner_)//' needs a foreign grid of rank 2 or 3'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        rc = ESMF_RC_ARG_BAD
+        return
       endif
 
       if (rank_ == 3) then

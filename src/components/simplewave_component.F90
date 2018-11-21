@@ -133,6 +133,8 @@ module simplewave_component
     type(ESMF_Grid)        :: grid, grid2
     type(ESMF_Field)       :: field
     type(ESMF_StateItem_Flag) :: itemType
+    type(ESMF_GeomType_Flag)  :: geomType
+    type(ESMF_Mesh)           :: mesh
 
     call MOSSCO_CompEntry(gridComp, clock, name=name, currTime=currTime, &
       importState=importState, exportState=exportState, rc=localrc)
@@ -165,7 +167,8 @@ module simplewave_component
         foreignGridFieldName, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call MOSSCO_StateGetForeignGrid(importState, grid=grid, owner=trim(name), &
+      call MOSSCO_StateGetForeignGrid(importState, geomType=geomType, &
+        grid=grid, mesh=mesh, owner=trim(name), &
         attributeName='foreign_grid_field_name', totalUWidth=totalUWidth, &
         totalLWidth=totalLWidth, rank=rank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
