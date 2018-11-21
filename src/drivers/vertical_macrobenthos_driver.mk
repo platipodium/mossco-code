@@ -12,10 +12,5 @@
 TARGETS += libmossco_vertical_macrobenthos
 LIBS_TO_CLEAN += libmossco_vertical_macrobenthos.a
 
-libmossco_vertical_macrobenthos:  libmossco_vertical_macrobenthos_component
-libmossco_vertical_macrobenthos_component: prefix \
-  libmossco_vertical_macrobenthos_driver libmossco_util \
-  $(MOSSCO_LIBRARY_PATH)/libmossco_vertical_macrobenthos.a(vertical_macrobenthos_component.o)
-
-libmossco_vertical_macrobenthos_driver:
-	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
+libmossco_vertical_macrobenthos: libmossco_vertical_macrobenthos_driver
+libmossco_vertical_macrobenthos_driver: prefix libsolver $(MOSSCO_LIBRARY_PATH)/libmossco_vertical_macrobenthos.a(vertical_macrobenthos_driver.o)

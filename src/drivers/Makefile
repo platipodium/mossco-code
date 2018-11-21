@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2013, 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 # @author Richard Hofmeister <richard.hofmeister@hzg.de>
 #
@@ -281,3 +281,10 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/clm_driver.mod
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a
 	$(RM) $(EROSED_OBJS)
+
+ifneq ($(wildcard *.make),)
+  include *.make
+endif
+ifneq ($(wildcard *.mk),)
+  include *mk
+endif

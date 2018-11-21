@@ -25,6 +25,7 @@
 module vertical_macrobenthos_component
 
   use esmf
+  use vertical_macrobenthos_driver
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Finalize"
@@ -132,9 +133,11 @@ module vertical_macrobenthos_component
 
     type(ESMF_Grid)          :: grid
     type(ESMF_Mesh)          :: mesh
-    integer(ESMF_KIND_I4)    :: lbnd(3)=1, ubnd(3)=1, rank=0
+    type(ESMF_Field)         :: field
+    integer(ESMF_KIND_I4)    :: lbnd(3)=1, ubnd(3)=1, rank=0, i
     type(ESMF_GeomType_Flag) :: geomType
     logical                  :: isPresent
+    character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
       importState=importState,  exportState=exportState, rc=localrc)
@@ -206,9 +209,58 @@ module vertical_macrobenthos_component
       return
     endif
 
+    ! Advertise fields for import and export
 
-    call ESMF_StateValidate(exportState, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    ! Import
+    ! (1) speed_in_water ! Bulk absolute value of velocity in lowest layer
+    ! (2) roughness_length_at_soil_surface ! z0
+
+    allocate(itemNameList(2))
+    itemNameList(1) = 'concentration_of_particulate_organic_carbon_at_soil_surface'
+    itemNameList(2) = 'bulk_speed_at_soil_surface'
+
+    do i=lbound(itemNameList,1), ubound(itemNameList,1)
+
+      field = ESMF_FieldEmptyCreate(name=itemNameList(i), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_StateAddReplace(importState, (/field/), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message,'(A)') trim(name)//' created for import '
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    enddo
+    deallocate(itemNameList)
+
+    ! Export
+    allocate(itemNameList(2))
+    itemNameList(1) = 'depth_of_endobenthic_macrozoobenthos_at_soil_surface'
+    itemNameList(2) = 'depth_of_epiobenthic_macrozoobenthos_at_soil_surface'
+    itemNameList(3) = 'depth_of_macrozoobenthos_at_soil_surface'
+    itemNameList(4) = 'carbon_biomass_of_endobenthic_macrozoobenthos_at_soil_surface'
+    itemNameList(5) = 'carbon_biomass_of_endobenthic_macrozoobenthos_at_soil_surface'
+    itemNameList(6) = 'carbon_biomass_of_endobenthic_macrozoobenthos_at_soil_surface'
+
+    do i=lbound(itemNameList,1), ubound(itemNameList,1)
+
+      field = ESMF_FieldEmptyCreate(name=itemNameList(i), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_StateAddReplace(exportState, (/field/), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message,'(A)') trim(name)//' created for export '
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    enddo
+    deallocate(itemNameList)
 
     call MOSSCO_CompExit(gridComp, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
