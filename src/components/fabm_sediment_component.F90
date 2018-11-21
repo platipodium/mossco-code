@@ -548,8 +548,10 @@ module fabm_sediment_component
     sed1d%dt_min=dt_min
     sed1d%relative_change_min=relative_change_min
     if (_INUM_ > 0 .and. _JNUM_ > 0) then
-      sed1d%bdys   => bdys(RANGE2D,:)
-      sed1d%fluxes => fluxes(RANGE2D,:)
+      !sed1d%bdys   => bdys(RANGE2D,:)
+      !sed1d%fluxes => fluxes(RANGE2D,:)
+      sed1d%bdys   => bdys(1:1,1:1,:)
+      sed1d%fluxes => fluxes(1:1,1:1,:)
     endif
 
     ! set boundary conditions for pre-simulation
@@ -578,15 +580,21 @@ module fabm_sediment_component
     sed1d%bcup_dissolved_variables = 2
     sed1d%adaptive_solver_diagnostics = .true.
     sed1d%bioturbation_profile=0
-    if (presimulation_years.gt.0) then
+
+    if (presimulation_years .gt. 0) then
+
       do tidx=1,int(presimulation_years*365*24/(dt_spinup/3600.0_rk),kind=ESMF_KIND_I8)
         call ode_solver(sed1d,dt_spinup,ode_method)
       enddo
+
+      !> @todo this does not make sense as it is a single column!
+      if (ode_method == 2) then
+        write (message,*) trim(name)//' found minimum dt:',sed1d%last_min_dt,' at cell ',sed1d%last_min_dt_grid_cell
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
+
     endif
-    if (ode_method == 2) then
-      write (message,*) 'minimum dt:',sed1d%last_min_dt,' at cell ',sed1d%last_min_dt_grid_cell
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-    endif
+
 
     do i=lbnd(1),ubnd(1)
       do j=lbnd(2),ubnd(2)

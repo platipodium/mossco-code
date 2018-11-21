@@ -549,6 +549,8 @@ subroutine get_rhs(rhs_driver, rhs)
     else
       cumdepth = sum(rhs_driver%grid%dz(:,:,1:k-1),dim=3)  ! light is calculated at upper layer interfaces
     endif
+    !write(0,*) shape(rhs_driver%mask(:,:,k)), shape(rhs_driver%temp3d(:,:,k))
+    !write(0,*) shape(rhs_driver%bdys(:,:,1)), shape(rhs_driver%par(:,:,k))
     where (.not.rhs_driver%mask(:,:,k))
       rhs_driver%temp3d(:,:,k) = rhs_driver%bdys(:,:,1)
       rhs_driver%par(:,:,k) = rhs_driver%par_surface * exp(-cumdepth/rhs_driver%k_par)
