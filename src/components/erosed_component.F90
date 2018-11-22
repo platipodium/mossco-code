@@ -57,7 +57,7 @@ module erosed_component
 
   type(ptrarray2D),dimension(:),allocatable              :: size_classes_of_upward_flux_of_pim_at_bottom
   type(ptrarray2D)                                       :: rms_orbital_velocity, bottom_shear_stress
-  type(ptrarray2D)                                       :: bottom_shear_stress_noncoh, equilibrium_spm
+  type(ptrarray2D)                                       :: bottom_shear_stress_noncohesive, equilibrium_spm
 
   type(MOSSCO_VariableFArray2d),dimension(:),allocatable :: importList
 
@@ -223,7 +223,7 @@ module erosed_component
     character(len=ESMF_MAXSTR)    :: foreignGridFieldName
 
     integer                   :: rank
-    integer                   :: UnitNr, istat,j
+    integer                   :: lun, istat,j
     logical                   :: opnd, exst
 
     character(ESMF_MAXSTR)    :: name, message
@@ -370,17 +370,21 @@ module erosed_component
 
   !> In globaldata.nml, global parameters for density of water (rhow)
   !> and gravitational acceleration (g) can be defined
-  inquire ( file = 'globaldata.nml', exist=exst , opened =opnd, Number = UnitNr )
+  inquire ( file='globaldata.nml', exist=exst , opened=opnd, Number=lun )
 
   if (exst.and.(.not.opnd)) then
 
-    call ESMF_UtilIOUnitGet(UnitNr, rc = localrc)
+    call ESMF_UtilIOUnitGet(lun, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    open (unit = UnitNr, file = 'globaldata.nml', action = 'read ', &
-      status = 'old', delim = 'APOSTROPHE')
-    read (UnitNr, nml=globaldata, iostat = localrc)
-    close (UnitNr)
+    open (unit=lun, file='globaldata.nml', action='read ', &
+      status='old', delim='APOSTROPHE', iostat=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    read (lun, nml=globaldata, iostat = localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    close (lun, iostat=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end if
@@ -396,21 +400,21 @@ module erosed_component
   nmlb=1
   nmub = inum * jnum
 
-  inquire ( file = 'benthic.nml', exist=exst , opened=opnd, Number = UnitNr )
+  inquire ( file = 'benthic.nml', exist=exst , opened=opnd, Number = lun )
 
   if (exst.and.(.not.opnd)) then
 
-    call ESMF_UtilIOUnitGet(UnitNr, rc = localrc)
+    call ESMF_UtilIOUnitGet(lun, rc = localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    open (unit = UnitNr, file = 'benthic.nml', action = 'read ', &
+    open (unit = lun, file = 'benthic.nml', action = 'read ', &
       status = 'old', delim = 'APOSTROPHE', iostat=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    read (UnitNr, nml=benthic, iostat=localrc)
+    read (lun, nml=benthic, iostat=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    close (UnitNr)
+    close (lun)
   end if
 
   if (nmlb /= 1) then
@@ -549,56 +553,56 @@ module erosed_component
   BioEffects%ErodibilityEffect = 1.0_fp
 !write (*,*)'in Init BioEffects%TauEffect ',BioEffects%TauEffect
 
-  inquire ( file = 'sedparams.txt', exist=exst , opened =opnd, Number = UnitNr )
+  inquire ( file = 'sedparams.txt', exist=exst , opened =opnd, Number = lun )
 
   if (exst.and.(.not.opnd)) then
-      call ESMF_UtilIOUnitGet(UnitNr, rc = localrc)
+      call ESMF_UtilIOUnitGet(lun, rc = localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      open (unit = UnitNr, file = 'sedparams.txt', action = 'read ', status = 'old')
+      open (unit = lun, file = 'sedparams.txt', action = 'read ', status = 'old')
 
       write(message,'(A)')  trim(name)//' reads configuration from sedparams.txt'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
  ! non-cohesive sediment
-      read (UnitNr,*, iostat = istat) (sedtyp(i),i=1,nfrac)
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) ( cdryb(i), i=1, nfrac)
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) (rhosol(i), i=1, nfrac)
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) (sedd50(i), i=1, nfrac)
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) (sedd90(i), i=1, nfrac)
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) (fractmp(i), i=1, nfrac)
-      !if (istat ==0 ) read (UnitNr,*, iostat = istat) ((frac(i,j), i=1, nfrac), j=nmlb,nmub)    ! fraction of each sedimt class from the whole
+      read (lun,*, iostat = istat) (sedtyp(i),i=1,nfrac)
+      if (istat ==0 ) read (lun,*, iostat = istat) ( cdryb(i), i=1, nfrac)
+      if (istat ==0 ) read (lun,*, iostat = istat) (rhosol(i), i=1, nfrac)
+      if (istat ==0 ) read (lun,*, iostat = istat) (sedd50(i), i=1, nfrac)
+      if (istat ==0 ) read (lun,*, iostat = istat) (sedd90(i), i=1, nfrac)
+      if (istat ==0 ) read (lun,*, iostat = istat) (fractmp(i), i=1, nfrac)
+      !if (istat ==0 ) read (lun,*, iostat = istat) ((frac(i,j), i=1, nfrac), j=nmlb,nmub)    ! fraction of each sedimt class from the whole
  ! cohesive sediment
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) (eropartmp(i), i=1, nfrac)
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) (tcrdeptmp(i), i=1, nfrac)
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) (tcrerotmp(i), i=1, nfrac)
-!      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((eropar(i,j), i=1, nfrac), j=nmlb,nmub)   ! erosion parameter for mud [kg/m2/s]
-!      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrdep(i,j), i=1, nfrac), j=nmlb,nmub)   ! critical bed shear stress for mud sedimentation [N/m2]
-!      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrero(i,j), i=1, nfrac), j=nmlb,nmub)   ! critical bed shear stress for mud erosion [N/m2]
+      if (istat ==0 ) read (lun,*, iostat = istat) (eropartmp(i), i=1, nfrac)
+      if (istat ==0 ) read (lun,*, iostat = istat) (tcrdeptmp(i), i=1, nfrac)
+      if (istat ==0 ) read (lun,*, iostat = istat) (tcrerotmp(i), i=1, nfrac)
+!      if (istat ==0 ) read (lun,*, iostat = istat) ((eropar(i,j), i=1, nfrac), j=nmlb,nmub)   ! erosion parameter for mud [kg/m2/s]
+!      if (istat ==0 ) read (lun,*, iostat = istat) ((tcrdep(i,j), i=1, nfrac), j=nmlb,nmub)   ! critical bed shear stress for mud sedimentation [N/m2]
+!      if (istat ==0 ) read (lun,*, iostat = istat) ((tcrero(i,j), i=1, nfrac), j=nmlb,nmub)   ! critical bed shear stress for mud erosion [N/m2]
 
  ! cohesive sediment
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) pmcrittmp
-      !if (istat ==0 ) read (UnitNr,*, iostat = istat) (pmcrit (i), i = nmlb,nmub)
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) betam                                      ! power factor for adaptation of critical bottom shear stress [-]
+      if (istat ==0 ) read (lun,*, iostat = istat) pmcrittmp
+      !if (istat ==0 ) read (lun,*, iostat = istat) (pmcrit (i), i = nmlb,nmub)
+      if (istat ==0 ) read (lun,*, iostat = istat) betam                                      ! power factor for adaptation of critical bottom shear stress [-]
  ! sediment transport formulation
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) alf1                                       ! calibration coefficient van Rijn (1984) [-]
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) rksc
+      if (istat ==0 ) read (lun,*, iostat = istat) alf1                                       ! calibration coefficient van Rijn (1984) [-]
+      if (istat ==0 ) read (lun,*, iostat = istat) rksc
  ! fluff layer
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) (depefftmp(i), i=1, nfrac)
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) (depfactmp(i), i=1, nfrac)
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) (parfluff0tmp(i), i=1, nfrac)
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) (parfluff1tmp(i), i=1, nfrac)
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) (tcrflufftmp(i), i=1, nfrac)
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) (wstmp(i), i=1, nfrac)
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) (spm_const(i), i=1, nfrac)
-!      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((depeff(i,j), i=1, nfrac), j=nmlb,nmub)   ! deposition efficiency [-]
-!      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((depfac(i,j), i=1, nfrac), j=nmlb,nmub)   ! deposition factor (flufflayer=2) [-]
-!      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((parfluff0(i,j), i=1, nfrac), j=nmlb,nmub)! erosion parameter 1 [s/m]
-!      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((parfluff1(i,j), i=1, nfrac), j=nmlb,nmub)! erosion parameter 2 [ms/kg]
-!      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrfluff(i,j), i=1, nfrac), j=nmlb,nmub) ! critical bed shear stress for fluff layer erosion [N/m2]
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) wave
-      if (istat ==0.and. bedmodel ) read (UnitNr,*, iostat = istat) init_thick
-      if (istat ==0.and. bedmodel ) read (UnitNr,*, iostat = istat) porosity
+      if (istat ==0 ) read (lun,*, iostat = istat) (depefftmp(i), i=1, nfrac)
+      if (istat ==0 ) read (lun,*, iostat = istat) (depfactmp(i), i=1, nfrac)
+      if (istat ==0 ) read (lun,*, iostat = istat) (parfluff0tmp(i), i=1, nfrac)
+      if (istat ==0 ) read (lun,*, iostat = istat) (parfluff1tmp(i), i=1, nfrac)
+      if (istat ==0 ) read (lun,*, iostat = istat) (tcrflufftmp(i), i=1, nfrac)
+      if (istat ==0 ) read (lun,*, iostat = istat) (wstmp(i), i=1, nfrac)
+      if (istat ==0 ) read (lun,*, iostat = istat) (spm_const(i), i=1, nfrac)
+!      if (istat ==0 ) read (lun,*, iostat = istat) ((depeff(i,j), i=1, nfrac), j=nmlb,nmub)   ! deposition efficiency [-]
+!      if (istat ==0 ) read (lun,*, iostat = istat) ((depfac(i,j), i=1, nfrac), j=nmlb,nmub)   ! deposition factor (flufflayer=2) [-]
+!      if (istat ==0 ) read (lun,*, iostat = istat) ((parfluff0(i,j), i=1, nfrac), j=nmlb,nmub)! erosion parameter 1 [s/m]
+!      if (istat ==0 ) read (lun,*, iostat = istat) ((parfluff1(i,j), i=1, nfrac), j=nmlb,nmub)! erosion parameter 2 [ms/kg]
+!      if (istat ==0 ) read (lun,*, iostat = istat) ((tcrfluff(i,j), i=1, nfrac), j=nmlb,nmub) ! critical bed shear stress for fluff layer erosion [N/m2]
+      if (istat ==0 ) read (lun,*, iostat = istat) wave
+      if (istat ==0.and. bedmodel ) read (lun,*, iostat = istat) init_thick
+      if (istat ==0.and. bedmodel ) read (lun,*, iostat = istat) porosity
       if (istat /= 0) then
         write(message,'(A)') trim(name)//' cannot read file sedparams.txt'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -609,7 +613,7 @@ module erosed_component
         return
       endif
 
-      close (UnitNr)
+      close (lun)
 
       do i =nmlb, nmub
         eropar   (:,i) = eropartmp   (:)
@@ -1242,7 +1246,7 @@ module erosed_component
       name='rms_orbital_velocity_at_soil_surface', rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
+    call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     write(message,'(A)') trim(name)//' created for export '
@@ -1259,7 +1263,7 @@ module erosed_component
     bottom_shear_stress%ptr(:,:)= 0.0_fp
 
     field = ESMF_FieldCreate(grid, farrayPtr=bottom_shear_stress%ptr, &
-            name='shear_stress_at_soil_surface', rc=localrc)
+            name='shear_stress_cohesive_at_soil_surface', rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
@@ -1272,23 +1276,49 @@ module erosed_component
     call ESMF_StateAdd(exportState,(/field/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    allocate (bottom_shear_stress_noncoh%ptr(inum, jnum))
+    !> Bottom shear stress for cohesive sediments
+    if (any(sedtyp(1:nfrac) == 2)) then
 
-    bottom_shear_stress_noncoh%ptr(:,:)= 0.0_fp
+      allocate (bottom_shear_stress%ptr(inum,jnum))
+      bottom_shear_stress%ptr(:,:)= 0.0_fp
 
-    field = ESMF_FieldCreate(grid, farrayPtr=bottom_shear_stress_noncoh%ptr, &
-      name='shear_stress_at_soil_surface_noncohesive', rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      field = ESMF_FieldCreate(grid, &
+        farrayPtr=bottom_shear_stress%ptr, &
+        name='shear_stress_cohesive_at_soil_surface', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    write(message,'(A)') trim(name)//' created for export '
-    call MOSSCO_FieldString(field, message, options=options, rc=localrc)
-    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+      write(message,'(A)') trim(name)//' created for export '
+      call MOSSCO_FieldString(field, message, options=options, rc=localrc)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
-    call ESMF_StateAdd(exportState,(/field/), rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      call ESMF_StateAdd(exportState,(/field/), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    endif
+
+    !> Bottom shear stress for non-cohesive sediments
+    if (any(sedtyp(1:nfrac) == 1)) then
+
+      allocate (bottom_shear_stress_noncohesive%ptr(inum,jnum))
+      bottom_shear_stress_noncohesive%ptr(:,:)= 0.0_fp
+
+      field = ESMF_FieldCreate(grid, &
+        farrayPtr=bottom_shear_stress_noncohesive%ptr, &
+        name='shear_stress_noncohesive_at_soil_surface', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message,'(A)') trim(name)//' created for export '
+      call MOSSCO_FieldString(field, message, options=options, rc=localrc)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+      call ESMF_StateAdd(exportState,(/field/), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    endif
 
     allocate (equilibrium_spm%ptr(inum, jnum))
 
@@ -2078,77 +2108,54 @@ endif
     end do
   end do
 
-  call ESMF_StateGet(exportState, 'shear_stress_at_soil_surface', itemType=itemType, &
-    rc=localrc)
+  !> Provide optional output of shear stress
+  call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-  if (itemType /= ESMF_STATEITEM_FIELD) then
-    write(message, '(A)') trim(name)//' did not find field shear_stress_at_soil_surface'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-  endif
-
-  call ESMF_StateGet(exportState, 'shear_stress_at_soil_surface', &
-    field=field, rc=localrc)
+  call MOSSCO_StateGet(exportState, fieldList=fieldList, fieldCount=&
+    fieldCount, itemSearch='shear_stress_cohesive_at_soil_surface', &
+    fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-  call ESMF_FieldGet(field, status=status, rc=localrc)
-  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+  if (fieldCount > 0) then
 
-  if (status /= ESMF_FIELDSTATUS_COMPLETE) then
-    write(message, '(A)') trim(name)//' received incomplete field'
-    call MOSSCO_FieldString(field, message, rc=localrc)
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-  endif
+    call ESMF_FieldGet(fieldList(1), &
+      farrayPtr=bottom_shear_stress%ptr, &
+      exclusiveLBound=exclusiveLBound, &
+      exclusiveUBound=exclusiveUBound, totalLBound=totalLBound, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-  call ESMF_FieldGet(field, farrayPtr=bottom_shear_stress%ptr, &
-    exclusiveLBound=exclusiveLBound, &
-    exclusiveUBound=exclusiveUBound, totalLBound=totalLBound, rc=localrc)
-  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !> @todo proper bounds checking with eLBound required here
 
-  !> @todo proper bounds checking with eLBound required here
-
-  do j=1,jnum
-    do i= 1, inum
-      bottom_shear_stress%ptr(i,j) = taub(inum*(j -1)+i)
+    do j=1,jnum
+      do i= 1, inum
+        bottom_shear_stress%ptr(i,j) = taub(inum * (j-1) + i)
+      end do
     end do
-  end do
-
-  call ESMF_StateGet(exportState, 'shear_stress_at_soil_surface_noncohesive', &
-    itemType=itemType, rc=localrc)
-  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-  if (itemType /= ESMF_STATEITEM_FIELD) then
-    write(message, '(A)') trim(name)//' did not find field shear_stress_at_soil_surface_noncohesive'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
   endif
 
-  call ESMF_StateGet(exportState, 'shear_stress_at_soil_surface_noncohesive', field=field, &
-    rc=localrc)
+  call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-  call ESMF_FieldGet(field, status=status, rc=localrc)
+  call MOSSCO_StateGet(exportState, fieldList=fieldList, fieldCount=&
+    fieldCount, itemSearch='shear_stress_noncohesive_at_soil_surface', &
+    fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-  if (status /= ESMF_FIELDSTATUS_COMPLETE) then
-    write(message, '(A)') trim(name)//' received incomplete field'
-    call MOSSCO_FieldString(field, message, rc=localrc)
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-  endif
+  if (fieldCount > 0) then
 
-  call ESMF_FieldGet(field, farrayPtr=bottom_shear_stress_noncoh%ptr, &
-    exclusiveLBound=exclusiveLBound, &
-    exclusiveUBound=exclusiveUBound, totalLBound=totalLBound, rc=localrc)
-  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    call ESMF_FieldGet(fieldList(1), &
+      farrayPtr=bottom_shear_stress_noncohesive%ptr, &
+      exclusiveLBound=exclusiveLBound, &
+      exclusiveUBound=exclusiveUBound, totalLBound=totalLBound, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-  do j=1,jnum
-    do i= 1, inum
-      bottom_shear_stress_noncoh%ptr(i,j) = taubn(inum*(j -1)+i)
+    do j=1,jnum
+      do i= 1, inum
+        bottom_shear_stress_noncohesive%ptr(i,j) = taubn(inum * (j-1) + i)
+      end do
     end do
-  end do
+  endif
 
   call ESMF_StateGet(exportState, 'Equilibrium_SPM_concentration_at_soil_surface_noncohesive', &
     itemType=itemType, rc=localrc)
@@ -2397,7 +2404,7 @@ end subroutine Run
     if (associated(rms_orbital_velocity%ptr)) nullify (rms_orbital_velocity%ptr)
     if (associated(equilibrium_spm%ptr)) nullify (equilibrium_spm%ptr)
     if (associated(bottom_shear_stress%ptr)) nullify (bottom_shear_stress%ptr)
-    if (associated(bottom_shear_stress_noncoh%ptr)) nullify (bottom_shear_stress_noncoh%ptr)
+    if (associated(bottom_shear_stress_noncohesive%ptr)) nullify (bottom_shear_stress_noncohesive%ptr)
     if (associated(mask)) nullify(mask)
     if (associated(area)) nullify(area)
 
