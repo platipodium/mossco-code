@@ -1180,12 +1180,12 @@ contains
     call ESMF_FieldGet(fieldList(1), geomType=geomType, grid=grid, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    if (geomType == ESMF_GEOMTYPE_GRID .neqv. present(grid)) then
+    if (geomType == ESMF_GEOMTYPE_GRID .and..not. present(grid)) then
       write(message,'(A)') trim(owner_)//' returns a grid, which is not requested'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       rc = ESMF_RC_ARG_BAD
       return
-    elseif (geomType == ESMF_GEOMTYPE_MESH .neqv. present(mesh)) then
+    elseif (geomType == ESMF_GEOMTYPE_MESH .and..not. present(mesh)) then
       write(message,'(A)') trim(owner_)//' returns a mesh, which is not requested'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       rc = ESMF_RC_ARG_BAD
