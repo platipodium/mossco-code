@@ -1510,7 +1510,8 @@ module netcdf_input_component
         return
       endif
 
-      call ESMF_AttributeGet(gridComp, 'climatology_period', isPresent=isPresent, rc=localrc)
+      call ESMF_AttributeGet(gridComp, 'climatology_period', &
+        isPresent=isPresent, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       !> read the field into the variable for most constellations
@@ -1519,13 +1520,14 @@ module netcdf_input_component
           .or. trim(interpolationMethod) == 'recent' &
           .or. (trim(interpolationMethod) == 'nearest' .and. weight <= 0.5)) then
 
-        !write(message,'(A,I9,A,I9)') trim(name)//' reads ',itime, ' / ',int(itime, kind=ESMF_KIND_I4)
-        !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        write(message,'(A,I9,A,I9)') trim(name)//' reads ',itime, ' / ',int(itime, kind=ESMF_KIND_I4)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         call nc%getvar(field, var, owner=trim(name), &
           itime=int(itime, kind=ESMF_KIND_I4), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      else
+      endif
+
       if (trim(interpolationMethod) == 'linear' .and. (jtime /= itime)) then
 
         call ESMF_FieldGet(field, typeKind=typeKind, grid=grid, rc=localrc)
@@ -1556,11 +1558,10 @@ module netcdf_input_component
         write(message,'(A,I3)') trim(name)//' uses climatology for future time ',jtime
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      else
+      elseif (trim(interpolationMethod) == 'recent') then
         write(message,'(A,I3)') trim(name)//' uses climatology from past time ',itime
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      endif ! type of climatology
       endif ! reading from climatology
 
       call ESMF_AttributeGet(gridComp, 'scale_factor',  isPresent=isPresent, rc=localrc)
