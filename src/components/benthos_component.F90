@@ -511,7 +511,7 @@ contains
       !   write (0,*)'tellina_fabula_mean_abundance data,external', importList(i)%data
       !   write (0,*)'tellina_fabula_mean_abundance data,external',importList(i)%units
          elseif  (trim (importList(i)%name )== 'microphytobenthos_at_soil_surface') then
-           call micro%set(importList(i)%data,importList(i)%units)
+           call micro%set(importList(i)%data,trim(importList(i)%units))
       !   write (0,*)'microphytobenthos_at_soil_surface, external', importList(i)%data
       !   write (0,*)'microphytobenthos_at_soil_surface, external', importList(i)%units
          endif
@@ -714,7 +714,7 @@ contains
         defaultValue='1', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      !call Micro%set(farrayPtr2, unit)
+      call Micro%set(farrayPtr2, trim(unit))
       call Micro%run()
 
     ! elseif (verbose) then

@@ -80,7 +80,7 @@ subroutine set_microphyt (this, spatialvar, biounit)
 
   class (Microphytobenthos)  :: this
   real (fp), dimension (:,:), pointer, optional  :: spatialvar
-  character (len = 255), optional  :: Biounit
+  character (len = *), optional  :: Biounit
 
   real (fp), dimension (:,:), allocatable  :: Biomass
   character (len = 255)      :: units
