@@ -714,7 +714,7 @@ contains
         defaultValue='1', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call Micro%set(farrayPtr2, unit)
+      !call Micro%set(farrayPtr2, unit)
       call Micro%run()
 
     ! elseif (verbose) then
