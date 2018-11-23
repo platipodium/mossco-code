@@ -224,13 +224,13 @@ module erosed_component
 
     integer                   :: rank
     integer                   :: lun, istat,j
-    logical                   :: opnd, exst
+    logical                   :: opnd, isPresent
 
     character(ESMF_MAXSTR)    :: name, message
     type(ESMF_Clock)          :: clock
     type(ESMF_Time)           :: currTime
 
-    logical                   :: isPresent, foreignGridIsPresent=.false.
+    logical                   :: foreignGridIsPresent=.false.
 
     integer(ESMF_KIND_I4), allocatable :: ubnd(:), lbnd(:)
 ! local variables
@@ -370,9 +370,9 @@ module erosed_component
 
   !> In globaldata.nml, global parameters for density of water (rhow)
   !> and gravitational acceleration (g) can be defined
-  inquire ( file='globaldata.nml', exist=exst , opened=opnd, Number=lun )
+  inquire ( file='globaldata.nml', exist=isPresent , opened=opnd, Number=lun )
 
-  if (exst.and.(.not.opnd)) then
+  if (isPresent.and.(.not.opnd)) then
 
     call ESMF_UtilIOUnitGet(lun, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -399,10 +399,10 @@ module erosed_component
 
   nmlb=1
   nmub = inum * jnum
+  
+  inquire ( file = 'benthic.nml', exist=isPresent , opened=opnd, Number = lun )
 
-  inquire ( file = 'benthic.nml', exist=exst , opened=opnd, Number = lun )
-
-  if (exst.and.(.not.opnd)) then
+  if (isPresent.and.(.not.opnd)) then
 
     call ESMF_UtilIOUnitGet(lun, rc = localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -553,13 +553,13 @@ module erosed_component
   BioEffects%ErodibilityEffect = 1.0_fp
 !write (*,*)'in Init BioEffects%TauEffect ',BioEffects%TauEffect
 
-  inquire ( file = 'sedparams.txt', exist=exst , opened =opnd, Number = lun )
+  inquire (file='sedparams.txt', exist=isPresent, opened=opnd)
 
-  if (exst.and.(.not.opnd)) then
+  if (isPresent.and.(.not.opnd)) then
       call ESMF_UtilIOUnitGet(lun, rc = localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      open (unit = lun, file = 'sedparams.txt', action = 'read ', status = 'old')
+      open (unit=lun, file = 'sedparams.txt', action = 'read ', status = 'old')
 
       write(message,'(A)')  trim(name)//' reads configuration from sedparams.txt'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
@@ -638,11 +638,8 @@ module erosed_component
 !      end do
 
     else
-      write(message, '(A)') trim(name)//' cannot find required file sedparams.txt'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-      call MOSSCO_CompExit(gridComp, localrc)
-      localrc = ESMF_RC_NOT_FOUND
-      return
+      write(message, '(A)') trim(name)//' cannot find optional file sedparams.txt'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
     end if
 
     !   Initial bed composition
@@ -777,6 +774,10 @@ module erosed_component
     call ESMF_StateAddReplace(importState, (/fieldBundle/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+    write(message, '(A)') trim(name)// &
+      ' created for import bundle concentration_of_SPM_in_water'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
     fieldBundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_z_velocity_in_water', &
       multiflag=.true., rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -789,6 +790,10 @@ module erosed_component
 
     call ESMF_StateAddReplace(importState, (/fieldBundle/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    write(message, '(A)') trim(name)// &
+      ' created for import bundle concentration_of_SPM_z_velocity_in_water'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     fieldBundle = ESMF_FieldBundleCreate(&
       name='concentration_of_SPM_upward_flux_at_soil_surface', &
@@ -804,6 +809,10 @@ module erosed_component
     call ESMF_StateAddReplace(exportState, (/fieldBundle/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+    write(message, '(A)') trim(name)// &
+      ' created for export bundle concentration_of_SPM_upward_flux_at_soil_surface'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
     fieldBundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_downward_flux_at_soil_surface', &
       multiflag=.true.,rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -816,6 +825,10 @@ module erosed_component
 
     call ESMF_StateAddReplace(exportState, (/fieldBundle/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    write(message, '(A)') trim(name)// &
+      ' created for export bundle concentration_of_SPM_downward_flux_at_soil_surface'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     if (bedmodel) then
 

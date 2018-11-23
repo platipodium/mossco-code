@@ -72,7 +72,7 @@ all: utilities subdirs $(TARGETS)
 
 libmossco_default: libdefault libmossco_util
 libmossco_info: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_info.a(info_component.o)
-
+	
 libmossco_benthos: libmossco_benthos_driver libmossco_util \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthos_component.o)
 

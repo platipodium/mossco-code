@@ -450,7 +450,7 @@ contains
 !   Complete Import Fields
     do i=1,ubound(importList,1)
 
-      call ESMF_StateGet(importState,trim(importList(i)%name), field, rc=localrc)
+      call ESMF_StateGet(importState, trim(importList(i)%name), field, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_FieldGet(field, status=status, rc=localrc)
@@ -480,7 +480,7 @@ contains
         write(message,'(A)') trim(name)//' import from external field '// &
           trim(importList(i)%name)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        call ESMF_FieldGet(field,farrayPtr=importList(i)%data,rc=localrc)
+        call ESMF_FieldGet(field, farrayPtr=importList(i)%data,rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         if (.not. (      all(lbound(importList(i)%data) .eq. exclusiveLBound) &
@@ -652,7 +652,7 @@ contains
     integer(ESMF_KIND_I8)       :: advancecount
     real(ESMF_KIND_R8)          :: runtimestepcount,dt
 
-    character(ESMF_MAXSTR) :: name, message
+    character(ESMF_MAXSTR) :: name, message, unit
     type(ESMF_Time)        :: currTime, stopTime
     type(ESMF_Clock)       :: clock
     integer(ESMF_KIND_I4)  :: localrc
@@ -686,11 +686,10 @@ contains
       itemSearch='microphytobenthos_at_soil_surface', rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    ! if (fieldCount > 0) then
-    !
-    !   call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr2, &
-    !     rc=localrc)
-    !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (fieldCount > 0) then
+
+      call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr2, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     !
     !   if (geomType == ESMF_GEOMTYPE_GRID) then
     !
@@ -708,9 +707,14 @@ contains
     !       mask(:,:) = 1.0
     !     endif
     !
-    !   endif
+      endif
     !
-    !   call Micro%set(farrayPtr2)
+
+      call ESMF_AttributeGet(fieldList(1), 'units', value=unit, &
+        defaultValue='1', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call Micro%set(farrayPtr2, unit)
       call Micro%run()
 
     ! elseif (verbose) then
