@@ -32,6 +32,7 @@ module erosed_component
   use mossco_field
   use mossco_grid
   use mossco_variable_types
+  use mossco_attribute
 
   use erosed_driver !, only : initerosed, erosed, getfrac_dummy
   use precision, only : fp
@@ -238,6 +239,7 @@ module erosed_component
                              &   parfluff0tmp,parfluff1tmp,tcrflufftmp, fractmp, wstmp, spm_const
     real (fp)                 :: pmcrittmp
     integer                   :: i
+    type(ESMF_State)          :: paramState
 
     namelist /globaldata/g, rhow
     namelist /benthic/   nmlb       ! = 1  ! first cell number
@@ -399,7 +401,7 @@ module erosed_component
 
   nmlb=1
   nmub = inum * jnum
-  
+
   inquire ( file = 'benthic.nml', exist=isPresent , opened=opnd, Number = lun )
 
   if (isPresent.and.(.not.opnd)) then
@@ -552,6 +554,8 @@ module erosed_component
   BioEffects%TauEffect =1.0_fp
   BioEffects%ErodibilityEffect = 1.0_fp
 !write (*,*)'in Init BioEffects%TauEffect ',BioEffects%TauEffect
+
+  !sedtyp(1:nfrac) = 2 ! SEDTYP_NONCOHESIVE_SUSPENDED
 
   inquire (file='sedparams.txt', exist=isPresent, opened=opnd)
 
@@ -843,7 +847,7 @@ module erosed_component
       call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_AttributeSet(field,'units', trim('kg'),rc=localrc)
+      call ESMF_AttributeSet(field,'units', trim('kg m-2'),rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_FieldGet(field, rank=rank, rc=localrc)
@@ -877,6 +881,18 @@ module erosed_component
     if (allocated(ubnd)) deallocate(ubnd)
     if (allocated(lbnd)) deallocate(lbnd)
 
+    ! Write a metadata state
+    paramState=ESMF_StateCreate(stateIntent=ESMF_STATEINTENT_EXPORT, &
+      name=trim(name), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    !call MOSSCO_AttributesCopy(paramState, exportState)
+    !call MOSSCO_StateStateAttributesCopy(paramState, exportState)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_StateAddReplace(exportState, (/paramState/), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
     call MOSSCO_CompExit(gridComp, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -892,7 +908,7 @@ module erosed_component
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
 
-    character(ESMF_MAXSTR)  :: name, message, format
+    character(ESMF_MAXSTR)  :: name, message, format, string
     type(ESMF_Time)         :: currTime
 
     type(ESMF_Field), target     :: field
@@ -913,7 +929,8 @@ module erosed_component
 
     type(allocatable_integer_array) :: coordTotalLBound(2),coordTotalUBound(2)
 
-    type(ESMF_Field)  ,dimension(:),allocatable    :: fieldlist,spm_flux_fieldList
+    type(ESMF_Field)  ,dimension(:),allocatable    :: fieldlist, fluxFieldList
+    type(ESMF_Field)  ,dimension(:),allocatable    :: spmFieldList
     type(ESMF_FieldBundle)                         :: fieldBundle
     integer(ESMF_KIND_I4)                          :: fieldCount
 
@@ -965,20 +982,22 @@ module erosed_component
       mask = 1
     endif
 
-   call ESMF_GridGetItem(grid, ESMF_GRIDITEM_AREA,                  &
-                         staggerloc=ESMF_STAGGERLOC_CENTER, &
-                         isPresent=isPresent, rc=localrc)
-   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-   if (isPresent) then
-      call ESMF_GridGetItem(grid, ESMF_GRIDITEM_AREA,                  &
-                            staggerloc=ESMF_STAGGERLOC_CENTER, &
-                            farrayPtr=area, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-   else
+  !> The mass calculation should *not* consider area, but mass per area, such
+  !> that fluxes can be budgeted
+   ! call ESMF_GridGetItem(grid, ESMF_GRIDITEM_AREA,                  &
+   !                       staggerloc=ESMF_STAGGERLOC_CENTER, &
+   !                       isPresent=isPresent, rc=localrc)
+   ! _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+   !
+   ! if (isPresent) then
+   !    call ESMF_GridGetItem(grid, ESMF_GRIDITEM_AREA,                  &
+   !                          staggerloc=ESMF_STAGGERLOC_CENTER, &
+   !                          farrayPtr=area, rc=localrc)
+   !    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+   ! else
      allocate(area(RANGE2D))
      area = 1.0
-   end if
+   ! end if
 
    if (bedmodel) then
      do l=1,nfrac
@@ -1051,7 +1070,7 @@ module erosed_component
     fieldBundle, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-  call ESMF_FieldBundleGet(fieldBundle,fieldCount=fieldCount, rc=localrc)
+  call ESMF_FieldBundleGet(fieldBundle, fieldCount=fieldCount, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   if (fieldCount==1 .and. nfrac>1) then
@@ -1074,25 +1093,24 @@ module erosed_component
         ' fields to ', nfrac,' SPM fractions'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-  else
+  else ! nfrac == fieldCount
 
-    if (allocated(fieldlist) .and. size(fieldList)<fieldcount) deallocate(fieldlist)
-    if (.not.allocated(fieldList)) allocate(fieldlist(fieldCount))
+    if (allocated(spmFieldList) .and. size(spmFieldList) /= fieldcount) deallocate(spmFieldList)
+    if (.not.allocated(spmFieldList)) allocate(spmFieldList(fieldCount))
 
-    call ESMF_FieldBundleGet(fieldBundle, fieldlist=fieldlist, rc=localrc)
+    call ESMF_FieldBundleGet(fieldBundle, FieldList=spmFieldList, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    do n=1,fieldCount
+    do n=1, nfrac
 
-      call ESMF_AttributeGet(fieldlist(n),'external_index', &
+      call ESMF_AttributeGet(spmFieldList(n),'external_index', &
         isPresent=isPresent, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (isPresent) then
-        call ESMF_AttributeGet(fieldlist(n), 'external_index', &
+        call ESMF_AttributeGet(spmFieldList(n), 'external_index', &
           external_idx_by_nfrac(n), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
       else
         write(message,'(A,I1,A,I1)') trim(name)// &
           ' no external index attribute found for SPM fraction //', n
@@ -1102,15 +1120,12 @@ module erosed_component
     end do
   endif
 
-  !> @todo change mapping from order of SPM fields in fieldbundle to trait-related
-  !!       mapping by e.g. d50. It is unknown here, which SPM fraction in water is
-  !!       related to SPM fractions in the bed module
   !! after having external_index defined by nfrac, create nfrac_by_external_idx:
-
   allocate(nfrac_by_external_idx(1:maxval(external_idx_by_nfrac)))
   do n=1,ubound(external_idx_by_nfrac,1)
     nfrac_by_external_idx(external_idx_by_nfrac(n))=n
   end do
+
 
   call ESMF_StateGet(exportState, &
     'concentration_of_SPM_upward_flux_at_soil_surface', fieldBundle,rc=localrc)
@@ -1121,19 +1136,19 @@ module erosed_component
 
   if (fieldcount .gt. 0) then
 
-    allocate(spm_flux_fieldList(fieldCount))
+    allocate(fluxFieldList(fieldCount))
     allocate(spm_flux_id(fieldCount))
 
-    call ESMF_FieldBundleGet(fieldBundle, fieldList=spm_flux_fieldList, rc=localrc)
+    call ESMF_FieldBundleGet(fieldBundle, fieldList=fluxFieldList, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     do i=1,fieldCount
-      call ESMF_AttributeGet(spm_flux_fieldList(i), 'external_index', value=spm_flux_id(i), rc=localrc)
+      call ESMF_AttributeGet(fluxFieldList(i), 'external_index', value=spm_flux_id(i), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     end do
   end if
 
-  do n=1,nfrac
+  do n=1, nfrac
 
     i = -1
     do j=1, fieldCount
@@ -1148,27 +1163,34 @@ module erosed_component
         ' maps fraction ',i, ' with mean diameter ',sedd50(i)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       write(message,'(A)') trim(name)//'   to '
-      call MOSSCO_FieldString(spm_flux_fieldList(j), message)
+      call MOSSCO_FieldString(fluxFieldList(j), message)
       write(message,'(A)') ' with unknown density'
 
-      call ESMF_AttributeGet(spm_flux_fieldList(j), 'mean_particle_diameter', &
+      call ESMF_AttributeGet(spmFieldList(j), 'mean_particle_diameter', &
         isPresent=isPresent, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (isPresent) then
-        call ESMF_AttributeGet(spm_flux_fieldList(j), 'mean_particle_diameter', &
+        call ESMF_AttributeGet(spmFieldList(j), 'mean_particle_diameter', &
           value=external_d50, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        write(message,'(A,ES9.3)') message//' with density ',external_d50
+        write(string,'(A,ES9.3)') ' with density ',external_d50
+        call MOSSCO_MessageAdd(message, string)
+
+        call ESMF_AttributeSet(fluxFieldList(j), 'mean_particle_diameter', &
+          value=external_d50, rc=localrc)
       endif
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      call ESMF_FieldGet(spm_flux_fieldList(i), status=status, rc=localrc)
+      call ESMF_AttributeSet(fluxFieldList(j), 'erosed_fraction', &
+        value=n, rc=localrc)
+
+      call ESMF_FieldGet(fluxFieldList(i), status=status, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
 
-        call ESMF_FieldGet(spm_flux_fieldList(i), &
+        call ESMF_FieldGet(fluxFieldList(i), &
           farrayPtr=size_classes_of_upward_flux_of_pim_at_bottom(n)%ptr, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -1229,12 +1251,12 @@ module erosed_component
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   if (fieldCount > 0) then
-    call ESMF_FieldBundleGet(fieldBundle, fieldList=spm_flux_fieldList, rc=localrc)
+    call ESMF_FieldBundleGet(fieldBundle, fieldList=fluxFieldList, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
   endif
 
   ! do i=1, fieldCount
-  !   field = spm_flux_fieldList(i)
+  !   field = fluxFieldList(i)
   !   call ESMF_AttributeGet(field, 'external_index', external_index, rc=localrc)
   !   n = int(nfrac_by_external_idx(external_index),kind=ESMF_KIND_I4)
   !
@@ -1627,9 +1649,12 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
   real(ESMF_KIND_R8)                  :: external_d50
   character(len=ESMF_MAXSTR), pointer :: includeList(:) => null()
   logical                             :: verbose = .false.
+  real(ESMF_KIND_R8), dimension(:,:,:), allocatable :: mass_in_spm, mass_total
+  real(ESMF_KIND_R8), dimension(:,:,:), allocatable :: mass_in_bed
+
 
 !#define DEBUG
-  rc=ESMF_SUCCESS
+  rc = ESMF_SUCCESS
 
   call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
     importState=importState, exportState=exportState, rc=localrc)
@@ -1652,6 +1677,23 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
   call ESMF_TimeIntervalGet(timestep, s_r8=dt, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
+    itemSearch='sediment_mass_in_bed', &
+    fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  if (fieldCount > 0) then
+    call ESMF_fieldGet(fieldList(1), farrayPtr=sediment_mass, exclusiveLBound=lbnd, &
+      exclusiveUBound=ubnd, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    allocate(mass_in_bed(RANGE3D))
+    allocate(mass_in_spm(RANGE3D))
+    allocate(mass_total(RANGE3D))
+
+    mass_in_bed(RANGE3D)=sediment_mass(RANGE3D)
+  endif
 
   !> get import state
   if (forcing_from_coupler) then
@@ -1680,6 +1722,15 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       call ESMF_FieldBundleGet(fieldBundle, fieldlist=fieldlist, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+      call ESMF_FieldGet(fieldList(1), grid=grid,rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      !> Get the height/thickness of all layers in 3D grid and also
+      !> get the depth of the interfaces
+      call MOSSCO_GridGetDepth(grid, height=layer_thickness,  &
+        interface=interface_height_above_soil_surface, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
       do n=1, size(fieldlist)
 
         field = fieldlist(n)
@@ -1702,13 +1753,16 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
         if (isPresent) then
           call ESMF_AttributeGet(field,'mean_particle_diameter', external_d50, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           if (external_d50 - sedd50(nfrac_by_external_idx(external_index)) > 1E-10) then
             write(message,'(A)') trim(name)//' particle diameter sizes do not agree in '
             call MOSSCO_FieldString(field, message, rc=localrc)
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-            localrc = ESMF_RC_ARG_BAD
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+            !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+            !localrc = ESMF_RC_ARG_BAD
+            !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+            sedd50(nfrac_by_external_idx(external_index)) = external_d50
 
           endif
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -1757,6 +1811,15 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         !write (0,*) 'shape of spm_concentration original', shape (ptr_f3)
         if (localrc == ESMF_SUCCESS) then
           spm_concentration(1:inum,1:jnum,1:knum,nfrac_by_external_idx(external_index)) = ptr_f3(RANGE3D)
+
+          ! Calculated mass in each fraction in kg m -2
+          mass_in_spm(RANGE2D, nfrac_by_external_idx(external_index)) = &
+            sum(ptr_f3(RANGE3D)*layer_thickness(RANGE3D),dim=3) / 1000
+
+          mass_total(RANGE2D, nfrac_by_external_idx(external_index)) = &
+            mass_in_spm(RANGE2D,nfrac_by_external_idx(external_index)) +  &
+            mass_in_bed(RANGE2D,nfrac_by_external_idx(external_index))
+
         else
           write(message,'(A,I2.2)') trim(name)//' cannot find SPM fraction ',n
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
@@ -1847,15 +1910,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     h0 = h1
     first_entry = .false.
   end if
-
-  call ESMF_FieldGet(fieldList(1), grid=grid,rc=localrc)
-  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-  !> Get the height/thickness of all layers in 3D grid and also
-  !> get the depth of the interfaces
-  call MOSSCO_GridGetDepth(grid, height=layer_thickness,  &
-    interface=interface_height_above_soil_surface, rc=localrc)
-  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   call ESMF_GridGetCoordBounds(grid, coordDim=3, &
     staggerloc=ESMF_STAGGERLOC_CENTER, &
@@ -2322,8 +2376,24 @@ endif
 
   sum_depth_avg_spm_concentration = sum(depth_avg_spm_concentration, dim=3)
 
-  call ESMF_StateValidate(exportState, rc=localrc)
-  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+  !> Examine the budget of SPM and bedmass
+
+  ! if (bedmodel) then
+  !   write(message,'(A,3(X,ES10.3))') trim(name)//' bed mass original  ',mass_in_bed(RANGE2D,:)
+  !   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+  !   write(message,'(A,3(X,ES10.3))') trim(name)//' bed mass now       ',sediment_mass(RANGE2D,:)
+  !   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+  !   write(message,'(A,3(X,ES10.3))') trim(name)//' bed mass difference',sediment_mass(RANGE2D,:) &
+  !     - mass_in_bed(RANGE2D,:)
+  !   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+  !   write(message,'(A,3(X,ES10.3))') trim(name)//' bed mass up flux   ',  &
+  !     (dt*size_classes_of_upward_flux_of_pim_at_bottom(i)%ptr(:,:)/1000.0, i=1,nfrac)
+  !   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+  ! endif
+
+  if (allocated(mass_in_spm)) deallocate(mass_in_spm)
+  if (allocated(mass_total)) deallocate(mass_total)
+  if (allocated(mass_in_bed)) deallocate(mass_in_bed)
 
   call MOSSCO_CompExit(gridComp, localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
