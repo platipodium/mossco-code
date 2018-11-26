@@ -317,7 +317,10 @@ module fabm_pelagic_component
     real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2=>null()
     real(ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3=>null()
     real(ESMF_KIND_R8),dimension(:,:,:,:),pointer :: ptr_f4=>null()
+    real(ESMF_KIND_R4)    :: attribute_r4
     real(ESMF_KIND_R8)    :: attribute_r8
+    real(ESMF_KIND_I4)    :: attribute_i4
+    logical               :: attribute_l
     real(ESMF_KIND_R8)    :: background_extinction=0.13
     real(ESMF_KIND_R8)    :: albedo_const=0.78
     integer(ESMF_KIND_I4) :: fieldcount
@@ -750,8 +753,48 @@ module fabm_pelagic_component
       !! this section can be removed once the more generic one above works
       attribute_name=trim('mean_particle_diameter')
       attribute_r8 = pel%model%state_variables(n)%properties%get_real('diameter',default=-99.d0)
-      if (attribute_r8 > 0.0d0) call ESMF_AttributeSet(concfield,attribute_name, attribute_r8)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      if (attribute_r8 > 0.0d0) then
+        call ESMF_AttributeSet(concfield, attribute_name, attribute_r8, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        call ESMF_AttributeSet(concfield, 'mean_particle_diameter_unit', '10-6 m', rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        attribute_name=trim('particle_type')
+        attribute_l = pel%model%state_variables(n)%properties%get_logical('cohesive', default=.false.)
+        call ESMF_AttributeSet(concfield, attribute_name, attribute_l)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        attribute_name=trim('sinking_method')
+        attribute_i4 = pel%model%state_variables(n)%properties%get_integer('sinking_method', default=0)
+
+        if (attribute_i4 == 0) then
+          call ESMF_AttributeSet(concfield, 'sinking_method', 'constant', rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          attribute_name=trim('sinking_velocity')
+          attribute_r8 = pel%model%state_variables(n)%properties%get_real('ws_const', default=0.001_ESMF_KIND_R8)
+
+          call ESMF_AttributeSet(concfield, attribute_name, attribute_r8, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          call ESMF_AttributeSet(concfield, 'sinking_velocity_unit', 'm s-1', rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        elseif (attribute_i4 == 1 .and. attribute_l) then  !cohesive
+          call ESMF_AttributeSet(concfield, 'sinking_method', 'Krone 1963', rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        elseif (attribute_i4 == 1 .and. .not. attribute_l) then !noncohesive
+          call ESMF_AttributeSet(concfield, 'sinking_method', 'Soulsby 1997', rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        elseif (attribute_i4 == 2 .and. attribute_l) then !cohesive
+          call ESMF_AttributeSet(concfield, 'sinking_method', 'Winterwerp 2001', rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        elseif (attribute_i4 == 2 .and. .not. attribute_l) then !noncohesive
+          call ESMF_AttributeSet(concfield, 'sinking_method', 'Stokes-Newton', rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        elseif (attribute_i4 == 2 .and. attribute_l) then !cohesive
+          call ESMF_AttributeSet(concfield, 'sinking_method', 'Mehta 1986', rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        endif
+      endif
 
       attribute_name=trim('particle_density')
       attribute_r8 = pel%model%state_variables(n)%properties%get_real('density',default=-99.d0)
@@ -793,6 +836,15 @@ module fabm_pelagic_component
       call ESMF_AttributeSet(wsfield, 'creator', trim(name), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+      attribute_name=trim('mean_particle_diameter')
+      attribute_r8 = pel%model%state_variables(n)%properties%get_real('diameter',default=-99.d0)
+      if (attribute_r8 > 0.0d0) then
+        call ESMF_AttributeSet(wsfield, attribute_name, attribute_r8, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        call ESMF_AttributeSet(wsfield, 'mean_particle_diameter_unit', '10-6 m', rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      endif
+      
       write(message,'(A)') trim(name)//' created field '
       call MOSSCO_FieldString(wsfield, message)
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
