@@ -63,7 +63,7 @@ subroutine set_Mbalthica(this, spatialvar, Biounit)
 
   class (Mbalthica_Object)  :: this
   real (fp), dimension (:,:), pointer, optional  :: spatialvar
-  character (len = 255), optional  :: Biounit
+  character (len = *), optional  :: Biounit
 
   real (fp), dimension (:,:), allocatable :: amounts
   character (len = 255)     :: units
