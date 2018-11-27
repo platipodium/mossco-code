@@ -1652,6 +1652,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
   real(ESMF_KIND_R8), dimension(:,:,:), allocatable :: mass_in_spm, mass_total
   real(ESMF_KIND_R8), dimension(:,:,:), allocatable :: mass_in_bed
 
+  type(ESMF_Field),dimension(:),allocatable :: spmFieldlist, fluxFieldList
+  type(ESMF_Field),dimension(:),allocatable :: velFieldlist
+  character(len=ESMF_MAXSTR)                :: string
+
 
 !#define DEBUG
   rc = ESMF_SUCCESS
@@ -1678,7 +1682,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
   call ESMF_TimeIntervalGet(timestep, s_r8=dt, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-  call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
+  call MOSSCO_StateGet(exportState, fieldList, fieldCount=fieldCount, &
     itemSearch='sediment_mass_in_bed', &
     fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -1694,6 +1698,72 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     mass_in_bed(RANGE3D)=sediment_mass(RANGE3D)
   endif
+
+  if (associated(includeList)) deallocate(includeList)
+  allocate(includeList(1))
+  includeList(1)='concentration_of_SPM_in_water'
+
+  call MOSSCO_StateGet(importState, spmFieldList, fieldCount=fieldCount, &
+    include=includeList, &
+    fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  if (fieldCount /= nfrac) then
+    write(message, '(A)') trim(name)//' obtained wrong number of SPM fractions'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+    localrc = ESMF_RC_ARG_BAD
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+  endif
+
+  includeList(1)='concentration_of_SPM_z_velocity_in_water'
+  call MOSSCO_StateGet(importState, velFieldList, fieldCount=fieldCount, &
+    include=includeList, &
+    fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  if (fieldCount /= nfrac) then
+    write(message, '(A)') trim(name)//' obtained wrong number of SPM velocity fractions'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+    localrc = ESMF_RC_ARG_BAD
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+  endif
+
+  includeList(1)='concentration_of_SPM_upward_flux_at_soil_surface'
+  call MOSSCO_StateGet(exportState, fluxFieldList, fieldCount=fieldCount, &
+    include=includeList, &
+    fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  if (fieldCount /= nfrac) then
+    write(message, '(A)') trim(name)//' obtained wrong number of SPM flux fractions'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+    localrc = ESMF_RC_ARG_BAD
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+  endif
+
+  write(message,'(A)') trim(name)// ' maps '
+  do i=1, fieldCount
+    call ESMF_AttributeGet(spmFieldList(i), 'external_index', &
+      value=external_index,  rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    write(string, '(A,I1,A,I1)') ' (',i,') ',external_index
+    call ESMF_AttributeGet(velFieldList(i), 'external_index', &
+      value=external_index, &
+      rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    write(string, '(A,X,I1)') trim(string), external_index
+
+    call ESMF_AttributeGet(fluxFieldList(i),'external_index', external_index, &
+      rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    write(string, '(A,X,I1,X,I1)') trim(string),external_index, &
+      nfrac_by_external_idx(external_index)
+    call MOSSCO_MessageAdd(message,string)
+  end do
+  call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
   !> get import state
   if (forcing_from_coupler) then
