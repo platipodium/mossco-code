@@ -1608,9 +1608,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
   integer(ESMF_KIND_I8)    :: advancecount
   real(ESMF_KIND_R8)       :: runtimestepcount,dt
 
-  real(kind=ESMF_KIND_R8), dimension(:,:), pointer :: depth=>null(),hbot=>null()
+  real(kind=ESMF_KIND_R8), dimension(:,:), pointer :: depth=>null()
   real(kind=ESMF_KIND_R8), dimension(:,:), pointer :: u2d=>null(),v2d=>null()
-  real(kind=ESMF_KIND_R8), dimension(:,:), pointer :: ubot=>null(),vbot=>null()
   real(kind=ESMF_KIND_R8), dimension(:,:), pointer :: nybot=>null()
   real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: taubmax=>null()
   real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: waveH=>null(),waveT=>null()
@@ -1646,7 +1645,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
   integer                  :: kmx, kmaxsd, knum !(kmaxsd: kmax-layer index for sand)
   real (kind=fp) :: deposition_rate, entrainment_rate
 
-  real(ESMF_KIND_R8)                  :: external_d50
+  real(ESMF_KIND_R8)                  :: external_d50, real8
   character(len=ESMF_MAXSTR), pointer :: includeList(:) => null()
   logical                             :: verbose = .false.
   real(ESMF_KIND_R8), dimension(:,:,:), allocatable :: mass_in_spm, mass_total
@@ -1656,8 +1655,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
   type(ESMF_Field),dimension(:),allocatable :: velFieldlist
   character(len=ESMF_MAXSTR)                :: string
 
-
-!#define DEBUG
   rc = ESMF_SUCCESS
 
   call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
@@ -1708,7 +1705,14 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-  if (fieldCount /= nfrac) then
+  if (fieldCount == 0) then
+    write(message, '(A)') trim(name)//' did not find '//trim(includelist(1)), &
+      ', runs without pelagic forcing'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    h0=h1
+
+  elseif (fieldCount /= nfrac) then
     write(message, '(A)') trim(name)//' obtained wrong number of SPM fractions'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
     localrc = ESMF_RC_ARG_BAD
@@ -1721,7 +1725,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-  if (fieldCount /= nfrac) then
+  if (fieldCount > 0 .and. fieldCount /= nfrac) then
     write(message, '(A)') trim(name)//' obtained wrong number of SPM velocity fractions'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
     localrc = ESMF_RC_ARG_BAD
@@ -1734,7 +1738,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-  if (fieldCount /= nfrac) then
+  if (fieldCount > 0 .and. fieldCount /= nfrac) then
     write(message, '(A)') trim(name)//' obtained wrong number of SPM flux fractions'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
     localrc = ESMF_RC_ARG_BAD
@@ -1763,7 +1767,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       nfrac_by_external_idx(external_index)
     call MOSSCO_MessageAdd(message,string)
   end do
-  call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+  if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
   !> get import state
   if (forcing_from_coupler) then
@@ -1943,12 +1947,31 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
   nullify(ptr_f3)
 !-----
 
-  depth    => importList( 1)%data
-  hbot     => importList( 2)%data
+  h1 = h0
+  call map_variable(importState, 'water_depth_at_soil_surface', h1, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  call map_variable(importState, 'x_velocity_at_soil_surface', u_bot, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  call map_variable(importState, 'y_velocity_at_soil_surface', v_bot, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  !> Not used at all
+  !call map_variable(importState, 'layer_height_at_soil_surface', , rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  if (wave) then
+    call map_variable(importState, 'wave_period', tper, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    call map_variable(importState, 'wave_direction', teta, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+  endif
+
+
+  depth    => importList( 1)%data ! used in wave calc
   u2d      => importList( 3)%data
   v2d      => importList( 4)%data
-  ubot     => importList( 5)%data
-  vbot     => importList( 6)%data
   nybot    => importList( 7)%data
   taubmax  => importList( 8)%data
 
@@ -2046,8 +2069,8 @@ endif
          if ( mask(lbnd(1)-1+i,lbnd(2)-1+j) .gt. 0 ) then
           umod  (inum*(j -1)+i) = sqrt( u2d(i,j)*u2d(i,j) + v2d(i,j)*v2d(i,j) )
 
-          u_bot (inum*(j -1)+i) = ubot (i,j)
-          v_bot (inum*(j -1)+i) = vbot (i,j)
+          !u_bot (inum*(j -1)+i) = ubot (i,j)
+          !v_bot (inum*(j -1)+i) = vbot (i,j)
           if (wave) then
               tper (inum*(j -1)+i) = waveT (i,j)
               teta (inum*(j -1)+i) = WaveDir (i,j)
@@ -2769,5 +2792,108 @@ function wavenr(h,t,ag)
     kd = sqrt(ome2*num/den)/real(h, hp)
     wavenr = real(kd, fp)
 end function wavenr
+
+#undef ESMF_METHOD
+#define ESMF_METHOD "map_variable"
+subroutine map_variable(state, varname, farray1, rc)
+
+  type(ESMF_State), intent(in) :: state
+  character(len=*), intent(in) :: varname
+  real(ESMF_KIND_R8), allocatable :: farray1(:)
+  integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+  integer(ESMF_KIND_I4)       :: localrc, i, j, lbnd(3), ubnd(3)
+  integer(ESMF_KIND_I4)       :: fieldCount, rank, rc_
+  type(ESMF_Grid)             :: grid
+  type(ESMF_Mesh)             :: mesh
+  type(ESMF_GeomType_Flag)    :: geomType
+  type(ESMF_Field), allocatable :: fieldList(:)
+  logical                     :: isPresent
+  real(ESMF_KIND_R8), pointer :: farrayPtr2(:,:) => null()
+  character(ESMF_MAXSTR)      :: message, owner_
+
+  if (present(rc)) rc = ESMF_SUCCESS
+  owner_ = '--'
+  lbnd = 1
+  ubnd = 1
+
+  call MOSSCO_StateGet(state, itemSearch=trim(varname), fieldCount= &
+    fieldCount, fieldSTatusList=(/ESMF_FIELDSTATUS_COMPLETE/), fieldList &
+    =fieldList, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  if (fieldCount < 1) return
+
+  call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=lbnd(1:rank), &
+     exclusiveUBound=ubnd(1:rank), rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  !> @todo inum, jnum are still global
+  inum=ubnd(1)-lbnd(1)+1
+  jnum=ubnd(2)-lbnd(2)+1
+
+  if (.not.allocated(farray1)) allocate(farray1(inum*jnum))
+
+  if (inum*jnum /= size(farray1)) then
+    write(message, '(A)') trim(owner_)//' obtained invalid data for '
+    call MOSSCO_FieldString(fieldList(1), message)
+    rc = ESMF_RC_ARG_BAD
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  endif
+
+  call ESMF_FieldGet(fieldList(1), geomType=geomType, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  if (geomType == ESMF_GEOMTYPE_MESH) then
+    localrc = ESMF_RC_NOT_IMPL
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  elseif (geomType == ESMF_GEOMTYPE_GRID) then
+    call ESMF_FieldGet(fieldList(1), grid=grid, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, isPresent=isPresent, &
+      rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    !> @todo mask is still a global variable
+    if (isPresent) then
+      call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask, &
+        rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    else
+      if (.not.associated(mask)) allocate(mask(RANGE2D))
+      mask = 1
+    endif
+  else
+    localrc = ESMF_RC_NOT_IMPL
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  endif
+
+  if (rank == 2) then
+    call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr2, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    !> @todo what about the mask?
+    do j=1, jnum
+      do i=1, inum
+        farray1(inum * (j - 1) + i) = farrayPtr2(lbnd(1)+i-1, lbnd(2)+j-1)
+      enddo
+    enddo
+
+  else
+    localrc = ESMF_RC_NOT_IMPL
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  endif
+
+  nullify(farrayPtr2)
+
+  call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+end subroutine map_variable
 
 end module erosed_component
