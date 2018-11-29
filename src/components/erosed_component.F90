@@ -1654,6 +1654,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
   type(ESMF_Field),dimension(:),allocatable :: spmFieldlist, fluxFieldList
   type(ESMF_Field),dimension(:),allocatable :: velFieldlist
   character(len=ESMF_MAXSTR)                :: string
+  real(ESMF_KIND_R8), allocatable           :: farray1(:)
 
   rc = ESMF_SUCCESS
 
@@ -1769,8 +1770,74 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
   end do
   if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-  !> get import state
-  if (forcing_from_coupler) then
+  !> Compare and consolidate attributes
+  !> This should be done only once for performance
+  do i=1, fieldCount
+
+    call ESMF_AttributeGet(spmFieldList(i), 'mean_particle_diameter', &
+      external_d50, rc=localrc)
+    call ESMF_AttributeGet(velFieldList(i), 'mean_particle_diameter', &
+      isPresent=isPresent, rc=localrc)
+    if (isPresent) then
+      call ESMF_AttributeGet(velFieldList(i), 'mean_particle_diameter', &
+        real8, rc=localrc)
+      if (abs(external_d50 - real8) > 10*tiny(real8)) then
+        write(message ,'(A)') trim(name)//' obtained mismatching SPM info'
+        rc = ESMF_RC_ARG_BAD
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      endif
+    else
+      call ESMF_AttributeSet(velFieldList(i), 'mean_particle_diameter', &
+        external_d50, rc=localrc)
+    endif
+
+    call ESMF_AttributeGet(fluxFieldList(i), 'mean_particle_diameter', &
+      isPresent=isPresent, rc=localrc)
+    if (isPresent) then
+      call ESMF_AttributeGet(fluxFieldList(i), 'mean_particle_diameter', &
+        real8, rc=localrc)
+      if (abs(external_d50 - real8) > 10*tiny(real8)) then
+        write(message ,'(A)') trim(name)//' obtained mismatching SPM info'
+        rc = ESMF_RC_ARG_BAD
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      endif
+    else
+      call ESMF_AttributeSet(fluxFieldList(i), 'mean_particle_diameter', &
+        external_d50, rc=localrc)
+    endif
+
+    if (external_d50 - sedd50(nfrac_by_external_idx(external_index)) > 10*tiny(real8)) then
+      write(message,'(A)') trim(name)//' particle diameter sizes do not agree in '
+      call MOSSCO_FieldString(spmFieldList(i), message, rc=localrc)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      sedd50(nfrac_by_external_idx(external_index)) = external_d50
+    endif
+
+    call ESMF_AttributeGet(spmFieldList(i),'particle_density', &
+      rhosol(nfrac_by_external_idx(external_index)), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    !> @todo copy over all other parameters from iow/spm model
+
+  enddo
+
+
+    !> @todo adjust this to meshes
+    if (allocated(spmFieldList)) then
+
+      call ESMF_FieldGet(spmFieldList(1), grid=grid,rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      !> Get the height/thickness of all layers in 3D grid and also
+      !> get the depth of the interfaces
+      call MOSSCO_GridGetDepth(grid, height=layer_thickness,  &
+        interface=interface_height_above_soil_surface, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    endif
+
 
     !> get spm concentrations, particle sizes and density
     !> @todo better use MOSSCO_StateGet to fieldList
@@ -1825,27 +1892,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         call ESMF_AttributeGet(field, 'mean_particle_diameter', isPresent=isPresent, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        if (isPresent) then
-          call ESMF_AttributeGet(field,'mean_particle_diameter', external_d50, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-          if (external_d50 - sedd50(nfrac_by_external_idx(external_index)) > 1E-10) then
-            write(message,'(A)') trim(name)//' particle diameter sizes do not agree in '
-            call MOSSCO_FieldString(field, message, rc=localrc)
-            !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-            !localrc = ESMF_RC_ARG_BAD
-            !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-            sedd50(nfrac_by_external_idx(external_index)) = external_d50
-
-          endif
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        else
-          sedd50(nfrac_by_external_idx(external_index))=0.0
-          write(message,'(A)')  trim(name)//' did not find "mean_particle_diameter" attribute in field '
-          call MOSSCO_FieldString(field, message, rc=localrc)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-        endif
 
         call ESMF_AttributeGet(field,'particle_density', isPresent=isPresent, &
           rc=localrc)
@@ -1939,14 +1985,22 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       end do
     end if
 
-  else
-    !> use initial values
-    h0=h1
-  end if
-
   nullify(ptr_f3)
 !-----
 
+  !> Test for vertical CFL
+
+  call map_variable(importState, 'layer_height_at_soil_surface', farray1, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  if (any(maxval(-ws,dim=1)*dt*2 > farray1 .and. farray1>0)) then
+    write(message, '(A)') trim(name)//' coupling exceeds CFL, reduce coupling time step'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+    write(message, '(A,ES10.3)') trim(name)//' dt*ws/layerheight ',dt*maxval(maxval(-ws,dim=1)/farray1,mask=farray1>0)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+  endif
+
+  !> Get water depth, assum initial water depth as default
   h1 = h0
   call map_variable(importState, 'water_depth_at_soil_surface', h1, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -1957,9 +2011,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
   call map_variable(importState, 'y_velocity_at_soil_surface', v_bot, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-  !> Not used at all
-  !call map_variable(importState, 'layer_height_at_soil_surface', , rc=localrc)
-  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   if (wave) then
     call map_variable(importState, 'wave_period', tper, rc=localrc)
@@ -1968,7 +2019,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
   endif
 
-
+  !> @todo clean up this list
   depth    => importList( 1)%data ! used in wave calc
   u2d      => importList( 3)%data
   v2d      => importList( 4)%data
@@ -2194,6 +2245,7 @@ endif
       if ( mask(lbnd(1)-1+i,lbnd(2)-1+j) == 1 ) then
 
          deposition_rate  = real(sink(l,nm),fp)*real(spm_concentration(i,j,kmx,l),fp)/1000._fp
+         !deposition_rate  = min(0.5*real(ws(l,nm),fp),real(sink(l,nm),fp))*real(spm_concentration(i,j,kmx,l),fp)/1000._fp
          entrainment_rate = sour(l,nm)
 
         if (bedmodel) then
