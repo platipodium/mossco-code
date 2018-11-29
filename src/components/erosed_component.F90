@@ -1616,7 +1616,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
   real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: waveK=>null(),waveDir=>null()
   real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: microEro=>null(),microTau=>null()
   real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: macroEro=>null(),macroTau=>null()
-  real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3=>null()
+  real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer :: farrayPtr3=>null()
 
   type(ESMF_Field)         :: Microphytobenthos_erodibility, Microphytobenthos_critical_bed_shearstress
   type(ESMF_Field)         :: Macrofauna_erodibility,Macrofauna_critical_bed_shearstress
@@ -1655,6 +1655,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
   type(ESMF_Field),dimension(:),allocatable :: velFieldlist
   character(len=ESMF_MAXSTR)                :: string
   real(ESMF_KIND_R8), allocatable           :: farray1(:)
+  logical, allocatable                      :: mask1(:)
 
   rc = ESMF_SUCCESS
 
@@ -1772,8 +1773,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
   !> Compare and consolidate attributes
   !> This should be done only once for performance
-  do i=1, fieldCount
+  do i=1, ubound(spmFieldList,1)
 
+    call ESMF_AttributeGet(spmFieldList(i), 'external_index', &
+      external_index, rc=localrc)
     call ESMF_AttributeGet(spmFieldList(i), 'mean_particle_diameter', &
       external_d50, rc=localrc)
     call ESMF_AttributeGet(velFieldList(i), 'mean_particle_diameter', &
@@ -1819,179 +1822,93 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       rhosol(nfrac_by_external_idx(external_index)), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+    write(0,*) external_index, nfrac_by_external_idx(external_index), rhosol
+
     !> @todo copy over all other parameters from iow/spm model
 
   enddo
 
+  !> @todo adjust this to meshes
+  if (allocated(spmFieldList)) then
 
-    !> @todo adjust this to meshes
-    if (allocated(spmFieldList)) then
-
-      call ESMF_FieldGet(spmFieldList(1), grid=grid,rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      !> Get the height/thickness of all layers in 3D grid and also
-      !> get the depth of the interfaces
-      call MOSSCO_GridGetDepth(grid, height=layer_thickness,  &
-        interface=interface_height_above_soil_surface, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    endif
-
-
-    !> get spm concentrations, particle sizes and density
-    !> @todo better use MOSSCO_StateGet to fieldList
-    call ESMF_StateGet(importState,'concentration_of_SPM_in_water', &
-      fieldBundle, rc=localrc)
+    call ESMF_FieldGet(spmFieldList(1), grid=grid,rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_FieldBundleGet(fieldBundle, fieldCount=n, rc=localrc)
+    !> Get the height/thickness of all layers in 3D grid and also
+    !> get the depth of the interfaces
+    call MOSSCO_GridGetDepth(grid, height=layer_thickness,  &
+      interface=interface_height_above_soil_surface, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    if (n .eq. 0) then
-      !> run without SPM forcing from pelagic component
-!#ifdef DEBUG
-      call ESMF_LogWrite( &
-         'field Bundle concentration_of_SPM not found, run without pelagic forcing', &
-         ESMF_LOGMSG_INFO)
-!#endif
-    else
+  endif
 
-      if (allocated(fieldlist)) deallocate(fieldlist)
-      allocate(fieldlist(n))
-
-      call ESMF_FieldBundleGet(fieldBundle, fieldlist=fieldlist, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      call ESMF_FieldGet(fieldList(1), grid=grid,rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      !> Get the height/thickness of all layers in 3D grid and also
-      !> get the depth of the interfaces
-      call MOSSCO_GridGetDepth(grid, height=layer_thickness,  &
-        interface=interface_height_above_soil_surface, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      do n=1, size(fieldlist)
-
-        field = fieldlist(n)
-        call ESMF_AttributeGet(field,'external_index', isPresent=isPresent, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-        if (isPresent) then
-          call ESMF_AttributeGet(field,'external_index',external_index, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        else
-          write(message,'(A)')  trim(name)//' did not find "external_index" attribute in'
-          call MOSSCO_FieldString(field, message, rc=localrc)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-          external_index=1
-          write (*,*) 'external_index is not present, therefore set to 1)'
-        endif
-
-        call ESMF_AttributeGet(field, 'mean_particle_diameter', isPresent=isPresent, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-
-        call ESMF_AttributeGet(field,'particle_density', isPresent=isPresent, &
-          rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-        !> @too check equality and fail if not
-        if (isPresent) then
-          call ESMF_AttributeGet(field,'particle_density',rhosol(nfrac_by_external_idx(external_index)), rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        else
-          rhosol(nfrac_by_external_idx(external_index))=0.0
-          write(message,'(A)')  trim(name)//' did not find "rhosol" attribute in field. It has bee set to zero'
-          call MOSSCO_FieldString(field, message, rc=localrc)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-        endif
-
-        call ESMF_FieldGet(field, farrayPtr=ptr_f3, exclusiveLBound=lbnd, &
-          exclusiveUBound=ubnd, totalLBound=tlbnd, totalUBound=tubnd, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-        knum=ubnd(3)-lbnd(3)+1
-         !> @todo proper bounds checking with eLBound required here
-!          if (.not. ( all(lbound(ptr_f3)== lbnd).and. all(ubound(ptr_f3)==ubnd ) ) ) then
-!            write(message, '(A)') trim(name)//' invalid field bounds in field'
-!            call MOSSCO_FieldString(field, message, rc=localrc)
-!            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!            call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!          end if
-!
-!          if (.not. (all(lbound(ptr_f3)==tlbnd).and. all(ubound(ptr_f3)==tubnd) ) ) then
-!            write(message, '(A)') trim(name)//' bounds do not match total domain in field'
-!            call MOSSCO_FieldString(field, message, rc=localrc)
-!            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
-!          end if
-
-        !> @todo unclear which localrc is excpected here
-        !write (0,*) 'shape of spm_concentration original', shape (ptr_f3)
-        if (localrc == ESMF_SUCCESS) then
-          spm_concentration(1:inum,1:jnum,1:knum,nfrac_by_external_idx(external_index)) = ptr_f3(RANGE3D)
-
-          ! Calculated mass in each fraction in kg m -2
-          mass_in_spm(RANGE2D, nfrac_by_external_idx(external_index)) = &
-            sum(ptr_f3(RANGE3D)*layer_thickness(RANGE3D),dim=3) / 1000
-
-          mass_total(RANGE2D, nfrac_by_external_idx(external_index)) = &
-            mass_in_spm(RANGE2D,nfrac_by_external_idx(external_index)) +  &
-            mass_in_bed(RANGE2D,nfrac_by_external_idx(external_index))
-
-        else
-          write(message,'(A,I2.2)') trim(name)//' cannot find SPM fraction ',n
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
-        end if
-
-      end do
-
-      !> get sinking velocities
-      call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
-        itemSearch='concentration_of_SPM_z_velocity_in_water', &
-        fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/),  rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      do n=1,fieldCount
-
-        call ESMF_FieldGet(fieldlist(n), farrayPtr=ptr_f3,rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-        call ESMF_AttributeGet(fieldlist(n),'external_index',isPresent=isPresent, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-        if (.not.isPresent) then
-          write(message,'(A)') trim(name)//' external_index attribute is missing from field '
-          call MOSSCO_FieldString(fieldList(n), message)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-          external_index = n
-        else
-          call ESMF_AttributeGet(fieldlist(n),'external_index',external_index, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        endif
-
-        do j=1,jnum
-          do i= 1, inum
-            ! filtering missing values (land)
-            if ( mask(lbnd(1)-1+i,lbnd(2)-1+j) .gt. 0 ) then
-             ws(nfrac_by_external_idx(external_index),inum*(j-1)+i) &
-               = ptr_f3(lbnd(1)-1+i,lbnd(2)-1+j,1)
-             else
-               ws(nfrac_by_external_idx(external_index),inum*(j-1)+i) = 0.0_fp
-             endif
-          end do
-        end do
-      end do
-    end if
-
-  nullify(ptr_f3)
-!-----
-
-  !> Test for vertical CFL
-
+  !> Construct mask from layer height
   call map_variable(importState, 'layer_height_at_soil_surface', farray1, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  allocate(mask1(1:size(farray1)))
+  mask1 = farray1 > 0
+
+  !> Obtain copy of import variables into own storage spm_concentration
+  !> and ws
+  if (allocated(spmFieldList)) then
+
+    do n=1,ubound(spmFieldList,1)
+
+      call ESMF_AttributeGet(spmFieldList(n), 'external_index', external_index, &
+        rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_FieldGet(spmFieldList(n), farrayPtr=farrayPtr3, exclusiveLBound=lbnd, &
+        exclusiveUBound=ubnd, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      knum=ubnd(3)-lbnd(3)+1
+
+      spm_concentration(1:inum, 1:jnum, 1:knum, &
+        nfrac_by_external_idx(external_index)) = farrayPtr3(RANGE3D)
+
+      ! Calculated mass in each fraction in kg m -2
+      mass_in_spm(RANGE2D, nfrac_by_external_idx(external_index)) = &
+        sum(farrayPtr3(RANGE3D)*layer_thickness(RANGE3D),dim=3) / 1000
+
+      mass_total(RANGE2D, nfrac_by_external_idx(external_index)) = &
+        mass_in_spm(RANGE2D,nfrac_by_external_idx(external_index)) +  &
+        mass_in_bed(RANGE2D,nfrac_by_external_idx(external_index))
+
+    enddo
+  endif
+
+  if (allocated(velFieldList)) then
+
+    do n=1,ubound(velFieldList,1)
+
+      call ESMF_AttributeGet(velFieldList(n), 'external_index', external_index, &
+        rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_FieldGet(velFieldList(n), farrayPtr=farrayPtr3, &
+        exclusiveLBound=lbnd, exclusiveUBound=ubnd, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      inum = ubnd(1)-lbnd(1)+1
+      jnum = ubnd(2)-lbnd(2)+1
+
+      do j=1,jnum
+        do i=1,inum
+          ws(nfrac_by_external_idx(external_index), inum*(j-1)+i) &
+          = farrayPtr3(lbnd(1)-1+i,lbnd(2)-1+j,1)
+        enddo
+      enddo
+
+      where(.not.mask1)
+        ws(nfrac_by_external_idx(external_index), :) = 0.0
+      endwhere
+    enddo
+  endif
+  nullify(farrayPtr3)
+
+  !> Test for vertical CFL
 
   if (any(maxval(-ws,dim=1)*dt*2 > farray1 .and. farray1>0)) then
     write(message, '(A)') trim(name)//' coupling exceeds CFL, reduce coupling time step'
@@ -2539,6 +2456,8 @@ endif
   if (allocated(mass_in_spm)) deallocate(mass_in_spm)
   if (allocated(mass_total)) deallocate(mass_total)
   if (allocated(mass_in_bed)) deallocate(mass_in_bed)
+  if (allocated(mask1)) deallocate(mask1)
+  if (allocated(farray1)) deallocate(farray1)
 
   call MOSSCO_CompExit(gridComp, localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
