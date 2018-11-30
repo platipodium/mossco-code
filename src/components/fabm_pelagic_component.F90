@@ -737,17 +737,15 @@ module fabm_pelagic_component
 
       call pel%model%state_variables(n)%properties%keys(itemNameList)
       do i=1, itemCount
-        !>@todo
-        !if (pel%model%state_variables(n)%properties%get_property(itemNameList(i))%typecode()==1)
-        !attribute_r8 = pel%model%state_variables(n)%properties%get_real(itemNameList(i), default=-1d30)
-        !call ESMF_AttributeSet(concfield,trim(itemNameList(i)), attribute_r8)
-        !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        call ESMF_AttributeSet(concfield,trim(itemNameList(i)), pel%model%state_variables(n)%properties%get_string(itemNameList(i),''))
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       enddo
 
       call MOSSCO_Reallocate(itemNameList, 0, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      !> add attributes relevant for MOSSCO
+      !> add attributes especially relevant for MOSSCO and overwrite those
+      !> given above.
       !! mean_particle_diameter and particle density given only,
       !! if property persent
       !! this section can be removed once the more generic one above works
@@ -844,7 +842,7 @@ module fabm_pelagic_component
         call ESMF_AttributeSet(wsfield, 'mean_particle_diameter_unit', '10-6 m', rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
-      
+
       write(message,'(A)') trim(name)//' created field '
       call MOSSCO_FieldString(wsfield, message)
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
