@@ -1450,7 +1450,7 @@ module erosed_component
     !> @todo possibly read fieldBundle of 2D fields
     !> @todo possibly read 2D field and partition reasonably
 
-    call MOSSCO_StateGetFieldList(importState, importFieldList, fieldCount=importFieldCount, &
+    call MOSSCO_StateGet(importState, importFieldList, fieldCount=importFieldCount, &
       itemSearch='sediment_mass_in_bed', &
       fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -1536,7 +1536,7 @@ module erosed_component
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     enddo
 
-    call MOSSCO_StateGetFieldList(exportState, exportFieldList, fieldCount=exportFieldCount, &
+    call MOSSCO_StateGet(exportState, exportFieldList, fieldCount=exportFieldCount, &
       itemSearch='sediment_mass_in_bed', &
       fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)

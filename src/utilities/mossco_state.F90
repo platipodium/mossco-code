@@ -2417,11 +2417,14 @@ contains
         call ESMF_FieldBundleGet(fieldBundle, fieldList=fieldInBundleList, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      else
+      elseif (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
         call MOSSCO_Reallocate(fieldInBundleList, 1, keep=.false., rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
         call ESMF_StateGet(state, itemNameList(i), fieldInBundleList(1), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      else
+        continue 
       endif
 
       do k=1, fieldInBundleCount
@@ -2499,7 +2502,7 @@ contains
           endif
 
           if (.not.ismatch) then
-            if (verbose_) then
+            if (.false.) then !if (verbose_) then !@todo temporarily disabled to unclutter output
               write(message,'(A)') trim(owner_)//' did not include'
               call MOSSCO_MessageAdd(message,' '//trim(itemNameList(i)), rc=localrc)
               call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
