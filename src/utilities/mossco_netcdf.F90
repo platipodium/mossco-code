@@ -3725,12 +3725,16 @@ module mossco_netcdf
     real(ESMF_KIND_R8), pointer                  :: farrayPtr1(:), farrayPtr2(:,:)
     type(ESMF_DistGrid)                          :: distGrid
 
-    rc = ESMF_SUCCESS
+    rc_ = ESMF_SUCCESS
+    owner_ = '--'
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = ESMF_SUCCESS
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
 
     !> Ask for coordinates attribute, if not present, then return (@todo: implement alternative solution)
     localrc = nf90_get_att(self%ncid, var%varid, 'coordinates', coordinates)
     if (localrc /= NF90_NOERR) then
-      write(message,'(A)') 'Cannot determine grid, "coordinates" attribute is missing from variable '//trim(var%name)
+      write(message,'(A)') trim(owner_)//' cannot determine grid, "coordinates" attribute is missing from variable '//trim(var%name)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       return
     end if
@@ -3744,12 +3748,15 @@ module mossco_netcdf
       if (j<=1) exit
 
       coordNameList(i) = trim(adjustl(coordinates(1:j)))
-      coordinates=coordinates(j+1:len_trim(coordinates))
+      !coordinates=coordinates(j+1:len_trim(coordinates))
+      call MOSSCO_StringCopy(coordinates, &
+        coordinates(j+1:len_trim(coordinates)),rc=localrc )
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       ! Try to find the corresponding coordinate variable
       localrc = nf90_inq_varid(self%ncid, trim(coordNameList(i)), varid)
       if (localrc /= NF90_NOERR) then
-        write(message,'(A)') 'No variable found for coordinate '//trim(coordNameList(i))
+        write(message,'(A)') trim(owner_)//' no variable found for coordinate '//trim(coordNameList(i))
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         return
       end if
@@ -3764,7 +3771,7 @@ module mossco_netcdf
 
       do j=1, ubound(coordVar%dimids,1)
         if (all(var%dimids /= coordVar%dimids(j))) then
-          write(message,'(A)') 'No corresponding dimensions in variable and its coordinate '//trim(coordNameList(i))
+          write(message,'(A)') trim(owner_)//' No corresponding dimensions in variable and its coordinate '//trim(coordNameList(i))
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           return
         end if
@@ -3774,7 +3781,7 @@ module mossco_netcdf
 
       localrc = nf90_get_att(self%ncid, coordVar%varid, 'units', units)
       if (localrc /= NF90_NOERR) then
-        write(message,'(A)') 'Cannot determine unit of coordinate variable '//trim(coordVar%name)
+        write(message,'(A)') trim(owner_)//' Cannot determine unit of coordinate variable '//trim(coordVar%name)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       end if
 
@@ -4582,7 +4589,10 @@ module mossco_netcdf
       return
     endif
 
-    timeunit = timeunit(i+6:len_trim(timeunit))
+    call MOSSCO_StringCopy(timeunit, timeunit(i+6:len_trim(timeunit)), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    ! Remove: timeunit = timeunit(i+6:len_trim(timeunit))
     ! Make sure that this is in ISO format, i.e. YYYY-MM-DDThh:mm:ss
     ! Some implementations do not write 4 (or 2) digits single digit components.
     call timeString2ISOTimeString(timeUnit, ISOString, rc=localrc)
