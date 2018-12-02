@@ -315,6 +315,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     logical                    :: checkNaN=.true., checkInf=.true.
     type(ESMF_Field), allocatable :: fieldList(:), itemFieldList(:)
     type(ESMF_FieldBundle)        :: fieldBundle
+    type(ESMF_State)              :: state
     character(len=ESMF_MAXSTR), pointer :: itemSearch(:) => null()
 
     rc = ESMF_SUCCESS
@@ -594,27 +595,53 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
    ! 7.0.0 b64
    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+
+    !> Look for states in states and write them as a non-dimensional
+    !> variable to record model metadata that is not stored in variables
     call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    ! The removal creates problesm, it is disabled here for further testing.  Is
-    ! it needed at all?
-    if (itemcount>0) then
+    if (allocated(itemTypeList)) deallocate(itemTypeList)
+    if (allocated(itemNameList)) deallocate(itemNameList)
+    allocate(itemTypeList(itemCount))
+    allocate(itemNameList(itemCount))
 
-      allocate(itemNameList(itemCount))
+    call ESMF_StateGet(importState, itemTypeList=itemTypeList, &
+      itemNameList=itemNameList, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_StateGet(importState, itemNameList=itemNameList, rc=localrc)
+    do i=1, itemCount
+
+      if (itemTypeList(i) /= ESMF_STATEITEM_STATE) cycle
+
+      call ESMF_StateGet(importState, itemNameList(i), state, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      !call ESMF_StateRemove(importState, itemNameList, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
-        write(message,'(A)') trim(name)//' ignores error above '
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-        localrc = ESMF_SUCCESS
-        !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
+      call nc%put_state(state, name=trim(itemNameList(i)), &
+        owner=trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    endif
+    enddo
+
+
+    ! The removal creates problesm, it is disabled here for further testing.  Is
+    ! it needed at all?
+    ! if (itemcount>0) then
+    !
+    !   allocate(itemNameList(itemCount))
+    !
+    !   call ESMF_StateGet(importState, itemNameList=itemNameList, rc=localrc)
+    !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    !   !call ESMF_StateRemove(importState, itemNameList, rc=localrc)
+    !   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
+    !     write(message,'(A)') trim(name)//' ignores error above '
+    !     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+    !     localrc = ESMF_SUCCESS
+    !     !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    !   endif
+    !
+    ! endif
 
     call nc%close()
 
