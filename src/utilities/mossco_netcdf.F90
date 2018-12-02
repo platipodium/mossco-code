@@ -67,7 +67,9 @@ module mossco_netcdf
     character(len=ESMF_MAXSTR) :: name, timeUnit
     type(type_mossco_netcdf_variable), pointer, dimension(:) :: variables
 
+
     contains
+
     procedure :: close => mossco_netcdf_close
     procedure :: add_timestep => mossco_netcdf_add_timestep
     procedure :: locstream_dimensions => mossco_netcdf_locstream_dimensions
@@ -77,8 +79,10 @@ module mossco_netcdf
     procedure :: update_variables => mossco_netcdf_update_variables
     procedure :: update => mossco_netcdf_update
     procedure :: create_variable => mossco_netcdf_variable_create
+    procedure :: create_variable_from_state => mossco_netcdf_state_create
     procedure :: variable_present => mossco_netcdf_variable_present
-    procedure :: put_variable => mossco_netcdf_variable_put
+    procedure :: put_variable => mossco_netcdf_field_put
+    procedure :: put_state => mossco_netcdf_state_put
     procedure :: create_grid_coordinate =>mossco_netcdf_grid_coordinate_create
     procedure :: create_mesh_coordinate =>mossco_netcdf_mesh_coordinate_create
     !procedure :: create_locstream_coordinate =>mossco_netcdf_locstream_coordinate_create
@@ -118,8 +122,8 @@ module mossco_netcdf
   contains
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "mossco_netcdf_variable_put"
-  subroutine mossco_netcdf_variable_put(self, field, kwe, seconds, name, &
+#define ESMF_METHOD "mossco_netcdf_field_put"
+  subroutine mossco_netcdf_field_put(self, field, kwe, seconds, name, &
     owner, checkNaN, checkInf, precision, rc)
 
     implicit none
@@ -1012,7 +1016,76 @@ module mossco_netcdf
     nullify(gridmask2)
     nullify(gridmask3)
 
-  end subroutine mossco_netcdf_variable_put
+  end subroutine mossco_netcdf_field_put
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "mossco_netcdf_state_put"
+  subroutine mossco_netcdf_state_put(self, state, kwe, name, &
+    owner, rc)
+
+    implicit none
+    class(type_mossco_netcdf)                    :: self
+    type(ESMF_State), intent(inout)              :: state
+    logical, intent(in), optional                :: kwe
+    character(len=*), optional                   :: name
+    character(len=*), optional, intent(in)       :: owner
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer                     :: ncStatus, varid, rc_, rank=0, localrc
+    character(len=ESMF_MAXSTR)  :: statename, message, owner_
+    type(type_mossco_netcdf_variable),pointer :: var=> null()
+
+    real(ESMF_KIND_R4)                               :: missingValueR4=-1.0E30
+    real(ESMF_KIND_R8)                               :: missingValueR8=-1.0D30, missingValue=-1.0D30
+    integer(ESMF_KIND_I4)                            :: missingValueI4=-9999
+    real(ESMF_KIND_I8)                               :: missingValueI8=-9999
+    real(ESMF_KIND_R8)                               :: representableValueR8
+    integer(ESMF_KIND_I4)                            :: representableValueI4
+    type(ESMF_TypeKind_Flag)                         :: mvTypeKind, typeKind
+
+    logical                           :: isPresent
+
+    rc_ = ESMF_SUCCESS
+    owner_ = '--'
+
+    if (present(kwe)) rc_ = rc_
+    if (present(rc)) rc = ESMF_SUCCESS
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+
+    call ESMF_StateGet(state, name=statename, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (present(name)) statename=trim(name)
+
+    !> If the variable does not exist, create it
+    if (.not.self%variable_present(statename)) then
+
+      call self%create_variable_from_state(state, name=trim(statename), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call self%enddef(owner=owner_, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call self%update_variables()
+      call self%update()
+    endif
+
+    var=>self%getvarvar(trim(statename))
+
+    if (.not.associated(var)) then
+      call ESMF_LogWrite(trim(owner_)//' could not find variable '//trim(statename), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      if (present(rc)) rc=ESMF_RC_NOT_FOUND
+      return
+    endif
+
+    ncStatus = nf90_inq_varid(self%ncid, var%name, varid)
+    if (ncStatus /= NF90_NOERR) then
+      call ESMF_LogWrite(trim(owner_)//' could not find variable '//trim(statename), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      if (present(rc)) rc=ESMF_RC_NOT_FOUND
+      return
+    endif
+
+  end subroutine mossco_netcdf_state_put
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_variable_present"
@@ -1499,6 +1572,71 @@ module mossco_netcdf
     call self%update()
 
   end subroutine mossco_netcdf_variable_create
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "mossco_netcdf_state_create"
+  subroutine mossco_netcdf_state_create(self, state, kwe, &
+    name, owner, rc)
+
+    class(type_mossco_netcdf)        :: self
+    type(ESMF_State), intent(inout)  :: state
+    type(ESMF_KeyWordEnforcer), optional, intent(in) :: kwe
+    character(len=*),intent(in), optional        :: name
+    character(len=*),intent(in), optional        :: owner
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    character(len=ESMF_MAXSTR)     :: attributeName, string, message
+    character(len=ESMF_MAXSTR)     :: stateName, varname
+    integer                        :: ncStatus, rc_, varid
+    real(ESMF_KIND_R8)             :: real8
+    real(ESMF_KIND_R4)             :: real4
+    integer(ESMF_KIND_I4)          :: i, attributeCount, int4, localrc
+    integer(ESMF_KIND_I8)          :: int8
+    type(ESMF_TypeKind_Flag)       :: typekind
+    logical                        :: isPresent
+    character(len=11)              :: precision_
+    character(len=ESMF_MAXSTR)     :: owner_
+
+    rc_ = ESMF_SUCCESS
+    owner_ = '--'
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = ESMF_SUCCESS
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+
+    call ESMF_StateGet(state, name=stateName, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    varname = trim(stateName)
+    if (present(name)) varname=trim(name)
+
+    !> return if variable is already defined in netcdf file
+    if (self%variable_present(varname)) return
+
+    call self%redef(owner=owner_, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_INT,varid)
+
+    if (ncStatus /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot define variable '//trim(varname),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      if (present(rc)) then
+        rc = ESMF_RC_FILE_WRITE
+        return
+      else
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+    endif
+
+    call MOSSCO_AttributeNetcdfWrite(state, self%ncid, varid=varid, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call self%enddef(owner=owner_, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call self%update_variables()
+    call self%update()
+
+  end subroutine mossco_netcdf_state_create
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_add_timestep"
@@ -3575,10 +3713,10 @@ module mossco_netcdf
     integer(ESMF_KIND_I4), intent(out), optional     :: rc
 
 
-    integer(ESMF_KIND_I4)                        :: localrc, i, udimid, varid
+    integer(ESMF_KIND_I4)                        :: localrc, i, udimid, varid, rc_
     integer(ESMF_KIND_I4)                        :: j, k=1, localDeCount, itemCount
     integer(ESMF_KIND_I4), allocatable           :: dimids(:), ubnd(:), lbnd(:)
-    character(len=ESMF_MAXSTR)                   :: coordinates, units, message
+    character(len=ESMF_MAXSTR)                   :: coordinates, units, message, owner_
     character(len=ESMF_MAXSTR), allocatable      :: coordNameList(:)
     type(type_mossco_netcdf_variable)            :: coordVar
     type(ESMF_CoordSys_Flag)                     :: coordSys
