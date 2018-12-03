@@ -2096,13 +2096,29 @@ endif
   !> @todo why not take the one from sedparams.txt?
   sedd90 = 1.50_fp *sedd50 ! according to manual of Delft3d page 356
 
-  call erosed(  nmlb   , nmub   , flufflyr , mfluff , frac , mudfrac , ws_convention_factor*ws, &
+
+  !> Test for vertical CFL
+
+  if (any(maxval(-ws,dim=1)*dt*2 > farray1 .and. farray1>0)) then
+    write(message, '(A)') trim(name)//' coupling exceeds CFL, reduce coupling time step'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+    write(message, '(A,ES10.3)') trim(name)//' dt*ws/layerheight ',dt*maxval(maxval(-ws,dim=1)/farray1,mask=farray1>0)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+  endif
+
+  do while (.true.)
+
+    !> @todo implement adaptive recursive call of erosed iff sinkf*dt and sink*dt
+    !> exceed layer_height
+    call erosed(  nmlb   , nmub   , flufflyr , mfluff , frac , mudfrac , ws_convention_factor*ws, &
               & umod   , h1     , chezy    , taub   , nfrac, rhosol  , sedd50                 , &
               & sedd90 , sedtyp , sink     , sinkf  , sour , sourf   , anymud      , wave ,  uorb, &
               & tper   , teta   , spm_concentration , BioEffects     , nybot       , sigma_midlayer, &
               & u_bot  , v_bot  , u2d      , v2d    , h0   , mask    , advancecount, taubn, eq_conc, &
               & relative_layer_thickness, kmaxsd, taubmax )
 
+    exit
+  enddo
 
   call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -2144,6 +2160,12 @@ endif
 
   n = 0
   do l = 1, nfrac
+
+    !> only used for direct manipulation of pelagic SPM
+    call ESMF_FieldGet(spmFieldList(external_idx_by_nfrac(l)), farrayPtr=farrayPtr3, &
+      exclusiveLBound=lbnd, exclusiveUBound=ubnd, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
     do nm = nmlb, nmub
 !                rn(l,nm) = r0(l,nm) ! explicit
 !!                r1(l,nm) = r0(l,nm) + dt*(sour(l,nm) + sourf(l,nm))/h0(nm) - dt*(sink(l,nm) + sinkf(l,nm))*rn(l,nm)/h1(nm)
@@ -2161,15 +2183,43 @@ endif
       !> boundary (mask == 2), only calculate where (mask == 1)
       if ( mask(lbnd(1)-1+i,lbnd(2)-1+j) == 1 ) then
 
+        !> Do not allow sink rate to exceed available material in lowest
+        !> layer, i.e. that CFL is violated
+        !if (sink(l,nm) * dt  > 0.9*farray1(nm) ) sink(l,nm) =  0.9*farray1(nm)/dt
+
+        !> Calculate the deposition rate (kg m-2 s-1) from erosed-calculated
+        !> deposition speed (sink, m s-1) and fabm concentration (g m-3)
          deposition_rate  = real(sink(l,nm),fp)*real(spm_concentration(i,j,kmx,l),fp)/1000._fp
-         !deposition_rate  = min(0.5*real(ws(l,nm),fp),real(sink(l,nm),fp))*real(spm_concentration(i,j,kmx,l),fp)/1000._fp
+
          entrainment_rate = sour(l,nm)
 
+         !> New section Add both fluxes and make sure they don't underflow
+         !> availabel spm nor available mass, this quanity is net upward flux
+         !> in kg m-2 s-1
+         entrainment_rate = (entrainment_rate - deposition_rate)
+
+         if (entrainment_rate * dt > mass(l,nm) + 1E-6) then
+           entrainment_rate = 1E-6/dt
+         elseif (-entrainment_rate * dt > &
+           spm_concentration(i,j,kmx,l)*layer_thickness(i,j,kmx)/1000.) then
+           entrainment_rate = &
+             -0.9*spm_concentration(i,j,kmx,l)/1000.*layer_thickness(i,j,kmx)/dt
+         endif
         if (bedmodel) then
-          call update_sediment_mass (mass(l,nm), dt,deposition_rate,entrainment_rate, area(i,j))
+          !call update_sediment_mass (mass(l,nm), dt,deposition_rate,entrainment_rate, area(i,j))
+          mass(l,nm)  = mass(l,nm) + (deposition_rate - entrainment_rate) * dt
         end if
 
+        !> Best practice: return a flux of material, as this has been shown
+        !> to cause mass imbalance, let's try to manipulate spm direclty
         size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j) = entrainment_rate *1000.0_fp - deposition_rate *1000._fp   ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplied by 1000.
+
+        !> Alternative forumlation, manipulate spm direclty (does not work)
+        !size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j) = 0
+        !spm_concentration(i,j,kmx,l) = spm_concentration(i,j,kmx,l) + &
+        !  dt*(entrainment_rate - deposition_rate) / layer_thickness(i,j,kmx)
+        !farrayPtr3(i,j,kmx) = spm_concentration(i,j,kmx,l)
+
       endif
     enddo
     !> @todo check units and calculation of sediment upward flux, rethink ssus to be taken from FABM directly, not calculated by
