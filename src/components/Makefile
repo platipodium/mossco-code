@@ -24,7 +24,7 @@ SUBDIRS=gotm remtc
 
 TARGETS=libmossco_technical libmossco_default libmossco_random
 TARGETS+=libmossco_aggregation libmossco_grid
-TARGETS+=libmossco_simplewave libmossco_info libmossco_filtration
+TARGETS+=libmossco_simplewave libmossco_info libmossco_macrobenthos
 
 ifeq ($(MOSSCO_CMAQ),true)
   TARGETS += libmossco_cmaq
@@ -72,7 +72,7 @@ all: utilities subdirs $(TARGETS)
 
 libmossco_default: libdefault libmossco_util
 libmossco_info: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_info.a(info_component.o)
-	
+
 libmossco_benthos: libmossco_benthos_driver libmossco_util \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthos_component.o)
 
@@ -93,6 +93,11 @@ libmossco_clm_component: libmossco_clm_driver $(MOSSCO_LIBRARY_PATH)/libmossco_c
 libmossco_clm_driver:    prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
 
 libmossco_oasis: $(MOSSCO_LIBRARY_PATH)/libmossco_oasis.a(oasis_component.o)
+
+libmossco_macrobenthos: prefix libmossco_util \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_macrobenthos.a(vertical_macrobenthos_driver.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_macrobenthos.a(vertical_macrobenthos_component.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_macrobenthos.a(filtration_component.o)
 
 libmossco_simplewave: libmossco_simplewave_driver libmossco_util \
   $(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a(simplewave_component.o)

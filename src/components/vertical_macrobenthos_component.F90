@@ -27,17 +27,14 @@ module vertical_macrobenthos_component
   use esmf
   use vertical_macrobenthos_driver
 
-#undef  ESMF_METHOD
-#define ESMF_METHOD "Finalize"
-  use mossco_component, Finalize => MOSSCO_GridCompFinalize
-#undef  ESMF_METHOD
-
   use mossco_field
   use mossco_state
   use mossco_config
   use mossco_strings
   use mossco_attribute
   use mossco_config
+  use mossco_component, ReadRestart => MOSSCO_GridCompReadRestart
+  use mossco_component, Finalize => MOSSCO_GridCompFinalize
 
   implicit none
 
@@ -266,42 +263,6 @@ module vertical_macrobenthos_component
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP1
-
-#undef  ESMF_METHOD
-#define ESMF_METHOD "ReadRestart"
-  subroutine ReadRestart(gridComp, importState, exportState, parentClock, rc)
-
-    type(ESMF_GridComp)   :: gridComp
-    type(ESMF_State)      :: importState
-    type(ESMF_State)      :: exportState
-    type(ESMF_Clock)      :: parentClock
-    integer, intent(out)  :: rc
-
-    integer(ESMF_KIND_I4) :: localrc
-
-    rc=ESMF_SUCCESS
-
-    !> It does not make sense to readrestart this component, thus, we
-    !> 1. do not log calls to this function with CompEntry/CompExit
-    !> 2. use vertical_macrobenthos variables to avoid -Wunused
-
-    call ESMF_GridCompValidate(gridComp, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_ClockValidate(parentClock, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_StateValidate(importState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_StateValidate(exportState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-  end subroutine ReadRestart
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Run"

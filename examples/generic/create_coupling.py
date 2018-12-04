@@ -1944,7 +1944,7 @@ fid.write('''
             realValue = realValue / ms_r8
             write(formatString,'(A)') '(A,X,'//intformat(int(realValue))//')'
             write(message, formatString, iostat=localrc) trim(message)//' with speedup ', int(realValue)
-            if (localrc /= ESMF_SUCCESS) then 
+            if (localrc /= ESMF_SUCCESS) then
               write(0,*,iostat=localrc) trim(formatString), realValue, int(realValue)
               write(0,*,iostat=localrc) trim(message)
             endif
@@ -2319,7 +2319,8 @@ libs = {'gotm'       : ['solver', 'mossco_gotm'] ,
         'grid'       : ['mossco_grid'],
         'location'   : ['mossco_location'],
         'erosed'     : ['mossco_erosed'],
-        'filtration'     : ['mossco_filtration'],
+        'filtration'     : ['mossco_macrobenthos'],
+        'vertical_macrobenthos' : ['mossco_macrobenthos'],
         'schism'     : ['mossco_schism'],
         'hamsom'     : ['mossco_hamsom'],
         'tracer'     : ['mossco_tracer'],
@@ -2395,7 +2396,8 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'rename_connector' : ['libmossco_connector'],
         'flux_connector' : ['libmossco_connector'],
         'transport_connector' : ['libmossco_connector'],
-        'filtration' : ['libmossco_filtration'],
+        'filtration' : ['libmossco_macrobenthos'],
+        'vertical_macrobenthos' : ['libmossco_macrobenthos'],
         'copy_coupler' : ['libcopycoupler'],
         'regrid_coupler' : ['libregridcoupler'],
         'remtc_atmosphere' : ['libremtc'],
@@ -2464,7 +2466,7 @@ libmossco_util libsolver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
 libsediment libconstant libdefault libmossco_clm libmossco_erosed \
-libmossco_fabm0d libmossco_fabmpelagic libmossco_filtration libmossco_grid \
+libmossco_fabm0d libmossco_fabmpelagic libmossco_macrobenthos libmossco_grid \
 libmossco_fabmbenthic libmossco_random:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
