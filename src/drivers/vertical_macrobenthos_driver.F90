@@ -28,6 +28,7 @@ module vertical_macrobenthos_driver
   !> also use mossco_strings? only when no ESMF dependence!
 
   private
+  public create_vertical_macrobenthos
 
   type, extends(type_rhs_driver), public :: type_vertical_macrobenthos
 
@@ -50,12 +51,13 @@ module vertical_macrobenthos_driver
     procedure :: set
     procedure :: get
     procedure :: initialize
+    procedure :: finalize
   end type
 
 
 contains
 
-function create(inum, jnum, rc) result(self)
+function create_vertical_macrobenthos(inum, jnum, rc) result(self)
 
   implicit none
 
@@ -68,7 +70,7 @@ function create(inum, jnum, rc) result(self)
 
   call self%initialize(inum, jnum, rc)
 
-end function create
+end function create_vertical_macrobenthos
 
 subroutine initialize(self, inum, jnum, rc)
 
@@ -112,6 +114,31 @@ subroutine initialize(self, inum, jnum, rc)
   self%bulk_speed = 0.1
 
 end subroutine initialize
+
+subroutine finalize(self, rc)
+
+  class(type_vertical_macrobenthos) :: self
+  integer(KIND_I4), optional, intent(out) :: rc
+
+  if (present(rc)) rc = 0
+
+  if (associated(self%mask)) deallocate(self%mask)
+  if (associated(self%conc)) deallocate(self%conc)
+
+  nullify(self%biomass_epibenthic)
+  nullify(self%biomass_endobenthic)
+
+  if (associated(self%biomass)) deallocate(self%biomass)
+
+  nullify(self%depth_epibenthic)
+  nullify(self%depth_epibenthic)
+
+  if (associated(self%depth)) deallocate(self%depth)
+  if (associated(self%poc)) deallocate(self%poc)
+  if (associated(self%roughness_length)) deallocate(self%roughness_length)
+  if (associated(self%bulk_speed)) deallocate(self%bulk_speed)
+
+end subroutine finalize
 
 subroutine set(self)
 
