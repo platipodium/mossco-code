@@ -2424,7 +2424,7 @@ contains
         call ESMF_StateGet(state, itemNameList(i), fieldInBundleList(1), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       else
-        continue 
+        cycle
       endif
 
       do k=1, fieldInBundleCount
