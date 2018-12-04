@@ -46,7 +46,7 @@ end interface
 
 !> An interface is not allowed for these ESMF routines
 public MOSSCO_GridCompFinalize
-public MOSSCO_GridCompRestart
+public MOSSCO_GridCompReadRestart
 public MOSSCO_CplCompFinalize
 
 
@@ -1776,8 +1776,8 @@ end subroutine MOSSCO_GridCompStateRemoveCreated
 !> For all fields in the exportState of a component, check if information
 !> exists in import and overwrite the information in export.
 #undef ESMF_METHOD
-#define ESMF_METHOD "MOSSCO_GridCompRestart"
-subroutine MOSSCO_GridCompRestart(gridComp, importState, exportState, parentClock, rc)
+#define ESMF_METHOD "MOSSCO_GridCompReadRestart"
+subroutine MOSSCO_GridCompReadRestart(gridComp, importState, exportState, parentClock, rc)
 
   type(ESMF_GridComp)   :: gridComp
   type(ESMF_State)      :: importState, exportState
@@ -1839,7 +1839,7 @@ subroutine MOSSCO_GridCompRestart(gridComp, importState, exportState, parentCloc
       !> @todo  call MOSSCO_StateCopyMatchingFields
       localrc = ESMF_RC_NOT_IMPL
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-            
+
     elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
 
       call MOSSCO_StateGet(exportState, fieldList=exportFieldList, &
@@ -1866,7 +1866,7 @@ subroutine MOSSCO_GridCompRestart(gridComp, importState, exportState, parentCloc
   call MOSSCO_CompExit(gridComp, localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-end subroutine MOSSCO_GridCompRestart
+end subroutine MOSSCO_GridCompReadRestart
 
 #undef ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_GridCompFinalize"
