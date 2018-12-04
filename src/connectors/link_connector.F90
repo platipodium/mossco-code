@@ -190,8 +190,11 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+    !> @todo attempt to replace this with new interface
     call link_fields_and_fieldbundles_in_states(cplComp, importState, exportState, rc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !call MOSSCO_link_fields_in_states(importState, exportState, &
+    !  owner=trim(name), rc=localrc)
+    !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_CplCompGet(cplComp, clock=clock, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -1390,7 +1393,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
     integer(ESMF_KIND_I4)       :: localrc, rc_
     integer(ESMF_KIND_I4)       :: i, itemCount, j, k
-    integer(ESMF_KIND_I4)       :: importFieldCount, exportFieldCount
+    integer(ESMF_KIND_I4)       :: importFieldCount=0, exportFieldCount=0
     character (len=ESMF_MAXSTR) :: message, itemName, owner_
     character(len=ESMF_MAXSTR), dimension(:), allocatable :: itemNameList
     type(ESMF_StateItem_Flag),  dimension(:), allocatable :: itemTypeList
@@ -1429,7 +1432,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
       call MOSSCO_StateGetFieldList(importState, itemSearch=trim(itemNameList(i)), &
         fieldList=importFieldList, fieldStatusList=(/ &
-        ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
+        ESMF_FIELDSTATUS_COMPLETE/), fieldCount=importFieldCount, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       !> Do not link empty or gridset fields
@@ -1456,23 +1459,12 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
       endif
 
-      call MOSSCO_StateGetFieldList(exportState, itemSearch=itemName, &
-        fieldList=exportFieldList, fieldStatusList=(/ESMF_FIELDSTATUS_GRIDSET, &
-        ESMF_FIELDSTATUS_COMPLETE, ESMF_FIELDSTATUS_EMPTY/), rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-      if (exportItemType == ESMF_STATEITEM_FIELDBUNDLE) then
-        call ESMF_StateGet(exportState, itemName, &
-          fieldBundle=exportFieldBundle, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-      endif
-
       ! If the item does not exist in export state, then simply link it into the
       ! export state
       if (exportItemType == ESMF_STATEITEM_NOTFOUND .and. &
         importItemType == ESMF_STATEITEM_FIELD) then
 
-        call ESMF_StateAddReplace(exportState, importFieldList(i:i), rc=localrc)
+        call ESMF_StateAddReplace(exportState, importFieldList(1:1), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
         write(message,'(A)') trim(owner_)//' linked over from '
@@ -1494,6 +1486,11 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         cycle
       endif
 
+      call MOSSCO_StateGetFieldList(exportState, itemSearch=itemName, &
+        fieldList=exportFieldList, fieldStatusList=(/ESMF_FIELDSTATUS_GRIDSET, &
+        ESMF_FIELDSTATUS_COMPLETE, ESMF_FIELDSTATUS_EMPTY/), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       !> From here on, items exist in both, first check for equal fields
       !> and do nothing but cycle
       if (importItemType == ESMF_STATEITEM_FIELD .and. exportItemType &
@@ -1501,6 +1498,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
         if (importFieldList(1) == exportfieldList(1)) cycle
       endif
+
 
       !> Move a blocking field in export to fieldBundle
       if (exportItemType == ESMF_STATEITEM_FIELD) then
@@ -1524,6 +1522,12 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         call MOSSCO_FieldString(exportfieldList(1), message)
         if (verbose) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
+      endif
+
+      if (exportItemType == ESMF_STATEITEM_FIELDBUNDLE) then
+        call ESMF_StateGet(exportState, itemName, &
+          fieldBundle=exportFieldBundle, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       endif
 
       do j = 1, importFieldCount
