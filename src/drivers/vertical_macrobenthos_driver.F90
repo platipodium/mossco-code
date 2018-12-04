@@ -73,6 +73,7 @@ end function create
 subroutine initialize(self, inum, jnum, rc)
 
   class(type_vertical_macrobenthos) :: self
+  integer(KIND_I4), intent(in)            :: inum, jnum
   integer(KIND_I4), optional, intent(out) :: rc
 
   if (present(rc)) rc = 0
@@ -150,7 +151,7 @@ subroutine get_rhs(self, rhs, rc)
           * exp (self%depth(i,j)/self%predation_depth)
 
         m0 = self%visibility * (self%biomass_endobenthic(i,j) &
-           * exp (-depth_endobenthic(i,j)/self%predation_depth) &
+           * exp (-self%depth_endobenthic(i,j)/self%predation_depth) &
            + self%biomass_epibenthic(i,j))
 
         drag = self%drag * (self%depth_epibenthic(i,j) + self%roughness_length(i,j) &
@@ -158,8 +159,8 @@ subroutine get_rhs(self, rhs, rc)
           -exp (-2*self%depth_epibenthic(i,j)/self%roughness_length(i,j)) - 3))
 
         dmpdz = -m0 * self%risk_amplification &
-          * drag * exp(-depth_epibenthic(i,j)/self%roughness_length(i,j))
-        dmbdz = -m0 * exp(-depth_endobenthic(i,j)/self%predation_depth)
+          * drag * exp(-self%depth_epibenthic(i,j)/self%roughness_length(i,j))
+        dmbdz = -m0 * exp(-self%depth_endobenthic(i,j)/self%predation_depth)
 
         dppdz = self%epibenthic_affinity * self%bulk_speed(i,j)  &
           * self%poc(i,j) / self%roughness_length(i,j)  &
