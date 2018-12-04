@@ -43,6 +43,9 @@ test_Coupler: test_Coupler.F90 libmossco_mediator
 test_MOSSCO_Field: test_MOSSCO_Field.F90 libmossco_technical
 		$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_technical  -lmossco_util $(LIBS)
 
+libmossco_connector:
+	$(MAKE) -C $(MOSSCO_DIR)/src/connectors $@
+
 libmossco_mediator:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
@@ -69,6 +72,9 @@ test_Concurrency: libmossco_default libmossco_info
 
 test_ClockDestroy: libmossco_technical
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_technical -lmossco_util $(LIBS)
+
+test_link_connector: libmossco_util libmossco_connector
+	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_connector -lmossco_util $(LIBS)
 
 test_Dictionary test_mossco_netcdf: libmossco_util
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_util $(LIBS)
