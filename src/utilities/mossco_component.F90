@@ -46,6 +46,7 @@ end interface
 
 !> An interface is not allowed for these ESMF routines
 public MOSSCO_GridCompFinalize
+public MOSSCO_GridCompRestart
 public MOSSCO_CplCompFinalize
 
 
@@ -54,7 +55,6 @@ public MOSSCO_CompEntry
 public MOSSCO_CompLog
 public MOSSCO_GridCompExitLog
 public MOSSCO_GridCompEntryLog
-
 
 private
 
@@ -1772,8 +1772,102 @@ subroutine MOSSCO_GridCompStateRemoveCreated(gridComp, state, rc)
 
 end subroutine MOSSCO_GridCompStateRemoveCreated
 
-!> Provide a generic Finalize routine for all MOSSCO components,
-!> systematically and robustly cleaning up all contents of a component
+!> Provide a generic Restart routine for all MOSSCO components,
+!> For all fields in the exportState of a component, check if information
+!> exists in import and overwrite the information in export.
+#undef ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_GridCompRestart"
+subroutine MOSSCO_GridCompRestart(gridComp, importState, exportState, parentClock, rc)
+
+  type(ESMF_GridComp)   :: gridComp
+  type(ESMF_State)      :: importState, exportState
+  type(ESMF_Clock)      :: parentClock
+  integer, intent(out)  :: rc
+
+  character(ESMF_MAXSTR)  :: name, message
+  integer(ESMF_KIND_I4)   :: localrc, itemCount, i
+  integer(ESMF_KIND_I4)   :: exportfieldCount, importFieldCount
+  type(ESMF_Field), allocatable          :: exportfieldList(:), importFieldList(:)
+  character(ESMF_MAXSTR), allocatable    :: itemNameList(:)
+  type(ESMF_StateItem_Flag), allocatable :: itemTypeList(:)
+  character(ESMF_MAXSTR), pointer        :: includeList(:)
+
+  rc = ESMF_SUCCESS
+
+  call MOSSCO_CompEntry(gridComp, parentClock, name=name, &
+    importState=importState, exportState=exportState, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  call ESMF_StateGet(exportState, itemCount=itemCount, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  if (itemCount < 1) then
+    call MOSSCO_CompExit(gridComp, localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    return
+  endif
+
+  allocate(itemNameList(itemCount))
+  allocate(itemTypeList(itemCount))
+
+  call ESMF_StateGet(exportState, itemNameList=itemNameList, &
+    itemTypeList=itemTypeList, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  do i=1, itemCount
+
+    if (associated(includeList)) deallocate(includeList)
+    allocate(includeList(1))
+    includeList(1) = itemNameList(i)
+
+    if (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
+
+      call MOSSCO_StateGet(exportState, fieldList=exportFieldList, &
+        fieldCount=exportFieldCount, include=includeList, &
+        fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (exportFieldCount < 1) cycle
+
+      call MOSSCO_StateGet(importState, fieldList=importFieldList, &
+        fieldCount=importFieldCount, include=includeList,  &
+        fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (importFieldCount /= exportfieldCount) cycle
+
+      !> @todo  call MOSSCO_StateCopyMatchingFields
+      localrc = ESMF_RC_NOT_IMPL
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+            
+    elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
+
+      call MOSSCO_StateGet(exportState, fieldList=exportFieldList, &
+        fieldCount=exportFieldCount, itemSearch= includeList(1), &
+        fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (exportFieldCount < 1) cycle
+
+      call MOSSCO_StateGet(importState, fieldList=importFieldList, &
+        fieldCount=importFieldCount, itemSearch=includeList(1), &
+        fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (exportFieldCount /= importFieldCount) cycle
+
+      call MOSSCO_FieldCopy(exportFieldList(1), importFieldList(1), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    else
+      cycle
+    endif
+  enddo
+
+  call MOSSCO_CompExit(gridComp, localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+end subroutine MOSSCO_GridCompRestart
+
 #undef ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_GridCompFinalize"
 subroutine MOSSCO_GridCompFinalize(gridComp, importState, exportState, parentClock, rc)
