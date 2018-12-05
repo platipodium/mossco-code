@@ -2096,13 +2096,26 @@ endif
   !> @todo why not take the one from sedparams.txt?
   sedd90 = 1.50_fp *sedd50 ! according to manual of Delft3d page 356
 
-  call erosed(  nmlb   , nmub   , flufflyr , mfluff , frac , mudfrac , ws_convention_factor*ws, &
+
+  do while (.true.)
+    call erosed(  nmlb   , nmub   , flufflyr , mfluff , frac , mudfrac , ws_convention_factor*ws, &
               & umod   , h1     , chezy    , taub   , nfrac, rhosol  , sedd50                 , &
               & sedd90 , sedtyp , sink     , sinkf  , sour , sourf   , anymud      , wave ,  uorb, &
               & tper   , teta   , spm_concentration , BioEffects     , nybot       , sigma_midlayer, &
               & u_bot  , v_bot  , u2d      , v2d    , h0   , mask    , advancecount, taubn, eq_conc, &
               & relative_layer_thickness, kmaxsd, taubmax )
 
+    if (any(maxval(-sink,dim=1)*dt*2 > farray1 .and. farray1>0)) then
+      write(message, '(A)') trim(name)//' sink flux exceeds CFL, iterating with halfed vertical velocity ...'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      ws = ws / 2! dt*maxval(maxval(-sink,dim=1)/farray1,mask=farray1>0)
+      cycle
+    endif
+
+    exit
+
+
+  enddo
 
   call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -2439,7 +2452,7 @@ endif
   sum_depth_avg_spm_concentration = sum(depth_avg_spm_concentration, dim=3)
 
   !> Examine the budget of SPM and bedmass
-
+  !
   ! if (bedmodel) then
   !   write(message,'(A,3(X,ES10.3))') trim(name)//' bed mass original  ',mass_in_bed(RANGE2D,:)
   !   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
