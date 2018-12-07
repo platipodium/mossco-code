@@ -69,26 +69,61 @@ all: libsolver libmossco_util $(TARGETS)
 libsolver: prefix $(MOSSCO_LIBRARY_PATH)/libsolver.a(solver_library.o)
 libmossco_util:  prefix sha $(LIBMOSSCO_UTIL_OBJS)
 libmossco_db: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_db.a(mossco_db.o)
-mossco_state.o : mossco_field.o mossco_state.F90
-mossco_logging.o : mossco_strings.o mossco_field.o mossco_state.o mossco_logging.F90
-mossco_field.o : mossco_strings.o mossco_field.F90 mossco_memory.o mossco_attribute.o mossco_grid.o mossco_geom.o mossco_loc.o
-mossco_loc.o : mossco_strings.o mossco_loc.F90
-mossco_gridspec.o : mossco_strings.o mossco_gridspec.F90
-mossco_geom.o : mossco_strings.o ESMF_GridCreate3D.o mossco_mesh.o mossco_grid.o mossco_locstream.o
-mossco_grid.o : mossco_strings.o mossco_grid.F90
-mossco_mesh.o : mossco_strings.o mossco_mesh.F90
-mossco_locstream.o : mossco_strings.o mossco_locstream.F90
-mossco_routehandle.o : mossco_strings.o mossco_routehandle.F90
-mossco_component.o : mossco_strings.o mossco_state.o mossco_field.o mossco_component.F90
-mossco_netcdf.o : mossco_gridspec.o mossco_netcdf.F90 mossco_time.o
-mossco_attribute.o : mossco_attribute.F90
-mossco_memory.o : mossco_memory.F90
-mossco_strings.o : mossco_memory.o mossco_strings.F90
-mossco_parameter.o : mossco_parameter.F90
-mossco_config.o : mossco_config.F90
-mossco_db.o : mossco_db.F90 \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_db.a(fsqlite.o)
-ESMF_GridCreate3D.o : ESMF_GridCreate3D.F90
+
+$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_logging.o) : mossco_logging.F90 \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_state.o)
+
+$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_state.o): mossco_state.F90 \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_field.o)
+
+$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_field.o) : mossco_field.F90 \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_attribute.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_loc.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_geom.o)
+
+$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_component.o) : mossco_component.F90 \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_state.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_field.o)
+
+$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_netcdf.o) : mossco_netcdf.F90 \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_gridspec.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_time.o)
+
+$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_db.o) : mossco_db.F90 \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_db.a(fsqlite.o)
+
+# Depends on ESMF_GridCreate3D, mesh/grid/locstream
+$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_geom.o) : mossco_geom.F90 \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_mesh.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_locstream.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_grid.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(ESMF_GridCreate3D.o)
+
+# Depends on mossco_strings and its dependents
+$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_loc.o) : mossco_loc.F90 \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_strings.o)
+$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_gridspec.o) : mossco_gridspec.F90 \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_strings.o)
+$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_locstream.o) : mossco_locstream.F90 \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_strings.o)
+$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_grid.o) : mossco_grid.F90 \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_strings.o)
+$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_mesh.o) : mossco_mesh.F90 \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_strings.o)
+$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_routehandle.o) : mossco_routehandle.F90 \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_strings.o)
+
+# Depends on mossco_memory
+$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_strings.o) : mossco_strings.F90 \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_memory.o)
+
+# Libraries that are independent of others
+$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_memory.o) : mossco_memory.F90
+$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_config.o) : mossco_config.F90
+$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_parameter.o) : mossco_parameter.F90
+$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_attribute.o) : mossco_attribute.F90
+$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(ESMF_GridCreate3D.o) : ESMF_GridCreate3D.F90
+
 
 $(MOSSCO_LIBRARY_PATH)/libmossco_db.a(fsqlite.o): $(SQLITE_DIR)/fsqlite.f90
 	make -C $(SQLITE_DIR)
