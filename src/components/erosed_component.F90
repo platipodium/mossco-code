@@ -765,74 +765,122 @@ module erosed_component
 
     end do
 
-    fieldBundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_in_water', &
-      multiflag=.true., rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (nfrac > 1) then
+      fieldBundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_in_water', &
+        multiflag=.true., rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_FieldBundleSet(fieldBundle, grid, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      call ESMF_FieldBundleSet(fieldBundle, grid, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(fieldBundle,'creator', trim(name), rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      call ESMF_AttributeSet(fieldBundle,'creator', trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_StateAddReplace(importState, (/fieldBundle/), rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      call ESMF_StateAddReplace(importState, (/fieldBundle/), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    write(message, '(A)') trim(name)// &
-      ' created for import bundle concentration_of_SPM_in_water'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      write(message, '(A)') trim(name)// &
+        ' created for import bundle concentration_of_SPM_in_water'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-    fieldBundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_z_velocity_in_water', &
-      multiflag=.true., rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      fieldBundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_z_velocity_in_water', &
+        multiflag=.true., rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_FieldBundleSet(fieldBundle, grid, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      call ESMF_FieldBundleSet(fieldBundle, grid, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(fieldBundle,'creator', trim(name), rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      call ESMF_AttributeSet(fieldBundle,'creator', trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_StateAddReplace(importState, (/fieldBundle/), rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      call ESMF_StateAddReplace(importState, (/fieldBundle/), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    write(message, '(A)') trim(name)// &
-      ' created for import bundle concentration_of_SPM_z_velocity_in_water'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      write(message, '(A)') trim(name)// &
+        ' created for import bundle concentration_of_SPM_z_velocity_in_water'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-    fieldBundle = ESMF_FieldBundleCreate(&
-      name='concentration_of_SPM_upward_flux_at_soil_surface', &
-      multiflag=.true.,rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      fieldBundle = ESMF_FieldBundleCreate(&
+        name='concentration_of_SPM_upward_flux_at_soil_surface', &
+        multiflag=.true.,rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_FieldBundleSet(fieldBundle, grid, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      call ESMF_FieldBundleSet(fieldBundle, grid, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(fieldBundle, 'creator', trim(name), rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      call ESMF_AttributeSet(fieldBundle, 'creator', trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_StateAddReplace(exportState, (/fieldBundle/), rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      call ESMF_StateAddReplace(exportState, (/fieldBundle/), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    write(message, '(A)') trim(name)// &
-      ' created for export bundle concentration_of_SPM_upward_flux_at_soil_surface'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      write(message, '(A)') trim(name)// &
+        ' created for export bundle concentration_of_SPM_upward_flux_at_soil_surface'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-    fieldBundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_downward_flux_at_soil_surface', &
-      multiflag=.true.,rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_FieldBundleSet(fieldBundle,grid,rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      fieldBundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_downward_flux_at_soil_surface', &
+        multiflag=.true.,rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(fieldBundle,'creator', trim(name), rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      call ESMF_FieldBundleSet(fieldBundle,grid,rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_StateAddReplace(exportState, (/fieldBundle/), rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      call ESMF_AttributeSet(fieldBundle,'creator', trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    write(message, '(A)') trim(name)// &
-      ' created for export bundle concentration_of_SPM_downward_flux_at_soil_surface'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      call ESMF_StateAddReplace(exportState, (/fieldBundle/), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message, '(A)') trim(name)// &
+        ' created for export bundle concentration_of_SPM_downward_flux_at_soil_surface'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    elseif (nfrac == 1) then
+
+      field = ESMF_FieldEmptyCreate(name='concentration_of_SPM_in_water', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_StateAddReplace(importState, (/field/), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message, '(A)') trim(name)//' created for import '
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      field = ESMF_FieldEmptyCreate(&
+        name='concentration_of_SPM_z_velocity_in_water', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_StateAddReplace(importState, (/field/), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message, '(A)') trim(name)//' created for import '
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      field = ESMF_FieldEmptyCreate(name='concentration_of_SPM_upward_flux_at_soil_surface', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_FieldEmptySet(field, grid, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_StateAddReplace(exportState, (/field/), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message, '(A)') trim(name)//' created for export '
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    endif
 
     if (bedmodel) then
 
@@ -938,6 +986,7 @@ module erosed_component
     integer(ESMF_KIND_I8),dimension(:),allocatable :: spm_flux_id
     logical :: isPresent
     character(len=ESMF_MAXSTR), allocatable        :: options(:)
+    character(len=ESMF_MAXSTR), pointer            :: includeList(:) => null()
 
     call MOSSCO_CompEntry(gridComp, clock, name=name, currTime=currTime, &
       importState=importState, exportState=exportState, rc=localrc)
@@ -1065,12 +1114,16 @@ module erosed_component
       end if
   end do
 
-  !> first try to get "external_index" from "concentration_of_SPM" fieldBundle in import State
-  call ESMF_StateGet(importState, 'concentration_of_SPM_in_water', &
-    fieldBundle, rc=localrc)
+  !> first try to get "external_index" from "concentration_of_SPM"  in import State
+  if (associated(includeList)) deallocate(includeList)
+  allocate(includeList(1))
+  includeList(1) = 'concentration_of_SPM_in_water'
+
+  call MOSSCO_Reallocate(spmFieldList, 0, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-  call ESMF_FieldBundleGet(fieldBundle, fieldCount=fieldCount, rc=localrc)
+  call MOSSCO_StateGet(importState, spmFieldList, fieldCount=fieldCount, &
+    include=includeList, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   if (fieldCount==1 .and. nfrac>1) then
@@ -1094,12 +1147,6 @@ module erosed_component
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
   else ! nfrac == fieldCount
-
-    if (allocated(spmFieldList) .and. size(spmFieldList) /= fieldcount) deallocate(spmFieldList)
-    if (.not.allocated(spmFieldList)) allocate(spmFieldList(fieldCount))
-
-    call ESMF_FieldBundleGet(fieldBundle, FieldList=spmFieldList, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     do n=1, nfrac
 
@@ -1126,21 +1173,18 @@ module erosed_component
     nfrac_by_external_idx(external_idx_by_nfrac(n))=n
   end do
 
+  includeList(1) = 'concentration_of_SPM_upward_flux_at_soil_surface'
 
-  call ESMF_StateGet(exportState, &
-    'concentration_of_SPM_upward_flux_at_soil_surface', fieldBundle,rc=localrc)
+  call MOSSCO_Reallocate(spmFieldList, 0, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-  call ESMF_FieldBundleGet(fieldBundle, fieldCount=fieldCount, rc=localrc)
+  call MOSSCO_StateGet(exportState, fluxFieldList, fieldCount=fieldCount, &
+    include=includeList, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   if (fieldcount .gt. 0) then
 
-    allocate(fluxFieldList(fieldCount))
     allocate(spm_flux_id(fieldCount))
-
-    call ESMF_FieldBundleGet(fieldBundle, fieldList=fluxFieldList, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     do i=1,fieldCount
       call ESMF_AttributeGet(fluxFieldList(i), 'external_index', value=spm_flux_id(i), rc=localrc)
@@ -1243,17 +1287,6 @@ module erosed_component
   end do !> Loop over erosed fractions 1..nfrac
 
   !> Add metadata from erosed to fields in export State
-  call ESMF_StateGet(exportState, &
-    'concentration_of_SPM_upward_flux_at_soil_surface', fieldBundle,rc=localrc)
-  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-  call ESMF_FieldBundleGet(fieldBundle, fieldCount=fieldCount, rc=localrc)
-  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-  if (fieldCount > 0) then
-    call ESMF_FieldBundleGet(fieldBundle, fieldList=fluxFieldList, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-  endif
 
   ! do i=1, fieldCount
   !   field = fluxFieldList(i)
@@ -1406,7 +1439,11 @@ module erosed_component
     call ESMF_StateAddReplace(exportState,(/field/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    deallocate(options)
+    if (allocated(options)) deallocate(options)
+    if (associated(includeList)) deallocate(includeList)
+
+    call MOSSCO_Reallocate(spmFieldList, 0, rc=localrc)
+    call MOSSCO_Reallocate(fluxFieldList, 0, rc=localrc)
 
     call MOSSCO_CompExit(gridComp, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
