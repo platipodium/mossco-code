@@ -1945,16 +1945,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
   endif
   nullify(farrayPtr3)
 
-  !> Test for vertical CFL
-
-  if (any(maxval(-ws,dim=1)*dt*2 > farray1 .and. farray1>0)) then
-    write(message, '(A)') trim(name)//' coupling exceeds CFL, reduce coupling time step'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-    write(message, '(A,ES10.3)') trim(name)//' dt*ws/layerheight ',dt*maxval(maxval(-ws,dim=1)/farray1,mask=farray1>0)
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-  endif
-
-  !> Get water depth, assum initial water depth as default
+  !> Get water depth, assume initial water depth as default
   h1 = h0
   call map_variable(importState, 'water_depth_at_soil_surface', h1, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
