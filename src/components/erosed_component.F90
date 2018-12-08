@@ -1045,7 +1045,7 @@ module erosed_component
    !    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
    ! else
      allocate(area(RANGE2D))
-     area = 1.0
+     area = 1.0D0
    ! end if
 
    if (bedmodel) then
@@ -1818,10 +1818,16 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     call ESMF_AttributeGet(spmFieldList(i), 'external_index', &
       external_index, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
     call ESMF_AttributeGet(spmFieldList(i), 'mean_particle_diameter', &
       external_d50, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
     call ESMF_AttributeGet(velFieldList(i), 'mean_particle_diameter', &
       isPresent=isPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
     if (isPresent) then
       call ESMF_AttributeGet(velFieldList(i), 'mean_particle_diameter', &
         real8, rc=localrc)
@@ -1834,9 +1840,12 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       call ESMF_AttributeSet(velFieldList(i), 'mean_particle_diameter', &
         external_d50, rc=localrc)
     endif
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_AttributeGet(fluxFieldList(i), 'mean_particle_diameter', &
       isPresent=isPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
     if (isPresent) then
       call ESMF_AttributeGet(fluxFieldList(i), 'mean_particle_diameter', &
         real8, rc=localrc)
@@ -1849,6 +1858,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       call ESMF_AttributeSet(fluxFieldList(i), 'mean_particle_diameter', &
         external_d50, rc=localrc)
     endif
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (external_d50 - sedd50(nfrac_by_external_idx(external_index)) > 10*tiny(real8)) then
       write(message,'(A)') trim(name)//' particle diameter sizes do not agree in '
@@ -1960,10 +1970,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
   call map_variable(importState, 'y_velocity_at_soil_surface', v_bot, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-
   if (wave) then
     call map_variable(importState, 'wave_period', tper, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
     call map_variable(importState, 'wave_direction', teta, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
   endif
@@ -2041,7 +2051,7 @@ endif
   !> @todo Why do we allow localrc /= 0? (if there is no grid?)
   if (localrc == 0) then
 
-    do k = 0,ubnd(3)-lbnd(3)
+    do k = 0, ubnd(3)-lbnd(3)
 
       layer_thickness(RANGE2D,lbnd(3)+k) &
         = interface_height_above_soil_surface(RANGE2D,iflbnd(3)+k+1) &
@@ -2128,7 +2138,6 @@ endif
   !> @todo why not take the one from sedparams.txt?
   sedd90 = 1.50_fp *sedd50 ! according to manual of Delft3d page 356
 
-
   do while (.true.)
     call erosed(  nmlb   , nmub   , flufflyr , mfluff , frac , mudfrac , ws_convention_factor*ws, &
               & umod   , h1     , chezy    , taub   , nfrac, rhosol  , sedd50                 , &
@@ -2145,7 +2154,6 @@ endif
     endif
 
     exit
-
 
   enddo
 
@@ -2170,12 +2178,13 @@ endif
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
   endif
 
-  do l=1, nfrac
+  !do l=1, nfrac
+  do i=1, size(fieldList)
 
-    call ESMF_AttributeGet(fieldList(l), 'external_index', external_index, rc=localrc)
+    call ESMF_AttributeGet(fieldList(i), 'external_index', external_index, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    !write(0,*) external_index, nfrac_by_external_idx(external_index), external_idx_by_nfrac(l)
+    l = nfrac_by_external_idx(external_index)
 
     call ESMF_FieldGet(fieldList(l), &
       farrayPtr=size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr, rc=localrc)
@@ -2185,7 +2194,6 @@ endif
 
   call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
 
   n = 0
   do l = 1, nfrac
@@ -2211,7 +2219,7 @@ endif
          entrainment_rate = sour(l,nm)
 
         if (bedmodel) then
-          call update_sediment_mass (mass(l,nm), dt,deposition_rate,entrainment_rate, area(i,j))
+          call update_sediment_mass (mass(l,nm), dt, deposition_rate, entrainment_rate, area(i,j))
         end if
 
         size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j) = entrainment_rate *1000.0_fp - deposition_rate *1000._fp   ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplied by 1000.
