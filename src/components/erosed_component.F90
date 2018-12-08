@@ -1175,7 +1175,7 @@ module erosed_component
 
   includeList(1) = 'concentration_of_SPM_upward_flux_at_soil_surface'
 
-  call MOSSCO_Reallocate(spmFieldList, 0, rc=localrc)
+  call MOSSCO_Reallocate(fluxFieldList, 0, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   call MOSSCO_StateGet(exportState, fluxFieldList, fieldCount=fieldCount, &
@@ -1190,7 +1190,11 @@ module erosed_component
       call ESMF_AttributeGet(fluxFieldList(i), 'external_index', value=spm_flux_id(i), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     end do
-  end if
+  else
+    localrc = ESMF_RC_NOT_FOUND
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  endif
 
   do n=1, nfrac
 

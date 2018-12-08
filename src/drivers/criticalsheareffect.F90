@@ -13,15 +13,15 @@ interface Crit_shear_bioeffect
 ! generic functions with the same arguments as already available functions
 ! listed here. If it is inevitable, then the function is not allowed to be
 ! defined within this interface, but as a separate function within this module.
-  module procedure mircophyto_crit_shear_func
-  module procedure Mbalthica_crit_shear_func
+  module procedure benthos_microphyto_critical_shearstress_function
+  module procedure benthos_macrofauna_critical_shearstress_function
 end interface
 
 !------------------------------------------------------------
   contains
 !------------------------------------------------------------
 
-function mircophyto_crit_shear_func ( Chl, inum, jnum) result (fcr_microphyto)
+function benthos_microphyto_critical_shearstress_function ( Chl, inum, jnum) result (fcr_microphyto)
 ! Function to determine the effect of microphytobenthos on the critical bed shear stress.
 ! By production of biofilm, this value can increase an order of magnitude.
 
@@ -35,14 +35,16 @@ function mircophyto_crit_shear_func ( Chl, inum, jnum) result (fcr_microphyto)
   ! local parameters Knaapen et al. 2003
   real(fp), parameter :: b1     = 0.08
 
-  !units    ! Unit of Bioamount (mgg: microgram/ g dry sediment weight)
-            !        or       (mgm-2: microgram/ m**2 area)
+  !units    ! Unit of Bioamount (mug g-1: microgram/ g dry sediment weight)
+            !        or       (mug m-2: microgram/ m**2 area)
+            ! With b1 above and typical range of microphytobenthos 0--150 mug g-1
+            ! the critical shear stress is between 1 and 10
 
   fcr_microphyto = 1.0
 
   select case (trim(Chl%units))
 
-    case ( 'mg g-1' ) ! according to Knaapen et al (2003)
+  case ( 'mug g-1' ) ! according to Knaapen et al (2003)
 
       do j = 1, jnum
         do i = 1, inum
@@ -53,21 +55,21 @@ function mircophyto_crit_shear_func ( Chl, inum, jnum) result (fcr_microphyto)
 
     case default
 
-      !do nothing except applying default value
-
-      !write (*,*) ' WARNING: Missing unit: the microphytobenthos effect on critical shear stress can be only'// &
-      !            ' calculated base on Chlorophyll a content in UNIT microgram /g dry Sediment (mgg**-1),'// &
+      write(0,*) 'FATAL ERROR criticalsheareffect.F90:',__LINE__,' microphytobenthos needs unit "mug g-1", got '//trim(Chl%units)
+      stop
+      ! Missing unit: the microphytobenthos effect on critical shear stress can be only'// &
+      !            ' calculated base on Chlorophyll a content in UNIT microgram /g dry Sediment (mug g-1),'// &
       !            ' therefore, the effect was not calculated.'
 
   end select
 
   return
 
-end function mircophyto_crit_shear_func
+end function benthos_microphyto_critical_shearstress_function
 
 !------------------------------------------------------------
 
-function Mbalthica_crit_shear_func (Mbalthica, inum, jnum) result (fcr_macrofauna)
+function benthos_macrofauna_critical_shearstress_function (Mbalthica, inum, jnum) result (fcr_macrofauna)
 ! Effect of Macoma balthica intensity on the critical bed shear stress.
 
   implicit none
@@ -86,8 +88,8 @@ function Mbalthica_crit_shear_func (Mbalthica, inum, jnum) result (fcr_macrofaun
   real(fp), parameter :: c1     = -0.15
   real(fp), parameter :: c2     = 0.978
 
-  !Units    ! Unit of Bioamount (mgg: microgram/ g dry sediment weight)
-            ! or              (mgm-2: microgram/ m**2 area)
+  !Units    ! Unit of Bioamount (mug g: microgram/ g dry sediment weight)
+            ! or              (mug m-2: microgram/ m**2 area)
 
   ! initialize with default value
   fcr_macrofauna = 1.0
@@ -108,7 +110,7 @@ function Mbalthica_crit_shear_func (Mbalthica, inum, jnum) result (fcr_macrofaun
         end do
       end do
 
-    case ( 'gCm**-2' ) ! according to Borsje et al. (2008)
+    case ( 'gC m-2' ) ! according to Borsje et al. (2008)
 
       do j = 1, jnum
         do i = 1, inum
@@ -127,6 +129,8 @@ function Mbalthica_crit_shear_func (Mbalthica, inum, jnum) result (fcr_macrofaun
 
       !do nothing except applying default value
 
+      write(0,*) 'FATAL ERROR criticalsheareffect.F90:',__LINE__,' macrofauna needs unit "gC m-2" or "m-2", got '//trim(Mbalthica%units)
+      stop
       !write (*,*) ' WARNING!! Missing unit. The Macoma balthica effect on critical bed shear stress can at the'// &
       !            ' moment be calculated base on intensity (refer to Knaapen et al. (2003)),'// &
       !            ' ,therefore, without unit this effect is ignored.'
@@ -135,7 +139,7 @@ function Mbalthica_crit_shear_func (Mbalthica, inum, jnum) result (fcr_macrofaun
 
   return
 
-end function Mbalthica_crit_shear_func
+end function benthos_macrofauna_critical_shearstress_function
 
 !------------------------------------------------------------
 

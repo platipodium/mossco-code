@@ -285,13 +285,13 @@ contains
     call ESMF_GridGet(grid, distGrid=distGrid, indexflag=indexflag, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    !> create import lists for reading abunadnace and biomass from fields
+    !> create import lists for reading abundance and biomass from fields
     !> (for example read by netcdf-input component)
     allocate (importList(2))
     importList(1)%name  = 'tellina_fabula_mean_abundance'
     importList(1)%units = 'm-2'
     importList(2)%name  = 'microphytobenthos_at_soil_surface'
-    importList(2)%units = 'mg g-1' ! from mgg**-1, correct?
+    importList(2)%units = 'mug g-1'
 
      do i=1, size(importList)
 

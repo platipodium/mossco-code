@@ -95,7 +95,7 @@ subroutine set_microphyt (this, spatialvar, biounit)
   if (.not.present(spatialvar)) then
 
     this%Species = 'Microphytobenthos'
-    Units        = 'mg g-1'
+    Units        = 'mug g-1'
 
     allocate ( Biomass ( this%inum , this%jnum ) )
     Biomass(:,:) = mass
