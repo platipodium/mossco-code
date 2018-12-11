@@ -1211,26 +1211,25 @@ module erosed_component
         ' maps fraction ',i, ' with mean diameter ',sedd50(i)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       write(message,'(A)') trim(name)//'   to '
-      call MOSSCO_FieldString(fluxFieldList(j), message)
+      call MOSSCO_FieldString(fluxFieldList(i), message)
       write(message,'(A)') ' with unknown density'
 
-      call ESMF_AttributeGet(spmFieldList(j), 'mean_particle_diameter', &
+      call ESMF_AttributeGet(spmFieldList(i), 'mean_particle_diameter', &
         isPresent=isPresent, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
       if (isPresent) then
-        call ESMF_AttributeGet(spmFieldList(j), 'mean_particle_diameter', &
+        call ESMF_AttributeGet(spmFieldList(i), 'mean_particle_diameter', &
           value=external_d50, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         write(string,'(A,ES9.3)') ' with density ',external_d50
         call MOSSCO_MessageAdd(message, string)
 
-        call ESMF_AttributeSet(fluxFieldList(j), 'mean_particle_diameter', &
+        call ESMF_AttributeSet(fluxFieldList(i), 'mean_particle_diameter', &
           value=external_d50, rc=localrc)
       endif
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      call ESMF_AttributeSet(fluxFieldList(j), 'erosed_fraction', &
+      call ESMF_AttributeSet(fluxFieldList(i), 'erosed_fraction', &
         value=n, rc=localrc)
 
       call ESMF_FieldGet(fluxFieldList(i), status=status, rc=localrc)
@@ -1253,7 +1252,6 @@ module erosed_component
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       end if
     else ! i== -1
-
       write(message,'(A)') trim(name)//' exports to internal field '// &
         'concentration_of_SPM_upward_flux_at_soil_surface'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
