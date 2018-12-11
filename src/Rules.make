@@ -412,7 +412,6 @@ ifeq ($(MOSSCO_GETM),true)
     GETM_LIBS += -l3d_prod
   endif
   GETM_LIBS += -l2d_prod -lwaves_prod -lles_prod -lpool_prod -ldomain_prod -linput_prod -lncdfio_prod -lfutils_prod
-  GETM_LIBS := -lgetm
   ifeq ($(MOSSCO_GETM_FABM),true)
     GETM_LINKDIRS += -L$(FABM_LIBRARY_PATH)
     GETM_LIBS += -lgotm_fabm_prod $(FABM_LIBS)
