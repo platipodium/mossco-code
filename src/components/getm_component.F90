@@ -895,6 +895,7 @@ module getm_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+!   toplevel modified myClock%stopTime
     call ESMF_ClockGet(myClock,currTime=currTime, advanceCount=advanceCount, &
       timeStep=timeStep, stopTime=stopTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -908,6 +909,7 @@ module getm_component
     if (.not. allocated(transport_conc)) then
       timeInterval = nextTime - currTime
       call ESMF_ClockSet(controlClock,currTime=currTime,timeStep=timeInterval)
+!     GETM will run until controlClock%nextTime=clock%nextTime
       call ESMF_GridCompRun(getmComp,clock=controlClock,               &
                             importState=importState,                   &
                             exportState=exportState,                   &
@@ -928,6 +930,7 @@ module getm_component
 
 !     optional Run of child components
       if (allocated(transport_conc)) then
+!       GETM will run until myClock%nextTime (myClock%timestep was set to 3D timestep)
         call ESMF_GridCompRun(getmComp,clock=myClock,                  &
                               importState=importState,                 &
                               exportState=exportState,                 &
