@@ -730,12 +730,12 @@ contains
 
     if (verbose) then
       write(message,'(A,es10.3,X,es10.3)') trim(name)// &
-      ' microphyto erodibility/critical shear ', &
-      Micro%ErodibilityEffect, Micro%TauEffect
+      ' max microphyto erodibility/critical shear ', &
+      maxval(Micro%ErodibilityEffect), minval(Micro%TauEffect)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       write(message,'(A,es10.3,X,es10.3)') trim(name)// &
       ' macrozoo erodibility/critical shear ', &
-      Total_Bioturb%ErodibilityEffect, Total_Bioturb%TauEffect
+      maxval(Total_Bioturb%ErodibilityEffect), minval(Total_Bioturb%TauEffect)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     endif
 
