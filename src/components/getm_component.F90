@@ -940,6 +940,8 @@ module getm_component
         call update_use_boundary_data(importState, advanceCount=advanceCount, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!       TODO: dilution due to rivers (now: zero gradient and no dilution)
+!             and fwf_int (but the latter was already reset to zero in GETM)
 !       Call transport routine every macro timestep
         call getmCmp_transport(currTime)
       end if
