@@ -1871,7 +1871,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       rhosol(nfrac_by_external_idx(external_index)), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    write(0,*) external_index, nfrac_by_external_idx(external_index), rhosol
+    !write(0,*) external_index, nfrac_by_external_idx(external_index), rhosol
 
     !> @todo copy over all other parameters from iow/spm model
 
