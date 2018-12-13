@@ -1695,6 +1695,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
   character(len=ESMF_MAXSTR)                :: string
   real(ESMF_KIND_R8), allocatable           :: farray1(:)
   logical, allocatable                      :: mask1(:)
+  integer(ESMF_KIND_I4)       :: niteration=0, ncorrected=0
 
   rc = ESMF_SUCCESS
 
@@ -2136,7 +2137,10 @@ endif
   !> @todo why not take the one from sedparams.txt?
   sedd90 = 1.50_fp *sedd50 ! according to manual of Delft3d page 356
 
+  niteration = 0
   do while (.true.)
+
+    niteration=niteration + 1
     call erosed(  nmlb   , nmub   , flufflyr , mfluff , frac , mudfrac , ws_convention_factor*ws, &
               & umod   , h1     , chezy    , taub   , nfrac, rhosol  , sedd50                 , &
               & sedd90 , sedtyp , sink     , sinkf  , sour , sourf   , anymud      , wave ,  uorb, &
@@ -2144,10 +2148,29 @@ endif
               & u_bot  , v_bot  , u2d      , v2d    , h0   , mask    , advancecount, taubn, eq_conc, &
               & relative_layer_thickness, kmaxsd, taubmax )
 
-    if (any(maxval(-sink,dim=1)*dt*2 > farray1 .and. farray1>0)) then
-      write(message, '(A)') trim(name)//' sink flux exceeds CFL, iterating with halfed vertical velocity ...'
+    !> The following is needed to preserve mass.   Reducing ws has only a limited effect which
+    !> usually converges after a few iterations, but sometimes does not go below the CFL specified below
+    !>
+    if (any(maxval(sink,dim=1)*dt*3 > farray1 .and. farray1>0)) then
+
+      ! do l = 1, nfrac
+      !   do nm = nmlb, nmub
+      !     if (sink(l,nm)*dt > farray1(l) .and. farray1(l)>0) then
+      !       i = 1 + mod((nm-1),inum)
+      !       j = 1 + int((nm-1)/inum)
+      !       spm_concentration(i,j,kmx,l) = 0.5* spm_concentration(i,j,kmx,l)
+      !     endif
+      !   enddo
+      ! enddo
+
+      ncorrected = count(maxval(sink,dim=1)*dt*3 > farray1 .and. farray1>0)
+      ws = ws / 2.0
+
+      write(message, '(A,I0,A,I0,A)') trim(name)//' sink flux exceeds CFL, iterating with spm*0.5^',niteration,' on ',ncorrected,' cells'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-      ws = ws / 2! dt*maxval(maxval(-sink,dim=1)/farray1,mask=farray1>0)
+
+      write(0,*) niteration,ncorrected,maxval(maxval(sink,dim=1)*3*dt / farray1)
+      if (niteration > 10) exit
       cycle
     endif
 
@@ -2182,7 +2205,7 @@ endif
     call ESMF_AttributeGet(fieldList(i), 'external_index', external_index, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    l = nfrac_by_external_idx(external_index)
+    l = int(nfrac_by_external_idx(external_index), kind=ESMF_KIND_I4)
 
     call ESMF_FieldGet(fieldList(l), &
       farrayPtr=size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr, rc=localrc)
