@@ -929,7 +929,7 @@ module pelagic_soil_connector
       allocate(CN_det1(RANGE1D))
       CN_det1(RANGE1D) = 106.0d0/16.0d0
     elseif (exportRank == 2) then
-      write(0,*) lbnd, ubnd
+      !write(0,*) lbnd, ubnd
       allocate(CN_det2(RANGE2D))
       CN_det2(RANGE2D) = 106.0d0/16.0d0
     else
