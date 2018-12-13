@@ -2220,7 +2220,7 @@ endif
           call update_sediment_mass (mass(l,nm), dt, deposition_rate, entrainment_rate, area(i,j))
         end if
 
-        size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j) = entrainment_rate *1000.0_fp - deposition_rate *1000._fp   ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplied by 1000.
+        size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j) = ( entrainment_rate - deposition_rate ) *1000._fp   ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplied by 1000.
       endif
     enddo
     !> @todo check units and calculation of sediment upward flux, rethink ssus to be taken from FABM directly, not calculated by
