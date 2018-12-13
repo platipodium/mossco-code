@@ -1696,6 +1696,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
   real(ESMF_KIND_R8), allocatable           :: farray1(:)
   logical, allocatable                      :: mask1(:)
   integer(ESMF_KIND_I4)       :: niteration=0, ncorrected=0
+  real(ESMF_KIND_R8)          :: maxSink
 
   rc = ESMF_SUCCESS
 
@@ -2138,6 +2139,7 @@ endif
   sedd90 = 1.50_fp *sedd50 ! according to manual of Delft3d page 356
 
   niteration = 0
+  maxSink = 1.0D8
   do while (.true.)
 
     niteration=niteration + 1
@@ -2151,7 +2153,7 @@ endif
     !> The following is needed to preserve mass.   Reducing ws has only a limited effect which
     !> usually converges after a few iterations, but sometimes does not go below the CFL specified below
     !>
-    if (any(maxval(sink,dim=1)*dt*3 > farray1 .and. farray1>0)) then
+    if (any(maxval(sink,dim=1)*dt*2 > farray1 .and. farray1>0)) then
 
       ! do l = 1, nfrac
       !   do nm = nmlb, nmub
@@ -2163,13 +2165,24 @@ endif
       !   enddo
       ! enddo
 
-      ncorrected = count(maxval(sink,dim=1)*dt*3 > farray1 .and. farray1>0)
-      ws = ws / 2.0
+      ncorrected = count(maxval(sink,dim=1)*dt*2 > farray1 .and. farray1>0)
+
+      do l = 1, nfrac
+        where (sink(l,:)*dt*2 > farray1)
+          ws(l,:) = ws(l,:) / 2.0
+        endwhere
+      enddo
 
       write(message, '(A,I0,A,I0,A)') trim(name)//' sink flux exceeds CFL, iterating with spm*0.5^',niteration,' on ',ncorrected,' cells'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
 
-      write(0,*) niteration,ncorrected,maxval(maxval(sink,dim=1)*3*dt / farray1)
+      !write(0,*) niteration,ncorrected,maxval(maxval(sink,dim=1)*dt*2 / farray1)
+
+      !> Assume convergence if change is below 1%
+      if (maxval(sink)/maxSink >0.99) exit
+      maxSink = maxval(sink)
+
+      !> Do not iterate more than 10 times
       if (niteration > 10) exit
       cycle
     endif
