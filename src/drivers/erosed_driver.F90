@@ -1795,6 +1795,7 @@ subroutine update_sediment_mass (mass, dt, deposition_rate, erosion_rate, area)
   ! First check if the current mass of the sediment fraction is below the
   ! minimum (i.e. resulting from extensive erosion in previous time step)
   if (mass <= min_mass) then
+write(*,*) 'clipped sediment mass'
       mass = min_mass
       erosion_rate = 0.0_fp
       mass  = mass + (deposition_rate - erosion_rate) * dt *area
@@ -1802,6 +1803,7 @@ subroutine update_sediment_mass (mass, dt, deposition_rate, erosion_rate, area)
       mass  = mass + (deposition_rate - erosion_rate) * dt *area
 
     if (mass<= min_mass)then
+write(*,*) 'clipped sediment mass'
       mass = min_mass
       erosion_rate = deposition_rate - mass /(dt *area)
     endif

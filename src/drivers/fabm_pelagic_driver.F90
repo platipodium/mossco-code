@@ -919,6 +919,7 @@ if ( any(pf%par(i,j,:) /= pf%par(i,j,:)) ) write(0,*) 'ERROR: fabm_pelagic_drive
           do j=1,pf%jnum
             do i=1,pf%inum
               if (pf%conc(i,j,k,n) .lt. pf%model%state_variables(n)%minimum) then
+write(*,*) 'clip_below_minimum',real(pf%conc(i,j,k,n))
                 pf%conc(i,j,k,n) = pf%model%state_variables(n)%minimum
               end if
             end do
