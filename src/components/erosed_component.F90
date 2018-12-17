@@ -2155,6 +2155,9 @@ endif
     !>
     if (any(maxval(sink,dim=1)*dt*2 > farray1 .and. farray1>0)) then
 
+
+      ncorrected = count(maxval(sink,dim=1)*dt*2 > farray1 .and. farray1>0)
+
       ! do l = 1, nfrac
       !   do nm = nmlb, nmub
       !     if (sink(l,nm)*dt > farray1(l) .and. farray1(l)>0) then
@@ -2164,9 +2167,7 @@ endif
       !     endif
       !   enddo
       ! enddo
-
-      ncorrected = count(maxval(sink,dim=1)*dt*2 > farray1 .and. farray1>0)
-
+      !
       do l = 1, nfrac
         where (sink(l,:)*dt*2 > farray1)
           ws(l,:) = ws(l,:) / 2.0
@@ -2248,8 +2249,8 @@ endif
       !> boundary (mask == 2), only calculate where (mask == 1)
       if ( mask(lbnd(1)-1+i,lbnd(2)-1+j) == 1 ) then
 
-         deposition_rate  = real(sink(l,nm),fp)*real(spm_concentration(i,j,kmx,l),fp)/1000._fp
-         !deposition_rate  = min(0.5*real(ws(l,nm),fp),real(sink(l,nm),fp))*real(spm_concentration(i,j,kmx,l),fp)/1000._fp
+         !deposition_rate  = real(sink(l,nm),fp)*real(spm_concentration(i,j,kmx,l),fp)/1000._fp
+         deposition_rate  = min(0.5,real(sink(l,nm),fp))*real(spm_concentration(i,j,kmx,l),fp)/1000._fp
          entrainment_rate = sour(l,nm)
 
         if (bedmodel) then
