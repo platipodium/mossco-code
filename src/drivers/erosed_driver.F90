@@ -535,10 +535,11 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
 
         call compbsskin_arguments%run ()
         call compbsskin_arguments%get(taub(nm))
-!write (0,*) 'taub', taub(nm), 'nm', nm, 'i,j ', i, j
+        !write (0,*) 'taub', taub(nm), 'nm', nm, 'i,j ', i, j
 !endif
 !endif
-        taub (nm) = taubmax(i,j)
+        !> Overwrite from external component if there is information
+        if (associated(taubmax)) taub (nm) = taubmax(i,j)
         fracf = 0.0_fp
         if (mfltot>0.0_fp) fracf = mfluff(l,nm)/mfltot
 
