@@ -713,6 +713,7 @@ module erosed_component
     importList( 7)%units = 'm2.s-1'
     importList( 8)%name  = 'maximum_bottom_stress'
     importList( 8)%units = 'Pa'
+    importList( 8)%optional = .true.
     importList( 9)%name  = 'Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface'
     importList( 9)%units = '1'
     importList( 9)%optional = .true.
@@ -1983,7 +1984,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
   u2d      => importList( 3)%data
   v2d      => importList( 4)%data
   nybot    => importList( 7)%data
-  taubmax  => importList( 8)%data
+  taubmax  => importList( 8)%data !
 
   microTau => importList( 9)%data
   microEro => importList(10)%data
