@@ -2122,8 +2122,6 @@ endif
     !write(0,*) 'macroTau', macroTau(1:inum,1:jnum), BioEffects%TauEffect
   endif
 
-
-
  ! filtering missing values (land)
   do j = 1, jnum
     do i = 1, inum
@@ -2155,6 +2153,7 @@ endif
 
   niteration = 0
   maxSink = 1.0D8
+
   do while (.true.)
 
     niteration=niteration + 1
@@ -2164,6 +2163,15 @@ endif
               & tper   , teta   , spm_concentration , BioEffects     , nybot       , sigma_midlayer, &
               & u_bot  , v_bot  , u2d      , v2d    , h0   , mask    , advancecount, taubn, eq_conc, &
               & relative_layer_thickness, kmaxsd, taubmax )
+
+
+    !> On mistral, we get NaN in sink and sour on the first run, this is fixed
+    !here
+    if (.not.(any(sink>0)) .and. .not. any(sink<0)) then
+      write(message,'(A)') trim(name)//' forced NaN fluxes to zero'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      sink=0.0_fp; sour=0.0_fp; sinkf=0.0_fp; sourf=0.0_fp
+    endif
 
     !> The following is needed to preserve mass.   Reducing ws has only a limited effect which
     !> usually converges after a few iterations, but sometimes does not go below the CFL specified below
@@ -2271,8 +2279,9 @@ endif
         if (bedmodel) then
           call update_sediment_mass (mass(l,nm), dt, deposition_rate, entrainment_rate, area(i,j))
         end if
-
+        !write(0,*) '   ero:', entrainment_rate, deposition_rate , area, dt, sour(l,nm), sink(l,nm)
         size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j) = ( entrainment_rate - deposition_rate ) *1000._fp   ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplied by 1000.
+        !size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j) = 0.0
       endif
     enddo
     !> @todo check units and calculation of sediment upward flux, rethink ssus to be taken from FABM directly, not calculated by
