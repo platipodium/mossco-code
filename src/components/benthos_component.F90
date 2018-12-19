@@ -737,7 +737,10 @@ contains
         defaultValue='1', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call Macrofauna_set(farrayPtr2, unit)
+      !> @todo fix the length of the unit argument to correspond to expected
+      !> argument length
+      !call Macrofauna_set(farrayPtr2, unit)
+      call Macrofauna_set(farrayPtr2, importList(1)%units)
     endif
 
     call Macrofauna_run(Total_Bioturb, inum, jnum)
