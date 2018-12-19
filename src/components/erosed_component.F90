@@ -2103,12 +2103,26 @@ endif
 
   !> get bio effects
   BioEffects%ErodibilityEffect = 1.0_fp
-  if ( associated(microEro) ) BioEffects%ErodibilityEffect = BioEffects%ErodibilityEffect * microEro(1:inum,1:jnum)
-  if ( associated(macroEro) ) BioEffects%ErodibilityEffect = BioEffects%ErodibilityEffect * macroEro(1:inum,1:jnum)
+  if ( associated(microEro) ) then
+    BioEffects%ErodibilityEffect = BioEffects%ErodibilityEffect * microEro(1:inum,1:jnum)
+    !write(0,*) 'microEro', microEro(1:inum,1:jnum), BioEffects%ErodibilityEffect
+  endif
+  if ( associated(macroEro) ) then
+    BioEffects%ErodibilityEffect = BioEffects%ErodibilityEffect * macroEro(1:inum,1:jnum)
+    !write(0,*) 'macroEro', macroEro(1:inum,1:jnum), BioEffects%ErodibilityEffect
+  endif
 
   BioEffects%TauEffect = 1.0_fp
-  if ( associated(microTau) ) BioEffects%TauEffect = BioEffects%TauEffect * microTau(1:inum,1:jnum)
-  if ( associated(macroTau) ) BioEffects%TauEffect = BioEffects%TauEffect * macroTau(1:inum,1:jnum)
+  if ( associated(microTau) ) then
+    BioEffects%TauEffect = BioEffects%TauEffect * microTau(1:inum,1:jnum)
+    !write(0,*) 'microTau', microTau(1:inum,1:jnum), BioEffects%TauEffect
+  endif
+  if ( associated(macroTau) ) then
+    BioEffects%TauEffect = BioEffects%TauEffect * macroTau(1:inum,1:jnum)
+    !write(0,*) 'macroTau', macroTau(1:inum,1:jnum), BioEffects%TauEffect
+  endif
+
+
 
  ! filtering missing values (land)
   do j = 1, jnum

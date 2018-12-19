@@ -469,11 +469,12 @@ contains
 
         importList(i)%data = 0.0d0
          if (trim (importList(i)%name )== 'tellina_fabula_mean_abundance') then
-           call Macrofauna_set( )
-       !   write (0,*)'tellina_fabula_mean_abundance internal',importList(i)%data
+           call Macrofauna_set()
+           !write (0,*)'tellina_fabula_mean_abundance internal',importList(i)%data
          elseif  (trim (importList(i)%name )== 'microphytobenthos_at_soil_surface') then
            call micro%set()
-       !  write (0,*)'microphytobenthos internal',importList(i)%data
+           !write (0,*)'microphytobenthos internal',micro%Biomass%amount,
+           importList(i)%data = micro%Biomass%amount
          endif
       else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
 
@@ -707,14 +708,14 @@ contains
     !       mask(:,:) = 1.0
     !     endif
     !
+        call ESMF_AttributeGet(fieldList(1), 'units', value=unit, &
+          defaultValue='1', rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        call Micro%set(farrayPtr2, trim(unit))
       endif
     !
 
-      call ESMF_AttributeGet(fieldList(1), 'units', value=unit, &
-        defaultValue='1', rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      call Micro%set(farrayPtr2, trim(unit))
       call Micro%run()
 
     ! elseif (verbose) then
@@ -723,21 +724,39 @@ contains
     !   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
     ! endif
 
-    call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
+    call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
+      itemSearch='tellina_fabula_mean_abundance_at_soil_surface', rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (fieldCount > 0) then
+
+      call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr2, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_AttributeGet(fieldList(1), 'units', value=unit, &
+        defaultValue='1', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call Macrofauna_set(farrayPtr2, unit)
+    endif
 
     call Macrofauna_run(Total_Bioturb, inum, jnum)
 
     if (verbose) then
-      write(message,'(A,es10.3,X,es10.3)') trim(name)// &
-      ' max microphyto erodibility/critical shear ', &
+      write(message,'(A,F4.0,X,F5.2,X,F5.2)') trim(name)// &
+      ' microphyt min erodibility/max critical shear ', &
       maxval(Micro%ErodibilityEffect), minval(Micro%TauEffect)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      write(message,'(A,es10.3,X,es10.3)') trim(name)// &
-      ' macrozoo erodibility/critical shear ', &
+      write(message,'(A,F4.0,X,F5.2,X,F5.2)') trim(name)// &
+      ' macrozoo  min erodibility/max critical shear ', &
       maxval(Total_Bioturb%ErodibilityEffect), minval(Total_Bioturb%TauEffect)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     endif
+
+    nullify(farrayPtr2)
+
+    call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_TimeIntervalGet(timestep,s_r8=dt,rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
