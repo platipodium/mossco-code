@@ -121,12 +121,12 @@ module calculator
     character(len=ESMF_MAXSTR)      :: name, message, configFileName
     type(ESMF_Time)                 :: currTime
 
-    integer(ESMF_KIND_I4)           :: localrc, i, j, n
+    integer(ESMF_KIND_I4)           :: localrc, i, j
 
     type(ESMF_Config)               :: config
     logical                         :: labelIsPresent, isPresent, fileIsPresent
-    character(len=ESMF_MAXSTR), allocatable :: exportList(:), rpn(:)
-    character(len=ESMF_MAXSTR), allocatable :: aliasList(:,:)
+    character(len=ESMF_MAXSTR), allocatable :: filterExcludeList(:), filterIncludeList(:)
+    character(len=ESMF_MAXSTR), allocatable :: aliasList(:,:), rpnList(:,:)
 
     rc=ESMF_SUCCESS
 
@@ -145,18 +145,39 @@ module calculator
       config = ESMF_ConfigCreate(rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_CplCompSet(cplComp, config=config, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
       call ESMF_ConfigLoadFile(config, trim(configfilename), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call MOSSCO_ConfigGet(config, 'export', exportList, rc=localrc)
+      call MOSSCO_ConfigGet(config, 'exclude', filterExcludeList, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call MOSSCO_ConfigGet(config, 'include', filterIncludeList, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call MOSSCO_ConfigGet(config, 'alias', aliasList, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+      call MOSSCO_ConfigGet(config, 'rpn', rpnList, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_CplCompSet(cplComp, config=config, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    endif
+
+    !> Add all configurable options as attributes
+    if (allocated(filterExcludeList)) then
+      !> @todo the argument must be a pointer, not an allocatable
+      !call MOSSCO_AttributeSet(cplComp, 'filter_pattern_exclude', &
+      !  filterExcludeList, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    endif
+
+    if (allocated(filterIncludeList)) then
+      !> @todo the argument must be a pointer, not an allocatable
+      !call MOSSCO_AttributeSet(cplComp, 'filter_pattern_include', &
+      !  filterIncludeList, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
 
     if (allocated(aliasList)) then
@@ -178,34 +199,20 @@ module calculator
       enddo
     endif
 
-    if (allocated(exportList)) n=size(exportList)
+    if (allocated(rpnList)) then
 
-    do i=1, n
-      call MOSSCO_ConfigGet(config, exportList(i), rpn, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      do i = lbound(rpnList,1), ubound(rpnList,1)
+        write(message,'(A)') trim(name)//' perform calculation: '
 
-      !call MOSSCO_AttributeSet(exportState, 'rpn_'//exportList(i), rpn, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        call MOSSCO_MessageAdd(message, trim(rpnList(i,1))//' = '//trim(rpnList(i,2)), rc=localrc)
 
-      !call MOSSCO_Reallocate(rpn, 0, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      !call MOSSCO_AttributeGet(exportState, 'rpn_'//exportList(i), rpn, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      
-
-    enddo
-
-      ! do i = lbound(aliasList,1), ubound(aliasList,1)
-      !   write(message,'(A)') trim(name)//' uses alias: '
-      !   call MOSSCO_MessageAdd(message, trim(exportList(i,1), rc=localrc)
-      !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      !
-      !   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      ! enddo
-
-
+        do j = 3, ubound(rpnList,2)
+          call MOSSCO_MessageAdd(message, ' '//trim(rpnList(i,j)), rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        enddo
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      enddo
+    endif
 
     call MOSSCO_CompExit(cplComp, rc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -230,10 +237,10 @@ module calculator
     call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    !call MOSSCO_CreateCalculatedExportFields(cplComp, importState, exportState, rc=localrc)
+    call MOSSCO_CreateCalculatedExportFields(cplComp, importState, exportState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    !call MOSSCO_CalculateFields(cplComp, importState, exportState, rc=localrc)
+    call MOSSCO_CalculateFields(cplComp, importState, exportState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !! Finally, log the successful completion of this function

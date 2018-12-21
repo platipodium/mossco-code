@@ -73,6 +73,9 @@ test_Concurrency: libmossco_default libmossco_info
 test_ClockDestroy: libmossco_technical
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_technical -lmossco_util $(LIBS)
 
+test_calculator: libmossco_util libmossco_mediator test_calculator.F90
+	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_mediator -lmossco_util $(LIBS)
+
 test_link_connector: libmossco_util libmossco_connector
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_connector -lmossco_util $(LIBS)
 

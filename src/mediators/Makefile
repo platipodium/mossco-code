@@ -41,7 +41,7 @@ all: subdirs $(TARGETS)
 ifeq ($(MOSSCO_SQLITE),true)
 libmossco_mediator: pelagicsoilconnector soilpelagicconnector soilpelagicmediator
 else
-libmossco_mediator: pelagicsoilconnector soilpelagicconnector
+libmossco_mediator: pelagicsoilconnector soilpelagicconnector libcalculator
 endif
 
 libpelagicbenthic_mediator: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(pelagic_benthic_mediator.o)
@@ -60,6 +60,9 @@ pelagicbenthiccoupler: libmossco_util $(MOSSCO_LIBRARY_PATH)/libpelagicbenthicco
 pelagicsoilconnector: libmossco_util \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(pelagic_soil_connector.o) \
 	$(MOSSCO_MODULE_PATH)/pelagic_soil_connector.mod
+libcalculator: libmossco_util \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(calculator.o) \
+	$(MOSSCO_MODULE_PATH)/calculator.mod
 pelagicsoilconnector: libmossco_util \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(soil_pelagic_connector.o) \
 	$(MOSSCO_MODULE_PATH)/soil_pelagic_connector.mod
@@ -107,7 +110,7 @@ $(MOSSCO_LIBRARY_PATH)/libsurfacescoupler.a(surfaces_coupler.o): surfaces_couple
 $(MOSSCO_LIBRARY_PATH)/libpelagicbenthiccoupler.a: pelagic_benthic_coupler.o benthic_pelagic_coupler.o pelagic_soil_connector.o soil_pelagic_connector.o
 	$(AR) cruvs $@ $?
 
-$(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a: pelagic_soil_connector.o pelagic_benthic_mediator.o soil_pelagic_connector.o
+$(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a: pelagic_soil_connector.o pelagic_benthic_mediator.o soil_pelagic_connector.o calculator.o
 	$(AR) cruvs $@ $?
 
 $(MOSSCO_MODULE_PATH)/regrid_coupler.mod:
@@ -117,6 +120,10 @@ $(MOSSCO_MODULE_PATH)/regrid_coupler.mod:
 $(MOSSCO_MODULE_PATH)/pelagic_soil_connector.mod:
 	@touch pelagic_soil_connector.F90
 	$(MAKE) pelagic_soil_connector.o
+
+$(MOSSCO_MODULE_PATH)/calculator.mod:
+	@touch calculator.F90
+	$(MAKE) calculator.o
 
 $(MOSSCO_MODULE_PATH)/soil_pelagic_connector.mod:
 	@touch soil_pelagic_connector.F90
