@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2013, 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 # @author Richard Hofmeister <richard.hofmeister@hzg.de>
 #
@@ -17,14 +17,15 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-TARGETS = libmossco_simplewave
+TARGETS = libmossco_simplewave libmossco_macrobenthos
+
 ifeq ($(MOSSCO_NETCDF),true)
   TARGETS+=libmossco_clm
   #TARGETS+=libmossco_river
 endif
 
 ifeq ($(MOSSCO_FABM),true)
-  TARGETS+=libmossco_sediment libmossco_fabmpelagic libmossco_fabmbenthic #libmossco_fabm0d
+  TARGETS+=libmossco_sediment libmossco_fabmpelagic #libmossco_fabmbenthic #libmossco_fabm0d
   ifeq ($(MOSSCO_GOTM),true)
     ifeq ($(MOSSCO_NETCDF),true)
       TARGETS+=libmossco_fabmgotm
@@ -66,6 +67,9 @@ all: $(TARGETS)
 
 libmossco_simplewave: prefix \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a(simplewave_driver.o)
+
+libmossco_macrobenthos: prefix libmossco_util \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_macrobenthos.a(vertical_macrobenthos_driver.o)
 
 libmossco_river: prefix \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_river.a(river_driver.o)
@@ -266,6 +270,7 @@ clean: extraclean
 	$(RM) *.o
 
 extraclean:
+	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_macrobenthos.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_getm.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a
@@ -279,5 +284,13 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/fabm_gotm_driver.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/erosed_driver.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/clm_driver.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/vertical_macrobenthos_driver.mod
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a
 	$(RM) $(EROSED_OBJS)
+
+ifneq ($(wildcard *.make),)
+  include *.make
+endif
+ifneq ($(wildcard *.mk),)
+  include *mk
+endif

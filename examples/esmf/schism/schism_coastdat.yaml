@@ -1,0 +1,50 @@
+# ---
+# author: Carsten Lemmen
+# copyright: 2018 Helmholtz-Zentrum Geesthacht
+# license: CC-by-SA 4.0
+# description: "This test case reads a grid from file, regrids it to an
+# ocean component (such as getm/schism/hamsom) and writes out to netcdf
+# the data that was read in and that is produced by the ocean component."
+# ...
+instances:
+  - coastdat_grid: grid
+  - coastdat: netcdf_input
+  - schism_mesh_output: netcdf
+  - schism_grid_output: netcdf
+  - regrid_tomesh: regrid_coupler
+  - regrid_togrid: regrid_coupler
+  - schism: schism_esmf
+  - atmos_default: default
+
+dependencies:
+  - coastdat:
+    - component: coastdat_grid
+      grid: coastdat_grid
+
+coupling:
+  - components:
+    - coastdat_grid
+    - coastdat
+    interval: none
+  - components:
+    - coastdat
+    - regrid_tomesh
+    - schism
+    interval: 30 m
+  - components:
+    - atmos_default
+    - schism
+    interval: none
+  - components:
+    - coastdat
+    - schism_grid_output
+    interval: 30 m
+  - components:
+    - schism
+    - schism_mesh_output
+    interval: 30 m
+  - components:
+    - schism
+    - regrid_togrid
+    - schism_grid_output
+    interval: 30 m

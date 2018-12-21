@@ -45,7 +45,7 @@ subroutine setting (this, spatialvar, Biounit)
 
   class (BenthosEffect) :: this
   real(kind=8), dimension (:,:), pointer, optional  :: spatialvar
-  character (len = 255), optional  :: Biounit
+  character (len = *), optional  :: Biounit
 
 end subroutine setting
 
@@ -74,4 +74,3 @@ end subroutine fin
 end interface
 
 end module BenthosEffect_class
-

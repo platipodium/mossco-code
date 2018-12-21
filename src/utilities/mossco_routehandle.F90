@@ -53,6 +53,8 @@ subroutine MOSSCO_RouteHandleString(routeHandle, message, kwe, length, rc)
     call ESMF_routeHandleGet(routeHandle, name=name, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
+    !> @todo ESMF currently does not support attributes for routeHandles
+    !> We filed a ticket https://sourceforge.net/p/esmf/tix/3614374/
     !call ESMF_AttributeGet(routeHandle, name='creator', isPresent=isPresent, rc=localrc)
     !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
@@ -65,7 +67,7 @@ subroutine MOSSCO_RouteHandleString(routeHandle, message, kwe, length, rc)
       call MOSSCO_MessageAdd(message,' '//name)
 !    endif
   else
-    call MOSSCO_MessageAdd(message, ' anonymous non-created routeHandle ')
+    call MOSSCO_MessageAdd(message, ' routeHandle ')
   endif
 
   length_=len_trim(message)

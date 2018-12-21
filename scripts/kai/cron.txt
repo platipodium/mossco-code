@@ -1,3 +1,0 @@
-0 * * * * ~/tools/send_nc_check.sh
-30 * * * * ~/tools/send_nc_check.sh
-

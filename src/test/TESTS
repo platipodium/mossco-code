@@ -1,3 +1,4 @@
+test_link_connector.F90
 test_MOSSCO_Field
 test_ArrayGet
 test_Clock
@@ -27,6 +28,8 @@ test_Ugrid
 test_mossco_db
 test_mossco_netcdf
 test_mossco_strings
+test_mossco_attribute
+test_mossco_memory
 test_netcdf
 test_pointer
 test_precision
@@ -36,3 +39,4 @@ test_mossco_time
 test_MOSSCO_StateGet
 test_interface
 
+test_time_accuracy.F90

@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 # 
-# @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -17,7 +17,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 EXTRA_DIST=README
 
 # Determine examples to build
-SUBDIRS =  benthos
+SUBDIRS =  benthos vertical_macrobenthos
 ifeq ($(MOSSCO_FABM),true)
 SUBDIRS += omexdia_p
 endif

@@ -22,10 +22,9 @@ EXTRA_DIST=README
 
 SUBDIRS=gotm remtc
 
-
-TARGETS=libmossco_technical libconstant libdefault libmossco_grid
-TARGETS=libmossco_aggregation
-TARGETS+=libmossco_simplewave libmossco_info libmossco_filtration
+TARGETS=libmossco_technical libmossco_default libmossco_random
+TARGETS+=libmossco_aggregation libmossco_grid
+TARGETS+=libmossco_simplewave libmossco_info libmossco_macrobenthos
 
 ifeq ($(MOSSCO_CMAQ),true)
   TARGETS += libmossco_cmaq
@@ -42,9 +41,13 @@ ifeq ($(MOSSCO_EROSED),true)
     TARGETS+=libmossco_benthos
   endif
 endif
+ifeq ($MOSSCO_XIOS),true)
+  TARGETS += libmossco_xios
+endif
+
 ifeq ($(MOSSCO_FABM),true)
 TARGETS +=  libsediment libmossco_fabmpelagic
-TARGETS +=  libmossco_fabmbenthic libmossco_fabm0d
+TARGETS +=  libmossco_fabmbenthic
 ifeq ($(MOSSCO_GOTM),true)
   #TARGETS += libmossco_fabm0d
 endif
@@ -67,8 +70,7 @@ endif
 
 all: utilities subdirs $(TARGETS)
 
-libmossco_constant: libconstant libmossco_util
-libmossco_default: libdefault
+libmossco_default: libdefault libmossco_util
 libmossco_info: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_info.a(info_component.o)
 
 libmossco_benthos: libmossco_benthos_driver libmossco_util \
@@ -78,6 +80,7 @@ libmossco_hamsom: libmossco_hamsom_driver libmossco_hamsom_component
 libmossco_hamsom_driver:  prefix $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a(hamsom_driver.o)
 libmossco_hamsom_component: libmossco_hamsom_driver $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a(hamsom_component.o)
 
+libmossco_xios: libmossco_xios $(MOSSCO_LIBRARY_PATH)/libmossco_xios.a(xios_component.o)
 libmossco_schism:  libmossco_schism_component
 libmossco_schism_component: prefix schism_component.F90 $(MOSSCO_LIBRARY_PATH)/libmossco_schism.a(schism_component.o)
 
@@ -90,6 +93,15 @@ libmossco_clm_component: libmossco_clm_driver $(MOSSCO_LIBRARY_PATH)/libmossco_c
 libmossco_clm_driver:    prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
 
 libmossco_oasis: $(MOSSCO_LIBRARY_PATH)/libmossco_oasis.a(oasis_component.o)
+
+
+$(MOSSCO_LIBRARY_PATH)/libmossco_macrobenthos.a(vertical_macrobenthos_driver.o):
+	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_macrobenthos
+
+libmossco_macrobenthos: prefix libmossco_util \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_macrobenthos.a(vertical_macrobenthos_driver.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_macrobenthos.a(vertical_macrobenthos_component.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_macrobenthos.a(filtration_component.o)
 
 libmossco_simplewave: libmossco_simplewave_driver libmossco_util \
   $(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a(simplewave_component.o)
@@ -155,13 +167,12 @@ libmossco_getm: libmossco_getm_driver libmossco_util \
 libmossco_technical: prefix libmossco_util test_component.F90 \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_technical.a(empty_component.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_technical.a(dummy_component.o) \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_technical.a(test_component.o) \
+#	$(MOSSCO_LIBRARY_PATH)/libmossco_technical.a(test_component.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_technical.a(inout_component.o)
 
 libmossco_aggregation: prefix libmossco_util  \
 		$(MOSSCO_LIBRARY_PATH)/libmossco_aggregation.a(time_aggregation_component.o)
 
-libconstant: prefix modtypes $(MOSSCO_LIBRARY_PATH)/libconstant.a(constant_component.o)
 libdefault: prefix modtypes $(MOSSCO_LIBRARY_PATH)/libdefault.a(default_component.o)
 modtypes: prefix $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
 
@@ -204,8 +215,9 @@ hamsom_component.o: hamsom_component.F90
 	$(F90) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 #	$(F90) $(HAMSOM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) $(HAMSOM_FFLAGS) -c $< -o $@
 
-
+xios_component.o: xios_component.F90
 cmaq_component.o: cmaq_component.F90
+
 	@echo "Compiling $<"
 	$(F90) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
@@ -252,7 +264,6 @@ extraclean:
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libempty.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_aggregation.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_technical.a
-	@-rm -f $(MOSSCO_LIBRARY_PATH)/libconstant.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libdefault.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a

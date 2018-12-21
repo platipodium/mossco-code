@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2013, 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht, Institut für Ostseeforschung Warnemünde
+# @copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht, Institut für Ostseeforschung Warnemünde
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 # @author Knut Klingbeil <knut.klingbeil@io-warnemuende.de>
 #
@@ -92,10 +92,10 @@ erosed-svn-update:
 	svn update --set-depth infinity $(MOSSCO_DIR)/external/erosed-svn/source
 
 flow2d3d-svn-export:
-	svn export --force https://svn.oss.deltares.nl/repos/delft3d/tags/2399/src/engines_gpl/flow2d3d/packages/kernel/src/compute_sediment/bedbc1993.f90 $(MOSSCO_DIR)/external/erosed-svn/source/bedbc1993.f90
-	svn export --force https://svn.oss.deltares.nl/repos/delft3d/tags/2399/src/engines_gpl/flow2d3d/packages/kernel/src/compute_sediment/soursin_3d.f90 $(MOSSCO_DIR)/external/erosed-svn/source/soursin_3d.f90
-	svn export --force https://svn.oss.deltares.nl/repos/delft3d/tags/2399/src/engines_gpl/flow2d3d/packages/kernel/src/compute_sediment/compbsskin.f90 $(MOSSCO_DIR)/external/erosed-svn/source/compbsskin.f90
-	svn export --force https://svn.oss.deltares.nl/repos/delft3d/tags/2399/src/utils_lgpl/deltares_common/packages/deltares_common/src/mathconsts.f90 $(MOSSCO_DIR)/external/erosed-svn/source/mathconsts.f90
+	svn export --force https://svn.oss.deltares.nl/repos/delft3d/tags/delft3d4/2399/src/engines_gpl/flow2d3d/packages/kernel/src/compute_sediment/bedbc1993.f90 $(MOSSCO_DIR)/external/erosed-svn/source/bedbc1993.f90
+	svn export --force https://svn.oss.deltares.nl/repos/delft3d/tags/delft3d4/2399/src/engines_gpl/flow2d3d/packages/kernel/src/compute_sediment/soursin_3d.f90 $(MOSSCO_DIR)/external/erosed-svn/source/soursin_3d.f90
+	svn export --force https://svn.oss.deltares.nl/repos/delft3d/tags/delft3d4/2399/src/engines_gpl/flow2d3d/packages/kernel/src/compute_sediment/compbsskin.f90 $(MOSSCO_DIR)/external/erosed-svn/source/compbsskin.f90
+	svn export --force https://svn.oss.deltares.nl/repos/delft3d/tags/delft3d4/2399/src/utils_lgpl/deltares_common/packages/deltares_common/src/mathconsts.f90 $(MOSSCO_DIR)/external/erosed-svn/source/mathconsts.f90
 
 sqlite: sqlite/sqlite3.c
 sqlite/sqlite3.c: sqlite-zip

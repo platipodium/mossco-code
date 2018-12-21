@@ -48,8 +48,10 @@ addons:
       - libnetcdff5
       - libnetcdf-dev
       - libnetcdfc7
+      - netcdf-bin
       - cvsutils
-      #- doxygen
+      - doxygen
+      - doxygen-latex
       - libxerces-c-dev
       - gnutls-bin
       - libgnutls-dev
@@ -73,43 +75,36 @@ notifications:
   email: true
 
 env:
-  global:
-    - MOSSCO_FFLAGS="-g -Wall -fprofile-arcs -ftest-coverage -O0"
+  - global:
+    - MAKEFLAGS="--silent" # "-j 2"
+    - MOSSCO_FFLAGS="-w   -fprofile-arcs -ftest-coverage -O0"
     - EXTRA_FFLAGS="-D_TEST_TRACERFLUXES_"
     - FFLAGS="-DESMF_UNRELEASED"
     - MOSSCO_DIR=${TRAVIS_BUILD_DIR}
     - ESMF_DIR=${MOSSCO_DIR}/../esmf-code
     - ESMF_INSTALL_PREFIX=${MOSSCO_DIR}/../esmf
+    - NETCDFINC=$(nc-config --includedir)
+    - NETCDFLIBDIR=$(nc-config --prefix)/lib
+    - NETCDFLIBNAME=$(nc-config --flibs)
     - NETCDF_VERSION=NETCDF4
     - COMMS="openmpi"       # @todo make this a matrix with mpich
     - COMPS="gfortranclang" # @todo make this a matrix with gfortran
     - TAGS="ESMF_7_1_0r"
     - ESMFMKFILE=${ESMF_INSTALL_PREFIX}/lib/libg/Linux.gfortranclang.64.openmpi.ESMF_7_1_0r/esmf.mk
 
-#  matrix:
-#    - make doc
-#    - make all
-
 install:
   - rm -rf ${ESMF_DIR}
-#  - test -d ${ESMF_DIR} || bash ${MOSSCO_DIR}/scripts/installation/install_esmf_versions.sh
-#  - source ${HOME}/.esmf_Linux.gfortranclang.64.openmpi.ESMF_7_1_0r
-  - bash ${MOSSCO_DIR}/scripts/install/install_esmf_versions.sh
-  - mkdir -p ${MOSSCO_DIR}/external/fabm/
-  - git clone -b master --depth 1 https://github.com/platipodium/mossco-fabm.git ${MOSSCO_DIR}/external/fabm/code
-  - mkdir -p ${MOSSCO_DIR}/external/getm/
-  - git clone -b iow --depth 1 https://github.com/platipodium/mossco-getm.git ${MOSSCO_DIR}/external/getm/code
-  - make external
-  - make libfabm_external
-  - make libgotm_external
-  - make libgetm_external
-  - make -C ${MOSSCO_DIR}/src/utilities
-  - make -C ${MOSSCO_DIR}/src/drivers
-  - make -C ${MOSSCO_DIR}/src/connectors
-  - make -C ${MOSSCO_DIR}/src/mediators
-  - make -C ${MOSSCO_DIR}/src/components
-  - make all
+  - bash  ${MOSSCO_DIR}/scripts/install/install_esmf_versions.sh
+  - make -s external
 
-#deploy:
-#  - mkdir -p ${HOME}/opt/bin
-#  - ln -sf ${MOSSCO_DIR}/scripts/mossco.sh ${HOME}/opt/bin/mossco
+before_script:
+
+script:
+  - make -s all
+  - make -s install
+  - make -s doc
+
+after_success:
+  # - cd $TRAVIS_BUILD_DIR
+  # - git config --global user.name "TRAVIS-CI-for-$(git --no-pager show -s --format='%cn' $TRAVIS_COMMIT)"
+  # - git config --global user.email "$(git --no-pager show -s --format='%ce' $TRAVIS_COMMIT)"

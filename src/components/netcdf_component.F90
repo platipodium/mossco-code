@@ -59,10 +59,6 @@ module netcdf_component
       userRoutine=InitializeP1, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_READRESTART, phase=1, &
-      userRoutine=ReadRestart, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -289,42 +285,6 @@ module netcdf_component
   end subroutine InitializeP1
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "ReadRestart"
-  subroutine ReadRestart(gridComp, importState, exportState, parentClock, rc)
-
-    type(ESMF_GridComp)   :: gridComp
-    type(ESMF_State)      :: importState
-    type(ESMF_State)      :: exportState
-    type(ESMF_Clock)      :: parentClock
-    integer, intent(out)  :: rc
-
-    integer(ESMF_KIND_I4)      :: localrc
-    character(len=ESMF_MAXSTR) :: name
-
-    rc = ESMF_SUCCESS
-
-    !> Here omes your restart code, which in the simplest case copies
-    !> values from all fields in importState to those in exportState
-
-    call ESMF_GridCompGet(gridComp, name=name, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_StateGet(importState, name=name, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_StateGet(exportState, name=name, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_ClockGet(parentClock, name=name, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-  end subroutine ReadRestart
-
-#undef  ESMF_METHOD
 #define ESMF_METHOD "Run"
 subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
@@ -340,9 +300,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     integer(ESMF_KIND_I8)   :: i, j, advanceCount
     real(ESMF_KIND_R8)      :: seconds
     integer(ESMF_KIND_I4)   :: itemCount, timeSlice, localPet,  petCount
-    integer(ESMF_KIND_I4)   :: localrc, fieldCount
+    integer(ESMF_KIND_I4)   :: localrc, fieldCount, itemFieldCount
     type(ESMF_StateItem_Flag) :: itemType
-    type(ESMF_StateItem_Flag), allocatable, dimension(:) :: itemTypeList
+    type(ESMF_StateItem_Flag), allocatable, dimension(:)  :: itemTypeList
     character(len=ESMF_MAXSTR), allocatable, dimension(:) :: itemNameList
     character(len=ESMF_MAXSTR), allocatable, dimension(:) :: fieldNameList
     type(ESMF_Clock)        :: clock
@@ -353,7 +313,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     character(len=ESMF_MAXSTR), pointer :: filterIncludeList(:) => null()
     character(len=ESMF_MAXSTR), pointer :: filterExcludeList(:) => null()
     logical                    :: checkNaN=.true., checkInf=.true.
-    type(ESMF_Field), allocatable :: fieldList(:)
+    type(ESMF_Field), allocatable :: fieldList(:), itemFieldList(:)
+    type(ESMF_FieldBundle)        :: fieldBundle
+    type(ESMF_State)              :: state
+    character(len=ESMF_MAXSTR), pointer :: itemSearch(:) => null()
 
     rc = ESMF_SUCCESS
 
@@ -402,9 +365,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (advanceCount<huge(timeSlice)) then
       timeSlice=int(advanceCount, ESMF_KIND_I4)
     else
-      write(message,'(A)') 'Cannot use this advanceCount for a netcdf timeSlice, failed to convert long int to int'
+      write(message,'(A)') trim(name)//' cannot use this advanceCount for a netcdf timeSlice, failed to convert long int to int'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       rc = ESMF_RC_ARG_OUTOFRANGE
+      call MOSSCO_CompExit(gridcomp, rc=localrc)
       return
     endif
 
@@ -442,7 +406,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       else
         verbose = .false.
       end if
-        nc = mossco_netcdfOpen(fileName, timeUnit=timeUnit, state=importState, rc=localrc)
+
+      nc = mossco_netcdfOpen(fileName, timeUnit=timeUnit, state=importState, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call nc%update()
@@ -452,9 +417,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       !! variables.  Continue an error message
 
       call nc%timeGet(minTime, searchIndex=1, stopTime=maxTime, rc=localrc)
+
       if (localrc == ESMF_RC_NOT_FOUND .or. maxTime < currTime) then
         call nc%add_timestep(seconds, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       elseif (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -463,14 +429,15 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         write(message, '(A)')  trim(name)//' '//trim(timeString)//' cannot insert time before'
-        localrc = ESMF_RC_NOT_IMPL
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call ESMF_TimeGet(maxTime, timeStringISOFrac=timeString, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call MOSSCO_MessageAdd(message,' '//trim(timeString))
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+
+        localrc = ESMF_RC_NOT_IMPL
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         itemCount=0
       endif
@@ -482,8 +449,12 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     !> Get all fields irrespective of bundle and that satisfy include/exclude
     call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
-        fieldStatus=ESMF_FIELDSTATUS_COMPLETE, include=filterIncludeList, &
+        fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), include=filterIncludeList, &
         exclude=filterExcludeList, verbose=verbose, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    !> This stores the itemSearch pointer field Name
+    if (.not.associated(itemSearch)) allocate(itemSearch(1), stat=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     do i=1, fieldCount
@@ -491,28 +462,36 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       call ESMF_FieldGet(fieldList(i), name=fieldName, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (verbose) then
-        write(message,'(A)') trim(name)//' will write'
-        call MOSSCO_MessageAdd(message,' '//trim(fieldName))
-        call MOSSCO_MessageAdd(message,' to file ')
-        call MOSSCO_MessageAdd(message,' '//fileName)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      endif
+      !> We need to know whether this field occurs multiple times
+      itemSearch(1)=trim(fieldName)
+      call MOSSCO_StateGet(importState, itemfieldList, &
+        fieldCount=itemfieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), &
+        include=itemSearch, verbose=verbose,  rc=localrc)
 
-      !> As we don't know whether the field comes from a fieldbundle
-      !> of the same name, check this here
-      call ESMF_StateGet(importState, fieldName, itemType, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      !> Simple case: field occurs only once
+      if (itemFieldCount == 1) then
 
-      if (itemType == ESMF_STATEITEM_FIELD) then
+        if (verbose) then
+          write(message,'(A)') trim(name)//' writes '
+          call MOSSCO_FieldString(itemFieldList(1), message)
+          call MOSSCO_MessageAdd(message,' to '//fileName)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        endif
+
         call nc_state_field_write(importState, trim(fieldName), &
           checkNaN=checkNaN, checkInf=checkInf, owner=trim(name), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      elseif (itemType == ESMF_STATEITEM_FIELDBUNDLE &
-        .or.  itemType == ESMF_STATEITEM_NOTFOUND) then
-        !> this is the case when a field has the same name as its containing
-        !> fieldBundle or when a field is in a fieldBundle that has a different name
+      elseif (itemFieldCount > 1) then
+
+        write(message,'(A)') trim(name)//' will write multiple item  '
+        call MOSSCO_FieldString(itemFieldList(1), message)
+        call MOSSCO_MessageAdd(message,' to '//fileName)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+        !> this is the case when a multiple field is in one or more fieldbundles,
+        !> either of the same or a different name. We assemble those fieldNames
+        !> in a fieldNameList for later processing
 
         if (.not.allocated(fieldNameList)) then
           call MOSSCO_Reallocate(fieldNameList, 1, keep=.false., rc=localrc)
@@ -528,17 +507,70 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
         fieldNameList(ubound(fieldNameList,1)) = trim(fieldName)
 
-        call nc_state_fieldbundle_write(importState, trim(fieldName), &
-          checkNaN=checkNaN, checkInf=checkInf, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
       else
-        localrc = ESMF_RC_NOT_IMPL
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) return
+        write(message,'(A)') trim(name)//' strangely received zero for item '//trim(fieldName)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       endif
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     enddo
 
+    !> Now take care of all existing fieldBundles with field named in fieldNameList
+    if (allocated(fieldNameList)) then
+      do i=1, ubound(fieldNameList,1)
+
+        call ESMF_StateGet(importState, fieldNameList(i), itemType, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        itemSearch(1)=trim(fieldNameList(i))
+
+        call MOSSCO_StateGet(importState, itemfieldList, &
+          fieldCount=itemfieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), &
+          include=itemSearch, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        !> Create a fieldBundle of the same name in the importState and add
+        !> all fields with this name the fieldBundle
+        if (itemType == ESMF_STATEITEM_NOTFOUND) then
+
+          fieldBundle = ESMF_FieldBundleCreate(name=fieldNameList(i), &
+            multiflag=.true., rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          call ESMF_FieldBundleAdd(fieldBundle, itemFieldList, multiflag=.true., rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          call ESMF_StateAddReplace(importState, (/fieldBundle/), rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        endif
+
+        if (verbose) then
+          write(message,'(A)') trim(name)//' writes bundle '
+          call MOSSCO_MessageAdd(message,' '//trim(fieldNameList(i))//' to ')
+          call MOSSCO_MessageAdd(message,' '//fileName)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        endif
+
+        do j=1,itemFieldCount
+          write(message,'(A)') trim(name)//' writes '
+          call MOSSCO_FieldString(itemFieldList(j), message)
+          call MOSSCO_MessageAdd(message,' to '//fileName)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        enddo
+
+        call nc_state_fieldbundle_write(importState, trim(fieldNameList(i)), &
+          checkNaN=checkNaN, checkInf=checkInf, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      enddo
+    endif
+
+    call MOSSCO_Reallocate(fieldNameList, 0, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call MOSSCO_Reallocate(itemFieldList, 0, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    deallocate(itemSearch, stat=localrc)
 
       !> Remove from import state all fields, whether written or not, ensure that all processes have
       !> processed all states by using a barrier
@@ -563,27 +595,53 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
    ! 7.0.0 b64
    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+
+    !> Look for states in states and write them as a non-dimensional
+    !> variable to record model metadata that is not stored in variables
     call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    ! The removal creates problesm, it is disabled here for further testing.  Is
-    ! it needed at all?
-    if (itemcount>0) then
+    if (allocated(itemTypeList)) deallocate(itemTypeList)
+    if (allocated(itemNameList)) deallocate(itemNameList)
+    allocate(itemTypeList(itemCount))
+    allocate(itemNameList(itemCount))
 
-      allocate(itemNameList(itemCount))
+    call ESMF_StateGet(importState, itemTypeList=itemTypeList, &
+      itemNameList=itemNameList, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_StateGet(importState, itemNameList=itemNameList, rc=localrc)
+    do i=1, itemCount
+
+      if (itemTypeList(i) /= ESMF_STATEITEM_STATE) cycle
+
+      call ESMF_StateGet(importState, itemNameList(i), state, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      !call ESMF_StateRemove(importState, itemNameList, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
-        write(message,'(A)') trim(name)//' ignores error above '
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-        localrc = ESMF_SUCCESS
-        !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
+      call nc%put_state(state, name=trim(itemNameList(i)), &
+        owner=trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    endif
+    enddo
+
+
+    ! The removal creates problesm, it is disabled here for further testing.  Is
+    ! it needed at all?
+    ! if (itemcount>0) then
+    !
+    !   allocate(itemNameList(itemCount))
+    !
+    !   call ESMF_StateGet(importState, itemNameList=itemNameList, rc=localrc)
+    !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    !   !call ESMF_StateRemove(importState, itemNameList, rc=localrc)
+    !   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
+    !     write(message,'(A)') trim(name)//' ignores error above '
+    !     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+    !     localrc = ESMF_SUCCESS
+    !     !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    !   endif
+    !
+    ! endif
 
     call nc%close()
 
@@ -838,7 +896,7 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     call nc%put_variable(field, name=trim(fieldName), &
       checkNaN=checkNaN_, checkInf=checkInf_, owner=trim(owner_), rc=localrc)
     if (localrc /= ESMF_SUCCESS) then
-      write(message,'(A)') '-- could not write'
+      write(message,'(A)') trim(owner_)//' could not write'
       call MOSSCO_FieldString(field, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
     endif

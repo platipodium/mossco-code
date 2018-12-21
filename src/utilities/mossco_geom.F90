@@ -25,12 +25,23 @@ module mossco_geom
   use esmf
   use esmf_pointlistmod
   use mossco_strings
+  use mossco_grid
+  !use mossco_xgrid
+  use mossco_mesh
+  use mossco_locstream
 
   implicit none
 
-  public MOSSCO_GeomCreate, MOSSCO_FileFormatFromString, MOSSCO_GeomTypeFromString
+  public MOSSCO_GeomCreate, MOSSCO_FileFormatFromString, MOSSCO_GeomTypeFromString, MOSSCO_GeomString
 
   private
+
+  interface MOSSCO_GeomString
+    module procedure MOSSCO_MeshString
+    module procedure MOSSCO_GridString
+    module procedure MOSSCO_LocStreamString
+    !module procedure MOSSCO_XGridString
+  end interface
 
   interface MOSSCO_GeomCreate
     module procedure MOSSCO_GeomCreateFromFile

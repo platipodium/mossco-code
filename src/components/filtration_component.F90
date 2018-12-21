@@ -4,7 +4,7 @@
 !>
 !> This computer program is part of MOSSCO.
 !> @copyright Copyright 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
-!> @author Carsten Lemmen, HZG
+!> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -66,10 +66,6 @@ module filtration_component
       userRoutine=InitializeP2, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_READRESTART, phase=1, &
-      userRoutine=ReadRestart, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -125,9 +121,10 @@ module filtration_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(ESMF_MAXSTR)  :: name, message, configfilename, itemName
+    character(ESMF_MAXSTR)  :: name, message, configfilename, itemName, string
     type(ESMF_Time)         :: currTime
-    integer(ESMF_KIND_I4)   :: localrc, rank, otherCount, i, j, diagCount
+    integer(ESMF_KIND_I4)   :: localrc, rank, otherCount, i, j, k, diagCount
+    integer(ESMF_KIND_I4)   :: starIndex
     type(ESMF_Field)        :: field
     type(ESMF_FieldBundle)  :: fieldBundle
     type(ESMF_Config)       :: config
@@ -139,6 +136,7 @@ module filtration_component
     character(len=ESMF_MAXSTR)  :: xVelocity, yVelocity
     character(len=ESMF_MAXSTR), allocatable  :: filterSpeciesList(:,:), itemNameList(:)
     character(len=ESMF_MAXSTR), allocatable  :: diagNameList(:), filterSpecies(:)
+    real(ESMF_KIND_R8), allocatable          :: partitionFactors(:)
 
     type(MOSSCO_ParameterType), dimension(10) :: parameters
 
@@ -225,19 +223,55 @@ module filtration_component
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         otherCount = ubound(filterSpeciesList,1)
+        allocate(partitionFactors(ubound(filterSpeciesList,2)-1), stat=localrc)
 
         do j=1,otherCount
+
           write(message,'(A)') trim(name)//' co-filters '
           call MOSSCO_MessageAdd(message, ' '//trim(filterSpeciesList(j,1)), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          if (filterSpeciesList(j,2) /= '') then
-            call MOSSCO_MessageAdd(message,' => '//trim(filterSpeciesList(j,2)), rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-          endif
+          !> Add explicit partitioning and balance
+          partitionFactors=0.0
+          do k=2, ubound(filterSpeciesList, 2)
+            if (filterSpeciesList(j,k) == '')  exit
+
+            string = filterSpeciesList(j,k)
+            starIndex=index(string, '*')
+            if (starIndex>1) then
+              read(string(1:starIndex-1), *) partitionFactors(k-1)
+            else
+              partitionFactors(k-1) = 1.0
+            endif
+          enddo
+          partitionFactors=partitionFactors/sum(partitionFactors)
+
+
+          do k=2, ubound(filterSpeciesList, 2)
+            if (filterSpeciesList(j,k) == '')  exit
+
+            if (k==2) then
+              call MOSSCO_MessageAdd(message,' =>', rc=localrc)
+            else
+              call MOSSCO_MessageAdd(message,' + ', rc=localrc)
+            endif
+
+            write(string,'(F4.2,A)') partitionFactors(k-1), '*'
+            call MOSSCO_MessageAdd(message,trim(string), rc=localrc)
+
+            string = filterSpeciesList(j,k)
+            starIndex=index(string, '*')
+            if (starIndex>1) then
+              call MOSSCO_MessageAdd(message,trim(string(starIndex+1:)), rc=localrc)
+            else
+              call MOSSCO_MessageAdd(message,trim(string), rc=localrc)
+            endif
+          enddo
 
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         enddo
+        deallocate(partitionFactors, stat=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       else
         otherCount = 0
       endif
@@ -307,21 +341,28 @@ module filtration_component
         j = index(itemName,'_in_water')
         if (j>1) itemName = itemName(1:j-1)
         field = ESMF_FieldEmptyCreate(name=trim(itemName)//'_in_water', rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       elseif (i == 1) then
         field = ESMF_FieldEmptyCreate(name=trim(itemName)//'_at_water_surface', rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       elseif (i == 2) then
         field = ESMF_FieldEmptyCreate(name=trim(itemName)//'_at_soil_surface', rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
+      call ESMF_FieldGet(field, name=itemNameList(i), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (i == 1 .or. i == 2)  call ESMF_AttributeSet(field, 'units', 'm-2', rc=localrc)
-      if (i > 2)  call ESMF_AttributeSet(field, 'units', 'mmol m-3', rc=localrc)
+      if (i == 1 .or. i == 2)  then
+        call ESMF_AttributeSet(field, 'units', 'm-2', rc=localrc)
+      else
+        call ESMF_AttributeSet(field, 'units', 'mmol m-3', rc=localrc)
+      endif
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      write(message, '(A)') trim(name)//' created for import empty field '
+      write(message, '(A)') trim(name)//' created for import '
       call MOSSCO_FieldString(field, message, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -342,36 +383,57 @@ module filtration_component
         = itemNameList(:)
 
     !> Add the optional products
-    if (filterSpecies(2) /= '') then
+    if (trim(filterSpecies(2)) /= '') then
       call MOSSCO_Reallocate(diagNameList, ubound(diagNameList,1) + 1, keep=.true., rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       diagNameList(ubound(diagNameList,1))=trim(filterSpecies(2))
     endif
     do i=lbound(filterSpeciesList,1), ubound(filterSpeciesList,1)
-      if (filterSpeciesList(i,2) == '') cycle
-      call MOSSCO_Reallocate(diagNameList, ubound(diagNameList,1) + 1, keep=.true., rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      diagNameList(ubound(diagNameList,1))=trim(filterSpeciesList(i,2))
+      do j=2, ubound(filterSpeciesList,2)
+
+        if (trim(filterSpeciesList(i,j)) == '') exit
+        call MOSSCO_Reallocate(diagNameList, ubound(diagNameList,1) + 1, keep=.true., rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        string = filterSpeciesList(i,j)
+        starIndex = index(string,'*')
+        if (starIndex > 1) then
+          diagNameList(ubound(diagNameList,1))=trim(string(starIndex+1:))
+        else
+          diagNameList(ubound(diagNameList,1))=trim(string)
+        endif
+      enddo
     enddo
 
-    !> Create export states for all variables above index 5,  add diagnostic variables
-    do i = 3, ubound(diagNameList,1)
+    !> Create for export a fieldBundle with all fluxes from filter and co-filter
+    !> items (all products), create fields for diagnostic variables
+    !> Create export states for all variables except the first 2 (abundance),  add diagnostic variables
+    do i = 3 + diagCount, ubound(diagNameList,1)
+
+      !write(message, '(A)') trim(name)//' creates for export '//trim(diagNameList(i))
+      !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      !cycle
       !> Create export states for diagnostic, filter and co-filter items
-      if (i < ubound(diagNameList,1)-size(itemNameList) - 1) then
+      !if (i < ubound(diagNameList,1)-size(itemNameList) - 1) then
+      if (i <= diagCount ) then
         field = ESMF_FieldEmptyCreate(name=trim(diagNameList(i)), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call ESMF_StateAddReplace(exportState, (/field/),rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        write(message, '(A)') trim(name)//' created for export empty field'
+        write(message, '(A)') trim(name)//' created for export'
 
       else
-        fieldBundle = ESMF_FieldBundleCreate(name=trim(diagNameList(i))//'_flux_in_water', rc=localrc)
+        itemName = trim(diagNameList(i))
+        starIndex = index(itemName,'_in_water')
+        if (starIndex>1) itemName = itemName(1:starIndex-1)
+
+        fieldBundle = ESMF_FieldBundleCreate(name=trim(itemName)//'_flux_in_water', rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        field = ESMF_FieldEmptyCreate(name=trim(diagNameList(i))//'_flux_in_water', rc=localrc)
+        field = ESMF_FieldEmptyCreate(name=trim(itemName)//'_flux_in_water', rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         !> @todo check units for co-filtered and filter species
@@ -387,7 +449,7 @@ module filtration_component
         call ESMF_StateAddReplace(exportState, (/fieldBundle/),rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        write(message, '(A)') trim(name)//' created bundled empty field'
+        write(message, '(A)') trim(name)//' created for export bundled'
       endif
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -424,20 +486,21 @@ module filtration_component
 
     character(ESMF_MAXSTR)  :: name, message
     character(ESMF_MAXSTR), allocatable  :: filterSpeciesList(:,:), filterSpecies(:)
-    character(ESMF_MAXSTR)  :: foreignGridFieldName
+    character(ESMF_MAXSTR)  :: foreignGridFieldName, string
     type(ESMF_Time)         :: currTime
 
     type(ESMF_Grid)             :: grid, grid2
     type(ESMF_Field)            :: field
     type(ESMF_Field), allocatable, dimension(:) :: fieldList
-    integer(ESMF_KIND_I4)       :: localrc, i, rank, gridRank
+    integer(ESMF_KIND_I4)       :: localrc, i, rank, gridRank, j
     type(ESMF_FieldStatus_Flag) :: fieldStatus
     type(ESMF_StateItem_Flag)   :: itemType
     type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
     character(len=ESMF_MAXSTR), allocatable :: itemNameList(:), diagNameList(:)
     character(len=ESMF_MAXSTR)              :: itemName
-    integer(ESMF_KIND_I4)                   :: itemCount
+    integer(ESMF_KIND_I4)                   :: itemCount, starIndex
     real(ESMF_KIND_R8)                      :: musselMass, minimumFoodFlux
+    real(ESMF_KIND_R8), allocatable         :: partitionFactors(:)
 
     rc = ESMF_SUCCESS
 
@@ -502,7 +565,7 @@ module filtration_component
 
     ! Get all fields that are empty and provide them with a grid
     call MOSSCO_StateGetFieldList(exportState, fieldList, &
-      fieldStatus=ESMF_FIELDSTATUS_EMPTY, fieldCount=itemCount, rc=localrc)
+      fieldStatusList=(/ESMF_FIELDSTATUS_EMPTY/), fieldCount=itemCount, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     do i=1, itemCount
@@ -519,7 +582,7 @@ module filtration_component
 
     ! Get all fields that are gridset and complete them with a typekind
     call MOSSCO_StateGetFieldList(exportState, fieldList, &
-      fieldStatus=ESMF_FIELDSTATUS_GRIDSET, fieldCount=itemCount, rc=localrc)
+      fieldStatusList=(/ESMF_FIELDSTATUS_GRIDSET/), fieldCount=itemCount, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     do i=1, itemCount
@@ -556,13 +619,56 @@ module filtration_component
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (allocated(filterSpeciesList)) then
+
+      allocate(partitionFactors(ubound(filterSpeciesList,2)-1), stat=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
       do i = lbound(filterSpeciesList,1), ubound(filterSpeciesList,1)
         write(message,'(A)') trim(name)//' filtrates also '//trim(filterSpeciesList(i,1))
-        if ((ubound(filterSpeciesList,2) == 2) .and. (filterSpeciesList(i,2) /= '')) then
-          write(message,'(A)') trim(message)//' => '//trim(filterSpeciesList(i,2))
-        endif
+
+        !> Add explicit partitioning and balance
+        partitionFactors = 0.0
+        do j=2, ubound(filterSpeciesList, 2)
+          if (filterSpeciesList(i,j) == '')  exit
+
+          string = filterSpeciesList(i,j)
+          starIndex=index(string, '*')
+          if (starIndex>1) then
+            read(string(1:starIndex-1), *) partitionFactors(j-1)
+          else
+            partitionFactors(j-1) = 1.0
+          endif
+        enddo
+        partitionFactors=partitionFactors/sum(partitionFactors)
+
+        do j=2, ubound(filterSpeciesList, 2)
+
+          if (trim(filterSpeciesList(i,j)) == '') exit
+
+
+          if (j==2) then
+            call MOSSCO_MessageAdd(message,' =>', rc=localrc)
+          else
+            call MOSSCO_MessageAdd(message,' + ', rc=localrc)
+          endif
+
+          write(string,'(F4.2,A)') partitionFactors(j-1), '*'
+          call MOSSCO_MessageAdd(message,trim(string), rc=localrc)
+
+          string = filterSpeciesList(i,j)
+          starIndex=index(string, '*')
+          if (starIndex>1) then
+            call MOSSCO_MessageAdd(message,trim(string(starIndex+1:)), rc=localrc)
+          else
+            call MOSSCO_MessageAdd(message,trim(string), rc=localrc)
+          endif
+        enddo
+
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       enddo
+
+      deallocate(partitionFactors, stat=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
 
     call MOSSCO_AttributeGet(gridComp, 'diagnostic_variables', diagNameList, rc=localrc)
@@ -585,36 +691,6 @@ module filtration_component
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP2
-
-#undef  ESMF_METHOD
-#define ESMF_METHOD "ReadRestart"
-  subroutine ReadRestart(gridComp, importState, exportState, parentClock, rc)
-
-    type(ESMF_GridComp)   :: gridComp
-    type(ESMF_State)      :: importState
-    type(ESMF_State)      :: exportState
-    type(ESMF_Clock)      :: parentClock
-    integer, intent(out)  :: rc
-
-    integer(ESMF_KIND_I4)      :: localrc
-    type(ESMF_Time)            :: currTime
-    character(len=ESMF_MAXSTR) :: name
-
-    rc = ESMF_SUCCESS
-
-    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
-      importState=importState,  exportState=exportState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    !> Here omes your restart code, which in the simplest case copies
-    !> values from all fields in importState to those in exportState
-
-    call MOSSCO_CompExit(gridComp, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-  end subroutine ReadRestart
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Run"
@@ -644,7 +720,7 @@ module filtration_component
     logical, allocatable, dimension(:,:,:)       :: mask
     type(ESMF_Field)        :: field
     type(ESMF_Grid)         :: grid
-    integer(ESMF_KIND_I4)   :: localrc, i, rank, otherCount, fieldCount, j, k
+    integer(ESMF_KIND_I4)   :: localrc, i, rank, otherCount, fieldCount, j, k, l
     real(ESMF_KIND_R8)      :: musselMass, scaleFactor
     real(ESMF_KIND_R8)      :: maximumRelativeChange
     real(ESMF_KIND_R8)      :: integration_timestep, threshold
@@ -662,6 +738,8 @@ module filtration_component
     real(ESMF_KIND_R8),parameter:: pi=3.141592653589793d0
     integer(ESMF_KIND_I8)       :: advanceCount
     real(ESMF_KIND_R8), parameter :: respiration_fraction=0.2
+    real(ESMF_KIND_R8), allocatable :: partitionFactors(:)
+    integer(ESMF_KIND_I4)       :: starIndex
 
     rc = ESMF_SUCCESS
 
@@ -718,7 +796,7 @@ module filtration_component
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
-      itemSearch=trim(filterSpecies(1))//'_in_water', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      itemSearch=trim(filterSpecies(1))//'_in_water', fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount /= 1) then
@@ -755,12 +833,13 @@ module filtration_component
     call ESMF_FieldGet(fieldList(1), grid=grid, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    !> save this field for later use while fieldList is reused 
+    !> save this field for later use while fieldList is reused
     field = fieldList(1)
 
     ! Get layer height  to export
     call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
-      itemSearch='layer_height_in_water', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      itemSearch='layer_height_in_water', &
+      fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !> @todo check correctness of layerHeigt (should be farray not pointer?)
@@ -780,7 +859,8 @@ module filtration_component
 
     ! Get mussel abundance to export
     call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
-      itemSearch='mussel_abundance_in_water', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      itemSearch='mussel_abundance_in_water', &
+      fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount > 1) then
@@ -797,7 +877,8 @@ module filtration_component
     ! Get mussel abundance to import
     nullify(abundanceAtSoil)
     call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
-      itemSearch='mussel_abundance_at_soil_surface', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      itemSearch='mussel_abundance_at_soil_surface', &
+      fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     isSoil = .false.
@@ -814,8 +895,10 @@ module filtration_component
     endif
 
     ! Get mussel abundance to import
-    call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
-      itemSearch='mussel_abundance_at_water_surface', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    call MOSSCO_StateGetFieldList(importState, fieldList, &
+      fieldCount=fieldCount, &
+      itemSearch='mussel_abundance_at_water_surface', &
+      fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     isSurface = .false.
@@ -916,7 +999,7 @@ module filtration_component
 
       !> Get all fields in export and initialize them to zero
       call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
-        fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+        fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       do i=1, fieldCount
@@ -929,7 +1012,8 @@ module filtration_component
       write(fluxName,'(A)') trim(filterSpecies(1))//'_flux_in_water'
 
       call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
-        itemSearch=trim(fluxName), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+        itemSearch=trim(fluxName), &
+        fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       do i=1, fieldCount
@@ -958,7 +1042,8 @@ module filtration_component
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
-        itemSearch='maximum_filtration_rate', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+        itemSearch='maximum_filtration_rate', &
+        fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (fieldCount > 0) then
@@ -969,7 +1054,8 @@ module filtration_component
       endif
 
       call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
-        itemSearch='fractional_loss_rate', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+        itemSearch='fractional_loss_rate', &
+        fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (fieldCount > 0) then
@@ -1069,7 +1155,8 @@ module filtration_component
         ! Get flux species, be careful to look at the creator attribute to choose
         ! the right one, i.e. those created as export states from this component
         call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
-          itemSearch=trim(fluxName), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+          itemSearch=trim(fluxName), &
+          fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         do i=1, fieldCount
@@ -1117,6 +1204,8 @@ module filtration_component
 
       if (allocated(filterSpeciesList)) then
         otherCount = ubound(filterSpeciesList,1)
+        allocate(partitionFactors(ubound(filterSpeciesList, 2)-1), stat=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       else
         otherCount = 0
       endif
@@ -1127,7 +1216,8 @@ module filtration_component
         ! Get cofiltered flux species, be careful to look at the creator attribute to choose
         ! the right one
         call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
-          itemSearch=trim(fluxName), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+          itemSearch=trim(fluxName), &
+          fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         do j=1, fieldCount
@@ -1196,52 +1286,79 @@ module filtration_component
         call MOSSCO_FieldString(fieldList(1),message)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-        !> If there is a product from the educt, then add the lossRate previously calculated
+        if (filterSpeciesList(i,2) == '')  cycle
+
+        !> If there is one or more product from the educt, then add the lossRate previously calculated
         !> to the product flux
-        if (trim(filterSpeciesList(i,2)) == '') cycle
+        partitionFactors=0.0
+        do l=2, ubound(filterSpeciesList, 2)
+          if (filterSpeciesList(i,l) == '')  exit
 
-        write(fluxName,'(A)') trim(filterSpeciesList(i,2))//'_flux_in_water'
+          string = filterSpeciesList(i,l)
+          starIndex=index(string, '*')
+          if (starIndex>1) then
+            read(string(1:starIndex-1), *) partitionFactors(l-1)
+          else
+            partitionFactors(l-1) = 1.0
+          endif
+        enddo
+        partitionFactors=partitionFactors/sum(partitionFactors)
 
-        call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
-          itemSearch=trim(fluxName), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        do l=2, ubound(filterSpeciesList, 2)
 
-        do j=1, fieldCount
-          call ESMF_AttributeGet(fieldList(j), 'creator', creatorName, defaultValue='none', rc=localrc)
+          if (trim(filterSpeciesList(i,l)) == '') exit
+
+          string = filterSpeciesList(i,l)
+          starIndex=index(string, '*')
+          if (starIndex>1) then
+            write(fluxName,'(A)') trim(string(starIndex+1:))//'_flux_in_water'
+          else
+            write(fluxName,'(A)') trim(string)//'_flux_in_water'
+          endif
+
+          call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
+            itemSearch=trim(fluxName), &
+            fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          if (trim(creatorName) /= trim(name)) then
-            fieldCount=fieldCount - 1
+          do j=1, fieldCount
+            call ESMF_AttributeGet(fieldList(j), 'creator', creatorName, defaultValue='none', rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+            if (trim(creatorName) /= trim(name)) then
+              fieldCount=fieldCount - 1
+              cycle
+            endif
+            field=fieldList(j)
+            exit
+          enddo
+
+          if (fieldCount /= 1) then
+            write(message,'(A)') trim(name)//' did not find matching field with name '//trim(fluxName)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
             cycle
           endif
-          field=fieldList(j)
-          exit
+
+          call ESMF_FieldGet(field, farrayPtr=productionRate,  rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          !> This assumes that the educt and product share the same unit
+          where(mask(RANGE3D))
+            productionRate(RANGE3D) = productionRate(RANGE3D) - partitionFactors(l-1)*lossRate(RANGE3D)
+          endwhere
+
+          write(message,'(A,ES10.3)') trim(name)//' produces up to ', &
+            partitionFactors(l-1)*maxval(-lossRate(RANGE3D), mask=mask(RANGE3D))
+          call ESMF_AttributeGet(field, 'units', value=string, &
+            defaultValue='', rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          call MOSSCO_MessageAdd(message,' '//trim(string))
+          call MOSSCO_FieldString(fieldList(1),message)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
         enddo
-
-        if (fieldCount /= 1) then
-          write(message,'(A)') trim(name)//' did not find matching field with name '//trim(fluxName)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-          cycle
-        endif
-
-        call ESMF_FieldGet(field, farrayPtr=productionRate,  rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-        !> This assumes that the educt and product share the same unit
-        where(mask(RANGE3D))
-          productionRate(RANGE3D) = productionRate(RANGE3D) - lossRate(RANGE3D)
-        endwhere
-
-        write(message,'(A,ES10.3)') trim(name)//' produces up to ', &
-          maxval(-lossRate(RANGE3D), mask=mask(RANGE3D))
-        call ESMF_AttributeGet(field, 'units', value=string, &
-          defaultValue='', rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        call MOSSCO_MessageAdd(message,' '//trim(string))
-        call MOSSCO_FieldString(fieldList(1),message)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
       enddo
+      if (allocated(partitionFactors)) deallocate(partitionFactors)
     enddo
 
     call MOSSCO_Reallocate(fieldList, 0, rc=localrc)

@@ -1,0 +1,10 @@
+# ---
+# author: Carsten Lemmen
+# copyright: 2018 Helmholtz-Zentrum Geesthacht
+# license: CC-by-SA 4.0
+# ...
+
+coupling:
+  - components:
+    - schism_esmf
+    - empty

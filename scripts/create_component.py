@@ -3,7 +3,7 @@
 #> MOSSCO/ESMF component
 
 #  This computer program is part of MOSSCO.
-#> @copyright Copyright (C) 2014, 2015, 2016, 2017 Helmholtz Zentrum Geesthacht
+#> @copyright Copyright (C) 2014, 2015, 2016, 2017, 2018 Helmholtz Zentrum Geesthacht
 #> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -27,40 +27,40 @@ else:
     filename = os.environ['MOSSCO_DIR'] + '/src/config/benthic_filtration_component.yaml'
 
 if not os.path.exists(filename):
-    print 'File ' + filename + ' does not exist.'
+    print ('File ' + filename + ' does not exist.')
     sys.exit(1)
 
-print 'Using ' + filename + ' ...'
+print ('Using ' + filename + ' ...')
 
-fid = file(filename,'rU')
-config = yaml.load(fid)
-fid.close()
+with open(filename,'rU') as fid:
+	config = yaml.load(fid)
 
 # Search for the key with name "component".  If part of the filename is the word "component" then assume that the first item on the list read is the name of the component
 component_name = 'unknown'
 variables = []
 component_properties = []
 
-if config.has_key('author'):
+if 'author' in config:
+
     author = config.pop('author')
 else:
     author = 'Carsten Lemmen, <carsten.lemmen@hzg.de>'
 
-if config.has_key('copyright'):
+if 'copyright' in config:
     copyright = config.pop('copyright')
 else:
     copyright = 'Copyright (C) 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht'
 
-if config.has_key('component'):
+if 'component' in config:
   component = config.pop('component')
 else:
   component=config.values()[0]
   component_name=config.keys()[0]
 
-if component.has_key('short_name'):
+if 'short_name' in component:
   component_name=component.pop('short_name')
 
-if component.has_key('grid'):
+if 'grid' in component:
   grid=component.pop('grid')
 
 for key, value in component.items():
@@ -74,7 +74,7 @@ import_variables=[]
 export_variables=[]
 module_list=[]
 for item in variables:
-  if item.values()[0].has_key('intent'):
+  if 'intent' in item.values()[0]:
     if item.values()[0]['intent']=='import' or item.values()[0]['intent']=='in':
       import_variables.append(item)
     elif item.values()[0]['intent']=='both' or item.values()[0]['intent']=='inout':
@@ -84,8 +84,8 @@ for item in variables:
       export_variables.append(item)
   else:
       export_variables.append(item)
-  if item.values()[0].has_key('module'):
-    if item.values()[0].has_key('internal_name'):
+  if 'module' in item.values()[0]:
+    if 'internal_name' in item.values()[0]:
       module_list.append('  use ' + item.values()[0]['module'] + ', only : '
                          + item.values()[0]['internal_name'])
 
@@ -279,7 +279,7 @@ if nimport > 0:
     fid.write('    nimport = ' + str(nimport) + '\n')
 
 for i in range(0,nimport):
-    if variables[i].values()[0].has_key('standard_name'):
+    if 'standard_name' in variables[i].values()[0]:
         variable_name = variables[i].values()[0]['standard_name']
     else:
         variable_name = variables[i].keys()[0]
@@ -305,7 +305,7 @@ nexport = len(export_variables)
 if nexport > 0:
     fid.write('    nexport = ' + str(nexport) + '\n')
     for k in range(nexport):
-        if variables[k].values()[0].has_key('standard_name'):
+        if 'standard_name' in variables[k].values()[0]:
             variable_name = variables[k].values()[0]['standard_name']
         else:
             variable_name = variables[k].keys()[0]

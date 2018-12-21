@@ -1,17 +1,8 @@
 instances:
   - mossco_lowres: netcdf
-  - mossco_highres: netcdf
 
 coupling:
   - components:
      - getm
-     - time_aggregation
-    interval: 10 m
-  - components:
-     - getm
-     - mossco_highres
-    interval: 10 m
-  - components:
-     - time_aggregation
      - mossco_lowres
-    interval: 6 h
+    interval: 1 h

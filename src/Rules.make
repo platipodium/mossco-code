@@ -23,6 +23,26 @@ ifeq ($(shell make --version | grep -c GNU),0)
   $(error GNU make is required)
 endif
 
+AWK:=$(shell which gawk 2> /dev/null)
+ifeq ($(strip $(AWK)),)
+AWK:=$(shell which awk 2> /dev/null)
+endif
+ifneq ($(strip $(AWK)),)
+export AWK:=$(basename $(AWK))
+endif
+
+export MOSSCO_OBJC=false
+OBJC=$(shell which objconv 2> /dev/null)
+ifeq ($(strip $(OBJC)),)
+OBJC=$(shell which gobjcopy 2> /dev/null)
+endif
+ifeq ($(strip $(OBJC)),)
+OBJC=$(shell which objcopy 2> /dev/null)
+endif
+ifneq ($(strip $(OBJC)),)
+MOSSCO_OBJC=$(shell basename $(OBJC))
+endif
+
 export MOSSCO_GIT=false
 ifneq ($(wildcard $(shell which git)),)
 MOSSCO_GIT=true
@@ -36,13 +56,19 @@ else
 endif
 
 # System-dependent flags
+ifeq ($(shell hostname),rznp0023)
+  export ARFLAGS=rv
+  export AR=ar
+  $(warning use changed ARFLAGS=rvU)
+endif
+
 ifeq ($(shell hostname),KSEZ8002)
   export ARFLAGS=rvU
   export AR=ar
   $(warning use changed ARFLAGS=rvU)
 endif
 
-MOSSCO_INSTALL_PREFIX?=$(MOSSCO_DIR)
+export MOSSCO_INSTALL_PREFIX?=$(MOSSCO_DIR)
 
 # Filter out all MAKELEVELS that are not 1 or 0 to avoid unneccessary execution
 # of the preamble section of this Rules.make in repeated calls.  In most circumstances,
@@ -390,7 +416,7 @@ ifeq ($(MOSSCO_GETM),true)
     GETM_LINKDIRS += -L$(FABM_LIBRARY_PATH)
     GETM_LIBS += -lgotm_fabm_prod $(FABM_LIBS)
   endif
-  GETM_LIBS += -lturbulence -lutil
+  GETM_LIBS += -lturbulence -lutil -loutput_manager
 
   ifeq ($(FORTRAN_COMPILER), XLF)
     export STATIC += -WF,$(GETM_STATIC_DEFINES)
@@ -579,8 +605,7 @@ MOSSCO_PREFIX?=$(MOSSCO_DIR)
 export MOSSCO_PREFIX
 
 export MOSSCO_MODULE_PATH=$(MOSSCO_PREFIX)/modules/$(FORTRAN_COMPILER)
-export MOSSCO_LIBRARY_PATH=$(MOSSCO_PREFIX)/lib/$(FORTRAN_COMPILER)
-export MOSSCO_BIN_PATH=$(MOSSCO_INSTALL_PREFIX)/bin
+export MOSSCO_LIBRARY_PATH=$(MOSSCO_PREFIX)/libraries/$(FORTRAN_COMPILER)
 
 # 7. Putting everything together.
 # This is the list of ESMF-supported compilers:
@@ -647,7 +672,7 @@ ifeq ($(FORTRAN_COMPILER),XLF)
 F90FLAGS += -qmoddir=$(MOSSCO_MODULE_PATH) -qstrict
 EXTRA_CPP=-WF,-DNO_ISO_FORTRAN_ENV
 else
-$(error I don't know where to place modules for FORTRAN_COMPILER=$(FORTRAN_COMPILER))
+$(error I don't know where to place modules for FORTRAN_COMPILER="$(FORTRAN_COMPILER)". You may have to set this variable or the variable ESMFMKFILE)
 endif
 endif
 endif
@@ -705,7 +730,7 @@ endif # End of MAKELEVEL 1 preamble
 
 
 # Make targets
-.PHONY: default all doc info prefix libfabm_external libgotm_external libgetm_external libjson_external
+.PHONY: default all doc info prefix libfabm_external libgotm_external libgetm_external libjson_external install
 .PHONY: distclean distupdate
 
 # Following GNU standards, "all" should be the default target in every Makefile.
@@ -723,7 +748,9 @@ distupdate:
 prefix:
 	@mkdir -p $(MOSSCO_LIBRARY_PATH)
 	@mkdir -p $(MOSSCO_MODULE_PATH)
-	@mkdir -p $(MOSSCO_BIN_PATH)
+	@mkdir -p $(MOSSCO_INSTALL_PREFIX)/bin
+	@mkdir -p $(MOSSCO_INSTALL_PREFIX)/include
+	@mkdir -p $(MOSSCO_INSTALL_PREFIX)/lib
 
 info:
 	@echo SHELL = $(SHELL)
@@ -852,10 +879,31 @@ endif
 
 #$(AR) Trus $(MOSSCO_LIBRARY_PATH)/libgetm_external.a $(GETM_LIBRARY_PATH)/lib*_prod.a
 
-install:
-	#mkdir -p $(MOSSCO_DIR)/bin
-	ln -sf $(MOSSCO_DIR)/scripts/mossco.sh  $(MOSSCO_INSTALL_PREFIX)/bin/mossco
-	#install  $(MOSSCO_DIR)/bin/mossco $(MOSSCO_INSTALL_PREFIX)/bin
+install-mossco-bin:
+	@ln -sf $(MOSSCO_DIR)/scripts/mossco.sh  $(MOSSCO_INSTALL_PREFIX)/bin/mossco
+	@ln -sf $(MOSSCO_DIR)/scripts/stitch_tiles.py  $(MOSSCO_INSTALL_PREFIX)/bin/stitch
+	@echo "Executables 'mossco' and 'stitch' have been installed to $(MOSSCO_INSTALL_PREFIX)/bin. "
+	@echo "Consider to add this directory to your PATH"
+
+install-mossco-include:
+	@cp $(MOSSCO_MODULE_PATH)/*.mod $(MOSSCO_INSTALL_PREFIX)/include
+	@echo "Use includes with  '-I $(MOSSCO_INSTALL_PREFIX)/include'"
+
+install: install-mossco-bin install-mossco-include install-mossco-lib
+
+install-mossco-lib:
+	@(cd $(MOSSCO_LIBRARY_PATH); for F in *.a ; do $(AR) x $$F; done )
+	@(cd $(MOSSCO_LIBRARY_PATH); $(RM) -f SORTED __*; $(AR) crus libmossco.a *.o )
+	@$(RM) -f $(MOSSCO_LIBRARY_PATH)/*.o
+	@mv $(MOSSCO_LIBRARY_PATH)/libmossco.a $(MOSSCO_INSTALL_PREFIX)/lib/;
+ifeq ($(MOSSCO_FABM),true)
+	@cp $(MOSSCO_DIR)/external/fabm/install/lib/libfabm.a $(MOSSCO_INSTALL_PREFIX)/lib/libmossco_fabm.a
+	@(cd $(MOSSCO_INSTALL_PREFIX)/lib; python $(MOSSCO_DIR)/scripts/rename_fabm_symbols.py)
+	@echo "Renamed symbols in fabm library __fabm_* => ___mossco_fabm_*"
+	@echo "Use library with '-L $(MOSSCO_INSTALL_PREFIX)/lib -lmossco -lmossco_fabm'"
+else
+	@echo "Use library with '-L $(MOSSCO_INSTALL_PREFIX)/lib -lmossco'"
+endif
 
 .PHONY: mossco_clean
 

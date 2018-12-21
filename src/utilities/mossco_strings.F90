@@ -11,13 +11,16 @@
 ! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 !
 
-
 #define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
 #define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "mossco_strings.F90"
 
 #define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+#ifndef VARLEN
+#define VARLEN ESMF_MAXSTR
+#endif
 
 module mossco_strings
 
@@ -28,7 +31,7 @@ module mossco_strings
 
   private
 
-  public intformat, order, MOSSCO_MessageAdd, MOSSCO_MessageAddListPtr, only_var_name, replace_character
+  public intformat, intString, order, MOSSCO_MessageAdd, MOSSCO_MessageAddListPtr, only_var_name, replace_character
   public split_string, MOSSCO_StringMatch, MOSSCO_StringClean
   public MOSSCO_CheckUnits, MOSSCO_CleanUnit, MOSSCO_StringCopy, MOSSCO_CleanGeomFormatString
   public MOSSCO_StringLower, MOSSCO_StringUpper
@@ -49,6 +52,11 @@ module mossco_strings
   interface intformat
     module procedure intformat_i4
     module procedure intformat_i8
+  end interface
+
+  interface intString
+    module procedure intString_i4
+    module procedure intString_i8
   end interface
 
   !> @brief Safely adds a string or list of strings to existing string, observing length
@@ -210,6 +218,7 @@ contains
      integer             :: o
 
      o=order(i)
+     if (i<0) o=o+1
      if (o<1) o=1
      if (o>9) o=9
      write(intformat_i8,'(A,I1,A,I1)') 'I', o , '.', o
@@ -230,6 +239,36 @@ contains
      write(intformat_i4,'(A,I1,A,I1)') 'I', o , '.', o
 
   end function intformat_i4
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "intstring_i4"
+  function intstring_i4(i)
+     character(len=ESMF_MAXSTR) :: intstring_i4
+     character(len=4) :: intFormat
+     integer(kind=4), intent(in) :: i
+
+     if (i < 0) then 
+       write(intString_i4,'(A,'//trim(intFormat_i4(i))//')') '-',-i
+     else
+       write(intString_i4,'('//trim(intFormat_i4(i))//')') i
+     endif
+
+  end function intstring_i4
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "intstring_i8"
+  function intstring_i8(i)
+     character(len=ESMF_MAXSTR) :: intstring_i8
+     character(len=4) :: intFormat
+     integer(kind=8), intent(in) :: i
+
+     if (i < 0) then 
+       write(intString_i8,'(A,'//trim(intFormat_i8(i))//')') '-',-i
+     else
+       write(intString_i8,'('//trim(intFormat_i8(i))//')') i
+     endif
+
+  end function intstring_i8
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_MessageAddString"
@@ -339,7 +378,7 @@ contains
   subroutine MOSSCO_StringMatchPatternList(itemName, patternList, isMatch, rc)
 
     character(len=*), intent(in)        :: itemName
-    character(len=*), intent(in), allocatable :: patternList(:)
+    character(len=VARLEN), intent(in), allocatable :: patternList(:)
     logical, intent(inout)              :: isMatch
     integer(ESMF_KIND_I4), intent(out), optional  :: rc
 
@@ -460,14 +499,12 @@ contains
     if (.not.associated(stringList)) return
 
     call MOSSCO_MessageAdd(message, stringList(lbound(stringList,1)), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     do i = lbound(stringList,1) + 1, ubound(stringList,1)
 
       call MOSSCO_MessageAdd(message, ', '//stringList(i), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     enddo
     return
@@ -484,7 +521,7 @@ contains
   subroutine MOSSCO_MessageAddList(message, stringList, rc)
 
     character(len=*), intent(inout)  :: message
-    character(len=*),  intent(in),  allocatable :: stringList(:)
+    character(len=VARLEN),  intent(in),  allocatable :: stringList(:)
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)                  :: i, rc_, localrc
@@ -495,17 +532,14 @@ contains
     if (.not.allocated(stringList)) return
 
     call MOSSCO_MessageAdd(message, stringList(lbound(stringList,1)), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     do i = lbound(stringList,1) + 1, ubound(stringList,1)
 
       call MOSSCO_MessageAdd(message, ', '//stringList(i), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     enddo
-    return
 
   end subroutine MOSSCO_MessageAddList
 
@@ -527,7 +561,7 @@ contains
     integer(ESMF_KIND_I4)            :: rc_, count1, count2, i, localrc, chunk
     integer(ESMF_KIND_I4), parameter :: maxChunk = 10
     character(len=ESMF_MAXSTR)       :: unit_, message
-    character(len=10), allocatable, dimension(:) :: unit1List, unit2List
+    character(len=ESMF_MAXSTR), allocatable, dimension(:) :: unit1List, unit2List
 
     if (present(rc)) rc = ESMF_SUCCESS
     isEqual = .true.
@@ -542,8 +576,11 @@ contains
 
     chunk = maxChunk
     call MOSSCO_Reallocate(unit1List, chunk, keep=.false., rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    !if (allocated(unit1List)) deallocate(unit1List, stat=localrc)
+    !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    !allocate(unit1List(chunk), stat=localrc)
+    !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     count1 = 0
     do
@@ -553,19 +590,16 @@ contains
       if (count1 > chunk) then
         chunk = chunk + chunk
         call MOSSCO_Reallocate(unit1List, chunk, keep=.true., rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       endif
       unit1List(count1) = adjustl(trim(unit_(1:i-1)))
       unit_=adjustl(unit_(i+1:len_trim(unit_)))
     enddo
     call MOSSCO_Reallocate(unit1List, count1, keep=.true., rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_UtilSort(unit1List, ESMF_SORTFLAG_ASCENDING, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     !> Assume that all parts of a unit2 are separated by white space and put
     !> them in another ordered list
@@ -577,8 +611,7 @@ contains
 
     chunk = maxChunk
     call MOSSCO_Reallocate(unit2List, chunk, keep=.false., rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     count2 = 0
     do
@@ -588,30 +621,25 @@ contains
       if (count2 > chunk) then
         chunk = chunk + chunk
         call MOSSCO_Reallocate(unit2List, chunk, keep=.true., rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       endif
       unit2List(count2) = adjustl(trim(unit_(1:i-1)))
       unit_=adjustl(unit_(i+1:len_trim(unit_)))
     enddo
     call MOSSCO_Reallocate(unit2List, count2, keep=.true., rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_UtilSort(unit2List, ESMF_SORTFLAG_ASCENDING, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     do i=1, count1
       !call MOSSCO_CleanUnit(unit1List(i), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     enddo
 
     do i=1, count2
       !call MOSSCO_CleanUnit(unit2List(i), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     enddo
 
     if (count1>0) then
@@ -638,12 +666,10 @@ contains
     endif
 
     call MOSSCO_Reallocate(unit1List, 0, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call MOSSCO_Reallocate(unit2List, 0, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   end subroutine MOSSCO_CheckUnits
 

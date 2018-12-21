@@ -32,7 +32,6 @@ integer, public, parameter :: LOCAL_GRID=0
 integer, public, parameter :: UGRID=1
 integer, public, parameter :: FOREIGN_GRID=2
 
-
 type, public :: fabm_sed_grid !< sediment grid type (part of type_sed)
    ! dz - layer heights (difference between interface depths zi)
    ! dzc - distance between layer center positions zc
@@ -527,86 +526,89 @@ end function diagnostic_variables
 !! dissolved properties use a concentration boundary condition. Diffusivities
 !! are calculated here depending on temperature (first index in bdys vector)
 
-subroutine get_rhs(rhs_driver,rhs)
-use fabm
-use fabm_types
-implicit none
+subroutine get_rhs(rhs_driver, rhs)
 
-class(type_sed)      ,intent(inout)          :: rhs_driver
-real(rk),intent(inout),dimension(:,:,:,:),pointer :: rhs
+  use fabm
+  use fabm_types
+  implicit none
 
-real(rk),dimension(1:rhs_driver%inum,1:rhs_driver%jnum,1:rhs_driver%knum)   :: conc_insitu,f_T
-real(rk),dimension(1:rhs_driver%inum,1:rhs_driver%jnum,1:rhs_driver%knum)   :: weighted_toc
-real(rk),dimension(1:rhs_driver%inum,1:rhs_driver%jnum,1:rhs_driver%knum+1) :: intFLux
-real(rk),dimension(1:rhs_driver%inum,1:rhs_driver%jnum)                     :: cumdepth, averaged_weighted_toc
+  class(type_sed), intent(inout)                      :: rhs_driver
+  real(rk), intent(inout), dimension(:,:,:,:),pointer :: rhs
 
-integer :: n,i,j,k,bcup=1,bcdown=3
+  real(rk),dimension(1:rhs_driver%inum,1:rhs_driver%jnum,1:rhs_driver%knum)   :: conc_insitu,f_T
+  real(rk),dimension(1:rhs_driver%inum,1:rhs_driver%jnum,1:rhs_driver%knum)   :: weighted_toc
+  real(rk),dimension(1:rhs_driver%inum,1:rhs_driver%jnum,1:rhs_driver%knum+1) :: intFLux
+  real(rk),dimension(1:rhs_driver%inum,1:rhs_driver%jnum)                     :: cumdepth, averaged_weighted_toc
+
+  integer :: n,i,j,k,bcup=1,bcdown=3
 
 ! calculate environmental properties in sediment
-do k = 1, rhs_driver%knum
-   if (k == 1) then
+  do k = 1, rhs_driver%knum
+    if (k == 1) then
       cumdepth = 0.0
-   else
+    else
       cumdepth = sum(rhs_driver%grid%dz(:,:,1:k-1),dim=3)  ! light is calculated at upper layer interfaces
-   endif
-   where (.not.rhs_driver%mask(:,:,k))
+    endif
+    !write(0,*) shape(rhs_driver%mask(:,:,k)), shape(rhs_driver%temp3d(:,:,k))
+    !write(0,*) shape(rhs_driver%bdys(:,:,1)), shape(rhs_driver%par(:,:,k))
+    where (.not.rhs_driver%mask(:,:,k))
       rhs_driver%temp3d(:,:,k) = rhs_driver%bdys(:,:,1)
       rhs_driver%par(:,:,k) = rhs_driver%par_surface * exp(-cumdepth/rhs_driver%k_par)
-   end where
-end do
+    end where
+  end do
 
-!   link state variables
-do n=1,size(rhs_driver%model%state_variables)
-   call fabm_link_bulk_state_data(rhs_driver%model,n,rhs_driver%conc(:,:,:,n))
-end do
+  !   link state variables
+  do n=1,size(rhs_driver%model%state_variables)
+    call fabm_link_bulk_state_data(rhs_driver%model,n,rhs_driver%conc(:,:,:,n))
+  end do
 
-!   link environment forcing
-call fabm_link_bulk_data(rhs_driver%model,standard_variables%temperature,rhs_driver%temp3d)
-call fabm_link_bulk_data(rhs_driver%model,standard_variables%downwelling_photosynthetic_radiative_flux,rhs_driver%par)
-!call fabm_link_bulk_data(rhs_driver%model,standard_variables%porosity,rhs_driver%porosity)
+  !   link environment forcing
+  call fabm_link_bulk_data(rhs_driver%model,standard_variables%temperature,rhs_driver%temp3d)
+  call fabm_link_bulk_data(rhs_driver%model,standard_variables%downwelling_photosynthetic_radiative_flux,rhs_driver%par)
+  !call fabm_link_bulk_data(rhs_driver%model,standard_variables%porosity,rhs_driver%porosity)
 
-! calculate diffusivities (temperature)
-if (rhs_driver%bioturbation_profile .eq. 3) then
+  ! calculate diffusivities (temperature)
+  if (rhs_driver%bioturbation_profile .eq. 3) then
   ! calculate bioturbation depending on infauna biomass, which is
   ! estimated from steady-state dependency on the TOC profile
   ! following Zhang & Wirtz (2017).
-  f_T = _ONE_
-  rhs_driver%bioturbation=_ONE_
-  ! calculate weighted TOC profile
-  weighted_toc = 0.0d0 ! [mg-C/g-dry_mass]
-  do n=1,size(rhs_driver%poc_classes)
-    weighted_toc = weighted_toc + rhs_driver%poc_classes(n)%factor*rhs_driver%porosity/(rhs_driver%ones3d-rhs_driver%porosity)*rhs_driver%poc_classes(n)%data
-  end do
-  do i=1,rhs_driver%inum
-    do j=1,rhs_driver%jnum
-      averaged_weighted_toc(i,j) = sum(rhs_driver%grid%dz(i,j,:)*weighted_toc(i,j,:))/cumdepth(i,j)
+    f_T = _ONE_
+    rhs_driver%bioturbation=_ONE_
+    ! calculate weighted TOC profile
+    weighted_toc = 0.0d0 ! [mg-C/g-dry_mass]
+    do n=1,size(rhs_driver%poc_classes)
+      weighted_toc = weighted_toc + rhs_driver%poc_classes(n)%factor*rhs_driver%porosity/(rhs_driver%ones3d-rhs_driver%porosity)*rhs_driver%poc_classes(n)%data
     end do
-  end do
-  ! save diagnostic values for output
-  rhs_driver%weighted_toc(1:rhs_driver%inum,1:rhs_driver%jnum,1:rhs_driver%knum) = weighted_toc(1:rhs_driver%inum,1:rhs_driver%jnum,1:rhs_driver%knum)
+    do i=1,rhs_driver%inum
+      do j=1,rhs_driver%jnum
+        averaged_weighted_toc(i,j) = sum(rhs_driver%grid%dz(i,j,:)*weighted_toc(i,j,:))/cumdepth(i,j)
+      end do
+    end do
+    ! save diagnostic values for output
+    rhs_driver%weighted_toc(1:rhs_driver%inum,1:rhs_driver%jnum,1:rhs_driver%knum) = weighted_toc(1:rhs_driver%inum,1:rhs_driver%jnum,1:rhs_driver%knum)
 
-  ! calculate infauna biomass [100 g/m2]
-  do k=1,rhs_driver%knum
-    rhs_driver%biomass(:,:,k) = weighted_toc(:,:,k) * exp(rhs_driver%grid%zc(:,:,k)*100.0d0*rhs_driver%k_l) * averaged_weighted_toc / &
+    ! calculate infauna biomass [100 g/m2]
+    do k=1,rhs_driver%knum
+      rhs_driver%biomass(:,:,k) = weighted_toc(:,:,k) * exp(rhs_driver%grid%zc(:,:,k)*100.0d0*rhs_driver%k_l) * averaged_weighted_toc / &
                          (rhs_driver%L1 + rhs_driver%L2*exp(rhs_driver%grid%zc(:,:,k)*200.0d0*rhs_driver%k_l))
-  end do
+    end do
 
-  ! calculate bioturbation [cm2/d]
-  rhs_driver%bioturbation_factor = rhs_driver%beta * rhs_driver%biomass**rhs_driver%b / weighted_toc
+    ! calculate bioturbation [cm2/d]
+    rhs_driver%bioturbation_factor = rhs_driver%beta * rhs_driver%biomass**rhs_driver%b / weighted_toc
 
-else
-  ! set temperature dependency factor for temporally constant bioturbation profile
-  f_T = _ONE_*exp(-4500.d0*(1.d0/(rhs_driver%temp3d+273.d0) - (1.d0/288.d0)))
-endif
+  else
+    ! set temperature dependency factor for temporally constant bioturbation profile
+    f_T = _ONE_*exp(-4500.d0*(1.d0/(rhs_driver%temp3d+273.d0) - (1.d0/288.d0)))
+  endif
 
-do n=1,size(rhs_driver%model%state_variables)
-   rhs_driver%diff = rhs_driver%bioturbation * f_T / 86400.0_rk / 10000_rk * &
+  do n=1,size(rhs_driver%model%state_variables)
+    rhs_driver%diff = rhs_driver%bioturbation * f_T / 86400.0_rk / 10000_rk * &
               (rhs_driver%ones3d - rhs_driver%intf_porosity)*rhs_driver%bioturbation_factor
 
 ! print*,'fabm_sediment_driver#606 ',   trim(rhs_driver%model%state_variables(n)%long_name), &
 !         rhs_driver%model%state_variables(n)%properties%get_logical('particulate',default=.false.), &
 !         rhs_driver%conc(1,1,:,n)
-   if (rhs_driver%model%state_variables(n)%properties%get_logical('particulate',default=.false.)) then
+    if (rhs_driver%model%state_variables(n)%properties%get_logical('particulate',default=.false.)) then
       bcup = rhs_driver%bcup_particulate_variables
 
       !write(0,*) rhs_driver%diff(1,1,:),'fac',rhs_driver%bioturbation_factor(1,1,:)
@@ -625,7 +627,7 @@ do n=1,size(rhs_driver%model%state_variables)
 ! enddo
       rhs_driver%transport(:,:,:,n) = rhs_driver%transport(:,:,:,n) * &
               (rhs_driver%ones3d - rhs_driver%porosity)/rhs_driver%porosity
-   else
+    else
       bcup = rhs_driver%bcup_dissolved_variables
 
       rhs_driver%diff = rhs_driver%diff+(rhs_driver%diffusivity + rhs_driver%temp3d * 0.035d0) &
@@ -637,13 +639,14 @@ do n=1,size(rhs_driver%model%state_variables)
               bcup, bcdown, rhs_driver%diff, rhs_driver%porosity, intFlux, &
               rhs_driver%transport(:,:,:,n))
       ! set fluxes for output
+      !write(0,*) shape(rhs_driver%fluxes(:,:,n)), shape(intFlux(:,:,1))
       rhs_driver%fluxes(:,:,n) = intFlux(:,:,1)
-   end if
-end do
+    end if
+  end do
 
-rhs=0.0_rk
-do k=1,rhs_driver%knum
-   do j=1,rhs_driver%jnum
+  rhs=0.0_rk
+  do k=1,rhs_driver%knum
+    do j=1,rhs_driver%jnum
       do i=1,rhs_driver%inum
          if (.not.rhs_driver%mask(i,j,k)) then
            call fabm_do(rhs_driver%model,i,j,k,rhs(i,j,k,:))
@@ -653,13 +656,13 @@ do k=1,rhs_driver%knum
            rhs_driver%transport(i,j,k,:) = 0.0d0
          end if
       end do
-   end do
-end do
+    end do
+  end do
 
-! return fabm-rhs + diff-tendencies
-rhs = rhs + rhs_driver%transport
+  ! return fabm-rhs + diff-tendencies
+  rhs = rhs + rhs_driver%transport
 
-end subroutine get_rhs
+  end subroutine get_rhs
 
 
 !> finalize the FABM sediment driver

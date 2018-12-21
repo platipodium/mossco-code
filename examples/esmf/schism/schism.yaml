@@ -1,0 +1,16 @@
+# ---
+# author: Carsten Lemmen
+# copyright: 2018 Helmholtz-Zentrum Geesthacht
+# license: CC-by-SA 4.0
+# description: "This coupling configuration runs an ocean component (like
+# SCHISM) and writes all data to netcdf"
+# ...
+instances:
+  - schism_mesh_output: netcdf
+  - schism: schism_esmf
+
+coupling:
+  - components:
+    - schism
+    - schism_mesh_output
+    interval: 30 m

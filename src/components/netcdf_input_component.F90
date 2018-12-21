@@ -64,10 +64,6 @@ module netcdf_input_component
       userRoutine=InitializeP2, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_READRESTART, phase=1, &
-      userRoutine=ReadRestart, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -577,20 +573,28 @@ module netcdf_input_component
       endif
 
       int4=0
-      ticks=0.0
+      ticks=-1.0
+      !> @todo if the unit is months, then this routine complains as it needs a
+      !starting time.
       select case (trim(timeUnit))
       case ('year', 'years')
-        call ESMF_TimeIntervalGet(currTime-refTime, yy=int4, rc=rc)
+        call ESMF_TimeIntervalGet(currTime-refTime, &
+          !calKindFlagIn=ESMF_CALKIND_GREGORIAN, yy=int4, rc=localrc)
+          startTimeIn=refTime, yy=int4, rc=localrc)
       case ('month', 'months')
-        call ESMF_TimeIntervalGet(currTime-refTime, mm=int4, rc=rc)
+        call ESMF_TimeIntervalGet(currTime-refTime, &
+          !calKindFlagIn=ESMF_CALKIND_GREGORIAN, mm=int4, rc=localrc)
+          startTimeIn=refTime, mm=int4, rc=localrc)
       case ('day', 'days')
-        call ESMF_TimeIntervalGet(currTime-refTime, d=int4, rc=rc)
+        call ESMF_TimeIntervalGet(currTime-refTime, &
+          !calKindFlagIn=ESMF_CALKIND_GREGORIAN, d=int4, rc=localrc)
+          startTimeIn=refTime, d=int4, rc=localrc)
       case ('hour', 'hours')
-        call ESMF_TimeIntervalGet(currTime-refTime, m=int4, rc=rc)
+        call ESMF_TimeIntervalGet(currTime-refTime, m=int4, rc=localrc)
       case ('minute', 'minutes')
-        call ESMF_TimeIntervalGet(currTime-refTime, m=int4, rc=rc)
+        call ESMF_TimeIntervalGet(currTime-refTime, m=int4, rc=localrc)
       case ('second', 'seconds')
-        call ESMF_TimeIntervalGet(currTime-refTime, s_r8=ticks, rc=rc)
+        call ESMF_TimeIntervalGet(currTime-refTime, s_r8=ticks, rc=localrc)
       case default
         write(message,'(A)')  trim(name)//' invalid or not implemented unit for time '//trim(timeUnit)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -601,7 +605,8 @@ module netcdf_input_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (ticks == 0.0) ticks=dble(int4)
+      ! use integer except when value comes from s_r8
+      if (ticks < 0.0) ticks=dble(int4)
 
       call ESMF_AttributeGet(gridComp, 'climatology_period', isPresent=isPresent, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -742,8 +747,14 @@ module netcdf_input_component
       call MOSSCO_MessageAdd(message, trim(itemName)//'"')
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
+      write(*,*) 'name=',trim(name), ' unit=',trim(nc%variables(i)%units)
+
       write(message,'(A,I3,A,I1,A)') trim(name)//' nc.varid = ', &
          nc%variables(i)%varid,', rank = ',nc%variables(i)%rank,' units = "'//trim(nc%variables(i)%units)//'"'
+
+      write(*,*) trim(message)
+      write(0,*) trim(message)
+
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       fieldList(i) = ESMF_FieldEmptyCreate(name=trim(itemName), rc=localrc)
@@ -871,61 +882,6 @@ module netcdf_input_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    integer(ESMF_KIND_I4)      :: localrc
-
-    call MOSSCO_CompEntry(gridComp, parentClock, importState=importState, &
-      exportState=exportState, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    call MOSSCO_CompExit(gridComp)
-
-  end subroutine InitializeP2
-
-#undef  ESMF_METHOD
-#define ESMF_METHOD "ReadRestart"
-  subroutine ReadRestart(gridComp, importState, exportState, parentClock, rc)
-
-    type(ESMF_GridComp)   :: gridComp
-    type(ESMF_State)      :: importState
-    type(ESMF_State)      :: exportState
-    type(ESMF_Clock)      :: parentClock
-    integer, intent(out)  :: rc
-
-    integer(ESMF_KIND_I4)      :: localrc
-    character(len=ESMF_MAXSTR) :: name
-
-    rc = ESMF_SUCCESS
-
-    !> Here omes your restart code, which in the simplest case copies
-    !> values from all fields in importState to those in exportState
-
-    call ESMF_GridCompGet(gridComp, name=name, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_StateGet(importState, name=name, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_StateGet(exportState, name=name, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_ClockGet(parentClock, name=name, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-  end subroutine ReadRestart
-
-#undef  ESMF_METHOD
-#define ESMF_METHOD "Run"
-  subroutine Run(gridComp, importState, exportState, parentClock, rc)
-
-    type(ESMF_GridComp)  :: gridComp
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: parentClock
-    integer, intent(out) :: rc
-
     character(len=19)       :: timestring
     type(ESMF_Time)         :: currTime, stopTime, recentTime, nextTime
     type(ESMF_Time)         :: climatologyStartTime, climatologyTime
@@ -945,8 +901,11 @@ module netcdf_input_component
     logical                    :: isPresent, checkFile
     type(ESMF_TypeKind_Flag)   :: typeKind
     type(ESMF_Grid)            :: grid
+    character(len=ESMF_MAXSTR), allocatable :: options(:)
 
     rc = ESMF_SUCCESS
+    allocate(options(3))
+    options  = (/'min ','mean','max '/)
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
       importState=importState, exportState=exportState, rc=localrc)
@@ -1154,7 +1113,7 @@ module netcdf_input_component
     ! Get all the fields in export state, including those in fieldBundles,
     ! make sure that only complete fields are obtained
     call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
-      fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !> Go through list of export variables and fill their pointers with values from the file
@@ -1200,7 +1159,7 @@ module netcdf_input_component
           itime=int(itime, kind=ESMF_KIND_I4), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      else 
+      else
       if (trim(interpolationMethod) == 'linear' .and. (jtime /= itime)) then
 
         call ESMF_FieldGet(field, typeKind=typeKind, grid=grid, rc=localrc)
@@ -1252,7 +1211,7 @@ module netcdf_input_component
         call MOSSCO_FieldMultiply(field, scale_factor, owner=name, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
-      
+
       call ESMF_AttributeGet(gridComp, 'add_offset',  isPresent=isPresent, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -1263,6 +1222,378 @@ module netcdf_input_component
         call MOSSCO_FieldAdd(field, add_offset, owner=name, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
+
+      write(message,'(A)') trim(name)//' read  '
+      call MOSSCO_FieldString(field, message, options=options, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+    enddo
+
+    call nc%close()
+
+    deallocate(options)
+
+    call MOSSCO_CompExit(gridComp, localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  end subroutine InitializeP2
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Run"
+  subroutine Run(gridComp, importState, exportState, parentClock, rc)
+
+    type(ESMF_GridComp)  :: gridComp
+    type(ESMF_State)     :: importState, exportState
+    type(ESMF_Clock)     :: parentClock
+    integer, intent(out) :: rc
+
+    character(len=19)       :: timestring
+    type(ESMF_Time)         :: currTime, stopTime, recentTime, nextTime
+    type(ESMF_Time)         :: climatologyStartTime, climatologyTime
+    type(ESMF_TimeInterval) :: timeStep, climatologyTimeStep
+    integer(ESMF_KIND_I8)   :: i, advanceCount
+    integer(ESMF_KIND_I4)   :: fieldCount, localDeCount
+    real(ESMF_KIND_R8)      :: weight, scale_factor, add_offset
+    type(ESMF_Field)        :: field, nextField
+    type(ESMF_Field), allocatable :: fieldList(:)
+    character(len=ESMF_MAXSTR) :: fileName, itemName
+    character(len=ESMF_MAXSTR) :: addString
+    type(ESMF_Clock)        :: clock
+    type(type_mossco_netcdf_variable), pointer    :: var => null()
+
+    character(len=ESMF_MAXSTR) :: message, name, interpolationMethod
+    integer(ESMF_KIND_I4)      :: localrc, itime, jtime
+    logical                    :: isPresent, checkFile
+    type(ESMF_TypeKind_Flag)   :: typeKind
+    type(ESMF_Grid)            :: grid
+    character(len=ESMF_MAXSTR), allocatable :: options(:)
+
+    rc = ESMF_SUCCESS
+    allocate(options(3))
+    options  = (/'min ','mean','max '/)
+
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
+      importState=importState, exportState=exportState, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    !> Synchronize this clock with parent clock
+    call ESMF_ClockSet(clock, currTime=currTime, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_ClockGet(clock, advanceCount=advanceCount, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    !> We can safely assume that the filename is present
+    call ESMF_AttributeGet(gridComp, 'filename', value=fileName, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    inquire(file=trim(fileName), exist=isPresent)
+    if (.not.isPresent) then
+      call ESMF_AttributeGet(gridComp, 'check_file', value=checkFile, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message,'(A)') trim(name)//' file '//trim(fileName)//' does not exist'
+      if (checkFile) then
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        rc = ESMF_RC_NOT_FOUND
+      else
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        rc = ESMF_SUCCESS
+      endif
+      call MOSSCO_CompExit(gridComp)
+      return
+    endif
+
+    nc = MOSSCO_NetcdfOpen(trim(fileName), mode='r', checkVersion=.false., rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call nc%update_variables()
+    call nc%update()
+
+    if (nc%nvars==0) then
+      write(message,'(A)') trim(name)//' contains no variables to read.'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      call MOSSCO_CompExit(gridComp)
+      return
+    endif
+
+    call ESMF_AttributeGet(importState, 'interpolation_method', value=interpolationMethod, &
+      defaultValue='recent', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_AttributeGet(gridComp, 'climatology_period', isPresent=isPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (isPresent) then
+      call ESMF_AttributeGet(gridComp, 'climatology_period', timeString, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call MOSSCO_TimeIntervalSet(climatologyTimeStep, trim(timeString), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_AttributeGet(gridComp, 'climatology_start', timeString, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call MOSSCO_TimeSet(climatologyStartTime, timeString, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      ! climatologyTime is the point in time that is read (or interpolated) from the
+      ! climatological input file.  First guess is that it equals the current time.
+      climatologyTime = currTime
+
+      ! if this value exceeds the climatology start + interval, then successively reduce
+      ! this value by the climatology interval
+      do while (climatologyTime > (climatologyStartTime + climatologyTimeStep))
+        climatologyTime = climatologyTime - climatologyTimeStep
+      enddo
+
+      ! if this value is less than  the climatology start, then successively increas
+      ! this value by the climatology interval
+      do while (climatologyTime < climatologyStartTime)
+        climatologyTime = climatologyTime + climatologyTimeStep
+      enddo
+
+      !> find for the climatologyTime the index of the current (or previous)
+      !> and next timestep, and the weight between the times
+      call nc%timeIndex(climatologyTime, itime, jtime=jtime, weight=weight, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      !> Make sure weight is in correct bounds
+      if (weight < 0 ) weight = weight + 1
+      if (weight > 1 ) weight = weight - 1
+
+      !> Initialize recentTime and nextTime with climatologyTime, then set to
+      !> the time pointed to by indices itime and jtime
+      call ESMF_TimeGet(climatologyTime, timeString=timeString, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call MOSSCO_TimeSet(recentTime, timeString, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call nc%timeGet(recentTime, searchIndex=itime, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call MOSSCO_TimeSet(nextTime, timeString, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call nc%timeGet(recentTime, searchIndex=itime, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      ! Make sure recentTime and nextTime are within climatological window
+      if (recentTime < climatologyStartTime) then
+        call nc%timeIndex(climatologyTime + climatologyTimeStep, itime, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        call nc%timeGet(recentTime, searchIndex=itime, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      endif
+
+      if (nextTime > climatologyStartTime + climatologyTimeStep) then
+        call nc%timeIndex(climatologyStartTime, itime, jtime=jtime, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        call nc%timeGet(nextTime, searchIndex=jtime, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      endif
+
+      !> Now set the climatologyTime to the correct time if method is not 'linear'
+      select case(trim(interpolationMethod))
+      case ('recent')
+        climatologyTime = recentTime
+      case ('next')
+        climatologyTime = nextTime
+      case ('nearest')
+        climatologyTime = recentTime
+        if (weight > 0.5) climatologyTime = nextTime
+      endselect
+
+      ! if itime and jtime are equal, we have the time exactly represented in
+      ! the netcdf file, or only one available time. In other cases, jtime
+      ! will be greater itime
+
+      ! debug
+      ! write(message,'(A)') trim(name)//' climatology currTime = '//trim(timeString)
+      ! call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      ! call ESMF_TimeGet(recentTime, timeString=timeString, rc=localrc)
+      ! write(message,'(A)') trim(name)//' climatology recentTime = '//trim(timeString)
+      ! call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      ! call ESMF_TimeGet(nextTime, timeString=timeString, rc=localrc)
+      ! write(message,'(A)') trim(name)//' climatology nextTime = '//trim(timeString)
+      ! call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      ! call ESMF_TimeGet(climatologyTime, timeString=timeString, rc=localrc)
+      ! write(message,'(A)') trim(name)//' climatology climatologyTime = '//trim(timeString)
+      ! call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      ! write(message,'(A,ES9.3)') trim(name)//' climatology weight = ', weight
+      ! call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      ! end debug
+
+      write(message,'(A)') trim(name)//' '//trim(timestring)//' uses climatology'
+
+      if (trim(interpolationMethod) == 'linear') then
+
+        call ESMF_TimeGet(recentTime, timeString=timeString, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        call MOSSCO_MessageAdd(message, ' interpolated from '//trim(timeString))
+
+        call ESMF_TimeGet(nextTime, timeString=timeString, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        call MOSSCO_MessageAdd(message, ' to '//trim(timeString))
+
+        write(addString,'(A,F5.2)') ', w=',weight
+        call MOSSCO_MessageAdd(message, trim(addString))
+      else
+        call ESMF_TimeGet(climatologyTime, timeString=timeString, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        call MOSSCO_MessageAdd(message, ' '//trim(interpolationMethod)//' time '//trim(timeString)//' (')
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        !> print either itime or jtime depending on method
+
+        if (weight > 0.5 .and. trim(interpolationMethod) == 'nearest') then
+          write(message,'(A,I3)') trim(message),jtime
+        elseif (trim(interpolationMethod) == 'next') then
+          write(message,'(A,I3)') trim(message),jtime
+        else
+          write(message,'(A,I3)') trim(message),itime
+        endif
+
+        call MOSSCO_MessageAdd(message, ' )')
+      endif !Interpolation method
+
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    else
+      ! This is for non-climatologies, look up the previous and (possibly) next
+      ! index in the file for the current time
+      call nc%timeIndex(currTime, itime, jtime=jtime, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    endif ! climatology
+
+    ! Get all the fields in export state, including those in fieldBundles,
+    ! make sure that only complete fields are obtained
+    call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
+      fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    !> Go through list of export variables and fill their pointers with values from the file
+    do i=1, fieldCount
+
+      field = fieldList(i)
+
+      call ESMF_FieldGet(field, name=itemName, localDeCount=localDeCount, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (localDeCount < 1) cycle
+
+      !! Instead of asking the aliasList, try to obtain the netcdf varname
+      !! from the netcdf_varname attribute in the field
+
+      call ESMF_AttributeGet(field, 'netcdf_varname', value=itemName, &
+        defaultValue=trim(itemName), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      var => nc%getvarvar(trim(itemName))
+
+      if (.not.associated(var)) then
+        write(message,'(A)') trim(name)//' no netcdf variable '
+        call MOSSCO_MessageAdd(message,' '//trim(itemName)//' for ')
+        call MOSSCO_FieldString(field, message)
+        rc = ESMF_RC_NOT_FOUND
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        return
+      endif
+
+      call ESMF_AttributeGet(gridComp, 'climatology_period', &
+        isPresent=isPresent, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      !> read the field into the variable for most constellations
+      if (.not.isPresent &
+          .or. trim(interpolationMethod) == 'linear' &
+          .or. trim(interpolationMethod) == 'recent' &
+          .or. (trim(interpolationMethod) == 'nearest' .and. weight <= 0.5)) then
+
+        write(message,'(A,I9,A,I9)') trim(name)//' reads ',itime, ' / ',int(itime, kind=ESMF_KIND_I4)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call nc%getvar(field, var, owner=trim(name), &
+          itime=int(itime, kind=ESMF_KIND_I4), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      endif
+
+      if (trim(interpolationMethod) == 'linear' .and. (jtime /= itime)) then
+
+        call ESMF_FieldGet(field, typeKind=typeKind, grid=grid, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        nextField = ESMF_FieldCreate(grid=grid, typeKind=typeKind, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        call nc%getvar(nextField, var, owner=trim(name), &
+          itime=int(jtime, kind=ESMF_KIND_I4), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        call MOSSCO_FieldWeightField(field, nextField, weight, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        write(message,'(A,I3,A,I3)') trim(name)//' uses climatology interpolated between ',itime,' and ',jtime
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+        call ESMF_FieldDestroy(nextField, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      elseif ((trim(interpolationMethod) == 'next') &
+        .or. (trim(interpolationMethod) == 'nearest' .and. weight > 0.5)) then
+
+        call nc%getvar(field, var, owner=trim(name), itime=int(jtime, kind=ESMF_KIND_I4), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        write(message,'(A,I3)') trim(name)//' uses climatology for future time ',jtime
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      elseif (trim(interpolationMethod) == 'recent') then
+        write(message,'(A,I3)') trim(name)//' uses climatology from past time ',itime
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      endif ! reading from climatology
+
+      call ESMF_AttributeGet(gridComp, 'scale_factor',  isPresent=isPresent, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (isPresent) then
+        call ESMF_AttributeGet(gridComp, 'scale_factor', value=scale_factor, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+
+        write(message,'(A,ES10.3)') trim(name)//' multiplies field by ',scale_factor
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+        call MOSSCO_FieldMultiply(field, scale_factor, owner=name, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      endif
+
+      call ESMF_AttributeGet(gridComp, 'add_offset',  isPresent=isPresent, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (isPresent) then
+        call ESMF_AttributeGet(gridComp, 'add_offset', value=add_offset, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        call MOSSCO_FieldAdd(field, add_offset, owner=name, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      endif
+
+      write(message,'(A)') trim(name)//' read  '
+      call MOSSCO_FieldString(field, message, options=options, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
     enddo
 
@@ -1281,6 +1612,8 @@ module netcdf_input_component
       call ESMF_ClockAdvance(clock, timeStep=timeStep, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     !endif
+
+    deallocate(options)
 
     call MOSSCO_CompExit(gridComp, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)

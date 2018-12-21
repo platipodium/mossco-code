@@ -1,17 +1,17 @@
 !> @file test_Concurrency.F90
-!! @brief Tests concurrent execution of the constant and info components
+!! @brief Tests concurrent execution of the default and info components
 !! @author Carsten Lemmen
 !!
 
 program test_Concurrency
 
 use esmf
-use constant_component, only : constant_SetServices => SetServices
+use default_component, only : default_SetServices => SetServices
 use info_component,     only : info_SetServices => SetServices
 
 integer                   :: rc
 type(ESMF_State)          :: importState, exportState
-type(ESMF_GridComp)       :: constantComp, infoComp
+type(ESMF_GridComp)       :: defaultComp, infoComp
 type(ESMF_Time)           :: startTime, stopTime
 type(ESMF_Clock)          :: clock
 type(ESMF_VM)             :: vm
@@ -36,23 +36,23 @@ allocate(petList(petCount-1))
 do i=1, petCount
   petList(i)=i-1
 enddo
-constantComp=ESMF_GridCompCreate(name='constant', clock=clock, petList=(/0/))
+defaultComp=ESMF_GridCompCreate(name='default', clock=clock, petList=(/0/))
 infoComp=ESMF_GridCompCreate(name='info', clock=clock, petList=petList)
 
-call ESMF_GridCompSetServices(constantComp, constant_SetServices, rc=rc)
+call ESMF_GridCompSetServices(defaultComp, default_SetServices, rc=rc)
 call ESMF_GridCompSetServices(infoComp, info_SetServices, rc=rc)
 
-call ESMF_GridCompInitialize(constantComp, importState=importState, exportState=exportState, clock=clock, &
+call ESMF_GridCompInitialize(defaultComp, importState=importState, exportState=exportState, clock=clock, &
 rc=rc)
-call ESMF_GridCompInitialize(constantComp, importState=exportState, exportState=importState, clock=clock, &
+call ESMF_GridCompInitialize(defaultComp, importState=exportState, exportState=importState, clock=clock, &
 rc=rc)
 
-call ESMF_GridCompRun(constantComp, importState=importState, exportState=exportState, clock=clock, &
+call ESMF_GridCompRun(defaultComp, importState=importState, exportState=exportState, clock=clock, &
 rc=rc)
 call ESMF_GridCompRun(infoComp, importState=exportState, exportState=importState, clock=clock, &
 rc=rc)
 
-call ESMF_GridCompFinalize(constantComp, importState=importState, exportState=exportState, clock=clock, &
+call ESMF_GridCompFinalize(defaultComp, importState=importState, exportState=exportState, clock=clock, &
 rc=rc)
 call ESMF_GridCompFinalize(infoComp, importState=exportState, exportState=importState, clock=clock, &
 rc=rc)
