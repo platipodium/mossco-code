@@ -305,28 +305,49 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_StateAttributeSetList2"
-  subroutine MOSSCO_StateAttributeSetList2(state, label, stringList, rc)
+  subroutine MOSSCO_StateAttributeSetList2(state, label, stringList, kwe, &
+    separator, owner, rc)
 
     type(ESMF_State), intent(inout)  :: state
     character(len=*), intent(in)  :: label
-    character(len=VARLEN), intent(in), allocatable :: stringList(:,:)
-    integer(ESMF_KIND_I4), intent(out), optional :: rc
+    character(len=VARLEN), intent(in), allocatable   :: stringList(:,:)
+    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+    character(len=1), intent(in), optional           :: separator
+    character(len=VARLEN), intent(in), optional      :: owner
+    integer(ESMF_KIND_I4), intent(out), optional     :: rc
 
-    integer(ESMF_KIND_I4)                :: localrc, rc_, i
+    integer(ESMF_KIND_I4)                :: localrc, rc_, i, j
     character(len=4096)                  :: attributeString
+    character(len=1)                     :: separator_
+    character(len=ESMF_MAXSTR)           :: owner_, message
 
-    if (present(rc)) rc=ESMF_SUCCESS
+    rc_ = ESMF_SUCCESS
+    separator_ = '='
+    owner_ = '--'
+
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = ESMF_SUCCESS
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+    if (present(separator)) separator_ = separator
     if (.not.allocated(stringList)) return
+
+    if (ubound(stringList,1) > 1 .and. separator_ == ',') then
+      write(message, '(A)') trim(owner_)//' uses "," for both column and row separation'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+    endif
 
     attributeString=''
     do i=lbound(stringList,1), ubound(stringList,1)
-      if (len_trim(attributeString)>0) write(attributeString,'(A)') trim(attributeString)//','
-      write(attributeString,'(A)') trim(attributeString)//trim(stringlist(i,1))//'='//trim(stringlist(i,2))
+      write(attributeString,'(A)') trim(attributeString)//trim(stringlist(i,1))
+
+      do j=lbound(stringList,2)+1, ubound(stringList,2)
+        call MOSSCO_MessageAdd(attributeString, separator//trim(stringlist(i,j)), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      enddo
     enddo
 
     call ESMF_AttributeSet(state, trim(label), value=attributeString, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   end subroutine MOSSCO_StateAttributeSetList2
 
@@ -508,37 +529,60 @@ contains
 
   end subroutine MOSSCO_cplCompAttributeGetInt4List1
 
-  subroutine MOSSCO_StateAttributeGetList2(state, label, stringList, rc)
+  subroutine MOSSCO_StateAttributeGetList2(state, label, stringList, kwe, &
+    owner, separator, rc)
 
-    type(ESMF_State), intent(in)  :: state
+    type(ESMF_State), intent(in)       :: state
     character(len=*), intent(in)  :: label
     character(len=ESMF_MAXSTR), intent(out), allocatable :: stringList(:,:)
+    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+    character(len=1), intent(in), optional           :: separator
+    character(len=VARLEN), intent(in), optional      :: owner
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
-    integer(ESMF_KIND_I4)                :: localrc, rc_, i, n, j
+    integer(ESMF_KIND_I4)                :: localrc, rc_, i, n, j, ni, nj, k
     logical                              :: isPresent
     character(len=4096)                  :: attributeString
-    character(len=ESMF_MAXSTR)           :: currString
+    character(len=1)                     :: separator_
+    character(len=ESMF_MAXSTR)           :: currString, message, owner_
 
-    if (present(rc)) rc=ESMF_SUCCESS
+    rc_ = ESMF_SUCCESS
+    owner_ = '--'
+    separator_ = '='
+
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = ESMF_SUCCESS
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+    if (present(separator)) separator_ = separator
 
     call ESMF_AttributeGet(state, name=trim(label), isPresent=isPresent, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (.not.isPresent) return
 
     call ESMF_AttributeGet(state, trim(label), value=attributeString, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    n=1
+    n=0
+    ni=1
+    nj=1
     do i=1,len_trim(attributeString)
-      if (attributeString(i:i)==',') n=n+1
+      if (attributeString(i:i)==separator_) nj=nj+1
+      if (attributeString(i:i)==',') then
+        if (nj > n) n=nj
+        nj = 1
+        ni = ni+1
+      endif
     enddo
 
-    if (n>0) allocate(stringList(n,2))
-    do i=1,n
+    if (ni<1 .or. nj<1) return
+
+    allocate(stringList(ni,nj))
+    stringList(:,:)=''
+
+    do i=1,ni
+
+      ! Separate rows
       j=index(attributeString,',')
       if (j>0) then
         currString=attributeString(1:j-1)
@@ -547,11 +591,18 @@ contains
       endif
       attributeString = attributeString(j+1:len_trim(attributeString))
 
-      j=index(currString,'=')
-      if (j>1) then
-        stringList(i,1)=trim(currString(1:j-1))
-        stringList(i,2)=trim(currString(j+1:len_trim(currString)))
-      endif
+      ! Separate columns
+      do j=1,nj
+
+        k=index(currString,separator_)
+        if (k<1) then
+          stringList(i,j) = trim(currString)
+          exit
+        else
+          stringList(i,j) = trim(currString(1:k-1))
+          currString= currString(k+1:len_trim(currString))
+        endif
+      enddo
     enddo
 
   end subroutine MOSSCO_StateAttributeGetList2
