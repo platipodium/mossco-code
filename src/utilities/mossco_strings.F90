@@ -31,6 +31,7 @@ module mossco_strings
 
   private
 
+  public isDecimal, isInteger, isNumeric
   public intformat, intString, order, MOSSCO_MessageAdd, MOSSCO_MessageAddListPtr, only_var_name, replace_character
   public split_string, MOSSCO_StringMatch, MOSSCO_StringClean
   public MOSSCO_CheckUnits, MOSSCO_CleanUnit, MOSSCO_StringCopy, MOSSCO_CleanGeomFormatString
@@ -44,6 +45,10 @@ module mossco_strings
     module procedure order_i8
     module procedure order_r4
     module procedure order_r8
+  end interface
+
+  interface isInteger
+    module procedure isInteger4
   end interface
 
   !> @brief Returns a formatstring for its argument
@@ -247,7 +252,7 @@ contains
      character(len=4) :: intFormat
      integer(kind=4), intent(in) :: i
 
-     if (i < 0) then 
+     if (i < 0) then
        write(intString_i4,'(A,'//trim(intFormat_i4(i))//')') '-',-i
      else
        write(intString_i4,'('//trim(intFormat_i4(i))//')') i
@@ -262,7 +267,7 @@ contains
      character(len=4) :: intFormat
      integer(kind=8), intent(in) :: i
 
-     if (i < 0) then 
+     if (i < 0) then
        write(intString_i8,'(A,'//trim(intFormat_i8(i))//')') '-',-i
      else
        write(intString_i8,'('//trim(intFormat_i8(i))//')') i
@@ -711,8 +716,8 @@ contains
     do i = 2,len_trim(unit)-1
       if (unit(i:i) /= ' ') cycle
 
-      if ((isChar(unit(i-1:i-1)) .or. isDigit(unit(i-1:i-1))) &
-       .and. (isChar(unit(i+1:i+1)) .or. isDigit(unit(i+1:i+1)))) then
+      if ((isLetter(unit(i-1:i-1)) .or. isDigit(unit(i-1:i-1))) &
+       .and. (isLetter(unit(i+1:i+1)) .or. isDigit(unit(i+1:i+1)))) then
          unit(i:i) = '.'
       else
         unit = unit(1:i-1)//unit(i+1:len_trim(unit))
@@ -752,7 +757,7 @@ contains
       i=i+1
 
       ! Search for a number
-      do while (isChar(unit(i:i)))
+      do while (isLetter(unit(i:i)))
         i = i + 1
       enddo
 
@@ -778,7 +783,7 @@ contains
 
   end subroutine MOSSCO_CleanUnit
 
-  function isChar(string) result(isTrue)
+  pure elemental function isLetter(string) result(isTrue)
     character(len=1), intent(in) :: string
     logical                      :: isTrue
 
@@ -787,9 +792,9 @@ contains
     else
       isTrue = .false.
     endif
-  end function isChar
+  end function isLetter
 
-  function isDigit(string) result(isTrue)
+  pure elemental function isDigit(string) result(isTrue)
     character(len=1), intent(in) :: string
     logical                      :: isTrue
 
@@ -800,7 +805,9 @@ contains
     endif
   end function isDigit
 
-  pure function isNumeric(string) result(isTrue)
+#undef ESMF_METHOD
+#define ESMF_METHOD "isNumeric"
+  function isNumeric(string) result(isTrue)
 
     character(len=*), intent(in) :: string
     logical                      :: isTrue
@@ -811,25 +818,163 @@ contains
       return
     endif
 
-    isTrue = isReal(string)
+    isTrue = isDecimal(string)
   end function isNumeric
 
-  pure function isInteger(string) result(isTrue)
+#undef ESMF_METHOD
+#define ESMF_METHOD "isInteger4"
+  !> Determines whether the input string is an integer number.  If it is, it will also optionally return its value.
+  function isInteger4(string, kwe, value, rc) result(isTrue)
 
     character(len=*), intent(in) :: string
+    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+    integer(ESMF_KIND_I4), intent(out), optional :: value
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
     logical                      :: isTrue
 
+    integer(ESMF_KIND_I4) :: value_
+    character(len=1)   :: char
+    character(len=ESMF_MAXSTR) :: string_
+    integer(ESMF_KIND_I4) :: rc_, localrc, i, strlen
+
+    value_ = 0
     isTrue = .false.
 
-  end function isInteger
+    if (present(kwe)) value_ = 0
+    if (present(value)) value = value_
+    if (present(rc)) rc = ESMF_SUCCESS
 
-  pure function isReal(string) result(isTrue)
+    call MOSSCO_StringCopy(string_, string, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    string_ = trim(adjustl(string_))
+    strlen  = len_trim(string_)
+
+    do i=1, strlen
+      char=string_(i:i)
+      if (index('0123456789',char) < 1) return
+    enddo
+
+    read(unit=string_, fmt=*, iostat=localrc) value
+
+    isTrue = (localrc == 0)
+    if (present(value)) value = value_
+
+  end function isInteger4
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "isInteger8"
+  !> Determines whether the input string is an integer number.  If it is, it will also optionally return its value.
+  function isInteger8(string, kwe, value, rc) result(isTrue)
 
     character(len=*), intent(in) :: string
+    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+    integer(ESMF_KIND_I8), intent(out), optional :: value
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
     logical                      :: isTrue
 
+    integer(ESMF_KIND_I8) :: value_
+    character(len=1)   :: char
+    character(len=ESMF_MAXSTR) :: string_
+    integer(ESMF_KIND_I4) :: rc_, localrc, i, strlen
+
+    value_ = 0
     isTrue = .false.
-  end function isReal
+
+    if (present(kwe)) value_ = 0
+    if (present(value)) value = value_
+    if (present(rc)) rc = ESMF_SUCCESS
+
+    call MOSSCO_StringCopy(string_, string, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    string_ = trim(adjustl(string_))
+    strlen  = len_trim(string_)
+
+    do i=1, strlen
+      char=string_(i:i)
+      if (index('0123456789',char) < 1) return
+    enddo
+
+    read(unit=string_, fmt=*, iostat=localrc) value
+
+    isTrue = (localrc == 0)
+    if (present(value)) value = value_
+
+  end function isInteger8
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "isDecimal"
+  !> Built on the isDecimal function from David G. Simpson's RPN calculator for the NASA GSFC
+  !> Determines whether the input string is a decimal number.  If it is, it will also optionally return its value.
+  function isDecimal(string, kwe, value, rc) result(isTrue)
+
+    character(len=*), intent(in) :: string
+    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+    real(ESMF_KIND_R8), intent(out), optional :: value
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+    logical                      :: isTrue
+
+    real(ESMF_KIND_R8) :: value_
+    character(len=1)   :: char
+    character(len=ESMF_MAXSTR) :: string_
+    integer(ESMF_KIND_I4) :: rc_, localrc, i, strlen
+    logical               :: hasExponent
+
+    value_ = 0.0D0
+    isTrue = .false.
+    hasExponent = .false.
+
+    if (present(kwe)) value_ = 0.0D0
+    if (present(value)) value = value_
+    if (present(rc)) rc = ESMF_SUCCESS
+
+    call MOSSCO_StringCopy(string_, string, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    string_ = trim(adjustl(string_))
+    char = string_(1:1)
+    strlen = len_trim(string_)
+
+    !> Check for allowed first characters
+    if (index('+-.0123456789',char) < 1) return
+
+    !> Check for allowed last characters
+    if (index('.0123456789',string_(strlen:strlen)) < 1) return
+
+    !> Check for not only .
+    if (strlen == 1 .and. char == '.') return
+
+    do i=2, strlen
+      char = string_(i:i)
+
+      !> Digits can occur anywhere
+      if (index('0123456789',char) > 0) cycle
+
+      !> Don't allow invalid characters
+      if (index('+-.eEdD', char) < 1) return
+
+      !> Don't allow double dots
+      if (string_(1:1) == '.' .and. char == '.') return
+
+      !> Don't allow dot following E
+      if (hasExponent .and.  char == '.') return
+
+      !> Don't allow double exponents
+      if (hasExponent .and.  index('eEdD', char) > 0) return
+
+      !> middle +- must be preceded by exponent
+      if (index('+-', char) > 0 .and. index('eEdD',string_(i-1:i-1)) < 0) return
+
+      if (index('eEdD', char) > 0) hasExponent = .true.
+    enddo
+
+    read(unit=string_, fmt=*, iostat=localrc) value
+
+    isTrue = (localrc == 0)
+    if (present(value)) value = value_
+
+  end function isDecimal
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_StringCopy"
