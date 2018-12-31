@@ -89,6 +89,11 @@ module mossco_field
     module procedure MOSSCO_FieldGetMask3
     module procedure MOSSCO_FieldGetMask4
   end interface
+
+  interface MOSSCO_FieldOperation
+    module procedure MOSSCO_FieldOperationBinaryR8
+      module procedure MOSSCO_FieldOperationUnary
+  end interface
 contains
 
 #undef  ESMF_METHOD
@@ -2705,32 +2710,31 @@ end subroutine MOSSCO_FieldCopyAttribute
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_FieldAddR8"
-  subroutine MOSSCO_FieldAddR8(field, scalar, kwe, owner, rc)
+subroutine MOSSCO_FieldAddR8(field, scalar, kwe, owner, rc)
 
-    type(ESMF_Field), intent(inout)        :: field
-    real(ESMF_KIND_R8), intent(in)         :: scalar
-    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
-    character(len=*), intent(in), optional :: owner
-    integer(ESMF_KIND_I4), optional        :: rc
+  type(ESMF_Field), intent(inout)        :: field
+  real(ESMF_KIND_R8), intent(in)         :: scalar
+  type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+  character(len=*), intent(in), optional :: owner
+  integer(ESMF_KIND_I4), optional        :: rc
 
-    integer(ESMF_KIND_I4)        :: rc_, localrc
-    character(len=ESMF_MAXSTR)   :: owner_
+  integer(ESMF_KIND_I4)        :: rc_, localrc
+  character(len=ESMF_MAXSTR)   :: owner_
 
-    rc_ = ESMF_SUCCESS
-    owner_ = '--'
-    if (present(rc)) rc = rc_
-    if (present(kwe)) rc = rc_
-    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+  rc_ = ESMF_SUCCESS
+  owner_ = '--'
+  if (present(rc)) rc = rc_
+  if (present(kwe)) rc = rc_
+  if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
 
-    call MOSSCO_FieldOperationScalarR8(field,'+',scalar,owner=owner_, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  call MOSSCO_FieldOperationBinaryR8(field,'+',scalar,owner=owner_, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-  end subroutine MOSSCO_FieldAddR8
+end subroutine MOSSCO_FieldAddR8
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_FieldAddField"
   subroutine MOSSCO_FieldAddField(field, importField, kwe, verbose, owner, rc)
-
     type(ESMF_Field), intent(inout)      :: field
     type(ESMF_Field), intent(in)         :: importField
     type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
@@ -3030,7 +3034,7 @@ end subroutine MOSSCO_FieldCopyAttribute
     if (present(kwe)) rc = rc_
     if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
 
-    call MOSSCO_FieldOperationScalarR8(field,'^',scalar,owner=owner_, rc=localrc)
+    call MOSSCO_FieldOperationBinaryR8(field,'^',scalar,owner=owner_, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   end subroutine MOSSCO_FieldExponentiateR8
@@ -3054,14 +3058,14 @@ end subroutine MOSSCO_FieldCopyAttribute
     if (present(kwe)) rc = rc_
     if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
 
-    call MOSSCO_FieldOperationScalarR8(field,'*',scalar,owner=owner_, rc=localrc)
+    call MOSSCO_FieldOperationBinaryR8(field,'*',scalar,owner=owner_, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   end subroutine MOSSCO_FieldMultiplyR8
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "MOSSCO_FieldOperationScalarR8"
-  subroutine MOSSCO_FieldOperationScalarR8(field, operation, scalar, kwe, owner, rc)
+#define ESMF_METHOD "MOSSCO_FieldOperationBinaryR8"
+  subroutine MOSSCO_FieldOperationBinaryR8(field, operation, scalar, kwe, owner, rc)
 
     type(ESMF_Field), intent(inout)        :: field
     real(ESMF_KIND_R8), intent(in)         :: scalar
@@ -3129,7 +3133,7 @@ end subroutine MOSSCO_FieldCopyAttribute
     if (rank == 1) then
       if (allocated(mask1)) deallocate(mask1)
       allocate(mask1(RANGE1D), stat=localrc)
-      mask2 = .true.
+      mask1 = .true.
     elseif (rank == 2) then
       if (allocated(mask2)) deallocate(mask2)
       allocate(mask2(RANGE2D), stat=localrc)
@@ -3212,20 +3216,34 @@ end subroutine MOSSCO_FieldCopyAttribute
         sum(farrayPtr1(RANGE1D),mask1(RANGE1D))/count(mask1(RANGE1D))
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-
-      if (operation == '*') then
+      select case (trim(adjustl(operation)))
+      case ('*')
         where (mask1(RANGE1D))
           farrayPtr1(RANGE1D) = farrayPtr1(RANGE1D) * scalar
         endwhere
-      elseif (operation == '+') then
+      case ('+')
         where (mask1(RANGE1D))
           farrayPtr1(RANGE1D) = farrayPtr1(RANGE1D) + scalar
         endwhere
-      elseif (operation == '^') then
+      case ('**','^','pow')
         where (mask1(RANGE1D))
           farrayPtr1(RANGE1D) = farrayPtr1(RANGE1D) ** scalar
         endwhere
-      endif
+      case ('%','mod')
+        where (mask1(RANGE1D))
+          farrayPtr1(RANGE1D) = modulo(farrayPtr1(RANGE1D),scalar)
+        endwhere
+      case ('rem')
+        where (mask1(RANGE1D))
+          farrayPtr1(RANGE1D) = mod(farrayPtr1(RANGE1D),scalar)
+        endwhere
+      case default
+        write(message,'(A)') trim(owner_)//' undefined operation "'//trim(operation)//'"'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        if (present(rc)) rc=ESMF_RC_NOT_IMPL
+        return
+      end select
+
       write(message,'(A,ES10.3)') trim(owner_)//' mean value after operation '//trim(operation)//' ', &
         sum(farrayPtr1(RANGE1D),mask1(RANGE1D))/count(mask1(RANGE1D))
 
@@ -3321,7 +3339,236 @@ end subroutine MOSSCO_FieldCopyAttribute
     nullify(gridMask2)
     nullify(gridMask3)
 
-  end subroutine MOSSCO_FieldOperationScalarR8
+  end subroutine MOSSCO_FieldOperationBinaryR8
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_FieldOperationUnary"
+  subroutine MOSSCO_FieldOperationUnary(field, operation, kwe, owner, rc)
+
+    type(ESMF_Field), intent(inout)        :: field
+    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+    character(len=*), intent(in)           :: operation
+    character(len=*), intent(in), optional :: owner
+    integer(ESMF_KIND_I4), optional        :: rc
+
+    character(ESMF_MAXSTR)                 :: message, owner_
+    type(ESMF_FieldStatus_Flag)            :: fieldStatus
+    integer(ESMF_KIND_I4)                  :: rank
+    integer(ESMF_KIND_I4)                  :: ubnd(4), lbnd(4), gridLbnd(4), gridUbnd(4)
+
+    real(ESMF_KIND_R8), pointer            :: farrayPtr3(:,:,:), farrayPtr4(:,:,:,:)
+    real(ESMF_KIND_R8), pointer            :: farrayPtr2(:,:), farrayPtr1(:)
+    logical, allocatable                   :: mask1(:), mask2(:,:), mask3(:,:,:), mask4(:,:,:,:)
+    integer(ESMF_KIND_I4), pointer         :: gridMask2(:,:) => null()
+    integer(ESMF_KIND_I4), pointer         :: gridMask3(:,:,:) => null()
+    logical                                :: tagOnly_, isPresent
+    real(ESMF_KIND_R8)                     :: missingValue
+    type(ESMF_TypeKind_Flag)               :: typeKind
+
+    integer(ESMF_KIND_I4)                  :: localrc, rc_, geomRank, i, j
+    type(ESMF_Grid)                        :: grid
+    type(ESMF_Mesh)                        :: mesh
+    type(ESMF_GeomType_Flag)               :: geomType
+
+    rc_ = ESMF_SUCCESS
+    owner_ = '--'
+    if (present(rc)) rc = rc_
+    if (present(kwe)) rc = rc_
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+
+    call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
+      write(message,'(A)') trim(owner_)//' skipped incomplete field'
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+      return
+    endif
+
+    call ESMF_FieldGet(field, rank=rank, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (rank < 1 .or. rank > 4) then
+      write(message,'(A,I1,A)') trim(owner_)//' skipped rank ',rank,' field'
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+      return
+    endif
+
+    call ESMF_FieldGetBounds(field, exclusiveUBound=ubnd(1:rank), &
+      exclusiveLBound=lbnd(1:rank), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call MOSSCO_AttributeGet(field, 'missing_value', missingValue, &
+      defaultValue=-1.0D30, convert=.true., rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (rank == 1) then
+      if (allocated(mask1)) deallocate(mask1)
+      allocate(mask1(RANGE1D), stat=localrc)
+      mask1 = .true.
+    elseif (rank == 2) then
+      if (allocated(mask2)) deallocate(mask2)
+      allocate(mask2(RANGE2D), stat=localrc)
+      mask2 = .true.
+    elseif (rank == 3) then
+      if (allocated(mask3)) deallocate(mask3)
+      allocate(mask3(RANGE3D), stat=localrc)
+      mask3 = .true.
+    elseif (rank == 4) then
+      if (allocated(mask4)) deallocate(mask4)
+      allocate(mask4(RANGE4D), stat=localrc)
+      mask4 = .true.
+    endif
+
+    call ESMF_FieldGet(field, geomType=geomType, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (geomType == ESMF_GEOMTYPE_GRID) then
+      call ESMF_FieldGet(field, grid=grid, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, isPresent=isPresent, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      if (isPresent) then
+        call ESMF_GridGet(grid, rank=geomRank, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        call ESMF_GridGet(grid, staggerloc=ESMF_STAGGERLOC_CENTER, localDe=0, &
+          exclusiveUBound=gridUbnd(1:geomRank), exclusiveLBound=gridLbnd(1:geomRank), &
+          rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        if (geomRank == 2) then
+          call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridMask2, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+        elseif (geomRank == 3) then
+          call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridMask3, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+        else
+          write(message,'(A)') trim(owner_)//' only considers grid rank 2 or 3, got'
+          call MOSSCO_FieldString(field, message)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+          if (present(rc)) rc = ESMF_RC_NOT_IMPL
+          return
+        endif
+
+        if (rank == 2) then
+          mask2 = (mask2 .and. (gridMask2(gridLbnd(1):gridUbnd(1),gridLbnd(2):gridUbnd(2)) > 0))
+        elseif (rank == 3 .and. geomRank == 3) then
+          mask3 = (mask3 .and. &
+            (gridMask3(gridLbnd(1):gridUbnd(1),gridLbnd(2):gridUbnd(2),gridLbnd(3):gridUbnd(3))  > 0))
+        elseif (rank == 3 .and. geomRank == 2) then
+          do i = lbnd(3), ubnd(3)
+            mask3(RANGE2D,i) = (mask3(RANGE2D,i) .and. &
+              (gridMask2(gridLbnd(1):gridUbnd(1),gridLbnd(2):gridUbnd(2))  > 0))
+          enddo
+        elseif (rank == 4 .and. geomRank == 2) then
+          do i = lbnd(3), ubnd(3)
+            do j = lbnd(4), ubnd(4)
+              mask4(RANGE2D,i,j) = (mask4(RANGE2D,i,j) .and. &
+                (gridMask2(gridLbnd(1):gridUbnd(1),gridLbnd(2):gridUbnd(2))  > 0))
+            enddo
+          enddo
+        elseif (rank == 4 .and. geomRank == 3) then
+          do j = lbnd(4), ubnd(4)
+            mask4(RANGE3D,j) = (mask4(RANGE3D,j) .and. &
+              (gridMask3(gridLbnd(1):gridUbnd(1),gridLbnd(2):gridUbnd(2),gridLbnd(3):gridUbnd(3))  > 0))
+          enddo
+        endif
+      endif  ! gridItemMask isPresent
+    elseif (geomType == ESMF_GEOMTYPE_MESH) then
+      localrc = ESMF_RC_NOT_IMPL
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    else
+      localrc = ESMF_RC_NOT_IMPL
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
+    ! Perform the operations, currently  exponentiation , logarithms, sine,
+    ! cosine, tangent and sqrt are supported
+
+    select case (rank)
+    case (1)
+      call ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      write(message,'(A,ES10.3)') trim(owner_)//' mean value before operation '//trim(operation)//' ', &
+        sum(farrayPtr1(RANGE1D),mask1(RANGE1D))/count(mask1(RANGE1D))
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      select case (trim(operation))
+      case ('abs')
+        where (mask1(RANGE1D))
+          farrayPtr1(RANGE1D) = abs(farrayPtr1(RANGE1D))
+        endwhere
+      case ('acos')
+        where (mask1(RANGE1D))
+          farrayPtr1(RANGE1D) = acos(farrayPtr1(RANGE1D))
+        endwhere
+      case ('asin')
+        where (mask1(RANGE1D))
+          farrayPtr1(RANGE1D) = asin(farrayPtr1(RANGE1D))
+        endwhere
+      case ('atan')
+        where (mask1(RANGE1D))
+          farrayPtr1(RANGE1D) = atan(farrayPtr1(RANGE1D))
+        endwhere
+      case ('cos')
+        where (mask1(RANGE1D))
+          farrayPtr1(RANGE1D) = cos(farrayPtr1(RANGE1D))
+        endwhere
+      case ('e','exp')
+        where (mask1(RANGE1D))
+          farrayPtr1(RANGE1D) = exp(farrayPtr1(RANGE1D))
+        endwhere
+      case ('log','ln')
+        where (mask1(RANGE1D) .and. farrayPtr1(RANGE1D) > 0.0d0)
+          farrayPtr1(RANGE1D) = log(farrayPtr1(RANGE1D))
+        endwhere
+        where (mask1(RANGE1D) .and. farrayPtr1(RANGE1D) < tiny(0.0d0))
+          farrayPtr1(RANGE1D) = missingValue
+        endwhere
+      case ('lg','log10')
+        where (mask1(RANGE1D) .and. farrayPtr1(RANGE1D) > 0.0d0)
+          farrayPtr1(RANGE1D) = log10(farrayPtr1(RANGE1D))
+        endwhere
+        where (mask1(RANGE1D) .and. farrayPtr1(RANGE1D) < tiny(0.0d0))
+          farrayPtr1(RANGE1D) = missingValue
+        endwhere
+      case ('sin')
+        where (mask1(RANGE1D))
+          farrayPtr1(RANGE1D) = sin(farrayPtr1(RANGE1D))
+        endwhere
+      case ('sqrt')
+        where (mask1(RANGE1D) .and. farrayPtr1(RANGE1D) > -tiny(0.0d0))
+          farrayPtr1(RANGE1D) = sqrt(farrayPtr1(RANGE1D))
+        endwhere
+        where (mask1(RANGE1D) .and. farrayPtr1(RANGE1D) < 0.0d0)
+          farrayPtr1(RANGE1D) = missingValue
+        endwhere
+      case default
+        write(message,'(A)') trim(owner_)//' obtained undefined operation "'//trim(operation)//'"'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        if (present(rc)) rc = ESMF_RC_NOT_IMPL
+        return
+      end select
+      write(message,'(A,ES10.3)') trim(owner_)//' mean value after operation '//trim(operation)//' ', &
+        sum(farrayPtr1(RANGE1D),mask1(RANGE1D))/count(mask1(RANGE1D))
+
+    endselect
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    if (allocated(mask4)) deallocate(mask4)
+    if (allocated(mask3)) deallocate(mask3)
+    if (allocated(mask2)) deallocate(mask2)
+    if (allocated(mask1)) deallocate(mask1)
+    nullify(gridMask2)
+    nullify(gridMask3)
+
+  end subroutine MOSSCO_FieldOperationUnary
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_FieldLog"
