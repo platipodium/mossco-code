@@ -434,7 +434,7 @@ contains
     integer(ESMF_KIND_I4), allocatable  :: matchIndex_(:)
 
     rc_ = ESMF_SUCCESS
-    isMatch = .false.
+    owner_ = '--'
 
     if (present(rc)) rc = rc_
     if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
@@ -444,9 +444,11 @@ contains
     ! received (thus only set to .false. two lines below)
     if (.not.allocated(stringList)) return
     allocate(matchIndex_(size(stringList)))
+    isMatch = .false.
 
-    do j=1, size(stringList)
+    do j=1, ubound(stringList,1)
       isMatch = (trim(adjustl(stringList(j))) == trim(adjustl(itemName)))
+      !write(0,*) __LINE__,isMatch, j, ubound(stringList,1), trim(owner_), ': "',trim(adjustl(stringList(j))),'" ?= "', trim(adjustl(itemName)),'"'
       if (.not.isMatch) cycle
 
       nmatch=nmatch + 1

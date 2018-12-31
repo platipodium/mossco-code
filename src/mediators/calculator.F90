@@ -286,8 +286,8 @@ module calculator
     character(len=ESMF_MAXSTR)      :: message
     type(ESMF_STATEITEM_Flag), allocatable:: itemTypeList(:)
     logical                         :: isMatch, verbose
-    character(len=3), allocatable, dimension(:) :: binaryOperatorList
-    character(len=4), allocatable, dimension(:) :: unaryOperatorList
+    character(len=ESMF_MAXSTR), allocatable, dimension(:) :: binaryOperatorList
+    character(len=ESMF_MAXSTR), allocatable, dimension(:) :: unaryOperatorList
 
     integer(ESMF_KIND_I4)              :: stackPointer
     integer(ESMF_KIND_I4), allocatable :: stack(:)
@@ -381,13 +381,13 @@ module calculator
       allocate(scalarList(size(rpnList)))
       call MOSSCO_Reallocate(importFieldList, size(rpnList), rc=localrc)
       stack(:)     = -1
-      stackTypeString(:) = 'x'
+      stackTypeString(1:size(rpnList)) = 'x'
 
       do j=1, size(rpnList)
 
-        write(0,*) j,trim(rpnList(j,1))
+        write(0,*) __LINE__, j,trim(rpnList(j,1))
         call MOSSCO_StringFind(rpnList(j,1), unaryOperatorList, &
-          isMatch=isMatch, rc=localrc)
+          isMatch=isMatch, owner=name, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         if (isMatch) then
@@ -396,7 +396,7 @@ module calculator
         endif
 
         call MOSSCO_StringFind(rpnList(j,1), binaryOperatorList, &
-          isMatch=isMatch, rc=localrc)
+          isMatch=isMatch, owner=name, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         if (isMatch) then
@@ -413,7 +413,7 @@ module calculator
 
         if (allocated(matchIndex)) deallocate(matchIndex)
         call MOSSCO_StringFind(rpnList(j,1), itemNameList, isMatch=isMatch, &
-          matchIndex=matchIndex, rc=localrc)
+          matchIndex=matchIndex, owner=name, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         if (isMatch) then
           stackTypeString(j:j) = 's' ! this is a symbol
