@@ -33,7 +33,7 @@ module mossco_strings
 
   public isDecimal, isInteger, isNumeric
   public intformat, intString, order, MOSSCO_MessageAdd, MOSSCO_MessageAddListPtr, only_var_name, replace_character
-  public split_string, MOSSCO_StringMatch, MOSSCO_StringClean
+  public split_string, MOSSCO_StringMatch, MOSSCO_StringClean, MOSSCO_StringFind
   public MOSSCO_CheckUnits, MOSSCO_CleanUnit, MOSSCO_StringCopy, MOSSCO_CleanGeomFormatString
   public MOSSCO_StringLower, MOSSCO_StringUpper
 
@@ -75,6 +75,10 @@ module mossco_strings
   interface MOSSCO_StringMatch
     module procedure MOSSCO_StringMatchPattern
     module procedure MOSSCO_StringMatchPatternList
+  end interface
+
+  interface MOSSCO_StringFind
+    module procedure MOSSCO_StringFindStringList
   end interface
 
 contains
@@ -411,6 +415,52 @@ contains
     enddo
 
   end subroutine MOSSCO_StringMatchPatternList
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_StringFindStringList"
+  subroutine MOSSCO_StringFindStringList(itemName, stringList, isMatch, kwe, &
+    matchIndex, owner, rc)
+
+    character(len=*), intent(in)        :: itemName
+    character(len=VARLEN), intent(in), allocatable :: stringList(:)
+    logical, intent(inout)              :: isMatch
+    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+    character(len=*), intent(in), optional :: owner
+    integer(ESMF_KIND_I4), allocatable, intent(out), optional :: matchIndex(:)
+    integer(ESMF_KIND_I4), intent(out), optional  :: rc
+
+    integer(ESMF_KIND_I4)               :: localrc, i, j, rc_, nmatch
+    character(len=ESMF_MAXSTR)          :: owner_, message
+    integer(ESMF_KIND_I4), allocatable  :: matchIndex_(:)
+
+    rc_ = ESMF_SUCCESS
+    isMatch = .false.
+
+    if (present(rc)) rc = rc_
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+    nmatch = 0
+
+    ! Return if there is no pattern, isMatch is returned in the state it was
+    ! received (thus only set to .false. two lines below)
+    if (.not.allocated(stringList)) return
+    allocate(matchIndex_(size(stringList)))
+
+    do j=1, size(stringList)
+      isMatch = (trim(adjustl(stringList(j))) == trim(adjustl(itemName)))
+      if (.not.isMatch) cycle
+
+      nmatch=nmatch + 1
+      matchIndex_(nmatch) = j
+    enddo
+
+    isMatch = (nmatch > 0)
+    if (present(matchIndex) .and. isMatch) then
+      allocate(matchIndex(nmatch))
+      matchIndex(1:nmatch) = matchIndex_(1:nmatch)
+    endif
+    deallocate(matchIndex_)
+
+  end subroutine MOSSCO_StringFindStringList
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_StringClean"
@@ -926,7 +976,7 @@ contains
     hasExponent = .false.
 
     if (present(kwe)) value_ = 0.0D0
-    if (present(value)) value = value_
+    !if (present(value)) value = value_
     if (present(rc)) rc = ESMF_SUCCESS
 
     call MOSSCO_StringCopy(string_, string, rc=localrc)
@@ -969,10 +1019,10 @@ contains
       if (index('eEdD', char) > 0) hasExponent = .true.
     enddo
 
-    read(unit=string_, fmt=*, iostat=localrc) value
+    read(unit=string_, fmt=*, iostat=localrc) value_
 
     isTrue = (localrc == 0)
-    if (present(value)) value = value_
+    !if (present(value)) value = value_
 
   end function isDecimal
 
@@ -984,7 +1034,10 @@ contains
     character(len=*), intent(in)       :: from
     integer(ESMF_KIND_I4), optional    :: rc
 
-    integer(ESMF_KIND_I4)   :: toLen, fromLen
+    integer(ESMF_KIND_I4)   :: toLen, fromLen, rc_
+
+    rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
 
     toLen = len(to)
     fromLen = len(from)
