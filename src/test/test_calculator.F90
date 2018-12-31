@@ -21,6 +21,7 @@
 program test_calculator
 
 use esmf
+use mossco_mesh
 use mossco_state
 use mossco_time
 use mossco_memory
@@ -39,6 +40,8 @@ type(ESMF_Field), allocatable :: exportFieldList(:), importFieldList(:)
 type(ESMF_State)       :: importState, exportState
 integer                :: localrc, i, exportFieldCount, importFieldCount, rc
 character(len=ESMF_MAXSTR) :: message
+type(ESMF_Mesh)        :: mesh
+type(ESMF_Grid)        :: grid
 
 call ESMF_Initialize(defaultCalKind=ESMF_CALKIND_GREGORIAN, rc=localrc)
 _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -74,7 +77,23 @@ importState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT, &
   name='importState')
 _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+grid = ESMF_GridCreateNoPeriDim(maxIndex=(/15, 20/), &
+  name="15by20", rc=localrc)
+_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+mesh = MOSSCO_MeshCreate(rc=localrc)
+_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
 field = ESMF_FieldEmptyCreate(name = 'x', rc=localrc)
+_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+call ESMF_FieldEmptySet(field, grid=grid, rc=localrc)
+_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+call ESMF_FieldEmptyComplete(field, typeKind=ESMF_TYPEKIND_R8, rc=localrc)
+_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+call MOSSCO_FieldInitialize(field, value=2.0d0, rc=localrc)
 _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
 call ESMF_StateAddReplace(importState, (/field/), rc=localrc)
@@ -83,7 +102,26 @@ _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 field = ESMF_FieldEmptyCreate(name = 'y', rc=localrc)
 _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-!call ESMF_FieldEmptyComplete(field, )
+call ESMF_FieldEmptySet(field, grid=grid, rc=localrc)
+_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+call ESMF_FieldEmptyComplete(field, typeKind=ESMF_TYPEKIND_R8, rc=localrc)
+_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+call MOSSCO_FieldInitialize(field, value=1.0d0, rc=localrc)
+_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+call ESMF_StateAddReplace(importState, (/field/), rc=localrc)
+_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+field = ESMF_FieldEmptyCreate(name = 'z', rc=localrc)
+_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+call ESMF_FieldEmptySet(field, mesh=mesh, rc=localrc)
+_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+call ESMF_FieldEmptyComplete(field, typeKind=ESMF_TYPEKIND_R8, rc=localrc)
+_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
 call ESMF_StateAddReplace(importState, (/field/), rc=localrc)
 _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)

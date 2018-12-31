@@ -181,15 +181,16 @@ module calculator
     endif
 
     if (allocated(exportList)) then
-      call MOSSCO_AttributeSet(importState, 'export_items', exportList, &
-        owner=name, rc=localrc)
+
+      call MOSSCO_AttributeSet(exportState, 'export_items', exportList, &
+        owner=trim(name), separator=',', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call MOSSCO_Reallocate(exportList, 0, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call MOSSCO_AttributeGet(importState, 'export_items', exportList, &
-        owner=name, rc=localrc)
+      call MOSSCO_AttributeGet(exportState, 'export_items', exportList, &
+        owner=name, separator=',', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       do i = lbound(exportList,1), ubound(exportList,1)
@@ -208,19 +209,29 @@ module calculator
       call MOSSCO_ConfigGet(config, exportList(i,1), rpnList, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call MOSSCO_AttributeSet(exportState, 'rpn_'//exportList(i,1), rpnList, rc=localrc)
+      if (.not.allocated(rpnList)) then
+        write(message,'(A,A)') trim(name)//' does not define calculation for ', &
+          trim(exportList(i,1))
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        cycle
+      endif
+
+      call MOSSCO_AttributeSet(exportState, 'rpn_'//exportList(i,1), rpnList, &
+        owner=name, separator=',', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call MOSSCO_Reallocate(rpnList, 0, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call MOSSCO_AttributeGet(exportState, 'rpn_'//exportList(i,1), rpnList, rc=localrc)
+      call MOSSCO_AttributeGet(exportState, 'rpn_'//exportList(i,1), rpnList, &
+        owner=name, separator=',', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       write(message,'(A)') trim(name)//' will calculate'
       call MOSSCO_MessageAdd(message, ' '//trim(exportList(i,1)), rc=localrc)
-      call MOSSCO_MessageAdd(message,' as:')
+      call MOSSCO_MessageAdd(message,' as ')
       do j = lbound(rpnList,2), ubound(rpnList,2)
+        !> @todo add multiline rpn
         call MOSSCO_MessageAdd(message, ' '//trim(rpnList(1,j)), rc=localrc)
       enddo
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
@@ -242,6 +253,10 @@ module calculator
 
       call ESMF_StateAddReplace(exportState, (/field/), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message,'(A)') trim(name)//' created for export '
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     enddo
 
     call MOSSCO_CompExit(cplComp, rc)
@@ -265,14 +280,14 @@ module calculator
     character(len=ESMF_MAXSTR), allocatable :: exportList(:,:), rpnList(:,:)
     character(len=ESMF_MAXSTR), allocatable :: aliasList(:,:), itemNameList(:)
     type(ESMF_Field)                :: field
-    type(ESMF_Field), allocatable   :: fieldList(:)
-    integer(ESMF_KIND_I4)           :: fieldCount, itemCount, n, i, j, k, l
+    type(ESMF_Field), allocatable   :: fieldList(:), importFieldList(:)
+    integer(ESMF_KIND_I4)           :: fieldCount, itemCount, n, i, j, k
     character(len=ESMF_MAXSTR), pointer :: includeList(:) => null()
     character(len=ESMF_MAXSTR)      :: message
     type(ESMF_STATEITEM_Flag), allocatable:: itemTypeList(:)
     logical                         :: isMatch, verbose
     character(len=3), allocatable, dimension(:) :: binaryOperatorList
-    character(len=3), allocatable, dimension(:) :: unaryOperatorList
+    character(len=4), allocatable, dimension(:) :: unaryOperatorList
 
     integer(ESMF_KIND_I4)              :: stackPointer
     integer(ESMF_KIND_I4), allocatable :: stack(:)
@@ -285,13 +300,19 @@ module calculator
 
     integer(ESMF_KIND_I4)            :: rank, ubnd(4), lbnd(4)
     real(ESMF_KIND_R8), allocatable  :: scalarList(:)
+    integer(ESMF_KIND_I4), allocatable  :: matchIndex(:)
+    type(ESMF_FieldStatus_Flag)      :: fieldStatus
+    type(ESMF_GeomType_Flag)         :: geomType = ESMF_GEOMTYPE_GRID
+    type(ESMF_Mesh)                  :: mesh
+    type(ESMF_Grid)                  :: grid
 
     rc = ESMF_SUCCESS
 
-    allocate(unaryOperatorList(10))
-    allocate(binaryOperatorList(10))
+    allocate(unaryOperatorList(9))
+    allocate(binaryOperatorList(8))
     binaryOperatorList = (/'*  ','/  ','+  ','-  ','** ','^  ','div','mod'/)
-    unaryOperatorList = (/'e  ','log','ln ','exp', 'lg ','sin', 'cos', 'tan'/)
+    unaryOperatorList = (/'e   ','log ','ln  ','exp ', 'lg  ','sin ', 'cos ', &
+      'tan ', 'sqrt'/)
 
     call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -301,12 +322,12 @@ module calculator
     call MOSSCO_AttributeGet(exportState, 'export_items', exportList, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_AttributeGet(exportState, 'alias_definition', aliasList, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
     n = 0
     if (allocated(exportList)) n = size(exportList)
     if (.not.associated(includeList)) allocate(includeList(1))
+
+    !call MOSSCO_AttributeGet(exportState, 'alias_definition', aliasList, rc=localrc)
+    !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -322,7 +343,7 @@ module calculator
     do i=1, n
 
       call MOSSCO_AttributeGet(exportState, 'rpn_'//exportList(i,1), rpnList, &
-        rc=localrc)
+        owner=name, separator=',', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       !> Don't do anything if there is no calculation to be performed
@@ -350,8 +371,119 @@ module calculator
         cycle
       endif
 
-      call MOSSCO_FieldInitialize(fieldList(1), value=0.0D0, rc=localrc)
+      !> find symbols in rpnList and determine their grid
+      !> @todo this only looks for the first grid, others are disregarded
+
+      if (allocated(stack)) deallocate(stack)
+      if (allocated(stackType)) deallocate(stackType)
+      if (allocated(scalarList)) deallocate(scalarList)
+
+      allocate(stack(size(rpnList)))
+      allocate(stackType(size(rpnList)))
+      allocate(scalarList(size(rpnList)))
+      call MOSSCO_Reallocate(importFieldList, size(rpnList), rc=localrc)
+      stack(:)     = -1
+      stackType(:) = 'x'
+
+      do j=1, size(rpnList)
+
+        write(0,*) j,trim(rpnList(j,1))
+        call MOSSCO_StringFind(rpnList(j,1), unaryOperatorList, &
+          isMatch=isMatch, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        if (isMatch) then
+          stackType(j) = 'u' ! unary operator
+          cycle
+        endif
+
+        call MOSSCO_StringFind(rpnList(j,1), binaryOperatorList, &
+          isMatch=isMatch, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        if (isMatch) then
+          stackType(j) = 'b' ! binary operator
+          cycle
+        endif
+
+        if (isDecimal(rpnList(j,1), rc=localrc)) then
+          read(unit=rpnList(j,1), fmt=*, iostat=localrc) scalarList(j)
+          stackType(j) = 'd' ! this is a isDecimal
+          cycle
+        endif
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        if (allocated(matchIndex)) deallocate(matchIndex)
+        call MOSSCO_StringFind(rpnList(j,1), itemNameList, isMatch=isMatch, &
+          matchIndex=matchIndex, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        if (isMatch) then
+          stackType(j) = 's' ! this is a symbol
+
+          !> @todo consider alias
+          includeList(1) = itemNameList(matchIndex(1))
+          call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
+            include=includeList, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), &
+            rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          if (fieldCount == 0) then
+            write(message, '(A)') trim(name)//' could not find complete item "'// &
+              trim(includeList(1))//'" required to calculate '//trim(exportList(i,1))
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+            rc = ESMF_RC_NOT_FOUND
+            return
+          endif
+
+          importFieldList(j) = fieldList(1)
+
+          call ESMF_FieldGet(fieldList(1), geomType=geomType, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          if (geomType == ESMF_GEOMTYPE_MESH) then
+            call ESMF_FieldGet(fieldList(1), mesh=mesh, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          elseif (geomType == ESMF_GEOMTYPE_GRID) then
+            call ESMF_FieldGet(fieldList(1), grid=grid, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          else
+            localrc = ESMF_RC_NOT_IMPL
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          endif
+
+          cycle
+        endif
+
+        write(0,*) 'item "',trim(rpnList(j,1)),'" not operator or input or number'
+      enddo
+
+      write(0,*) stackType
+
+      includeList(1) = exportList(i,1)
+      call MOSSCO_StateGet(exportState, fieldList, include=includeList, &
+        fieldCount=fieldCount, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_FieldGet(fieldList(1), status=fieldStatus, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
+        if (geomType == ESMF_GEOMTYPE_GRID) then
+          call ESMF_FieldEmptySet(fieldList(1), grid=grid, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        elseif (geomType == ESMF_GEOMTYPE_MESH) then
+          call ESMF_FieldEmptySet(fieldList(1), mesh=mesh, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        endif
+      endif
+
+      call ESMF_FieldGet(fieldList(1), status=fieldStatus, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (fieldStatus == ESMF_FIELDSTATUS_GRIDSET) then
+        call ESMF_FieldEmptyComplete(fieldList(1), typeKind=ESMF_TYPEKIND_R8, &
+          rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      endif
 
       call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -363,102 +495,81 @@ module calculator
       if (rank == 4) then
         call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr4, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        farrayPtr4 = 0.0D0
       elseif (rank == 3) then
         call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr3, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        farrayPtr3 = 0.0D0
       elseif (rank == 2) then
         call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr2, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        farrayPtr2 = 0.0D0
       elseif (rank == 1) then
         call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr1, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        farrayPtr1 = 0.0D0
       endif
 
-      if (allocated(stack)) deallocate(stack)
-      if (allocated(stackType)) deallocate(stackType)
-      allocate(stack(size(rpnList)))
-      allocate(stackType(size(rpnList)))
+      !> Look for initialization field, which is one (unary) or two (binary)
+      !> positions before the first operator
+      j = index(stackType,'u')
+      if (j > 1 .and. j < index(stackType,'b')) then
+        j = j - 1
+      elseif (index(stackType,'b') > 2 .and. index(stackType,'b') < j) then
+        j = index(stackType,'b') - 1
+      elseif (j < 0 .and. index(stackType,'b') < 0) then
+        j = 1
+      else
+        localrc = ESMF_RC_ARG_BAD
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      endif
 
-      stack(:)     = -1
-      stackType(:) = 'x'
-
-      do k=lbound(rpnList,2), ubound(rpnList,2)
-        do j=lbound(rpnList,1), ubound(rpnList,1)
-          l = (j-1) * ubound(rpnList,2) + k
-
-          call MOSSCO_StringMatch(rpnList(j,k), unaryOperatorList, &
-            isMatch=isMatch, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-          if (isMatch) then
-            stackType(l) = 'u' ! unary operator
-            cycle
-          endif
-
-          call MOSSCO_StringMatch(rpnList(j,k), binaryOperatorList, &
-            isMatch=isMatch, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-          if (isMatch) then
-            stackType(l) = 'b' ! binary operator
-            cycle
-          endif
-
-          call MOSSCO_StringMatch(rpnList(j,k), itemNameList, isMatch=isMatch, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-          if (isMatch) then
-            stackType(l) = 's' ! this is a symbol
-            cycle
-          endif
-
-          if (isDecimal(rpnList(j,k), value=scalarList(l), rc=localrc)) then
-            stackType(l) = 'd' ! this is a isDecimal
-            cycle
-          endif
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-          write(0,*) 'item ',rpnList(j,k),' not operator or input or number'
-        enddo
-      enddo
+      if (stackType(j) == 'd') then
+        call MOSSCO_FieldInitialize(fieldList(1), value=scalarList(j), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      elseif (stackType(j) == 's') then
+        call ESMF_FieldCopy(fieldList(1), importFieldList(j), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      endif
+      stackType(j) == 'v'
 
       stackPointer = 0
       do j=lbound(rpnList,1), ubound(rpnList,1)
-        do k=lbound(rpnList,2), ubound(rpnList,2)
 
-          l = (j-1) * ubound(rpnList,2) + k
+        !> push (index of) item onto stack if it is not an operator
+        if (index('ub', stackType(j)) < 1) then
+          stackPointer = stackPointer + 1
+          stack(stackPointer) = j
+          cycle
+        endif
 
-          !> push (index of) item onto stack if it is not an operator
-          if (index('ub', stackType(l)) < 1) then
-            stackPointer = stackPointer + 1
-            stack(stackPointer) = l
-            cycle
+        !> We found an operator, deal with unary first
+        if (stackType(j) == 'u') then
+          if (stackPointer < 1) localrc=ESMF_RC_ARG_BAD
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_
+
+          if (stackType(stack(stackPointer)) /= 'v') localrc=ESMF_RC_ARG_BAD
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_
+
+          call MOSSCO_FieldOperation(fieldList(1), rpnList(j,1), rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_
+
+        elseif (stackType(j) == 'b') then
+          if (stackPointer < 2) then localrc=ESMF_RC_ARG_BAD
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_
+
+          if (stackType(stack(stackPointer-1)) /= 'v') localrc=ESMF_RC_ARG_BAD
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_
+
+          if (stackType(stack(stackPointer)) == 'd') then
+            call MOSSCO_FieldOperation(fieldList(1), rpnList(stack(stackPointer),1),
+              operator=rpnList(j,1), rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_
+          else
+            localrc=ESMF_RC_NOT_IMPL
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_
           endif
-
-          !> We found an operator, deal with unary first
-          !if (stackType(l) == 'u') then
-          !  if (stackType(stack(stackPointer)) == 'd') then
-          !    call MOSSCO_Calculate(value, value, operator=rpnList(j,k), rc=localrc)
-
-
-          !for a binary, take the two last items on the stack
-          !> and operate on them, special value -1 is reserved for a temporary value
-          !> For a unary operator, just apply it
-          !if (stack(stackPointer - 1) == -1 ) then
-          !elseif (isDecimal(rpnList(stackPointer / ubound(rpnList,2) + 1, mod(stackPointer,ubound(rpnList,2)) + 1),  value=scalar, rc=localrc)) then
-          !else
-
-          !call MOSSCO_StringMatch(rpnList(stackPointer / ubound(rpnList,2) + 1, mod(stackPointer,ubound(rpnList,2)) + 1), itemNameList, isMatch=isMatch, rc=localrc)
-          !endif
 
           stackPointer = stackPointer - 1
 
-        enddo
+        endif
       enddo
-
     enddo
 
     !call MOSSCO_CreateCalculatedExportFields(cplComp, importState, exportState, rc=localrc)
@@ -477,6 +588,7 @@ module calculator
     if (allocated(unaryOperatorList)) deallocate(unaryOperatorList)
     if (allocated(binaryOperatorList)) deallocate(binaryOperatorList)
     if (allocated(scalarList)) deallocate(scalarList)
+    if (allocated(matchIndex)) deallocate(matchIndex)
     if (allocated(stack)) deallocate(stack)
     if (allocated(rpnList)) deallocate(rpnList)
     if (allocated(aliasList)) deallocate(aliasList)
