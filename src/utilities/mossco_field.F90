@@ -55,8 +55,9 @@ module mossco_field
   public :: MOSSCO_FieldReduce, MOSSCO_FieldInitialize, MOSSCO_FieldCopyAttributes
   public :: MOSSCO_FieldMatchFields, MOSSCO_FieldWeightField, MOSSCO_FieldGetMissingValue
   public :: MOSSCO_FieldLog, MOSSCO_FieldExponentiate, MOSSCO_FieldMultiply
-  public :: MOSSCO_FieldValue
+  public :: MOSSCO_FieldValue!, MOSSCO_FieldOperation
   public :: MOSSCO_FieldAdd, MOSSCO_FieldNameCheck, MOSSCO_FieldUnitString, MOSSCO_FieldGetMask
+  public :: MOSSCO_FieldOperationBinaryR8, MOSSCO_FieldOperationUnary
 
   interface MOSSCO_FieldGetMissingValue
     module procedure MOSSCO_FieldGetMissingValueR8
@@ -88,12 +89,13 @@ module mossco_field
     module procedure MOSSCO_FieldGetMask2
     module procedure MOSSCO_FieldGetMask3
     module procedure MOSSCO_FieldGetMask4
-  end interface
+  end interface MOSSCO_FieldGetMask
 
   interface MOSSCO_FieldOperation
     module procedure MOSSCO_FieldOperationBinaryR8
-      module procedure MOSSCO_FieldOperationUnary
-  end interface
+    module procedure MOSSCO_FieldOperationUnary
+  end interface MOSSCO_FieldOperation
+
 contains
 
 #undef  ESMF_METHOD
@@ -3065,14 +3067,14 @@ end subroutine MOSSCO_FieldAddR8
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_FieldOperationBinaryR8"
-  subroutine MOSSCO_FieldOperationBinaryR8(field, operation, scalar, kwe, owner, rc)
+  subroutine MOSSCO_FieldOperationBinaryR8(field, operator, scalar, kwe, owner, rc)
 
     type(ESMF_Field), intent(inout)        :: field
     real(ESMF_KIND_R8), intent(in)         :: scalar
+    character(len=*), intent(in)           :: operator
     type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
-    character(len=*), intent(in)           :: operation
     character(len=*), intent(in), optional :: owner
-    integer(ESMF_KIND_I4), optional        :: rc
+    integer(ESMF_KIND_I4), optional, intent(out)  :: rc
 
     character(ESMF_MAXSTR)                 :: message, owner_
     type(ESMF_FieldStatus_Flag)            :: fieldStatus
@@ -3212,11 +3214,11 @@ end subroutine MOSSCO_FieldAddR8
       call ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      write(message,'(A,ES10.3)') trim(owner_)//' mean value before operation '//trim(operation)//' ', &
+      write(message,'(A,ES10.3)') trim(owner_)//' mean value before operation '//trim(operator)//' ', &
         sum(farrayPtr1(RANGE1D),mask1(RANGE1D))/count(mask1(RANGE1D))
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      select case (trim(adjustl(operation)))
+      select case (trim(adjustl(operator)))
       case ('*')
         where (mask1(RANGE1D))
           farrayPtr1(RANGE1D) = farrayPtr1(RANGE1D) * scalar
@@ -3238,88 +3240,88 @@ end subroutine MOSSCO_FieldAddR8
           farrayPtr1(RANGE1D) = mod(farrayPtr1(RANGE1D),scalar)
         endwhere
       case default
-        write(message,'(A)') trim(owner_)//' undefined operation "'//trim(operation)//'"'
+        write(message,'(A)') trim(owner_)//' undefined operation "'//trim(operator)//'"'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         if (present(rc)) rc=ESMF_RC_NOT_IMPL
         return
       end select
 
-      write(message,'(A,ES10.3)') trim(owner_)//' mean value after operation '//trim(operation)//' ', &
+      write(message,'(A,ES10.3)') trim(owner_)//' mean value after operation '//trim(operator)//' ', &
         sum(farrayPtr1(RANGE1D),mask1(RANGE1D))/count(mask1(RANGE1D))
 
     case (2)
       call ESMF_FieldGet(field, farrayPtr=farrayPtr2, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      write(message,'(A,ES10.3)') trim(owner_)//' mean value before operation '//trim(operation)//' ', &
+      write(message,'(A,ES10.3)') trim(owner_)//' mean value before operation '//trim(operator)//' ', &
         sum(farrayPtr2(RANGE2D),mask2(RANGE2D))/count(mask2(RANGE2D))
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      if (operation == '*') then
+      if (operator == '*') then
         where (mask2(RANGE2D))
           farrayPtr2(RANGE2D) = farrayPtr2(RANGE2D) * scalar
         endwhere
-      elseif (operation == '+') then
+      elseif (operator == '+') then
         where (mask2(RANGE2D))
           farrayPtr2(RANGE2D) = farrayPtr2(RANGE2D) + scalar
         endwhere
-      elseif (operation == '^') then
+      elseif (operator == '^') then
         where (mask2(RANGE2D))
           farrayPtr2(RANGE2D) = farrayPtr2(RANGE2D) ** scalar
         endwhere
       endif
-      write(message,'(A,ES10.3)') trim(owner_)//' mean value after operation '//trim(operation)//' ', &
+      write(message,'(A,ES10.3)') trim(owner_)//' mean value after operator '//trim(operator)//' ', &
         sum(farrayPtr2(RANGE2D),mask2(RANGE2D))/count(mask2(RANGE2D))
 
     case (3)
       call ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      write(message,'(A,ES10.3)') trim(owner_)//' mean value before operation '//trim(operation)//' ', &
+      write(message,'(A,ES10.3)') trim(owner_)//' mean value before operator '//trim(operator)//' ', &
         sum(farrayPtr3(RANGE3D),mask3(RANGE3D))/count(mask3(RANGE3D))
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      if (operation == '*') then
+      if (operator == '*') then
         where (mask3(RANGE3D))
           farrayPtr3(RANGE3D) = farrayPtr3(RANGE3D) * scalar
         endwhere
-      elseif (operation == '+') then
+      elseif (operator == '+') then
         where (mask3(RANGE3D))
           farrayPtr3(RANGE3D) = farrayPtr3(RANGE3D) + scalar
         endwhere
-      elseif (operation == '^') then
+      elseif (operator == '^') then
         where (mask3(RANGE3D))
           farrayPtr3(RANGE3D) = farrayPtr3(RANGE3D) ** scalar
         endwhere
       endif
-      write(message,'(A,ES10.3)') trim(owner_)//' mean value after operation '//trim(operation)//' ', &
+      write(message,'(A,ES10.3)') trim(owner_)//' mean value after operator '//trim(operator)//' ', &
         sum(farrayPtr3(RANGE3D),mask3(RANGE3D))/count(mask3(RANGE3D))
 
     case (4)
       call ESMF_FieldGet(field, farrayPtr=farrayPtr4, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      write(message,'(A,ES10.3)') trim(owner_)//' mean value before operation '//trim(operation)//' ', &
+      write(message,'(A,ES10.3)') trim(owner_)//' mean value before operator '//trim(operator)//' ', &
         sum(farrayPtr4(RANGE4D),mask4(RANGE4D))/count(mask4(RANGE4D))
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      if (operation == '*') then
+      if (operator == '*') then
         where (mask4(RANGE4D))
           farrayPtr4(RANGE4D) = farrayPtr4(RANGE4D) * scalar
         endwhere
-      elseif (operation == '+') then
+      elseif (operator == '+') then
         where (mask4(RANGE4D))
           farrayPtr4(RANGE4D) = farrayPtr4(RANGE4D) + scalar
         endwhere
-      elseif (operation == '^') then
+      elseif (operator == '^') then
         where (mask4(RANGE4D))
           farrayPtr4(RANGE4D) = farrayPtr4(RANGE4D) ** scalar
         endwhere
       endif
-      write(message,'(A,ES10.3)') trim(owner_)//' mean value after operation '//trim(operation)//' ', &
+      write(message,'(A,ES10.3)') trim(owner_)//' mean value after operator '//trim(operator)//' ', &
         sum(farrayPtr4(RANGE4D),mask4(RANGE4D))/count(mask4(RANGE4D))
     case default
-      write(message,'(A)') trim(owner_)//' only allows operations "*", "+", "^" on '
+      write(message,'(A)') trim(owner_)//' only allows operators "*", "+", "^" on '
       call MOSSCO_FieldString(field, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       if (present(rc)) rc = ESMF_RC_NOT_IMPL
@@ -3343,13 +3345,13 @@ end subroutine MOSSCO_FieldAddR8
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_FieldOperationUnary"
-  subroutine MOSSCO_FieldOperationUnary(field, operation, kwe, owner, rc)
+  subroutine MOSSCO_FieldOperationUnary(field, operator, kwe, owner, rc)
 
     type(ESMF_Field), intent(inout)        :: field
+    character(len=*), intent(in)           :: operator
     type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
-    character(len=*), intent(in)           :: operation
     character(len=*), intent(in), optional :: owner
-    integer(ESMF_KIND_I4), optional        :: rc
+    integer(ESMF_KIND_I4), optional, intent(out)        :: rc
 
     character(ESMF_MAXSTR)                 :: message, owner_
     type(ESMF_FieldStatus_Flag)            :: fieldStatus
@@ -3487,7 +3489,7 @@ end subroutine MOSSCO_FieldAddR8
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
 
-    ! Perform the operations, currently  exponentiation , logarithms, sine,
+    ! Perform the operators, currently  exponentiation , logarithms, sine,
     ! cosine, tangent and sqrt are supported
 
     select case (rank)
@@ -3495,11 +3497,11 @@ end subroutine MOSSCO_FieldAddR8
       call ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      write(message,'(A,ES10.3)') trim(owner_)//' mean value before operation '//trim(operation)//' ', &
+      write(message,'(A,ES10.3)') trim(owner_)//' mean value before operation '//trim(operator)//' ', &
         sum(farrayPtr1(RANGE1D),mask1(RANGE1D))/count(mask1(RANGE1D))
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      select case (trim(operation))
+      select case (trim(operator))
       case ('abs')
         where (mask1(RANGE1D))
           farrayPtr1(RANGE1D) = abs(farrayPtr1(RANGE1D))
@@ -3550,13 +3552,211 @@ end subroutine MOSSCO_FieldAddR8
           farrayPtr1(RANGE1D) = missingValue
         endwhere
       case default
-        write(message,'(A)') trim(owner_)//' obtained undefined operation "'//trim(operation)//'"'
+        write(message,'(A)') trim(owner_)//' obtained undefined operator "'//trim(operator)//'"'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         if (present(rc)) rc = ESMF_RC_NOT_IMPL
         return
       end select
-      write(message,'(A,ES10.3)') trim(owner_)//' mean value after operation '//trim(operation)//' ', &
+      write(message,'(A,ES10.3)') trim(owner_)//' mean value after operator '//trim(operator)//' ', &
         sum(farrayPtr1(RANGE1D),mask1(RANGE1D))/count(mask1(RANGE1D))
+    case (2)
+      call ESMF_FieldGet(field, farrayPtr=farrayPtr2, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      write(message,'(A,ES10.3)') trim(owner_)//' mean value before operator '//trim(operator)//' ', &
+        sum(farrayPtr2(RANGE2D),mask2(RANGE2D))/count(mask2(RANGE2D))
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      select case (trim(operator))
+      case ('abs')
+        where (mask2(RANGE2D))
+          farrayPtr2(RANGE2D) = abs(farrayPtr2(RANGE2D))
+        endwhere
+      case ('acos')
+        where (mask2(RANGE2D))
+          farrayPtr2(RANGE2D) = acos(farrayPtr2(RANGE2D))
+        endwhere
+      case ('asin')
+        where (mask2(RANGE2D))
+          farrayPtr2(RANGE2D) = asin(farrayPtr2(RANGE2D))
+        endwhere
+      case ('atan')
+        where (mask2(RANGE2D))
+          farrayPtr2(RANGE2D) = atan(farrayPtr2(RANGE2D))
+        endwhere
+      case ('cos')
+        where (mask2(RANGE2D))
+          farrayPtr2(RANGE2D) = cos(farrayPtr2(RANGE2D))
+        endwhere
+      case ('e','exp')
+        where (mask2(RANGE2D))
+          farrayPtr2(RANGE2D) = exp(farrayPtr2(RANGE2D))
+        endwhere
+      case ('log','ln')
+        where (mask2(RANGE2D) .and. farrayPtr2(RANGE2D) > 0.0d0)
+          farrayPtr2(RANGE2D) = log(farrayPtr2(RANGE2D))
+        endwhere
+        where (mask2(RANGE2D) .and. farrayPtr2(RANGE2D) < tiny(0.0d0))
+          farrayPtr2(RANGE2D) = missingValue
+        endwhere
+      case ('lg','log10')
+        where (mask2(RANGE2D) .and. farrayPtr2(RANGE2D) > 0.0d0)
+          farrayPtr2(RANGE2D) = log10(farrayPtr2(RANGE2D))
+        endwhere
+        where (mask2(RANGE2D) .and. farrayPtr2(RANGE2D) < tiny(0.0d0))
+          farrayPtr2(RANGE2D) = missingValue
+        endwhere
+      case ('sin')
+        where (mask2(RANGE2D))
+          farrayPtr2(RANGE2D) = sin(farrayPtr2(RANGE2D))
+        endwhere
+      case ('sqrt')
+        where (mask2(RANGE2D) .and. farrayPtr2(RANGE2D) > -tiny(0.0d0))
+          farrayPtr2(RANGE2D) = sqrt(farrayPtr2(RANGE2D))
+        endwhere
+        where (mask2(RANGE2D) .and. farrayPtr2(RANGE2D) < 0.0d0)
+          farrayPtr2(RANGE2D) = missingValue
+        endwhere
+      case default
+        write(message,'(A)') trim(owner_)//' obtained undefined operator "'//trim(operator)//'"'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        if (present(rc)) rc = ESMF_RC_NOT_IMPL
+        return
+      end select
+      write(message,'(A,ES10.3)') trim(owner_)//' mean value after operator '//trim(operator)//' ', &
+        sum(farrayPtr2(RANGE2D),mask2(RANGE2D))/count(mask2(RANGE2D))
+    case (3)
+      call ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      write(message,'(A,ES10.3)') trim(owner_)//' mean value before operator '//trim(operator)//' ', &
+        sum(farrayPtr3(RANGE3D),mask3(RANGE3D))/count(mask3(RANGE3D))
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      select case (trim(operator))
+      case ('abs')
+        where (mask3(RANGE3D))
+          farrayPtr3(RANGE3D) = abs(farrayPtr3(RANGE3D))
+        endwhere
+      case ('acos')
+        where (mask3(RANGE3D))
+          farrayPtr3(RANGE3D) = acos(farrayPtr3(RANGE3D))
+        endwhere
+      case ('asin')
+        where (mask3(RANGE3D))
+          farrayPtr3(RANGE3D) = asin(farrayPtr3(RANGE3D))
+        endwhere
+      case ('atan')
+        where (mask3(RANGE3D))
+          farrayPtr3(RANGE3D) = atan(farrayPtr3(RANGE3D))
+        endwhere
+      case ('cos')
+        where (mask3(RANGE3D))
+          farrayPtr3(RANGE3D) = cos(farrayPtr3(RANGE3D))
+        endwhere
+      case ('e','exp')
+        where (mask3(RANGE3D))
+          farrayPtr3(RANGE3D) = exp(farrayPtr3(RANGE3D))
+        endwhere
+      case ('log','ln')
+        where (mask3(RANGE3D) .and. farrayPtr3(RANGE3D) > 0.0d0)
+          farrayPtr3(RANGE3D) = log(farrayPtr3(RANGE3D))
+        endwhere
+        where (mask3(RANGE3D) .and. farrayPtr3(RANGE3D) < tiny(0.0d0))
+          farrayPtr3(RANGE3D) = missingValue
+        endwhere
+      case ('lg','log10')
+        where (mask3(RANGE3D) .and. farrayPtr3(RANGE3D) > 0.0d0)
+          farrayPtr3(RANGE3D) = log10(farrayPtr3(RANGE3D))
+        endwhere
+        where (mask3(RANGE3D) .and. farrayPtr3(RANGE3D) < tiny(0.0d0))
+          farrayPtr3(RANGE3D) = missingValue
+        endwhere
+      case ('sin')
+        where (mask3(RANGE3D))
+          farrayPtr3(RANGE3D) = sin(farrayPtr3(RANGE3D))
+        endwhere
+      case ('sqrt')
+        where (mask3(RANGE3D) .and. farrayPtr3(RANGE3D) > -tiny(0.0d0))
+          farrayPtr3(RANGE3D) = sqrt(farrayPtr3(RANGE3D))
+        endwhere
+        where (mask3(RANGE3D) .and. farrayPtr3(RANGE3D) < 0.0d0)
+          farrayPtr3(RANGE3D) = missingValue
+        endwhere
+      case default
+        write(message,'(A)') trim(owner_)//' obtained undefined operator "'//trim(operator)//'"'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        if (present(rc)) rc = ESMF_RC_NOT_IMPL
+        return
+      end select
+      write(message,'(A,ES10.3)') trim(owner_)//' mean value after operator '//trim(operator)//' ', &
+        sum(farrayPtr3(RANGE3D),mask3(RANGE3D))/count(mask3(RANGE3D))
+    case (4)
+      call ESMF_FieldGet(field, farrayPtr=farrayPtr4, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      write(message,'(A,ES10.3)') trim(owner_)//' mean value before operator '//trim(operator)//' ', &
+        sum(farrayPtr4(RANGE4D),mask4(RANGE4D))/count(mask4(RANGE4D))
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      select case (trim(operator))
+      case ('abs')
+        where (mask4(RANGE4D))
+          farrayPtr4(RANGE4D) = abs(farrayPtr4(RANGE4D))
+        endwhere
+      case ('acos')
+        where (mask4(RANGE4D))
+          farrayPtr4(RANGE4D) = acos(farrayPtr4(RANGE4D))
+        endwhere
+      case ('asin')
+        where (mask4(RANGE4D))
+          farrayPtr4(RANGE4D) = asin(farrayPtr4(RANGE4D))
+        endwhere
+      case ('atan')
+        where (mask4(RANGE4D))
+          farrayPtr4(RANGE4D) = atan(farrayPtr4(RANGE4D))
+        endwhere
+      case ('cos')
+        where (mask4(RANGE4D))
+          farrayPtr4(RANGE4D) = cos(farrayPtr4(RANGE4D))
+        endwhere
+      case ('e','exp')
+        where (mask4(RANGE4D))
+          farrayPtr4(RANGE4D) = exp(farrayPtr4(RANGE4D))
+        endwhere
+      case ('log','ln')
+        where (mask4(RANGE4D) .and. farrayPtr4(RANGE4D) > 0.0d0)
+          farrayPtr4(RANGE4D) = log(farrayPtr4(RANGE4D))
+        endwhere
+        where (mask4(RANGE4D) .and. farrayPtr4(RANGE4D) < tiny(0.0d0))
+          farrayPtr4(RANGE4D) = missingValue
+        endwhere
+      case ('lg','log10')
+        where (mask4(RANGE4D) .and. farrayPtr4(RANGE4D) > 0.0d0)
+          farrayPtr4(RANGE4D) = log10(farrayPtr4(RANGE4D))
+        endwhere
+        where (mask4(RANGE4D) .and. farrayPtr4(RANGE4D) < tiny(0.0d0))
+          farrayPtr4(RANGE4D) = missingValue
+        endwhere
+      case ('sin')
+        where (mask4(RANGE4D))
+          farrayPtr4(RANGE4D) = sin(farrayPtr4(RANGE4D))
+        endwhere
+      case ('sqrt')
+        where (mask4(RANGE4D) .and. farrayPtr4(RANGE4D) > -tiny(0.0d0))
+          farrayPtr4(RANGE4D) = sqrt(farrayPtr4(RANGE4D))
+        endwhere
+        where (mask4(RANGE4D) .and. farrayPtr4(RANGE4D) < 0.0d0)
+          farrayPtr4(RANGE4D) = missingValue
+        endwhere
+      case default
+        write(message,'(A)') trim(owner_)//' obtained undefined operator "'//trim(operator)//'"'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        if (present(rc)) rc = ESMF_RC_NOT_IMPL
+        return
+      end select
+      write(message,'(A,ES10.3)') trim(owner_)//' mean value after operator '//trim(operator)//' ', &
+        sum(farrayPtr4(RANGE4D),mask4(RANGE4D))/count(mask4(RANGE4D))
 
     endselect
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
