@@ -499,27 +499,6 @@ module calculator
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
-      call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=lbnd(1:rank), &
-        exclusiveUbound=ubnd(1:rank), rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      if (rank == 4) then
-        call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr4, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      elseif (rank == 3) then
-        call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr3, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      elseif (rank == 2) then
-        call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr2, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      elseif (rank == 1) then
-        call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr1, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      endif
-
       sp = 0
       do j=lbound(rpnList,1), ubound(rpnList,1)
 
@@ -548,32 +527,33 @@ module calculator
             call ESMF_FieldGet(fieldList(1), rank=stack(sp)%rank, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-            call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=lbnd(1:rank), &
-              exclusiveUBound=ubnd(1:rank), rc=localrc)
+            call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=&
+              lbnd(1:stack(sp)%rank), &
+              exclusiveUBound=ubnd(1:stack(sp)%rank), rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-            if (rank == 4) then
+            if (stack(sp)%rank == 4) then
               call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr4, rc=localrc)
               _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
               allocate(stack(sp)%farray4(RANGE4D))
               stack(sp)%farray4(RANGE4D) = farrayPtr4(RANGE4D)
               call MOSSCO_FieldGetMask(fieldList(1), mask4=stack(sp)%mask4, owner=name, rc=localrc)
               _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-            elseif (rank == 3) then
+            elseif (stack(sp)%rank == 3) then
               call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr3, rc=localrc)
               _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
               allocate(stack(sp)%farray3(RANGE3D))
               stack(sp)%farray3(RANGE3D) = farrayPtr3(RANGE3D)
               call MOSSCO_FieldGetMask(fieldList(1), mask3=stack(sp)%mask3, owner=name, rc=localrc)
               _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-            elseif (rank == 2) then
+            elseif (stack(sp)%rank == 2) then
               call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr2, rc=localrc)
               _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
               allocate(stack(sp)%farray2(RANGE2D))
               stack(sp)%farray2(RANGE2D) = farrayPtr2(RANGE2D)
               call MOSSCO_FieldGetMask(fieldList(1), mask2=stack(sp)%mask2, owner=name, rc=localrc)
               _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-            elseif (rank == 1) then
+            elseif (stack(sp)%rank == 1) then
               call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr1, rc=localrc)
               _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
               allocate(stack(sp)%farray1(RANGE1D))
@@ -706,6 +686,8 @@ module calculator
               write(message,'(A,ES10.3)') trim(message)//' = ', &
                 sum(stack(sp-1)%farray1,stack(sp-1)%mask1)/count(stack(sp-1)%mask1)
               call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+              deallocate(stack(sp)%farray1,stack(sp)%mask1)
+              stack(sp)%rank = -1
             case (2)
               stack(sp-1)%mask2 = (stack(sp-1)%mask2 .and. stack(sp)%mask2)
               write(message,'(A,ES10.3,X,A,X,ES10.3)') trim(name)//' calculates ',&
@@ -741,6 +723,8 @@ module calculator
               write(message,'(A,ES10.3)') trim(message)//' = ', &
                 sum(stack(sp-1)%farray2,stack(sp-1)%mask2)/count(stack(sp-1)%mask2)
               call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+              deallocate(stack(sp)%farray2,stack(sp)%mask2)
+              stack(sp)%rank = -1
             case (3)
               stack(sp-1)%mask3 = (stack(sp-1)%mask3 .and. stack(sp)%mask3)
               write(message,'(A,ES10.3,X,A,X,ES10.3)') trim(name)//' calculates ',&
@@ -776,6 +760,8 @@ module calculator
               write(message,'(A,ES10.3)') trim(message)//' = ', &
                 sum(stack(sp-1)%farray3,stack(sp-1)%mask3)/count(stack(sp-1)%mask3)
               call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+              deallocate(stack(sp)%farray3,stack(sp)%mask3)
+              stack(sp)%rank = -1
             case (4)
               stack(sp-1)%mask4 = (stack(sp-1)%mask4 .and. stack(sp)%mask4)
               write(message,'(A,ES10.3,X,A,X,ES10.3)') trim(name)//' calculates ',&
@@ -811,19 +797,43 @@ module calculator
               write(message,'(A,ES10.3)') trim(message)//' = ', &
                 sum(stack(sp-1)%farray4,stack(sp-1)%mask4)/count(stack(sp-1)%mask4)
               call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+              deallocate(stack(sp)%farray4,stack(sp)%mask4)
+              stack(sp)%rank = -1
             end select !case(stack(sp)%rank)
-            deallocate(stack(sp)%farray2, stack(sp)%mask2)
           endif ! stack(sp)%rank == stack(sp-1)%rank
 
           sp = sp - 1
 
-        elseif (j==1) then
-          select case(rank)
-          case(1) ; farrayPtr1(RANGE1D) = stack(j)%farray1(RANGE1D)
-          case(2) ; farrayPtr2(RANGE2D) = stack(j)%farray2(RANGE2D)
-          case(3) ; farrayPtr3(RANGE3D) = stack(j)%farray3(RANGE3D)
-          case(4) ; farrayPtr4(RANGE4D) = stack(j)%farray4(RANGE4D)
-          end select
+        elseif (j==1) then ! Save results in export state
+          includeList(1) = exportList(i,1)
+          call MOSSCO_StateGet(exportState, fieldList, include=includeList, &
+            fieldCount=fieldCount, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=lbnd(1:rank), &
+            exclusiveUbound=ubnd(1:rank), rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          if (rank == 4) then
+            call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr4, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+            farrayPtr4(RANGE4D) = stack(j)%farray4(RANGE4D)
+          elseif (rank == 3) then
+            call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr3, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+            farrayPtr3(RANGE3D) = stack(j)%farray3(RANGE3D)
+          elseif (rank == 2) then
+            call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr2, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+            farrayPtr2(RANGE2D) = stack(j)%farray2(RANGE2D)
+          elseif (rank == 1) then
+            call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr1, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+            farrayPtr1(RANGE1D) = stack(j)%farray1(RANGE1D)
+          endif
         endif
       enddo ! rpnList
     enddo ! exportItems
