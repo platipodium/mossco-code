@@ -23,7 +23,7 @@ LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBS)
 all: exec
 exec: libmossco_macrobenthos vertical_macrobenthos
 
-libmossco_macrobenthos:
+libmossco_macrobenthos: libmossco_util libsolver
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
 vertical_macrobenthos: main.o
@@ -34,3 +34,6 @@ clean: extraclean
 
 extraclean:
 	@rm -f vertical_macrobenthos
+
+libsolver libmossco_util:
+	make -C $(MOSSCO_DIR)/src/utilities $@

@@ -48,8 +48,7 @@ module vertical_macrobenthos_driver
     real(KIND_R8) :: risk_amplification, drag
 
   contains
-    procedure :: set
-    procedure :: get
+    procedure :: get_rhs
     procedure :: initialize
     procedure :: finalize
   end type
@@ -84,6 +83,11 @@ subroutine initialize(self, inum, jnum, rc)
   self%inum=inum
   self%jnum=jnum
   self%nvar=4
+  self%dt_min=1.D-6
+  self%relative_change_min=-0.9D0
+  self%last_min_dt = 1E30
+  self%last_min_dt_grid_cell=(/-99,-99,-99,-99/)
+  self%adaptive_solver_diagnostics = .true.
 
   allocate(self%mask(self%inum,self%jnum,self%knum))
   self%mask = .false.
@@ -101,7 +105,11 @@ subroutine initialize(self, inum, jnum, rc)
   self%depth_endobenthic => self%conc(:,:,1,4)
 
   allocate(self%depth(inum,jnum))
-  self%depth = self%depth_epibenthic + self%depth_endobenthic
+  where (self%mask(:,:,1) .and. self%biomass>0)
+  self%depth = (self%depth_epibenthic * self%biomass_endobenthic &
+     + self%depth_endobenthic * self%biomass_endobenthic) &
+     /self%biomass
+  endwhere
 
   ! @todo allocate from outside?
   allocate(self%poc(inum,jnum))
@@ -140,62 +148,47 @@ subroutine finalize(self, rc)
 
 end subroutine finalize
 
-subroutine set(self)
-
-  class(type_vertical_macrobenthos) :: self
-
-  self%dt_min=1.d-9 ! minimum timestep
-  self%relative_change_min=-0.9d0 ! minimum relative change
-  self%last_min_dt=1.e20
-  self%last_min_dt_grid_cell = (/-99,-99,-99,-99/)
-  self%adaptive_solver_diagnostics=.false.
-
-end subroutine set
-
 subroutine get(self)
 
   class(type_vertical_macrobenthos) :: self
 end subroutine get
 
-subroutine get_rhs(self, rhs, rc)
+subroutine get_rhs(rhs_driver, rhs)
 
-  class(type_vertical_macrobenthos) :: self
-  integer(KIND_I4), optional, intent(out) :: rc
+  class(type_vertical_macrobenthos), intent(inout) :: rhs_driver
   real(KIND_R8), intent(inout), dimension(:,:,:,:), pointer :: rhs
 
   real(KIND_R8)    :: dmpdz, dmbdz, dppdz, dpbdz, drpdz, drbdz
   real(KIND_R8)    :: drag, m0
   integer(KIND_I4) :: j, i
 
-  if (present(rc)) rc = 0
-
-  do j=1,self%jnum
-    do i=1,self%inum
-      if (.not.self%mask(i,j,1)) then
+  do j=1,rhs_driver%jnum
+    do i=1,rhs_driver%inum
+      if (.not.rhs_driver%mask(i,j,1)) then
 
         drpdz = 0 ! pelagic respiration with depth
-        drbdz = self%respiration_rate / self%predation_depth &
-          * exp (self%depth(i,j)/self%predation_depth)
+        drbdz = rhs_driver%respiration_rate / rhs_driver%predation_depth &
+          * exp (rhs_driver%depth(i,j)/rhs_driver%predation_depth)
 
-        m0 = self%visibility * (self%biomass_endobenthic(i,j) &
-           * exp (-self%depth_endobenthic(i,j)/self%predation_depth) &
-           + self%biomass_epibenthic(i,j))
+        m0 = rhs_driver%visibility * (rhs_driver%biomass_endobenthic(i,j) &
+           * exp (-rhs_driver%depth_endobenthic(i,j)/rhs_driver%predation_depth) &
+           + rhs_driver%biomass_epibenthic(i,j))
 
-        drag = self%drag * (self%depth_epibenthic(i,j) + self%roughness_length(i,j) &
-          / 2 * (4 * exp (-self%depth_epibenthic(i,j)/self%roughness_length(i,j)) &
-          -exp (-2*self%depth_epibenthic(i,j)/self%roughness_length(i,j)) - 3))
+        drag = rhs_driver%drag * (rhs_driver%depth_epibenthic(i,j) + rhs_driver%roughness_length(i,j) &
+          / 2 * (4 * exp (-rhs_driver%depth_epibenthic(i,j)/rhs_driver%roughness_length(i,j)) &
+          -exp (-2*rhs_driver%depth_epibenthic(i,j)/rhs_driver%roughness_length(i,j)) - 3))
 
-        dmpdz = -m0 * self%risk_amplification &
-          * drag * exp(-self%depth_epibenthic(i,j)/self%roughness_length(i,j))
-        dmbdz = -m0 * exp(-self%depth_endobenthic(i,j)/self%predation_depth)
+        dmpdz = -m0 * rhs_driver%risk_amplification &
+          * drag * exp(-rhs_driver%depth_epibenthic(i,j)/rhs_driver%roughness_length(i,j))
+        dmbdz = -m0 * exp(-rhs_driver%depth_endobenthic(i,j)/rhs_driver%predation_depth)
 
-        dppdz = self%epibenthic_affinity * self%bulk_speed(i,j)  &
-          * self%poc(i,j) / self%roughness_length(i,j)  &
-          * exp (-self%depth_epibenthic(i,j)/self%roughness_length(i,j))
+        dppdz = rhs_driver%epibenthic_affinity * rhs_driver%bulk_speed(i,j)  &
+          * rhs_driver%poc(i,j) / rhs_driver%roughness_length(i,j)  &
+          * exp (-rhs_driver%depth_epibenthic(i,j)/rhs_driver%roughness_length(i,j))
 
-        dpbdz = self%endobenthic_affinity * self%poc(i,j) &
-          / self%bioturbation_depth &
-          * exp (-self%depth_endobenthic(i,j)/self%bioturbation_depth)
+        dpbdz = rhs_driver%endobenthic_affinity * rhs_driver%poc(i,j) &
+          / rhs_driver%bioturbation_depth &
+          * exp (-rhs_driver%depth_endobenthic(i,j)/rhs_driver%bioturbation_depth)
 
         rhs(i,j,1,1) = 1.0
         rhs(i,j,1,2) = 1.0
