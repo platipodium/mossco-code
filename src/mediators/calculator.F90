@@ -601,7 +601,19 @@ module calculator
               if (stack(sp)%scalar(1) < 0) then ; stack(sp)%scalar(1) = -1D30
               else ; stack(sp)%scalar(1) = sqrt(stack(sp)%scalar(1)); endif
             case ('sin') ; stack(sp)%scalar(1) = sin(stack(sp)%scalar(1))
+            case default
+              write(0,*) __LINE__, ' not implemented '//trim(adjustl(rpnList(j,1)))
             end select
+          case (1)
+            write(0,*) __LINE__, ' not implemented '//trim(adjustl(rpnList(j,1)))
+          case (2)
+            write(0,*) __LINE__, ' not implemented '//trim(adjustl(rpnList(j,1)))
+          case (3)
+            write(0,*) __LINE__, ' not implemented '//trim(adjustl(rpnList(j,1)))
+          case (4)
+            write(0,*) __LINE__, ' not implemented '//trim(adjustl(rpnList(j,1)))
+          case default
+            write(0,*) __LINE__, ' not implemented '//trim(adjustl(rpnList(j,1)))
           end select
 
         elseif (rpnTypeString(j:j) == 'b') then
@@ -643,12 +655,203 @@ module calculator
           if (stack(sp)%rank == 0) then
             select case(stack(sp-1)%rank)
             case (0)
-              write(0,*) stack(sp-1)%scalar(1),' '//rpnList(j,1)//' ',stack(sp)%scalar(1)
+              write(message,'(A,ES10.3,X,A,X,ES10.3)') trim(name)//' calculates ',&
+                stack(sp-1)%scalar(1),trim(rpnList(j,1)),stack(sp)%scalar(1)
+              select case(trim(adjustl(rpnList(j,1))))
+              case('+')
+                stack(sp-1)%scalar(1) = stack(sp-1)%scalar(1) + stack(sp)%scalar(1)
+              case('-')
+                stack(sp-1)%scalar(1) = stack(sp-1)%scalar(1) - stack(sp)%scalar(1)
+              case('*')
+                stack(sp-1)%scalar(1) = stack(sp-1)%scalar(1) * stack(sp)%scalar(1)
+              case('/')
+                if (abs(stack(sp)%scalar(1)) > tiny(0.0d0)) then
+                  stack(sp-1)%scalar(1)  = stack(sp-1)%scalar(1)  / stack(sp)%scalar(1)
+                else
+                  stack(sp-1)%scalar(1)  = -1.0d30
+                endif
+              case ('**','^','pow')
+                stack(sp-1)%scalar(1) = stack(sp-1)%scalar(1) ** stack(sp)%scalar(1)
+              case('%','mod')
+                stack(sp-1)%scalar(1)  = modulo(stack(sp-1)%scalar(1) ,stack(sp)%scalar(1))
+              case default
+                write(message,'(A,I1,A)') trim(name)//' does not implement operation "'// &
+                  rpnList(j,1)//'" for two scalars'
+                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+              end select
+              write(message,'(A,ES10.3)') trim(message)//' = ', stack(sp-1)%scalar(1)
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
             case (1)
+              write(message,'(A,ES10.3,X,A,X,ES10.3)') trim(name)//' calculates ',&
+                sum(stack(sp-1)%farray1, &
+                stack(sp-1)%mask1)/count(stack(sp-1)%mask1),trim(rpnList(j,1)), &
+                stack(sp)%scalar(1)
+              select case(trim(adjustl(rpnList(j,1))))
+              case('+')
+                where(stack(sp-1)%mask1)
+                  stack(sp-1)%farray1 = stack(sp-1)%farray1 + stack(sp)%scalar(1)
+                endwhere
+              case('-')
+                where(stack(sp-1)%mask1)
+                  stack(sp-1)%farray1 = stack(sp-1)%farray1 - stack(sp)%scalar(1)
+                endwhere
+              case('*')
+                where(stack(sp-1)%mask1)
+                  stack(sp-1)%farray1 = stack(sp-1)%farray1 * stack(sp)%scalar(1)
+                endwhere
+              case('/')
+                if (abs(stack(sp)%scalar(1)) > tiny(0.0d0)) then
+                  where(stack(sp-1)%mask1)
+                    stack(sp-1)%farray1 = stack(sp-1)%farray1 / stack(sp)%scalar(1)
+                  endwhere
+                else
+                  stack(sp-1)%farray1 = -1.0d30
+                endif
+              case ('**','^','pow')
+                where(stack(sp-1)%mask1)
+                  stack(sp-1)%farray1 = stack(sp-1)%farray1 * stack(sp)%scalar(1)
+                endwhere
+              case('%','mod')
+                where(stack(sp-1)%mask1)
+                  stack(sp-1)%farray1 = modulo(stack(sp-1)%farray1,stack(sp)%scalar(1))
+                endwhere
+              case default
+                write(message,'(A,I1,A)') trim(name)//' does not implement operation "'// &
+                  rpnList(j,1)//'" for ranks ',stack(sp-1)%rank,' and scalar'
+                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+              end select
+              write(message,'(A,ES10.3)') trim(message)//' = ', &
+                sum(stack(sp-1)%farray1,stack(sp-1)%mask1)/count(stack(sp-1)%mask1)
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
             case (2)
+              write(message,'(A,ES10.3,X,A,X,ES10.3)') trim(name)//' calculates ',&
+                sum(stack(sp-1)%farray2, &
+                stack(sp-1)%mask2)/count(stack(sp-1)%mask2),trim(rpnList(j,1)), &
+                stack(sp)%scalar(1)
+              select case(trim(adjustl(rpnList(j,1))))
+              case('+')
+                where(stack(sp-1)%mask2)
+                  stack(sp-1)%farray2 = stack(sp-1)%farray2 + stack(sp)%scalar(1)
+                endwhere
+              case('-')
+                where(stack(sp-1)%mask2)
+                  stack(sp-1)%farray2 = stack(sp-1)%farray2 - stack(sp)%scalar(1)
+                endwhere
+              case('*')
+                where(stack(sp-1)%mask2)
+                  stack(sp-1)%farray2 = stack(sp-1)%farray2 * stack(sp)%scalar(1)
+                endwhere
+              case('/')
+                if (abs(stack(sp)%scalar(1)) > tiny(0.0d0)) then
+                  where(stack(sp-1)%mask2)
+                    stack(sp-1)%farray2 = stack(sp-1)%farray2 / stack(sp)%scalar(1)
+                  endwhere
+                else
+                  stack(sp-1)%farray2 = -1.0d30
+                endif
+              case ('**','^','pow')
+                where(stack(sp-1)%mask2)
+                  stack(sp-1)%farray2 = stack(sp-1)%farray2 * stack(sp)%scalar(1)
+                endwhere
+              case('%','mod')
+                where(stack(sp-1)%mask2)
+                  stack(sp-1)%farray2 = modulo(stack(sp-1)%farray2,stack(sp)%scalar(1))
+                endwhere
+              case default
+                write(message,'(A,I1,A)') trim(name)//' does not implement operation "'// &
+                  rpnList(j,1)//'" for ranks ',stack(sp-1)%rank,' and scalar'
+                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+              end select
+              write(message,'(A,ES10.3)') trim(message)//' = ', &
+                sum(stack(sp-1)%farray2,stack(sp-1)%mask2)/count(stack(sp-1)%mask2)
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
             case (3)
+              write(message,'(A,ES10.3,X,A,X,ES10.3)') trim(name)//' calculates ',&
+                sum(stack(sp-1)%farray3, &
+                stack(sp-1)%mask3)/count(stack(sp-1)%mask3),trim(rpnList(j,1)), &
+                stack(sp)%scalar(1)
+              select case(trim(adjustl(rpnList(j,1))))
+              case('+')
+                where(stack(sp-1)%mask3)
+                  stack(sp-1)%farray3 = stack(sp-1)%farray3 + stack(sp)%scalar(1)
+                endwhere
+              case('-')
+                where(stack(sp-1)%mask3)
+                  stack(sp-1)%farray3 = stack(sp-1)%farray3 - stack(sp)%scalar(1)
+                endwhere
+              case('*')
+                where(stack(sp-1)%mask3)
+                  stack(sp-1)%farray3 = stack(sp-1)%farray3 * stack(sp)%scalar(1)
+                endwhere
+              case('/')
+                if (abs(stack(sp)%scalar(1)) > tiny(0.0d0)) then
+                  where(stack(sp-1)%mask3)
+                    stack(sp-1)%farray3 = stack(sp-1)%farray3 / stack(sp)%scalar(1)
+                  endwhere
+                else
+                  stack(sp-1)%farray3 = -1.0d30
+                endif
+              case ('**','^','pow')
+                where(stack(sp-1)%mask3)
+                  stack(sp-1)%farray3 = stack(sp-1)%farray3 * stack(sp)%scalar(1)
+                endwhere
+              case('%','mod')
+                where(stack(sp-1)%mask3)
+                  stack(sp-1)%farray3 = modulo(stack(sp-1)%farray3,stack(sp)%scalar(1))
+                endwhere
+              case default
+                write(message,'(A,I1,A)') trim(name)//' does not implement operation "'// &
+                  rpnList(j,1)//'" for ranks ',stack(sp-1)%rank,' and scalar'
+                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+              end select
+              write(message,'(A,ES10.3)') trim(message)//' = ', &
+                sum(stack(sp-1)%farray3,stack(sp-1)%mask3)/count(stack(sp-1)%mask3)
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
             case (4)
+              write(message,'(A,ES10.3,X,A,X,ES10.3)') trim(name)//' calculates ',&
+                sum(stack(sp-1)%farray4, &
+                stack(sp-1)%mask4)/count(stack(sp-1)%mask4),trim(rpnList(j,1)), &
+                stack(sp)%scalar(1)
+              select case(trim(adjustl(rpnList(j,1))))
+              case('+')
+                where(stack(sp-1)%mask4)
+                  stack(sp-1)%farray4 = stack(sp-1)%farray4 + stack(sp)%scalar(1)
+                endwhere
+              case('-')
+                where(stack(sp-1)%mask4)
+                  stack(sp-1)%farray4 = stack(sp-1)%farray4 - stack(sp)%scalar(1)
+                endwhere
+              case('*')
+                where(stack(sp-1)%mask4)
+                  stack(sp-1)%farray4 = stack(sp-1)%farray4 * stack(sp)%scalar(1)
+                endwhere
+              case('/')
+                if (abs(stack(sp)%scalar(1)) > tiny(0.0d0)) then
+                  where(stack(sp-1)%mask4)
+                    stack(sp-1)%farray4 = stack(sp-1)%farray4 / stack(sp)%scalar(1)
+                  endwhere
+                else
+                  stack(sp-1)%farray4 = -1.0d30
+                endif
+              case ('**','^','pow')
+                where(stack(sp-1)%mask4)
+                  stack(sp-1)%farray4 = stack(sp-1)%farray4 * stack(sp)%scalar(1)
+                endwhere
+              case('%','mod')
+                where(stack(sp-1)%mask4)
+                  stack(sp-1)%farray4 = modulo(stack(sp-1)%farray4,stack(sp)%scalar(1))
+                endwhere
+              case default
+                write(message,'(A,I1,A)') trim(name)//' does not implement operation "'// &
+                  rpnList(j,1)//'" for ranks ',stack(sp-1)%rank,' and scalar'
+                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+              end select
+              write(message,'(A,ES10.3)') trim(message)//' = ', &
+                sum(stack(sp-1)%farray4,stack(sp-1)%mask4)/count(stack(sp-1)%mask4)
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
             end select
+            deallocate(stack(sp)%scalar)
+            stack(sp)%rank = -1
           elseif (stack(sp)%rank == stack(sp-1)%rank) then
             select case(stack(sp)%rank)
             case (1)
