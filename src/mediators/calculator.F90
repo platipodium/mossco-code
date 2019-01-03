@@ -321,8 +321,9 @@ module calculator
 
     rc = ESMF_SUCCESS
 
-    allocate(binaryOperatorList(9))
-    binaryOperatorList = (/'*  ','/  ','+  ','-  ','** ','^  ','%  ','mod','rem'/)
+    allocate(binaryOperatorList(10))
+    binaryOperatorList = (/'*  ','/  ','+  ','-  ','** ','^  ','%  ','mod', &
+      'rem','pow'/)
     allocate(unaryOperatorList(13))
     unaryOperatorList = (/'e   ','log ','ln  ','exp ', 'lg  ','sin ', 'cos ', &
       'tan ', 'sqrt','asin','atan','acos','abs '/)
@@ -862,7 +863,7 @@ module calculator
                 endif
               case ('**','^','pow')
                 where(stack(sp-1)%mask1)
-                  stack(sp-1)%farray1 = stack(sp-1)%farray1 * stack(sp)%scalar(1)
+                  stack(sp-1)%farray1 = stack(sp-1)%farray1 ** stack(sp)%scalar(1)
                 endwhere
               case('%','mod')
                 where(stack(sp-1)%mask1)
@@ -904,7 +905,7 @@ module calculator
                 endif
               case ('**','^','pow')
                 where(stack(sp-1)%mask2)
-                  stack(sp-1)%farray2 = stack(sp-1)%farray2 * stack(sp)%scalar(1)
+                  stack(sp-1)%farray2 = stack(sp-1)%farray2 ** stack(sp)%scalar(1)
                 endwhere
               case('%','mod')
                 where(stack(sp-1)%mask2)
@@ -946,7 +947,7 @@ module calculator
                 endif
               case ('**','^','pow')
                 where(stack(sp-1)%mask3)
-                  stack(sp-1)%farray3 = stack(sp-1)%farray3 * stack(sp)%scalar(1)
+                  stack(sp-1)%farray3 = stack(sp-1)%farray3 ** stack(sp)%scalar(1)
                 endwhere
               case('%','mod')
                 where(stack(sp-1)%mask3)
@@ -988,7 +989,7 @@ module calculator
                 endif
               case ('**','^','pow')
                 where(stack(sp-1)%mask4)
-                  stack(sp-1)%farray4 = stack(sp-1)%farray4 * stack(sp)%scalar(1)
+                  stack(sp-1)%farray4 = stack(sp-1)%farray4 ** stack(sp)%scalar(1)
                 endwhere
               case('%','mod')
                 where(stack(sp-1)%mask4)

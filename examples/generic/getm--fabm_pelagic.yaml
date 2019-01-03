@@ -9,6 +9,8 @@ dependencies:
 instances:
   - mossco_gf: netcdf
   - restart_water: netcdf_input
+  - getm_diags: calculator
+  - maecs_diags: calculator
 
 coupling:
   - components:
@@ -26,6 +28,16 @@ coupling:
     interval: none
   - components:
      - getm
+     - mossco_gf
+    interval: 1 h
+  - components:
+     - getm
+     - getm_diags
+     - mossco_gf
+    interval: 1 h
+  - components:
+     - fabm_pelagic
+     - maecs_diags
      - mossco_gf
     interval: 1 h
   - components:

@@ -2341,7 +2341,6 @@ libs = {'gotm'       : ['solver', 'mossco_gotm'] ,
         'soil_pelagic_connector' : ['mossco_mediator'],
         'calculator' : ['mossco_mediator'],
         'vertical_reduction' : ['verticalreduction'],
-        'calculator' : ['mossco_calculator'],
         'pelagic_benthic_coupler' : ['pelagicbenthiccoupler'],
         'benthic_pelagic_coupler' : ['pelagicbenthiccoupler'],
         'xgrid_coupler' : ['xgridcoupler'],
@@ -2391,7 +2390,6 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'pelagic_benthic_coupler' : ['libpelagicbenthiccoupler'],
         'benthic_pelagic_coupler' : ['libpelagicbenthiccoupler'],
         'vertical_reduction' : ['libverticalreduction'],
-        'calculator' : ['libmossco_calculator'],
         'xgrid_coupler' : ['libxgridcoupler'],
         'link_connector' : ['libmossco_connector'],
         'nudge_connector' : ['libmossco_connector'],
@@ -2490,7 +2488,7 @@ libsurfacescouplerlibaocoupler liblinkcoupler libxgridcoupler libregridcoupler l
 libmossco_connector:
 	$(MAKE) -C $(MOSSCO_DIR)/src/connectors $@
 
-libverticalreduction libmossco_calculator:
+libverticalreduction: 
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
 libremtc:
