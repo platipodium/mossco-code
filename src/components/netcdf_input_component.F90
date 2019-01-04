@@ -320,13 +320,15 @@ module netcdf_input_component
 
       if (allocated(aliasList)) then
 
-        call MOSSCO_AttributeSet(importState, 'alias_definition', aliasList, rc=localrc)
+        call MOSSCO_AttributeSet(importState, 'alias_definition', aliasList, &
+          separator='=', rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call MOSSCO_Reallocate(aliasList, 0, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        call MOSSCO_AttributeGet(importState, 'alias_definition', aliasList, rc=localrc)
+        call MOSSCO_AttributeGet(importState, 'alias_definition', aliasList, &
+          separator='=', rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         do i = lbound(aliasList,1), ubound(aliasList,1)

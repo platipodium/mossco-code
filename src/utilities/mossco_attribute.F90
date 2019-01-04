@@ -352,7 +352,7 @@ contains
       j=1
       do j=lbound(stringList,2)+1, ubound(stringList,2)
         if (len_trim(stringlist(i,j)) == 0) exit
-        call MOSSCO_MessageAdd(attributeString, separator//trim(stringlist(i,j)), rc=localrc)
+        call MOSSCO_MessageAdd(attributeString, separator_//trim(stringlist(i,j)), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       enddo
     enddo
@@ -588,7 +588,9 @@ contains
         ni = ni+1
       endif
     enddo
+    !write(0,*) 'Att=',trim(attributeString),' '//separator_,nj,ni
 
+    if (n>nj) nj=n
     if (ni<1 .or. nj<1) return
 
     allocate(stringList(ni,nj))
@@ -620,6 +622,7 @@ contains
         endif
       enddo
     enddo
+    !write(0,*) 'Str: ',shape(stringList),stringList
 
   end subroutine MOSSCO_StateAttributeGetList2
 
