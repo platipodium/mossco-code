@@ -438,8 +438,8 @@ module calculator
 
       do j=1, size(rpnList)
 
-        !> Skip operators which we have dealt with
-        if (index('rub',rpnTypeString(j:j))>0) cycle
+        !> Skip operators and numbers which we have dealt with
+        if (index('rubd',rpnTypeString(j:j))>0) cycle
 
         if (allocated(matchIndex)) deallocate(matchIndex)
         call MOSSCO_StringFind(rpnList(j,1), itemNameList, isMatch=isMatch, &

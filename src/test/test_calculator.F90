@@ -168,6 +168,14 @@ _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 call ESMF_CplCompRun(calculatorCplComp, exportState=exportState, &
   importState=importState, clock=clock, phase=1, rc=localrc)
 _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+call ESMF_CplCompRun(calculatorCplComp, exportState=exportState, &
+  importState=importState, clock=clock, phase=1, rc=localrc)
+_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+call ESMF_CplCompRun(calculatorCplComp, exportState=exportState, &
+  importState=importState, clock=clock, phase=1, rc=localrc)
+_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 !
 ! call MOSSCO_StateGet(exportState, fieldList=exportFieldList, &
 !   fieldCount=exportFieldCount, rc=localrc)

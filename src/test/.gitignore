@@ -23,4 +23,5 @@ test_Ugrid
 test_mossco_netcdf
 test_netcdf.nc
 test_Coupler
+test_calculator
 *dSYM
