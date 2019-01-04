@@ -677,7 +677,7 @@ module calculator
               endwhere
             case ('sqrt')
               where(stack(sp)%mask1 .and. stack(sp)%farray1 > -tiny(0.0d0))
-                stack(sp)%farray1 = log10(stack(sp)%farray1)
+                stack(sp)%farray1 = sqrt(stack(sp)%farray1)
               endwhere
             case ('sin')
               where(stack(sp)%mask1) ; stack(sp)%farray1 = sin(stack(sp)%farray1); endwhere
@@ -716,7 +716,7 @@ module calculator
               endwhere
             case ('sqrt')
               where(stack(sp)%mask2 .and. stack(sp)%farray2 > -tiny(0.0d0))
-                stack(sp)%farray2 = log10(stack(sp)%farray2)
+                stack(sp)%farray2 = sqrt(stack(sp)%farray2)
               endwhere
             case ('sin')
               where(stack(sp)%mask2) ; stack(sp)%farray2 = sin(stack(sp)%farray2); endwhere
@@ -755,7 +755,7 @@ module calculator
               endwhere
             case ('sqrt')
               where(stack(sp)%mask3 .and. stack(sp)%farray3 > -tiny(0.0d0))
-                stack(sp)%farray3 = log10(stack(sp)%farray3)
+                stack(sp)%farray3 = sqrt(stack(sp)%farray3)
               endwhere
             case ('sin')
               where(stack(sp)%mask3) ; stack(sp)%farray3 = sin(stack(sp)%farray3); endwhere
@@ -769,10 +769,13 @@ module calculator
               elseif (trim(adjustl(rpnList(j,1)))=='vsum') then
                 stack(sp)%farray2 = sum(stack(sp)%farray3, &
                   dim=stack(sp)%rank, mask=stack(sp)%mask3)
-              elseif (trim(adjustl(rpnList(j,1)))=='vsum') then
+              elseif (trim(adjustl(rpnList(j,1)))=='vmean') then
                 stack(sp)%farray2 = sum(stack(sp)%farray3, &
                   dim=stack(sp)%rank, mask=stack(sp)%mask3) / &
                   count(stack(sp)%mask3,dim=stack(sp)%rank)
+              else
+                localrc = ESMF_RC_NOT_IMPL
+                _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
               endif
               stack(sp)%mask2 = all(stack(sp)%mask3, dim=stack(sp)%rank)
               deallocate(stack(sp)%mask3,stack(sp)%farray3)
@@ -817,7 +820,7 @@ module calculator
               endwhere
             case ('sqrt')
               where(stack(sp)%mask4 .and. stack(sp)%farray4 > -tiny(0.0d0))
-                stack(sp)%farray4 = log10(stack(sp)%farray4)
+                stack(sp)%farray4 = sqrt(stack(sp)%farray4)
               endwhere
             case ('sin')
               where(stack(sp)%mask4) ; stack(sp)%farray4 = sin(stack(sp)%farray4); endwhere
