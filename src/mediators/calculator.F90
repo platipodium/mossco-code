@@ -301,6 +301,7 @@ module calculator
     logical                         :: isMatch, verbose
     character(len=ESMF_MAXSTR), allocatable, dimension(:) :: binaryOperatorList
     character(len=ESMF_MAXSTR), allocatable, dimension(:) :: unaryOperatorList
+    character(len=ESMF_MAXSTR), allocatable, dimension(:) :: reductionOperatorList
 
     integer(ESMF_KIND_I4)              :: sp
     character(len=ESMF_MAXSTR)         :: rpnTypeString
@@ -317,7 +318,7 @@ module calculator
     type(ESMF_FieldStatus_Flag)      :: fieldStatus
     type(ESMF_GeomType_Flag)         :: geomType = ESMF_GEOMTYPE_GRID
     type(ESMF_Mesh)                  :: mesh
-    type(ESMF_Grid)                  :: grid
+    type(ESMF_Grid)                  :: grid, grid3
 
     rc = ESMF_SUCCESS
 
@@ -325,8 +326,10 @@ module calculator
     binaryOperatorList = (/'*  ','/  ','+  ','-  ','** ','^  ','%  ','mod', &
       'rem','pow'/)
     allocate(unaryOperatorList(13))
-    unaryOperatorList = (/'e   ','log ','ln  ','exp ', 'lg  ','sin ', 'cos ', &
-      'tan ', 'sqrt','asin','atan','acos','abs '/)
+    unaryOperatorList = (/'e    ','log  ','ln   ','exp  ', 'lg   ','sin  ', 'cos  ', &
+      'tan  ', 'sqrt ','asin ','atan ','acos ','abs  '/)
+    allocate(reductionOperatorList(4))
+    reductionOperatorList = (/'vmean','vsum ','upper','lower'/)
 
     call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -398,6 +401,15 @@ module calculator
 
       do j=1, size(rpnList)
 
+        call MOSSCO_StringFind(rpnList(j,1), reductionOperatorList, &
+          isMatch=isMatch, owner=name, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        if (isMatch) then
+          rpnTypeString(j:j) = 'r' ! unary reduction operator
+          cycle
+        endif
+
         call MOSSCO_StringFind(rpnList(j,1), unaryOperatorList, &
           isMatch=isMatch, owner=name, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -422,49 +434,75 @@ module calculator
           cycle
         endif
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      enddo !j=1, size(rpnList), looking for operators 'rub'
+
+      do j=1, size(rpnList)
+
+        !> Skip operators which we have dealt with
+        if (index('rub',rpnTypeString(j:j))>0) cycle
 
         if (allocated(matchIndex)) deallocate(matchIndex)
         call MOSSCO_StringFind(rpnList(j,1), itemNameList, isMatch=isMatch, &
           matchIndex=matchIndex, owner=name, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        if (isMatch) then
-          rpnTypeString(j:j) = 's' ! this is a symbol
 
-          !> @todo consider alias
-          includeList(1) = itemNameList(matchIndex(1))
-          call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
-            include=includeList, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), &
-            rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-          if (fieldCount == 0) then
-            write(message, '(A)') trim(name)//' could not find complete item "'// &
-              trim(includeList(1))//'" required to calculate '//trim(exportList(i,1))
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-            rc = ESMF_RC_NOT_FOUND
-            return
-          endif
-
-          importFieldList(j) = fieldList(1)
-
-          call ESMF_FieldGet(fieldList(1), geomType=geomType, rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-          if (geomType == ESMF_GEOMTYPE_MESH) then
-            call ESMF_FieldGet(fieldList(1), mesh=mesh, rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-          elseif (geomType == ESMF_GEOMTYPE_GRID) then
-            call ESMF_FieldGet(fieldList(1), grid=grid, rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-          else
-            localrc = ESMF_RC_NOT_IMPL
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-          endif
-
+        if (.not.isMatch) then
+          write(message,'(A)') trim(name)//' item "'//trim(rpnList(j,1))// &
+            '" is not operator or input or number.'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
           cycle
         endif
 
-        write(message,'(A)') trim(name)//' item "'//trim(rpnList(j,1))// &
-          '" is not operator or input or number.'
+        rpnTypeString(j:j) = 's' ! this is a symbol
+
+        !> @todo consider alias
+        includeList(1) = itemNameList(matchIndex(1))
+        call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
+          include=includeList, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), &
+          rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        if (fieldCount == 0) then
+          write(message, '(A)') trim(name)//' could not find complete item "'// &
+            trim(includeList(1))//'" required to calculate '//trim(exportList(i,1))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+          rc = ESMF_RC_NOT_FOUND
+          return
+        endif
+
+        importFieldList(j) = fieldList(1)
+
+        call ESMF_FieldGet(fieldList(1), geomType=geomType, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        if (geomType == ESMF_GEOMTYPE_MESH) then
+          call ESMF_FieldGet(fieldList(1), mesh=mesh, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        elseif (geomType == ESMF_GEOMTYPE_GRID) then
+
+          call ESMF_FieldGet(fieldList(1), grid=grid, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          !> Reduce the grid if reduction operator present
+          if (index(rpnTypeString,'r') > 0) then
+
+            call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+            if (rank /= 3) then
+              localrc = ESMF_RC_NOT_IMPL
+              _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+            endif
+
+            grid3 = grid
+            grid = MOSSCO_GridCreateFromOtherGrid(grid3, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          endif
+        else
+          localrc = ESMF_RC_NOT_IMPL
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        endif
+
+        cycle
       enddo
 
       includeList(1) = exportList(i,1)
@@ -504,7 +542,7 @@ module calculator
       do j=lbound(rpnList,1), ubound(rpnList,1)
 
         !> push item onto stack if it is not an operator
-        if (index('ub', rpnTypeString(j:j)) < 1) then
+        if (index('rub', rpnTypeString(j:j)) < 1) then
           sp = sp + 1
 
           if (rpnTypeString(j:j) == 'd') then
@@ -573,10 +611,10 @@ module calculator
           cycle
         endif
 
-        !> We found an operator, deal with unary first, i.e. pop item off the
+        !> We found an operator, deal with unary and reduction first, i.e. pop item off the
         !> stack, operate on it, and push it back.  The stack pointer is not
         !> changed
-        if (rpnTypeString(j:j) == 'u') then
+        if (index('ru', rpnTypeString(j:j)) > 0) then
           write(0,*) 'rpn',j, sp, stack(sp)%rank, rpnTypeString(1:j), trim(rpnList(j,1))
           if (sp < 1) localrc=ESMF_RC_ARG_BAD
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -721,13 +759,36 @@ module calculator
               endwhere
             case ('sin')
               where(stack(sp)%mask3) ; stack(sp)%farray3 = sin(stack(sp)%farray3); endwhere
+            case ('lower','upper','vmean','vsum')
+              allocate(stack(sp)%mask2(RANGE2D))
+              allocate(stack(sp)%farray2(RANGE2D))
+              if (trim(adjustl(rpnList(j,1)))=='lower') then
+                stack(sp)%farray2 = stack(sp)%farray3(RANGE2D,lbnd(3))
+              elseif (trim(adjustl(rpnList(j,1)))=='upper') then
+                stack(sp)%farray2 = stack(sp)%farray3(RANGE2D,ubnd(3))
+              elseif (trim(adjustl(rpnList(j,1)))=='vsum') then
+                stack(sp)%farray2 = sum(stack(sp)%farray3, &
+                  dim=stack(sp)%rank, mask=stack(sp)%mask3)
+              elseif (trim(adjustl(rpnList(j,1)))=='vsum') then
+                stack(sp)%farray2 = sum(stack(sp)%farray3, &
+                  dim=stack(sp)%rank, mask=stack(sp)%mask3) / &
+                  count(stack(sp)%mask3,dim=stack(sp)%rank)
+              endif
+              stack(sp)%mask2 = all(stack(sp)%mask3, dim=stack(sp)%rank)
+              deallocate(stack(sp)%mask3,stack(sp)%farray3)
+              stack(sp)%rank=stack(sp)%rank-1
             case default
               write(message,'(A,I1)') trim(name)//' does not implement operation "'// &
                 rpnList(j,1)//'" for rank ',stack(sp)%rank
               call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
             end select
-            write(message,'(A,ES10.3)') trim(message)//' = ', &
-              sum(stack(sp)%farray3,stack(sp)%mask3)/count(stack(sp)%mask3)
+            if (stack(sp)%rank == 3) then
+              write(message,'(A,ES10.3)') trim(message)//' = ', &
+                sum(stack(sp)%farray3,stack(sp)%mask3)/count(stack(sp)%mask3)
+            elseif (stack(sp)%rank == 2) then
+              write(message,'(A,ES10.3)') trim(message)//' = ', &
+                sum(stack(sp)%farray2,stack(sp)%mask2)/count(stack(sp)%mask2)
+            endif
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
           case (4)
             write(message,'(A,ES10.3,A)') trim(name)//' calculates '//&
@@ -1232,6 +1293,7 @@ module calculator
 
     if (allocated(exportList)) deallocate(exportList)
     if (associated(includeList)) deallocate(includeList)
+    if (allocated(reductionOperatorList)) deallocate(reductionOperatorList)
     if (allocated(unaryOperatorList)) deallocate(unaryOperatorList)
     if (allocated(binaryOperatorList)) deallocate(binaryOperatorList)
     if (allocated(scalarList)) deallocate(scalarList)

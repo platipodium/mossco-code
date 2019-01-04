@@ -41,7 +41,7 @@ type(ESMF_State)       :: importState, exportState
 integer                :: localrc, i, exportFieldCount, importFieldCount, rc
 character(len=ESMF_MAXSTR) :: message
 type(ESMF_Mesh)        :: mesh
-type(ESMF_Grid)        :: grid
+type(ESMF_Grid)        :: grid2, grid3
 
 call ESMF_Initialize(defaultCalKind=ESMF_CALKIND_GREGORIAN, rc=localrc)
 _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -77,8 +77,22 @@ importState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT, &
   name='importState')
 _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-grid = ESMF_GridCreateNoPeriDim(maxIndex=(/15, 20/), &
-  name="15by20", rc=localrc)
+grid2 = ESMF_GridCreateNoPeriDim(maxIndex=(/15, 20/), &
+  name="15by20", coordSys=ESMF_COORDSYS_SPH_DEG, indexflag=ESMF_INDEX_GLOBAL,  &
+  coordTypeKind=ESMF_TYPEKIND_R8, coordDep1=(/1/),&
+  coorddep2=(/2/), rc=localrc)
+_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+call ESMF_GridAddCoord(grid2, rc=localrc)
+_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+grid3 = ESMF_GridCreateNoPeriDim(maxIndex=(/15, 20, 5/), &
+  name="15by20by5", coordSys=ESMF_COORDSYS_SPH_DEG, indexflag=ESMF_INDEX_GLOBAL,  &
+  coordTypeKind=ESMF_TYPEKIND_R8, coordDep1=(/1/), &
+  coorddep2=(/2/),rc=localrc)
+_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+call ESMF_GridAddCoord(grid3, rc=localrc)
 _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
 mesh = MOSSCO_MeshCreate(rc=localrc)
@@ -87,13 +101,13 @@ _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 field = ESMF_FieldEmptyCreate(name = 'x', rc=localrc)
 _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-call ESMF_FieldEmptySet(field, grid=grid, rc=localrc)
+call ESMF_FieldEmptySet(field, grid=grid2, rc=localrc)
 _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
 call ESMF_FieldEmptyComplete(field, typeKind=ESMF_TYPEKIND_R8, rc=localrc)
 _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-call MOSSCO_FieldInitialize(field, value=2.0d0, rc=localrc)
+call MOSSCO_FieldInitialize(field, value=4.0d0, rc=localrc)
 _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
 call ESMF_StateAddReplace(importState, (/field/), rc=localrc)
@@ -102,13 +116,28 @@ _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 field = ESMF_FieldEmptyCreate(name = 'y', rc=localrc)
 _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-call ESMF_FieldEmptySet(field, grid=grid, rc=localrc)
+call ESMF_FieldEmptySet(field, grid=grid2, rc=localrc)
 _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
 call ESMF_FieldEmptyComplete(field, typeKind=ESMF_TYPEKIND_R8, rc=localrc)
 _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-call MOSSCO_FieldInitialize(field, value=1.0d0, rc=localrc)
+call MOSSCO_FieldInitialize(field, value=3.0d0, rc=localrc)
+_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+call ESMF_StateAddReplace(importState, (/field/), rc=localrc)
+_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+field = ESMF_FieldEmptyCreate(name = 't', rc=localrc)
+_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+call ESMF_FieldEmptySet(field, grid=grid3, rc=localrc)
+_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+call ESMF_FieldEmptyComplete(field, typeKind=ESMF_TYPEKIND_R8, rc=localrc)
+_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+call MOSSCO_FieldInitialize(field, value=2.0d0, rc=localrc)
 _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
 call ESMF_StateAddReplace(importState, (/field/), rc=localrc)
