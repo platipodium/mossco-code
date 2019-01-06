@@ -480,7 +480,7 @@ fid.write('''
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1438,7 +1438,7 @@ fid.write('''
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Flush the log at the end of Initialize()
@@ -1485,7 +1485,8 @@ fid.write('''
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name=myName, currTime=currTime, importState=importState, &
+    call MOSSCO_CompEntry(gridComp, parentClock, name=myName, currTime=currTime, &
+      importState=importState, &
       exportState=exportState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -2122,7 +2123,7 @@ fid.write('''
     if (allocated(wallTimeStart)) deallocate(wallTimeStart)
     if (allocated(wallTimeStop)) deallocate(wallTimeStop)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Run
@@ -2261,7 +2262,7 @@ fid.write('''
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -2488,7 +2489,7 @@ libsurfacescouplerlibaocoupler liblinkcoupler libxgridcoupler libregridcoupler l
 libmossco_connector:
 	$(MAKE) -C $(MOSSCO_DIR)/src/connectors $@
 
-libverticalreduction: 
+libverticalreduction:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
 libremtc:

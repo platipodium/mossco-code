@@ -83,7 +83,7 @@ module pelagic_benthic_coupler
 
     rc = ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
@@ -95,7 +95,7 @@ module pelagic_benthic_coupler
       convention="NUOPC", purpose="General", rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP0
@@ -129,7 +129,7 @@ module pelagic_benthic_coupler
 
     rc = ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, externalClock, name=name, currTime=currTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     ! Search for suitable 2D field in export state (first found will be used)
@@ -270,7 +270,7 @@ module pelagic_benthic_coupler
 		  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP1
@@ -311,7 +311,7 @@ module pelagic_benthic_coupler
 
     rc = ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, externalClock, name=name, currTime=currTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> fdet + sdet = CN_det*det
@@ -486,7 +486,7 @@ module pelagic_benthic_coupler
 
     ptr_f2 = DIP(lbnd(1):ubnd(1),lbnd(2):ubnd(2),Plbnd(3))
 
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Run
@@ -504,13 +504,13 @@ module pelagic_benthic_coupler
     type(ESMF_Time)             :: currTime, stopTime
     integer                     :: localrc
 
-    call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, externalClock, name=name, currTime=currTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !call ESMF_ArraySpecDestroy(pelagic_bdy_array, rc)
     call ESMF_GridDestroy(pelagic_bdy_grid, rc=localrc)
 
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Finalize

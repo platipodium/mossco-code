@@ -84,7 +84,7 @@ module calculator
     type(ESMF_Time)             :: currTime
     integer(ESMF_KIND_I4)       :: localrc
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
@@ -103,7 +103,7 @@ module calculator
     call ESMF_StateReconcile(exportState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP0
@@ -130,7 +130,7 @@ module calculator
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     configfilename=trim(name)//'.cfg'
@@ -234,7 +234,7 @@ module calculator
 
     rc = ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_CreateCalculatedExportFields(cplComp, importState, exportState, rc=localrc)
@@ -244,7 +244,7 @@ module calculator
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !! Finally, log the successful completion of this function
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Run
@@ -282,7 +282,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
 
     end if
 
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Finalize

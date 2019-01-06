@@ -133,7 +133,7 @@ module clm_netcdf_component
       convention="NUOPC", purpose="General", rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP0
@@ -420,7 +420,7 @@ module clm_netcdf_component
 
     deallocate ( de )
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     end subroutine InitializeP1
@@ -521,7 +521,7 @@ module clm_netcdf_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Run
@@ -578,7 +578,7 @@ module clm_netcdf_component
 
     call CLM_final(localPet)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Finalize

@@ -106,7 +106,7 @@ module pelagic_soil_connector
 
     rc = ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
@@ -119,7 +119,7 @@ module pelagic_soil_connector
       convention="NUOPC", purpose="General", rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP0
@@ -147,7 +147,7 @@ module pelagic_soil_connector
 
     rc = ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !read namelist,
@@ -161,7 +161,7 @@ module pelagic_soil_connector
 
     !> @todo: check for necessary fields in export state?
 
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP1
@@ -253,7 +253,7 @@ module pelagic_soil_connector
     lbnd(:) = 1
     ubnd(:) = 1
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, rc=localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_ClockGet(parentClock, startTime=startTime, rc=localrc)
@@ -2033,7 +2033,7 @@ module pelagic_soil_connector
     call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Run
@@ -2051,10 +2051,10 @@ module pelagic_soil_connector
     type(ESMF_Time)             :: currTime, stopTime
     integer                     :: localrc
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Finalize

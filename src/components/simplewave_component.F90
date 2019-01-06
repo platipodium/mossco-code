@@ -104,7 +104,7 @@ module simplewave_component
       convention="NUOPC", purpose="General", rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP0
@@ -348,7 +348,7 @@ module simplewave_component
     if (allocated(totalLWidth)) deallocate(totalLWidth)
     !> @todo add optional fields (see Run method)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP1
@@ -474,7 +474,7 @@ module simplewave_component
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
 
           rc = ESMF_RC_ARG_OUTOFRANGE
-          call MOSSCO_CompExit(gridComp, localrc)
+          call MOSSCO_CompExit(gridComp, rc=localrc)
           return
         endif
 
@@ -534,7 +534,7 @@ module simplewave_component
 
     call do_simplewave()
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP2
@@ -570,7 +570,7 @@ module simplewave_component
     call ESMF_ClockAdvance(myClock, timeStep=nextTime-currTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Run

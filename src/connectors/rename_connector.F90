@@ -2,7 +2,7 @@
 !> @file rename_connector.F90
 !!
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -77,7 +77,7 @@ module rename_connector
     type(ESMF_Time)             :: currTime
     integer(ESMF_KIND_I4)       :: localrc
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -93,7 +93,7 @@ module rename_connector
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -117,7 +117,7 @@ module rename_connector
     !! with a prior ESMF_cplCompCreate() call.  If not, then create
     !! a local clock as a clone of the parent clock, and associate it
     !! with this component.  Finally, set the name of the local clock
-    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -125,7 +125,7 @@ module rename_connector
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_CompExit(cplComp, rc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -147,7 +147,7 @@ module rename_connector
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -168,7 +168,7 @@ module rename_connector
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Finally, log the successful completion of this function
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -186,8 +186,9 @@ module rename_connector
     character(ESMF_MAXSTR)  :: name
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
+    integer(ESMF_KIND_I4)   :: localrc
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, rc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     call ESMF_cplCompGet(cplComp, clock=clock, rc=rc)
@@ -197,7 +198,7 @@ module rename_connector
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     !! Finally, log the successful completion of this function
-    call MOSSCO_CompExit(cplComp, rc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
   end subroutine Finalize

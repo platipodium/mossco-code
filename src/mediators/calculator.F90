@@ -96,7 +96,7 @@ module calculator
     type(ESMF_Time)             :: currTime
     integer(ESMF_KIND_I4)       :: localrc
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
@@ -115,7 +115,7 @@ module calculator
     call ESMF_StateReconcile(exportState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP0
@@ -145,7 +145,7 @@ module calculator
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     configfilename=trim(name)//'.cfg'
@@ -272,7 +272,7 @@ module calculator
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     enddo
 
-    call MOSSCO_CompExit(cplComp, rc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP1
@@ -323,15 +323,16 @@ module calculator
     rc = ESMF_SUCCESS
 
     allocate(binaryOperatorList(10))
-    binaryOperatorList = (/'*  ','/  ','+  ','-  ','** ','^  ','%  ','mod', &
-      'rem','pow'/)
+    binaryOperatorList(1:6)  = (/'*','/','+','-','^ ','%'/)
+    binaryOperatorList(7:10) =(/'** ','mod','rem','pow'/)
+    binaryOperatorList(11:12) =(/'ubound','lbound'/)
     allocate(unaryOperatorList(13))
     unaryOperatorList = (/'e    ','log  ','ln   ','exp  ', 'lg   ','sin  ', 'cos  ', &
       'tan  ', 'sqrt ','asin ','atan ','acos ','abs  '/)
     allocate(reductionOperatorList(4))
-    reductionOperatorList = (/'vmean','vsum ','upper','lower'/)
+    reductionOperatorList = (/'vmean','vsum ','upper','lower','vmax ','vmin '/)
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     verbose = .true.
@@ -759,13 +760,19 @@ module calculator
               endwhere
             case ('sin')
               where(stack(sp)%mask3) ; stack(sp)%farray3 = sin(stack(sp)%farray3); endwhere
-            case ('lower','upper','vmean','vsum')
+            case ('lower','upper','vmean','vsum','vmax','vmin')
               allocate(stack(sp)%mask2(RANGE2D))
               allocate(stack(sp)%farray2(RANGE2D))
               if (trim(adjustl(rpnList(j,1)))=='lower') then
                 stack(sp)%farray2 = stack(sp)%farray3(RANGE2D,lbnd(3))
               elseif (trim(adjustl(rpnList(j,1)))=='upper') then
                 stack(sp)%farray2 = stack(sp)%farray3(RANGE2D,ubnd(3))
+              elseif (trim(adjustl(rpnList(j,1)))=='vmin') then
+                stack(sp)%farray2 = minval(stack(sp)%farray3, &
+                  dim=stack(sp)%rank, mask=stack(sp)%mask3)
+              elseif (trim(adjustl(rpnList(j,1)))=='vmax') then
+                stack(sp)%farray2 = maxval(stack(sp)%farray3, &
+                  dim=stack(sp)%rank, mask=stack(sp)%mask3)
               elseif (trim(adjustl(rpnList(j,1)))=='vsum') then
                 stack(sp)%farray2 = sum(stack(sp)%farray3, &
                   dim=stack(sp)%rank, mask=stack(sp)%mask3)
@@ -892,6 +899,10 @@ module calculator
                 stack(sp-1)%scalar(1) = stack(sp-1)%scalar(1) ** stack(sp)%scalar(1)
               case('%','mod')
                 stack(sp-1)%scalar(1)  = modulo(stack(sp-1)%scalar(1) ,stack(sp)%scalar(1))
+              case('ubound')
+                stack(sp-1)%scalar(1)  = min(stack(sp-1)%scalar(1) ,stack(sp)%scalar(1))
+              case('lbound')
+                stack(sp-1)%scalar(1)  = max(stack(sp-1)%scalar(1) ,stack(sp)%scalar(1))
               case default
                 write(message,'(A,I1,A)') trim(name)//' does not implement operation "'// &
                   rpnList(j,1)//'" for two scalars'
@@ -932,6 +943,14 @@ module calculator
               case('%','mod')
                 where(stack(sp-1)%mask1)
                   stack(sp-1)%farray1 = modulo(stack(sp-1)%farray1,stack(sp)%scalar(1))
+                endwhere
+              case('ubound')
+                where(stack(sp-1)%mask1)
+                  stack(sp-1)%farray1 = min(stack(sp-1)%farray1,stack(sp)%scalar(1))
+                endwhere
+              case('lbound')
+                where(stack(sp-1)%mask1)
+                  stack(sp-1)%farray1 = max(stack(sp-1)%farray1,stack(sp)%scalar(1))
                 endwhere
               case default
                 write(message,'(A,I1,A)') trim(name)//' does not implement operation "'// &
@@ -1308,7 +1327,7 @@ module calculator
     if (allocated(itemNameList)) deallocate(itemNameList)
 
     !! Finally, log the successful completion of this function
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Run
@@ -1347,7 +1366,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
 
     end if
 
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Finalize

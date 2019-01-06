@@ -142,7 +142,7 @@ module regrid_coupler
 
     rc = ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(CplComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !> Read (optionally) the associated config file and configure
@@ -633,7 +633,7 @@ module regrid_coupler
     if (allocated(srcMaskValues)) deallocate(srcMaskValues)
     if (allocated(dstMaskValues)) deallocate(dstMaskValues)
 
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Initialize
@@ -678,7 +678,7 @@ module regrid_coupler
     rc = ESMF_SUCCESS
     rank = 0
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !> If there are no routes, then don't do anything
@@ -688,7 +688,7 @@ module regrid_coupler
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
-      call MOSSCO_CompExit(cplComp, localrc)
+      call MOSSCO_CompExit(cplComp, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       return
@@ -869,7 +869,7 @@ module regrid_coupler
     if (allocated(ubnd)) deallocate(ubnd)
     if (allocated(lbnd)) deallocate(lbnd)
 
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Run
@@ -895,7 +895,7 @@ module regrid_coupler
 
     rc = ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(CplComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (allocated(Routes)) then
@@ -914,7 +914,7 @@ module regrid_coupler
     !if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Finalize

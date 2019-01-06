@@ -132,7 +132,7 @@ module hamsom_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -244,7 +244,7 @@ module hamsom_component
     !MK: dont know if needed
     !call getmCmp_update_exportState()
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -345,7 +345,7 @@ module hamsom_component
     !call getmCmp_update_grid(gridComp)
     !call getmCmp_update_exportState()
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -381,7 +381,7 @@ module hamsom_component
 
     call finalize_hamsom()
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 

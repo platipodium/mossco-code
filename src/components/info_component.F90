@@ -113,7 +113,7 @@ module info_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP0
@@ -425,7 +425,7 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 

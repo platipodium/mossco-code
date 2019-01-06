@@ -132,7 +132,7 @@ module fabm_pelagic_component
       convention="NUOPC", purpose="General", rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP0
@@ -1340,7 +1340,7 @@ module fabm_pelagic_component
     !!       and forcing
     call pel%update_export_states(update_sinking=.true.)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP1
@@ -1395,7 +1395,7 @@ module fabm_pelagic_component
     !> update sinking after restart
     call pel%update_export_states(update_sinking=.true.)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP2
@@ -1588,7 +1588,7 @@ module fabm_pelagic_component
     !> update sinking after restart
     call pel%update_export_states(update_sinking=.true.)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine ReadRestart
@@ -2107,7 +2107,7 @@ module fabm_pelagic_component
     !> prepare component's export
     call pel%update_export_states()
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Run
@@ -2139,7 +2139,7 @@ module fabm_pelagic_component
 
     if (associated(bfl)) deallocate(bfl)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Finalize

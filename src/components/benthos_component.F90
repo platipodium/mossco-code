@@ -134,7 +134,7 @@ contains
     if (isPresent) call ESMF_StateValidate(exportState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP0
@@ -355,7 +355,7 @@ contains
 
     end do
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP1
@@ -521,7 +521,7 @@ contains
         write(message,'(A)') trim(name)//' erroneous empty field '//&
           trim(importList(i)%name)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-        call MOSSCO_CompExit(gridComp, localrc)
+        call MOSSCO_CompExit(gridComp, rc=localrc)
         rc = ESMF_RC_NOT_FOUND
         return
       end if
@@ -569,7 +569,7 @@ contains
     call ESMF_StatePrint(exportstate, nestedFlag=.true.,rc=rc)
 #endif
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP2
@@ -635,7 +635,7 @@ contains
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     enddo
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine ReadRestart
@@ -772,7 +772,7 @@ contains
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Run
@@ -835,7 +835,7 @@ contains
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Finalize

@@ -106,7 +106,7 @@ module vertical_macrobenthos_component
       convention="NUOPC", purpose="General", rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP0
@@ -184,7 +184,7 @@ module vertical_macrobenthos_component
 
     else
       rc = ESMF_RC_NOT_IMPL
-      call MOSSCO_CompExit(gridComp, localrc)
+      call MOSSCO_CompExit(gridComp, rc=localrc)
       return
     endif
 
@@ -193,7 +193,7 @@ module vertical_macrobenthos_component
       call ESMF_GridGet(grid, rank=rank, rc=localrc)
       if (rank /= 2) then
         rc = ESMF_RC_NOT_IMPL
-        call MOSSCO_CompExit(gridComp, localrc)
+        call MOSSCO_CompExit(gridComp, rc=localrc)
         return
       endif
 
@@ -202,7 +202,7 @@ module vertical_macrobenthos_component
 
     else
       rc = ESMF_RC_NOT_IMPL
-      call MOSSCO_CompExit(gridComp, localrc)
+      call MOSSCO_CompExit(gridComp, rc=localrc)
       return
     endif
 
@@ -259,7 +259,7 @@ module vertical_macrobenthos_component
     enddo
     deallocate(itemNameList)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP1
@@ -311,7 +311,7 @@ module vertical_macrobenthos_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Finally, log the successful completion of this function
-    call MOSSCO_CompExit(gridComp, rc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 

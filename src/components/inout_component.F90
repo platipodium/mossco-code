@@ -92,7 +92,7 @@ module inout_component
     call ESMF_AttributeSet(gridComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
       convention="NUOPC", purpose="General", rc=rc)
 
-    call MOSSCO_CompExit(gridComp, rc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
   end subroutine InitializeP0
@@ -122,7 +122,7 @@ module inout_component
     exportState=importState
 
     !! Finally, log the successful completion of this function
-    call MOSSCO_CompExit(gridComp, rc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
   end subroutine InitializeP1
@@ -186,7 +186,7 @@ module inout_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     !! Finally, log the successful completion of this function
-    call MOSSCO_CompExit(gridComp, rc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
   end subroutine Run
@@ -222,7 +222,7 @@ module inout_component
     !! 2. Deallocate all your model's internal allocated memory
 
     !! Finally, log the successful completion of this function
-    call MOSSCO_CompExit(gridComp, rc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
   end subroutine Finalize

@@ -101,7 +101,7 @@ end type spVariable
 
     rc = ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
@@ -114,7 +114,7 @@ end type spVariable
       convention="NUOPC", purpose="General", rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP0
@@ -209,7 +209,7 @@ end type spVariable
     logical          :: isEqual, isPresent
 
     rc = ESMF_SUCCESS
-    call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, externalClock, name=name, currTime=currTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_ClockGet(externalClock, advanceCount=advanceCount, rc=localrc)
@@ -974,7 +974,7 @@ end type spVariable
     call MOSSCO_Reallocate(importFieldList, 0, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Run
@@ -994,7 +994,7 @@ end type spVariable
     integer                     :: localrc
     type(ESMF_StateItem_Flag)   :: exportItemType, importItemType
 
-    call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, externalClock, name=name, currTime=currTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
 #if 0
@@ -1029,7 +1029,7 @@ end type spVariable
 #endif
 
     !! Exit the method
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Finalize

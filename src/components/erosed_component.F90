@@ -201,7 +201,7 @@ module erosed_component
     if (isPresent) call ESMF_StateValidate(exportState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP0
@@ -612,7 +612,7 @@ module erosed_component
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         write(message,'(A)') trim(name)//' hint: check nfrac is consistent in fabm.nml, benthic.nml and sedparams.txt'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-        call MOSSCO_CompExit(gridComp, localrc)
+        call MOSSCO_CompExit(gridComp, rc=localrc)
         localrc = ESMF_RC_NOT_FOUND
         return
       endif
@@ -942,7 +942,7 @@ module erosed_component
     call ESMF_StateAddReplace(exportState, (/paramState/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP1
@@ -1448,7 +1448,7 @@ module erosed_component
     call MOSSCO_Reallocate(spmFieldList, 0, rc=localrc)
     call MOSSCO_Reallocate(fluxFieldList, 0, rc=localrc)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP2
@@ -1499,7 +1499,7 @@ module erosed_component
       write(message, '(A)') trim(name)//' did not hotstart'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       if (allocated(importFieldList)) deallocate(importFieldList)
-      call MOSSCO_CompExit(gridComp, localrc)
+      call MOSSCO_CompExit(gridComp, rc=localrc)
       return
     endif
 
@@ -1507,7 +1507,7 @@ module erosed_component
       write(message, '(A)') trim(name)//' cannot handle more than one field with sediment mass yet'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       if (allocated(importFieldList)) deallocate(importFieldList)
-      call MOSSCO_CompExit(gridComp, localrc)
+      call MOSSCO_CompExit(gridComp, rc=localrc)
       rc = ESMF_RC_NOT_IMPL
       return
     endif
@@ -1519,7 +1519,7 @@ module erosed_component
       write(message, '(A,I1)') trim(name)//' cannot yet handle field with rank ',rank
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       if (allocated(importFieldList)) deallocate(importFieldList)
-      call MOSSCO_CompExit(gridComp, localrc)
+      call MOSSCO_CompExit(gridComp, rc=localrc)
       rc = ESMF_RC_NOT_IMPL
       return
     endif
@@ -1585,7 +1585,7 @@ module erosed_component
       write(message, '(A)') trim(name)//' could not find field sediment_mass_in_bed'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       if (allocated(exportFieldList)) deallocate(exportFieldList)
-      call MOSSCO_CompExit(gridComp, localrc)
+      call MOSSCO_CompExit(gridComp, rc=localrc)
       rc = ESMF_RC_NOT_IMPL
       return
     endif
@@ -1594,7 +1594,7 @@ module erosed_component
       write(message, '(A)') trim(name)//' cannot handle more than one field with sediment mass'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       if (allocated(exportFieldList)) deallocate(exportFieldList)
-      call MOSSCO_CompExit(gridComp, localrc)
+      call MOSSCO_CompExit(gridComp, rc=localrc)
       rc = ESMF_RC_NOT_IMPL
       return
     endif
@@ -1628,7 +1628,7 @@ module erosed_component
     if (allocated(ubnd)) deallocate(ubnd)
     if (allocated(lbnd)) deallocate(lbnd)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine ReadRestart
@@ -2031,7 +2031,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (istat /= 0) then
       write(message,'(A)') trim(name)//' cannot allocate memory for relative_layer_thickness'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-      call MOSSCO_CompExit(gridComp, localrc)
+      call MOSSCO_CompExit(gridComp, rc=localrc)
       rc = ESMF_RC_MEM_ALLOCATE
       return
     end if
@@ -2043,7 +2043,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (istat /= 0) then
       write(message,'(A)') trim(name)//' cannot allocate memory for mid_layer'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-      call MOSSCO_CompExit(gridComp, localrc)
+      call MOSSCO_CompExit(gridComp, rc=localrc)
       rc = ESMF_RC_MEM_ALLOCATE
       return
     end if
@@ -2571,7 +2571,7 @@ endif
   if (allocated(mask1)) deallocate(mask1)
   if (allocated(farray1)) deallocate(farray1)
 
-  call MOSSCO_CompExit(gridComp, localrc)
+  call MOSSCO_CompExit(gridComp, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
 end subroutine Run
@@ -2598,7 +2598,7 @@ end subroutine Run
       importState=importState, exportState=exportState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
 
     return
 #ifdef DEBUG
@@ -2700,7 +2700,7 @@ end subroutine Run
     !call MOSSCO_DestroyOwn(exportState, trim(name), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Finalize

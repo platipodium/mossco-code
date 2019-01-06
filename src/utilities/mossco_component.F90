@@ -49,7 +49,6 @@ public MOSSCO_GridCompFinalize
 public MOSSCO_GridCompReadRestart
 public MOSSCO_CplCompFinalize
 
-
 public MOSSCO_CompExit
 public MOSSCO_CompEntry
 public MOSSCO_CompLog
@@ -62,13 +61,14 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_CplCompEntry"
-  subroutine MOSSCO_CplCompEntry(cplComp, parentClock, name, currTime, rc)
+  subroutine MOSSCO_CplCompEntry(cplComp, parentClock, kwe, name, currTime, rc)
 
     type(ESMF_CplComp), intent(inout)              :: cplComp
     type(ESMF_Clock), intent(in)                   :: parentClock
-    character(len=*), intent(out), optional  :: name
+    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+    character(len=*), intent(out), optional        :: name
     type(ESMF_Time), intent(out), optional         :: currTime
-    integer, intent(out), optional                 :: rc
+    integer(ESMF_KIND_I4), intent(out), optional   :: rc
 
     character(ESMF_MAXSTR)  :: name_
     type(ESMF_Time)         :: currTime_
@@ -91,11 +91,13 @@ contains
 
     rc_=ESMF_SUCCESS
 
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc))  rc = rc_
+
     call ESMF_CplCompGet(cplComp, name=name_, clockIsPresent=clockIsPresent, &
       configIsPresent=configIsPresent, vmIsPresent=vmIsPresent, localPet=localPet, &
       petCount=petCount, currentMethod=method, currentPhase=phase, contextFlag=context, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call system_clock(systemClockStart, count_rate=systemClockRate, count_max=systemClockMax)
     call cpu_time(cpuTimeStart)
@@ -103,45 +105,46 @@ contains
     !! Check for clock presence and add if necessary
     if (clockIsPresent) then
       call ESMF_CplCompGet(cplComp, clock=clock, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     else
       clock = ESMF_ClockCreate(parentClock, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       call ESMF_CplCompSet(cplComp, clock=clock, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       call ESMF_ClockSet(clock, name=trim(name_), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Check for config presence
     if (configIsPresent) then
       call ESMF_CplCompGet(cplcomp, config=config, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       !!> @todo: what todo with this information?
     endif
 
     !! Check for vm presence
     if (vmIsPresent) then
       call ESMF_CplCompGet(cplComp, vm=vm, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       !call ESMF_VmGet(vm, rc=localrc)
-      !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       !!> @todo: what todo with this information?
     endif
 
     !! Synchronize clock with parent clock if local clock is present
     call ESMF_ClockGet(parentClock, currTime=currTime_, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (clockIsPresent) then
       call ESMF_ClockGet(clock, startTime=startTime, stopTime=stopTime, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       if (currTime_>stopTime) currTime_=stopTime
 
       call ESMF_ClockSet(clock, currTime=currTime_, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) then
       !  call ESMF_TimePrint(startTime, options='string')
       !  call ESMF_TimePrint(stopTime, options='string')
@@ -150,14 +153,13 @@ contains
       !endif
 
       call ESMF_ClockGet(clock, currTime=currTime_, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
 
     call ESMF_TimeGet(currTime_,timeStringISOFrac=timestring)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    write(message,'(A)') name_(:MOSSCO_MAXLEN_COMPNAME)//' '//trim(timestring)
+    write(message,'(A)') name_(1:MOSSCO_MAXLEN_COMPNAME)//' '//trim(timestring)
     if (method == ESMF_METHOD_RUN) then
       write(message,'(A)') trim(message)//' running'
       write(phaseString, '(A,I1)') 'run_p', phase
@@ -180,30 +182,28 @@ contains
     phaseCount=1 !>@todo for now we assume all couplers have only 1 phase
     write(message,'(A,I1,A,I1)') trim(message)//' phase ',phase,' of ',phaseCount
 
-    if (present(rc)) rc=rc_
     if (present(currTime)) currTime=currTime_
     if (present(name)) name=trim(name_)
 
     call ESMF_AttributeSet(cplComp, 'cpu_time_start_'//trim(phaseString), &
       cpuTimeStart, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     call ESMF_AttributeSet(CplComp, 'system_clock_start_'//trim(phaseString), &
       systemClockStart, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
-    call ESMF_LogFlush()
-
-    return
 
   end subroutine MOSSCO_CplCompEntry
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_GridCompEntry"
-  subroutine MOSSCO_GridCompEntry(GridComp, parentClock, keywordEnforcer, name, &
+  subroutine MOSSCO_GridCompEntry(GridComp, parentClock, kwe, name, &
     currTime, importState, exportState, rc)
 
     type(ESMF_GridComp), intent(inout)             :: gridComp
     type(ESMF_Clock), intent(in)                   :: parentClock
-    type(ESMF_KeywordEnforcer), optional           :: keywordEnforcer ! must use keywords below
+    type(ESMF_KeywordEnforcer), optional, intent(in)  :: kwe ! must use keywords below
     character(len=*), intent(out), optional  :: name
     type(ESMF_Time), intent(out), optional         :: currTime
     integer, intent(out), optional                 :: rc
@@ -228,25 +228,24 @@ contains
     character(len=ESMF_MAXSTR) :: phaseString
 
     rc_=ESMF_SUCCESS
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+
     call system_clock(systemClockStart, count_rate=systemClockRate, count_max=systemClockMax)
     call cpu_time(cpuTimeStart)
 
     call ESMF_GridCompGet(GridComp, name=name_, &
       configIsPresent=configIsPresent, vmIsPresent=vmIsPresent, localPet=localPet, &
       petCount=petCount, contextFlag=context, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     !> if importState and exportState are provided as arguments, check whether they agree with
     !> the gridComp's import- and exportState
     if (present(importState)) then
       call ESMF_GridCompGet(GridComp, importStateIsPresent=isPresent, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       if (isPresent) then
         call ESMF_GridCompGet(GridComp, importState=state, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
         if (state /= importState) then
           write(message,'(A)')  trim(name_)//' importState differs from state given as argument'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
@@ -258,34 +257,37 @@ contains
 
     !! Check for clock presence and add if necessary
     call ESMF_GridCompGet(gridComp, clockIsPresent=clockIsPresent, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
     if (.not. clockIsPresent) then
       clock = ESMF_ClockCreate(parentClock, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_ClockSet(clock, name=trim(name_), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_GridCompSet(GridComp, clock=clock, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    endif
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call MOSSCO_GridCompEntryLog(gridComp,name=name_,currentMethod=method,currentPhase=phase, &
+      call ESMF_ClockSet(clock, name=trim(name_), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call ESMF_GridCompSet(GridComp, clock=clock, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
+    call MOSSCO_GridCompEntryLog(gridComp, name=name_, currentMethod=method,&
+      currentPhase=phase, &
       clockIsPresent=clockIsPresent, clock=clock, currTime=currTime_)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     !! Check for config presence
     if (configIsPresent) then
       call ESMF_GridCompGet(Gridcomp, config=config, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       !!> @todo: what todo with this information?
     endif
 
     !! Check for vm presence
     if (vmIsPresent) then
       call ESMF_GridCompGet(GridComp, vm=vm, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       call ESMF_VmGet(vm, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       !!> @todo: what todo with this information?
     endif
 
@@ -303,29 +305,24 @@ contains
 
     call ESMF_AttributeSet(gridComp, 'cpu_time_start_'//trim(phaseString), &
       cpuTimeStart, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_AttributeSet(gridComp, 'system_clock_start_'//trim(phaseString), &
       systemClockStart, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (present(rc)) rc=rc_
     if (present(currTime)) currTime=currTime_
     if (present(name)) name=trim(trim(name_))
 
-    call ESMF_LogFlush()
-    return
-
   end subroutine MOSSCO_GridCompEntry
-
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_CplCompExit"
-  subroutine MOSSCO_CplCompExit(cplComp, rc)
+  subroutine MOSSCO_CplCompExit(cplComp, kwe, rc)
 
     type(ESMF_CplComp), intent(inout) :: cplComp
+    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
     integer, intent(out), optional    :: rc
 
     integer(ESMF_KIND_I4)   :: phase, phaseCount, localrc, rc_, i
@@ -345,21 +342,24 @@ contains
     character(len=11), parameter :: methodsToEvaluate(4) = &
       (/'initialize ','readrestart','run        ','finalize   '/)
 
-    rc_=ESMF_SUCCESS
+    rc_ = ESMF_SUCCESS
+    if (present(kwe)) rc_ = ESMF_SUCCESS
 
     call ESMF_CplCompGet(cplComp, name=name, clockIsPresent=clockIsPresent, &
       currentMethod=method, currentPhase=phase, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     !! Check for clock presence
     if (clockIsPresent) then
       call ESMF_CplCompGet(cplComp, clock=clock, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       call ESMF_ClockGet(clock, currTime=currTime, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       write(message,'(A)') name(:MOSSCO_MAXLEN_COMPNAME)//' '//trim(timestring)
     else
       write(message,'(A)') name(:MOSSCO_MAXLEN_COMPNAME)//' -------------------'
@@ -391,51 +391,43 @@ contains
 
     call ESMF_AttributeGet(cplComp, 'system_clock_start_'//trim(phaseString), &
       isPresent=isPresent, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (.not.isPresent) then
       write(message, '(A)') trim(name)//' forgot to call MOSSCO_CplCompEntry'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
       call ESMF_AttributeSet(cplComp, 'system_clock_start_'//trim(phaseString), &
         systemClockStop, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
 
     call ESMF_AttributeGet(cplComp, 'system_clock_start_'//trim(phaseString), &
       systemClockStart, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_AttributeGet(cplComp, 'cpu_time_start_'//trim(phaseString), &
       isPresent=isPresent, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (.not.isPresent) then
       write(message, '(A)') trim(name)//' forgot to call MOSSCO_CplCompEntry'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
       call ESMF_AttributeSet(cplComp, 'cpu_time_start_'//trim(phaseString), &
         cpuTimeStop, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
 
     call ESMF_AttributeGet(cplComp, 'cpu_time_start_'//trim(phaseString), &
       cpuTimeStart, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_AttributeGet(CplComp, 'system_clock_duration'//trim(phaseString), &
       systemClockTotalDuration, defaultValue=0.0d0, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_AttributeGet(CplComp, 'cpu_time_duration_'//trim(phaseString), &
       cpuTimeTotalDuration, defaultValue=0.0d0, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     systemClockDuration = dble(systemClockStop - systemClockStart) / systemClockRate
     systemClockTotalDuration = systemClockTotalDuration + systemClockDuration
@@ -444,38 +436,32 @@ contains
 
     call ESMF_AttributeSet(cplComp, name='cpu_time_duration_'//trim(phaseString), &
       value=cpuTimeTotalDuration, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_AttributeSet(cplComp, name='system_clock_duration_'//trim(phaseString), &
       value=systemClockTotalDuration, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (method == ESMF_METHOD_FINALIZE) then
       do i = lbound(methodsToEvaluate,1), ubound(methodsToEvaluate,1)
         write(phaseString,'(A,I1)') trim(methodsToEvaluate(i))//'_p', phase
         call ESMF_AttributeGet(cplComp, 'system_clock_duration_'//trim(phaseString), &
           isPresent=isPresent, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
         if (.not.isPresent) cycle
 
         call ESMF_AttributeGet(cplComp, 'cpu_time_duration_'//trim(phaseString), &
           isPresent=isPresent, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
         if (.not.isPresent) cycle
 
         call ESMF_AttributeGet(cplComp, 'system_clock_duration_'//trim(phaseString), &
           systemClockTotalDuration, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
         call ESMF_AttributeGet(cplComp, 'cpu_time_duration_'//trim(phaseString), &
           cpuTimeTotalDuration, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
         write(message,'(A,ES9.2,A,ES9.2,A)') trim(name)//' spent ', cpuTimeTotalDuration, '/', &
           systemClockTotalDuration,' cpu/wall seconds in '//trim(phaseString)
@@ -507,19 +493,20 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_GridCompExit"
-  subroutine MOSSCO_GridCompExit(GridComp, rc)
+  subroutine MOSSCO_GridCompExit(gridComp, kwe, rc)
 
-    type(ESMF_GridComp), intent(inout) :: GridComp
+    type(ESMF_GridComp), intent(inout) :: gridComp
+    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
     integer, intent(out), optional     :: rc
 
     integer  :: rc_
 
     rc_ = ESMF_SUCCESS
+    if (present(kwe)) rc_ = ESMF_SUCCESS
 
     call MOSSCO_GridCompExitLog(gridComp)
 
     if (present(rc)) rc=rc_
-    return
 
   end subroutine MOSSCO_GridCompExit
 
@@ -1802,7 +1789,7 @@ subroutine MOSSCO_GridCompReadRestart(gridComp, importState, exportState, parent
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   if (itemCount < 1) then
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     return
   endif
@@ -1863,7 +1850,7 @@ subroutine MOSSCO_GridCompReadRestart(gridComp, importState, exportState, parent
     endif
   enddo
 
-  call MOSSCO_CompExit(gridComp, localrc)
+  call MOSSCO_CompExit(gridComp, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
 end subroutine MOSSCO_GridCompReadRestart
@@ -1926,7 +1913,7 @@ subroutine MOSSCO_GridCompFinalize(gridComp, importState, exportState, parentClo
 
   !> @todo deal with everything that is not in states, i.e. geometries and clock
 
-  call MOSSCO_CompExit(gridComp, localrc)
+  call MOSSCO_CompExit(gridComp, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
 end subroutine MOSSCO_GridCompFinalize
@@ -1981,7 +1968,7 @@ subroutine MOSSCO_CplCompFinalize(CplComp, importState, exportState, parentClock
 
   end if
 
-  call MOSSCO_CompExit(CplComp, localrc)
+  call MOSSCO_CompExit(CplComp, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
 end subroutine MOSSCO_CplCompFinalize

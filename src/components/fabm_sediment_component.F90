@@ -163,7 +163,7 @@ module fabm_sediment_component
       convention="NUOPC", purpose="General", rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP0
@@ -1074,7 +1074,7 @@ module fabm_sediment_component
     !call ESMF_StatePrint(importState)
     !call ESMF_StatePrint(exportState)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP1
@@ -1197,7 +1197,7 @@ module fabm_sediment_component
     !   call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
     ! endif
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP2
@@ -1362,7 +1362,7 @@ module fabm_sediment_component
 #endif
     call sed%check_domain()
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine ReadRestart
@@ -1702,7 +1702,7 @@ module fabm_sediment_component
 
     if (allocated(fieldList)) deallocate(fieldlist)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Run
@@ -1734,7 +1734,7 @@ module fabm_sediment_component
     if (allocated(bdys)) deallocate(bdys)
     if (allocated(fluxes)) deallocate(fluxes)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Finalize
