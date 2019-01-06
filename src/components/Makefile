@@ -237,6 +237,10 @@ test_component.F90: $(MOSSCO_DIR)/src/config/test_component.yaml $(MOSSCO_DIR)/s
 	@echo "Creating $@"
 	python $(MOSSCO_DIR)/scripts/create_component.py $(MOSSCO_DIR)/src/config/test_component.yaml
 
+calculator_component.F90: $(MOSSCO_DIR)/src/mediators/calculator.F90
+	@-echo "Creating $@"
+	@-sed 's/cplComp/gridComp/g;s/CplComp/GridComp/g' $< > $@
+
 # KK-TODO: this can be removed when gotm's timestep routine is used
 ifeq ($(MOSSCO_GOTM_FABM),true)
 gotm_component.o: gotm_component.F90
@@ -276,12 +280,12 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/cmaq_component.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/tracer_component.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/schism_component.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/calculator_component.mod
 
 subdirs: $(SUBDIRS)
 
 $(SUBDIRS):
 	$(MAKE) -C $@
-
 
 ifneq ($(wildcard *.make),)
   include *.make
