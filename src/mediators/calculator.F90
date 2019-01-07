@@ -323,7 +323,7 @@ module calculator
     rc = ESMF_SUCCESS
 
     allocate(binaryOperatorList(10))
-    binaryOperatorList(1:6)  = (/'*','/','+','-','^ ','%'/)
+    binaryOperatorList(1:6)  = (/'*','/','+','-','^','%'/)
     binaryOperatorList(7:10) =(/'** ','mod','rem','pow'/)
     binaryOperatorList(11:12) =(/'ubound','lbound'/)
     allocate(unaryOperatorList(13))
@@ -395,9 +395,12 @@ module calculator
       if (allocated(stack)) deallocate(stack)
       if (allocated(scalarList)) deallocate(scalarList)
 
-      allocate(stack(size(rpnList)))
+      allocate(stack(size(rpnList)), stat=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
       allocate(scalarList(size(rpnList)))
       call MOSSCO_Reallocate(importFieldList, size(rpnList), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       rpnTypeString(1:size(rpnList)) = 'x'
 
       do j=1, size(rpnList)
@@ -994,6 +997,14 @@ module calculator
                 where(stack(sp-1)%mask2)
                   stack(sp-1)%farray2 = modulo(stack(sp-1)%farray2,stack(sp)%scalar(1))
                 endwhere
+              case('ubound')
+                where(stack(sp-1)%mask2)
+                  stack(sp-1)%farray2 = min(stack(sp-1)%farray2,stack(sp)%scalar(1))
+                endwhere
+              case('lbound')
+                where(stack(sp-1)%mask2)
+                  stack(sp-1)%farray2 = max(stack(sp-1)%farray2,stack(sp)%scalar(1))
+                endwhere
               case default
                 write(message,'(A,I1,A)') trim(name)//' does not implement operation "'// &
                   rpnList(j,1)//'" for ranks ',stack(sp-1)%rank,' and scalar'
@@ -1035,6 +1046,14 @@ module calculator
               case('%','mod')
                 where(stack(sp-1)%mask3)
                   stack(sp-1)%farray3 = modulo(stack(sp-1)%farray3,stack(sp)%scalar(1))
+                endwhere
+              case('ubound')
+                where(stack(sp-1)%mask3)
+                  stack(sp-1)%farray3 = min(stack(sp-1)%farray3,stack(sp)%scalar(1))
+                endwhere
+              case('lbound')
+                where(stack(sp-1)%mask3)
+                  stack(sp-1)%farray3 = max(stack(sp-1)%farray3,stack(sp)%scalar(1))
                 endwhere
               case default
                 write(message,'(A,I1,A)') trim(name)//' does not implement operation "'// &
@@ -1078,6 +1097,14 @@ module calculator
                 where(stack(sp-1)%mask4)
                   stack(sp-1)%farray4 = modulo(stack(sp-1)%farray4,stack(sp)%scalar(1))
                 endwhere
+              case('ubound')
+                where(stack(sp-1)%mask4)
+                  stack(sp-1)%farray4 = min(stack(sp-1)%farray4,stack(sp)%scalar(1))
+                endwhere
+              case('lbound')
+                where(stack(sp-1)%mask4)
+                  stack(sp-1)%farray4 = max(stack(sp-1)%farray4,stack(sp)%scalar(1))
+                endwhere
               case default
                 write(message,'(A,I1,A)') trim(name)//' does not implement operation "'// &
                   rpnList(j,1)//'" for ranks ',stack(sp-1)%rank,' and scalar'
@@ -1118,6 +1145,14 @@ module calculator
                 where(stack(sp-1)%mask1)
                   stack(sp-1)%farray1 = modulo(stack(sp-1)%farray1,stack(sp)%farray1)
                 endwhere
+              case('ubound')
+                where(stack(sp-1)%mask1)
+                  stack(sp-1)%farray1 = min(stack(sp-1)%farray1,stack(sp)%farray1)
+                endwhere
+              case('lbound')
+                where(stack(sp-1)%mask1)
+                  stack(sp-1)%farray1 = max(stack(sp-1)%farray1,stack(sp)%farray1)
+                endwhere
               case default
                 write(message,'(A,I1,A,I1)') trim(name)//' does not implement operation "'// &
                   rpnList(j,1)//'" for ranks ',stack(sp-1)%rank,' and ',stack(sp)%rank
@@ -1154,6 +1189,14 @@ module calculator
               case('%','mod')
                 where(stack(sp-1)%mask2)
                   stack(sp-1)%farray2 = modulo(stack(sp-1)%farray2,stack(sp)%farray2)
+                endwhere
+              case('ubound')
+                where(stack(sp-1)%mask2)
+                  stack(sp-1)%farray2 = min(stack(sp-1)%farray2,stack(sp)%farray2)
+                endwhere
+              case('lbound')
+                where(stack(sp-1)%mask2)
+                  stack(sp-1)%farray2 = max(stack(sp-1)%farray2,stack(sp)%farray2)
                 endwhere
               case default
                 write(message,'(A,I1,A,I1)') trim(name)//' does not implement operation "'// &
@@ -1192,6 +1235,14 @@ module calculator
                 where(stack(sp-1)%mask3)
                   stack(sp-1)%farray3 = modulo(stack(sp-1)%farray3,stack(sp)%farray3)
                 endwhere
+              case('ubound')
+                where(stack(sp-1)%mask3)
+                  stack(sp-1)%farray3 = min(stack(sp-1)%farray3,stack(sp)%farray3)
+                endwhere
+              case('lbound')
+                where(stack(sp-1)%mask3)
+                  stack(sp-1)%farray3 = max(stack(sp-1)%farray3,stack(sp)%farray3)
+                endwhere
               case default
                 write(message,'(A,I1,A,I1)') trim(name)//' does not implement operation "'// &
                   rpnList(j,1)//'" for ranks ',stack(sp-1)%rank,' and ',stack(sp)%rank
@@ -1228,6 +1279,14 @@ module calculator
               case('%','mod')
                 where(stack(sp-1)%mask4)
                   stack(sp-1)%farray4 = modulo(stack(sp-1)%farray4,stack(sp)%farray4)
+                endwhere
+              case('ubound')
+                where(stack(sp-1)%mask4)
+                  stack(sp-1)%farray4 = min(stack(sp-1)%farray4,stack(sp)%farray4)
+                endwhere
+              case('lbound')
+                where(stack(sp-1)%mask4)
+                  stack(sp-1)%farray4 = max(stack(sp-1)%farray4,stack(sp)%farray4)
                 endwhere
               case default
                 write(message,'(A,I1,A,I1)') trim(name)//' does not implement operation "'// &
