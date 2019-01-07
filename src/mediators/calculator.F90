@@ -335,7 +335,7 @@ module calculator
     allocate(unaryOperatorList(13))
     unaryOperatorList = (/'e    ','log  ','ln   ','exp  ', 'lg   ','sin  ', 'cos  ', &
       'tan  ', 'sqrt ','asin ','atan ','acos ','abs  '/)
-    allocate(reductionOperatorList(4))
+    allocate(reductionOperatorList(6))
     reductionOperatorList = (/'vmean','vsum ','upper','lower','vmax ','vmin '/)
 
     call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
@@ -348,7 +348,8 @@ module calculator
 
     n = 0
     if (allocated(exportList)) n = ubound(exportList,1)
-    if (.not.associated(includeList)) allocate(includeList(1))
+    if (.not.associated(includeList)) allocate(includeList(1), stat=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !call MOSSCO_AttributeGet(exportState, 'alias_definition', aliasList, rc=localrc)
     !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -357,7 +358,11 @@ module calculator
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (itemCount > 0) then
-      allocate(itemTypeList(itemCount), itemNameList(itemCount))
+      allocate(itemTypeList(itemCount), stat=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      allocate(itemNameList(itemCount), stat=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_StateGet(importState, itemTypeList=itemTypeList, &
         itemNameList=itemNameList, rc=localrc )
@@ -443,6 +448,10 @@ module calculator
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       enddo !j=1, size(rpnList), looking for operators 'rub'
 
+      !> By default assume isMatch, use .false. to indicate an
+      !> error and skip processing after the next loop
+      isMatch = .true.
+
       do j=1, ubound(rpnList,1)
 
         !> Skip operators and numbers which we have dealt with
@@ -457,7 +466,7 @@ module calculator
           write(message,'(A)') trim(name)//' item "'//trim(rpnList(j,1))// &
             '" is not operator or input or number.'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-          cycle
+          exit
         endif
 
         rpnTypeString(j:j) = 's' ! this is a symbol
@@ -509,8 +518,14 @@ module calculator
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         endif
 
-        cycle
       enddo
+
+      !> Bail out here on previous non-matching symbol
+      if (.not.isMatch) then
+        write(message,'(A)') trim(name)//' skipped calculation of '//trim(exportList(i,1))
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        exit
+      endif
 
       includeList(1) = exportList(i,1)
       call MOSSCO_StateGet(exportState, fieldList, include=includeList, &
