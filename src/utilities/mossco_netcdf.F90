@@ -2173,10 +2173,12 @@ module mossco_netcdf
     if (present(timeUnit)) then
       nc%timeUnit=trim(timeUnit)
       call nc%init_time(rc=localrc)
-      write(message,'(A)') trim(owner_)//' file '//trim(filename)//' has time unit '//trim(timeUnit)
+      write(message,'(A)') trim(owner_)//' file'
+      call MOSSCO_MessageAdd(message,trim(filename)//' has time unit '//trim(timeUnit))
     else
       nc%timeUnit=''
-      write(message,'(A)') trim(owner_)//' file '//trim(filename)//' has no time unit'
+      write(message,'(A)') trim(owner_)//' file'
+      call MOSSCO_MessageAdd(message,trim(filename)//' has no time unit')
     endif
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
