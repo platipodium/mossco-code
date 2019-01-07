@@ -3,7 +3,7 @@
 !> @file calculator.F90
 !!
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2017, 2018 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2017, 2018, 2019 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -133,7 +133,7 @@ module calculator
     character(len=ESMF_MAXSTR)      :: name, message, configFileName
     type(ESMF_Time)                 :: currTime
 
-    integer(ESMF_KIND_I4)           :: localrc, i, j, n
+    integer(ESMF_KIND_I4)           :: localrc, i, j, k,   n
 
     type(ESMF_Config)               :: config
     logical                         :: labelIsPresent, isPresent, fileIsPresent
@@ -217,51 +217,56 @@ module calculator
 
     n=0
     if (allocated(exportList)) n=size(exportList)
+    j=1
 
-    do i=1, n
-      call MOSSCO_ConfigGet(config, exportList(i,1), rpnList, rc=localrc)
+    do i=1,ubound(exportList,1)
+      do j=1,ubound(exportList,2)
+    !do i=1, n
+      call MOSSCO_ConfigGet(config, exportList(i,j), rpnList, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (trim(exportList(i,j)) == '') cycle
+      !write(0,*) i,j,shape(exportList), '"'//trim(exportList(i,j))//'"'
 
       if (.not.allocated(rpnList)) then
         write(message,'(A,A)') trim(name)//' does not define calculation for ', &
-          trim(exportList(i,1))
+          trim(exportList(i,j))
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         cycle
       endif
 
-      call MOSSCO_AttributeSet(exportState, 'rpn_'//exportList(i,1), rpnList, &
+      call MOSSCO_AttributeSet(exportState, 'rpn_'//exportList(i,j), rpnList, &
         owner=name, separator=',', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call MOSSCO_Reallocate(rpnList, 0, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call MOSSCO_AttributeGet(exportState, 'rpn_'//exportList(i,1), rpnList, &
+      call MOSSCO_AttributeGet(exportState, 'rpn_'//exportList(i,j), rpnList, &
         owner=name, separator=',', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      write(message,'(A)') trim(name)//' will calculate'
-      call MOSSCO_MessageAdd(message, ' '//trim(exportList(i,1)), rc=localrc)
+      write(message,'(A)') trim(name)//' will calculate '//trim(exportList(i,j))
       call MOSSCO_MessageAdd(message,' as ')
-      do j = lbound(rpnList,2), ubound(rpnList,2)
+      do k = lbound(rpnList,1), ubound(rpnList,1)
         !> @todo add multiline rpn
-        call MOSSCO_MessageAdd(message, ' '//trim(rpnList(1,j)), rc=localrc)
+        call MOSSCO_MessageAdd(message, ' '//trim(rpnList(k,1)), rc=localrc)
       enddo
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      call MOSSCO_StateGet(exportState, fieldList, itemSearch=exportList(i,1), &
+      call MOSSCO_StateGet(exportState, fieldList, itemSearch=exportList(i,j), &
         fieldCount=fieldCount, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (fieldCount > 0) cycle
 
-      field = ESMF_FieldEmptyCreate(name = exportList(i,1), rc=localrc)
+      field = ESMF_FieldEmptyCreate(name = exportList(i,j), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      !call MOSSCO_AttributeSet(field, 'rpn_'//exportList(i,1), rpnList, rc=localrc)
+      !call MOSSCO_AttributeSet(field, 'rpn_'//exportList(i,j), rpnList, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_StateAddReplace(exportState, (/field/), rc=localrc)
@@ -271,6 +276,7 @@ module calculator
       call MOSSCO_FieldString(field, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     enddo
+  enddo
 
     call MOSSCO_CompExit(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -322,8 +328,8 @@ module calculator
 
     rc = ESMF_SUCCESS
 
-    allocate(binaryOperatorList(10))
-    binaryOperatorList(1:6)  = (/'*','/','+','-','^','%'/)
+    allocate(binaryOperatorList(12))
+    binaryOperatorList(1:6)  = (/'*','/','+','-','^ ','%'/)
     binaryOperatorList(7:10) =(/'** ','mod','rem','pow'/)
     binaryOperatorList(11:12) =(/'ubound','lbound'/)
     allocate(unaryOperatorList(13))
@@ -341,7 +347,7 @@ module calculator
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     n = 0
-    if (allocated(exportList)) n = size(exportList)
+    if (allocated(exportList)) n = ubound(exportList,1)
     if (.not.associated(includeList)) allocate(includeList(1))
 
     !call MOSSCO_AttributeGet(exportState, 'alias_definition', aliasList, rc=localrc)
@@ -395,15 +401,12 @@ module calculator
       if (allocated(stack)) deallocate(stack)
       if (allocated(scalarList)) deallocate(scalarList)
 
-      allocate(stack(size(rpnList)), stat=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      allocate(stack(ubound(rpnList,1)))
+      allocate(scalarList(ubound(rpnList,1)))
+      call MOSSCO_Reallocate(importFieldList, ubound(rpnList,1), rc=localrc)
+      rpnTypeString(1:ubound(rpnList,1)) = 'x'
 
-      allocate(scalarList(size(rpnList)))
-      call MOSSCO_Reallocate(importFieldList, size(rpnList), rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      rpnTypeString(1:size(rpnList)) = 'x'
-
-      do j=1, size(rpnList)
+      do j=1, ubound(rpnList,1)
 
         call MOSSCO_StringFind(rpnList(j,1), reductionOperatorList, &
           isMatch=isMatch, owner=name, rc=localrc)
@@ -440,7 +443,7 @@ module calculator
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       enddo !j=1, size(rpnList), looking for operators 'rub'
 
-      do j=1, size(rpnList)
+      do j=1, ubound(rpnList,1)
 
         !> Skip operators and numbers which we have dealt with
         if (index('rubd',rpnTypeString(j:j))>0) cycle
