@@ -168,7 +168,7 @@ module getm_component
    write(debug,*) 'InitializeP0() # ',Ncall
 #endif
 
-   call MOSSCO_CompEntry(gridComp, clock)
+   call MOSSCO_CompEntry(gridComp, clock, rc=localrc)
 
    InitializePhaseMap(1) = "IPDv00p1=1"
    InitializePhaseMap(2) = "IPDv00p2=2"
@@ -184,7 +184,7 @@ module getm_component
                                    convention="NUOPC",purpose="General",rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_CompExit(gridComp)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
 #ifdef DEBUG
    write(debug,*) 'Leaving InitializeP0()'
    write(debug,*)
@@ -230,7 +230,7 @@ module getm_component
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, clock)
+    call MOSSCO_CompEntry(gridComp, clock, rc=localrc)
 
     call ESMF_GridCompGet(gridComp,clockIsPresent=clockIsPresent, &
                                    name=name, rc=localrc)
@@ -435,7 +435,7 @@ module getm_component
 
     call getmCmp_update_exportState()
 
-    call MOSSCO_CompExit(gridComp)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
 
   end subroutine InitializeP1
 
@@ -887,7 +887,7 @@ module getm_component
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, clock)
+    call MOSSCO_CompEntry(gridComp, clock, rc=localrc)
 
     call getmCmp_update_importState()
 
@@ -979,7 +979,7 @@ module getm_component
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, clock)
+    call MOSSCO_CompEntry(gridComp, clock, rc=localrc)
 
     call ESMF_GridCompFinalize(getmComp,clock=clock,importState=importState, &
                                exportState=exportState)
