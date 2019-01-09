@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF netcdf output component
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
+!> @copyright 2014-2019 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
 !
@@ -29,6 +29,7 @@ module netcdf_input_component
   use mossco_state
   use mossco_time
   use mossco_grid
+  use mossco_mesh
   use mossco_attribute
   use mossco_config
 
@@ -133,17 +134,19 @@ module netcdf_input_component
     logical                    :: isPresent, fileIsPresent, labelIsPresent, hasGrid
     logical                    :: isBundle=.true.
     type(ESMF_Grid)            :: grid2, grid3, grid
+    type(ESMF_Mesh)            :: mesh
+    type(ESMF_GeomType_Flag)   :: geomType
     type(ESMF_Field)           :: field
     character(len=ESMF_MAXSTR) :: configFileName, timeUnit, itemName, petFileName, gridName
-    character(len=ESMF_MAXSTR) :: gridFileName, interpolationMethod
+    character(len=ESMF_MAXSTR) :: geomFileName, interpolationMethod
     type(ESMF_Config)          :: config
 
     integer(ESMF_KIND_I4)      :: itemCount, i, j, timeid, itime, udimid
-    integer(ESMF_KIND_I4)      :: fieldRank, gridRank
+    integer(ESMF_KIND_I4)      :: fieldRank, geomRank
     type(ESMF_Time)            :: refTime, climatologyTime
     real(ESMF_KIND_R8)         :: ticks, scale_factor, add_offset
     type(ESMF_Field), allocatable :: fieldList(:)
-    integer(ESMF_KIND_I4), allocatable    :: ungriddedUbnd(:), ungriddedLbnd(:)
+    integer(ESMF_KIND_I4)      :: ungriddedUbnd(3), ungriddedLbnd(3)
     character(len=ESMF_MAXSTR), allocatable :: aliasList(:,:)
     character(len=ESMF_MAXSTR), pointer :: filterExcludeList(:) => null()
     character(len=ESMF_MAXSTR), pointer :: filterIncludeList(:) => null()
@@ -174,8 +177,8 @@ module netcdf_input_component
     call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
-      rc=localrc)
+    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet, &
+      name=name, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !> Default filename to read (if not given in .cfg) is the same as the name of
@@ -238,10 +241,10 @@ module netcdf_input_component
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (labelIsPresent) then
-        call ESMF_ConfigGetAttribute(config, gridFileName, rc=localrc, default='none')
+        call ESMF_ConfigGetAttribute(config, geomFileName, rc=localrc, default='none')
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        write(message,'(A)')  trim(name)//' found in file '//trim(configFileName)//' grid: '//trim(gridFileName)
+        write(message,'(A)')  trim(name)//' found in file '//trim(configFileName)//' grid: '//trim(geomFileName)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
@@ -249,11 +252,11 @@ module netcdf_input_component
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (isPresent) then
-        call ESMF_AttributeGet(gridComp, 'grid_file_name', value=gridFileName, rc=localrc)
+        call ESMF_AttributeGet(gridComp, 'grid_file_name', value=geomFileName, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       elseif (labelIsPresent) then
-        call ESMF_AttributeSet(gridComp, 'grid_file_name', trim(gridFileName), rc=localrc)
+        call ESMF_AttributeSet(gridComp, 'grid_file_name', trim(geomFileName), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
 
@@ -411,7 +414,7 @@ module netcdf_input_component
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         rc = ESMF_SUCCESS
       endif
-      call MOSSCO_CompExit(gridComp)
+      call MOSSCO_CompExit(gridComp, rc=localrc)
       return
     endif
 
@@ -424,16 +427,16 @@ module netcdf_input_component
 
     if (isPresent) then
       call ESMF_AttributeGet(gridComp, name='grid_file_name', &
-        value=gridFileName, rc=localrc)
+        value=geomFileName, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (trim(gridFileName) /= 'none') then
+      if (trim(geomFileName) /= 'none') then
 
-        grid = ESMF_GridCreate(filename=trim(gridFileName),fileFormat=ESMF_FILEFORMAT_SCRIP, &
+        grid = ESMF_GridCreate(filename=trim(geomFileName),fileFormat=ESMF_FILEFORMAT_SCRIP, &
           regDecomp=(/1,1/), isSphere=.false., rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        write(message, '(A)') trim(name)//' obtains grid from file '//trim(gridFileName)
+        write(message, '(A)') trim(name)//' obtains grid from file '//trim(geomFileName)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
         call ESMF_GridCompSet(gridComp, grid=grid, rc=localrc)
@@ -487,14 +490,14 @@ module netcdf_input_component
         call ESMF_FieldGet(field, grid=grid, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        call ESMF_GridGet(grid, rank=gridRank, rc=localrc)
+        call ESMF_GridGet(grid, rank=geomRank, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         if (fieldStatus == ESMF_FIELDSTATUS_COMPLETE) then
           call ESMF_FieldGet(field, rank=fieldRank, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         else
-          fieldRank = gridRank
+          fieldRank = geomRank
         endif
 
         hasGrid=.true.
@@ -508,23 +511,21 @@ module netcdf_input_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-    call ESMF_GridGet(grid, rank=gridRank, name=gridName, rc=localrc)
+    call ESMF_GridGet(grid, rank=geomRank, name=gridName, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !! Check for ungridded dimensions in the case of foreignGrid
-    if (isPresent .and. fieldRank>gridRank) then
-      allocate(ungriddedUbnd(fieldRank-gridRank))
-      allocate(ungriddedLbnd(fieldRank-gridRank))
-      call ESMF_FieldGet(field, ungriddedLBound=ungriddedLbnd, ungriddedUbound=ungriddedUbnd, rc=localrc)
+    if (isPresent .and. fieldRank>geomRank) then
+      call ESMF_FieldGet(field, ungriddedLBound=ungriddedLbnd(1:fieldRank-geomRank), ungriddedUbound=ungriddedUbnd(1:fieldRank-geomRank), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
 
-    if (gridRank == 2) then
+    if (geomRank == 2) then
       grid2 = grid
       grid3 = MOSSCO_GridCreateFromOtherGrid(grid2, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    elseif (gridRank == 3) then
+    elseif (geomRank == 3) then
       grid3 = grid
       grid2 = MOSSCO_GridCreateFromOtherGrid(grid3, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -600,19 +601,17 @@ module netcdf_input_component
       case default
         write(message,'(A)')  trim(name)//' invalid or not implemented unit for time '//trim(timeUnit)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-        call MOSSCO_CompExit(gridComp)
+        call MOSSCO_CompExit(gridComp, rc=localrc)
         rc=ESMF_RC_ARG_BAD
         return
       endselect
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       ! use integer except when value comes from s_r8
       if (ticks < 0.0) ticks=dble(int4)
 
       call ESMF_AttributeGet(gridComp, 'climatology_period', isPresent=isPresent, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (isPresent) then
         call ESMF_AttributeGet(gridComp, 'climatology_period', timeString, rc=localrc)
@@ -751,7 +750,7 @@ module netcdf_input_component
 
       write(*,*) 'name=',trim(name), ' unit=',trim(nc%variables(i)%units)
 
-      write(message,'(A,I3,A,I1,A)') trim(name)//' nc.varid = ', &
+      write(message,'(A,I3,A,I1,A)') trim(name)//' '//trim(itemName)//' varid = ', &
          nc%variables(i)%varid,', rank = ',nc%variables(i)%rank,' units = "'//trim(nc%variables(i)%units)//'"'
 
       write(*,*) trim(message)
@@ -782,12 +781,12 @@ module netcdf_input_component
         endif
 
         !> @todo: test if varGrid conforms to grid
-        if (gridRank==2) then
+        if (geomRank==2) then
           call ESMF_FieldEmptySet(fieldList(i), grid2, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
-        elseif (gridRank==3) then
+        elseif (geomRank==3) then
           call ESMF_FieldEmptySet(fieldList(i), grid3, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
         else
-          write(message,'(A)') trim(name)//' not implemented with gridrank <2 or >3'
+          write(message,'(A)') trim(name)//' not implemented with geomRank <2 or >3'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           rc = ESMF_RC_NOT_IMPL
         endif
@@ -800,9 +799,10 @@ module netcdf_input_component
         return
       endif
 
-      if (fieldRank>gridRank) then
-        call ESMF_FieldEmptyComplete(fieldList(i), typekind=ESMF_TYPEKIND_R8, ungriddedLBound= &
-          ungriddedLbnd, ungriddedUbound=ungriddedUbnd, rc=localrc)
+      if (fieldRank>geomRank) then
+        call ESMF_FieldEmptyComplete(fieldList(i), typekind=ESMF_TYPEKIND_R8, &
+          ungriddedLBound=ungriddedLbnd(1:fieldRank-geomRank), &
+          ungriddedUbound=ungriddedUbnd(1:fieldRank-geomRank), rc=localrc)
       else
         call ESMF_FieldEmptyComplete(fieldList(i), typekind=ESMF_TYPEKIND_R8, rc=localrc)
       endif
@@ -847,9 +847,6 @@ module netcdf_input_component
 
     enddo
 
-    if (allocated(ungriddedUbnd)) deallocate(ungriddedUbnd)
-    if (allocated(ungriddedLbnd)) deallocate(ungriddedLbnd)
-
     if (associated(filterExcludeList)) deallocate(filterExcludeList)
     if (associated(filterIncludeList)) deallocate(filterIncludeList)
 
@@ -869,7 +866,7 @@ module netcdf_input_component
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
 
-    call MOSSCO_CompExit(gridComp)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     return
 
   end subroutine InitializeP1
@@ -940,7 +937,7 @@ module netcdf_input_component
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         rc = ESMF_SUCCESS
       endif
-      call MOSSCO_CompExit(gridComp)
+      call MOSSCO_CompExit(gridComp, rc=localrc)
       return
     endif
 
@@ -953,7 +950,7 @@ module netcdf_input_component
     if (nc%nvars==0) then
       write(message,'(A)') trim(name)//' contains no variables to read.'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-      call MOSSCO_CompExit(gridComp)
+      call MOSSCO_CompExit(gridComp, rc=localrc)
       return
     endif
 
@@ -1306,7 +1303,7 @@ module netcdf_input_component
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         rc = ESMF_SUCCESS
       endif
-      call MOSSCO_CompExit(gridComp)
+      call MOSSCO_CompExit(gridComp, rc=localrc)
       return
     endif
 
@@ -1319,7 +1316,7 @@ module netcdf_input_component
     if (nc%nvars==0) then
       write(message,'(A)') trim(name)//' contains no variables to read.'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-      call MOSSCO_CompExit(gridComp)
+      call MOSSCO_CompExit(gridComp, rc=localrc)
       return
     endif
 
@@ -1641,52 +1638,41 @@ module netcdf_input_component
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
       importState=importState, exportState=exportState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_GridCompGet(gridComp, configIsPresent=isPresent, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (isPresent) then
 
       call ESMF_GridCompGet(gridComp, config=config, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_ConfigDestroy(config, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     end if
 
     call ESMF_GridCompGet(gridComp, importStateIsPresent=isPresent, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (isPresent) call ESMF_StateValidate(importState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_DestroyOwn(importState, trim(name), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_GridCompGet(gridComp, exportStateIsPresent=isPresent, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (isPresent) call ESMF_StateValidate(exportState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_DestroyOwn(exportState, trim(name), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_CompExit(gridComp, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Finalize
 

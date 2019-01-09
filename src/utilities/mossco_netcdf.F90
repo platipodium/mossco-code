@@ -179,7 +179,7 @@ module mossco_netcdf
     integer(ESMF_KIND_I4), pointer    :: gridmask2(:,:)=> null()
     type(ESMF_Grid)                   :: grid
     type(ESMF_StaggerLoc)             :: staggerloc
-    integer(ESMF_KIND_I4)             :: gridRank
+    integer(ESMF_KIND_I4)             :: geomRank
     type(ESMF_Mesh)                   :: mesh
     type(ESMF_MeshLoc)                :: meshLoc
     type(ESMF_LocStream)              :: locStream
@@ -297,12 +297,12 @@ module mossco_netcdf
       call ESMF_FieldGet(field, grid=grid, staggerloc=staggerloc, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      call ESMF_GridGet(grid, rank=gridRank, rc=localrc)
+      call ESMF_GridGet(grid, rank=geomRank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
 #if ESMF_VERSION_MAJOR > 6
 !! This is only implemented from 7b29
-      if (gridRank == 2) then
+      if (geomRank == 2) then
         call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, isPresent=geomIsPresent, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
@@ -316,7 +316,7 @@ module mossco_netcdf
         else
           nullify(gridmask2)
         endif
-      elseif (gridRank == 3) then
+      elseif (geomRank == 3) then
         call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, isPresent=geomIsPresent, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
@@ -334,7 +334,7 @@ module mossco_netcdf
         endif
       endif
 #else
-      if (gridRank == 2) then
+      if (geomRank == 2) then
         call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, farrayPtr=gridmask2, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) then
           nullify(gridmask2)
@@ -344,7 +344,7 @@ module mossco_netcdf
             exclusiveUBound=grid2Ubnd, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
         endif
-      elseif (gridRank == 3) then
+      elseif (geomRank == 3) then
         call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, staggerloc=staggerloc, farrayPtr=gridmask3, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) then
           nullify(gridmask3)
@@ -3938,7 +3938,7 @@ module mossco_netcdf
     integer(ESMF_KIND_I4), intent(in), optional  :: itime
 
     integer(ESMF_KIND_I4)                        :: localrc, udimid, localDeCount, rc_
-    integer(ESMF_KIND_I4)                        :: fieldRank, gridRank, itime_
+    integer(ESMF_KIND_I4)                        :: fieldRank, geomRank, itime_
     integer(ESMF_KIND_I4)                        :: tdimloc, j, i, k
     type(ESMF_FieldStatus_Flag)                  :: fieldStatus
     integer(ESMF_KIND_I4), allocatable           :: start(:), count(:), ubnd(:), lbnd(:)
@@ -3957,19 +3957,18 @@ module mossco_netcdf
     type(ESMF_Grid)                              :: grid
     type(ESMF_DistGrid)                          :: distGrid
     type(ESMF_DELayout)                          :: delayout
-    type(ESMF_Vm)                                :: Vm
+    type(ESMF_Vm)                                :: vm
+    type(ESMF_GeomType_Flag)                     :: geomType
+    type(ESMF_Mesh)                              :: mesh
 
     owner_ = '--'
     rc_ = ESMF_SUCCESS
+    itime_ = 1
+
     if (present(rc)) rc = rc_
     if (present(kwe)) rc_ = ESMF_SUCCESS
     if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
-
-    if (present(itime)) then
-      itime_ = itime
-    else
-      itime_ = 1
-    endif
+    if (present(itime)) itime_ = itime
 
     ! Test for field completeness and terminate if not complete
     call ESMF_FieldGet(field, status=fieldStatus, name=name, rc=localrc)
@@ -3997,25 +3996,41 @@ module mossco_netcdf
       return
     endif
 
-    call ESMF_FieldGet(field, grid=grid, rc=localrc)
+    call ESMF_FieldGet(field, geomType=geomType, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_GridGet(grid, distGrid=distGrid, rank=gridRank, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    if (geomType /= ESMF_GEOMTYPE_GRID) then
+      write(message, '(A)')  trim(owner_)//' not implemented reading into non-grid '
+      call MOSSCO_FieldString(field, message, rc=localrc)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      if (present(rc)) rc = ESMF_RC_NOT_IMPL
+      return
+    endif
 
-    call ESMF_DistGridGet(distGrid, delayout=delayout, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    if (geomType == ESMF_GEOMTYPE_GRID) then
 
-    call ESMF_DELayoutGet(delayout, deCount=deCount, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      call ESMF_FieldGet(field, grid=grid, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    !> @todo check error state
-    allocate(minIndexPDe(gridRank, deCount), stat=localrc)
-    allocate(maxIndexPDe(gridRank, deCount), stat=localrc)
+      call ESMF_GridGet(grid, distGrid=distGrid, rank=geomRank, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_DistGridGet(distGrid, minIndexPDe=minIndexPDe, &
+      call ESMF_DistGridGet(distGrid, delayout=delayout, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call ESMF_DELayoutGet(delayout, deCount=deCount, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      !> @todo check error state
+      allocate(minIndexPDe(geomRank, deCount), stat=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      allocate(maxIndexPDe(geomRank, deCount), stat=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call ESMF_DistGridGet(distGrid, minIndexPDe=minIndexPDe, &
         maxIndexPDe=maxIndexPDe, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
 
     call ESMF_VmGetGlobal(vm, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -4024,39 +4039,44 @@ module mossco_netcdf
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     !> @todo check error state
-    allocate(start(fieldRank)); start(1:fieldRank) = 1
-    allocate(count(fieldRank)); count(1:fieldRank) = 1
+    allocate(start(fieldRank))
+    allocate(count(fieldRank))
     allocate(ubnd(fieldRank))
     allocate(ncubnd(fieldRank))
-    allocate(fstart(fieldRank)); fstart(1:fieldRank) = 1
+    allocate(fstart(fieldRank))
     allocate(lbnd(fieldRank))
 
-    call ESMF_FieldGetBounds(field, exclusiveUbound=ubnd, exclusiveLBound=lbnd, rc=localrc)
+    call ESMF_FieldGetBounds(field, exclusiveUbound=ubnd(1:fieldRank), &
+      exclusiveLBound=lbnd(1:fieldRank), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    ncubnd = ubnd ! initialize array size from local field bounds
+    ! initialize array size from local field bounds
+    start(1:fieldRank) = lbnd(1:fieldRank)
+    ncubnd(1:fieldRank) = ubnd(1:fieldRank)
+    count(1:fieldRank) = 1 ! set later ubnd(1:fieldRank) - lbnd(1:fieldRank) + 1
+    fstart(1:fieldRank) = 1
 
     !> First asssume to read part of a global field in the netcdf file
     !! adjust array size to match global field indexation:
-    ncubnd(1:gridRank)=maxIndexPDe(:,localPet+1)
-    start(1:gridRank)=minIndexPDe(:,localPet+1)
-    where (start < 1)
-      start=1
-    endwhere
+    ncubnd(1:geomRank) = maxIndexPDe(1:geomRank,localPet+1)
+    start(1:geomRank)  = minIndexPDe(1:geomRank,localPet+1)
+    ! where (start < 1)
+    !   start=1
+    ! endwhere
 
     !! set start indices for target field
-    fstart(1:gridRank)=start(1:gridRank)-minIndexPDe(1:gridRank,localPet+1)+1
+    fstart(1:geomRank)=start(1:geomRank)-minIndexPDe(1:geomRank,localPet+1)+1
 
     !! restrict length of field to read from netcdf to available size, only do this
     !! on the gridded dimensions
-    do i=1, gridRank
+    do i=1, geomRank
       if (ncubnd(i)>self%dimlens(var%dimids(i))) ncubnd(i)=self%dimlens(var%dimids(i))
     enddo
     count=count+ncubnd-start
 
     !> overwrite global indexing, if matching netcdf data domain
     !! then simply copy whole array:
-    do i=1, gridRank
+    do i=1, geomRank
       if (ubnd(i)-lbnd(i)+1==self%dimlens(var%dimids(i))) then
         start(i) = 1
         count(i) = ubnd(i)-lbnd(i)+1
@@ -4064,7 +4084,7 @@ module mossco_netcdf
       end if
     enddo
 
-    if (any(count <= 0)) then
+    if (any(count <= 0) .or. any(start < lbnd)) then
       write(0,*) '  fstart = ', fstart
       write(0,*) '  start = ', start
       write(0,*) '  count = ', count
@@ -4150,6 +4170,7 @@ module mossco_netcdf
             (/start(1),start(2),itime_/), (/count(1),count(2),1/))
         endif
       else
+
         ! ungridded bounds not implemented
         write(message,'(A)') trim(owner_)//' cannot handle ungridded dims in '//trim(var%name)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -4173,10 +4194,12 @@ module mossco_netcdf
       call ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      allocate(netcdfPtr3(1:count(1),1:count(2),1:count(3)))
+      allocate(netcdfPtr3(1:count(1),1:count(2),1:count(3)), stat=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       if (var%rank==fieldRank) then
         localrc = nf90_get_var(self%ncid, var%varid, netcdfPtr3, start, count)
+        _MOSSCO_LOG_AND_FINALIZE_ON_NC_ERROR_(localrc)
 
       elseif (var%rank==fieldRank+1 .and. tdimloc > -1) then
         ! Allow reading of a reduced variable rank, if  time is one of
@@ -4184,27 +4207,25 @@ module mossco_netcdf
         if (tdimloc == 1) then
           localrc = nf90_get_var(self%ncid, var%varid, netcdfPtr3, &
             (/itime_,start(1),start(2),start(3)/), (/1,count(1),count(2),count(3)/))
+          _MOSSCO_LOG_AND_FINALIZE_ON_NC_ERROR_(localrc)
         elseif (tdimloc == 2) then
           localrc = nf90_get_var(self%ncid, var%varid, netcdfPtr3, &
             (/start(1),itime_,start(2),start(3)/), (/count(1),1,count(2),count(3)/))
-        elseif (tdimloc == 2) then
+          _MOSSCO_LOG_AND_FINALIZE_ON_NC_ERROR_(localrc)
+        elseif (tdimloc == 3) then
           localrc = nf90_get_var(self%ncid, var%varid, netcdfPtr3, &
             (/start(1),start(2),itime_,start(3)/), (/count(1),count(2),1,count(3)/))
+          _MOSSCO_LOG_AND_FINALIZE_ON_NC_ERROR_(localrc)
         else
           localrc = nf90_get_var(self%ncid, var%varid, netcdfPtr3, &
             (/start(1),start(2),start(3),itime_/), (/count(1),count(2),count(3),1/))
+          _MOSSCO_LOG_AND_FINALIZE_ON_NC_ERROR_(localrc)
         endif
       else
         write(message,'(A)') trim(owner_)//' cannot handle ungridded dims in '//trim(var%name)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         if (present(rc)) rc = ESMF_RC_NOT_IMPL
         return
-      endif
-      if (localrc /= NF90_NOERR) then
-        write(message,'(A)') trim(owner_)//'  '//trim(nf90_strerror(localrc))//', could not read variable '//trim(var%name)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
       farrayPtr3(fstart(1):fstart(1)+count(1)-1, &
