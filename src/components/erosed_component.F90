@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF component for erosion and sedimentation
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018, 2019 Helmholtz-Zentrum Geesthacht
 !> @author M. Hassan Nasermoaddeli, Bundesanstalt für Wasserbau
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !

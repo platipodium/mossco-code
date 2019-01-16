@@ -24,6 +24,11 @@
 #define _LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 #define _LOG_ALLOC_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundAllocError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+#define RANGE1D lbnd(1):ubnd(1)
+#define RANGE2D RANGE1D,lbnd(2):ubnd(2)
+#define RANGE3D RANGE2D,lbnd(3):ubnd(3)
+#define RANGE4D RANGE3D,lbnd(4):ubnd(4)
+
 module getm_component
 
   use esmf
@@ -847,21 +852,155 @@ module getm_component
 !-----------------------------------------------------------------------
 #undef  ESMF_METHOD
 #define ESMF_METHOD "ReadRestart"
-  subroutine ReadRestart(gridComp, importState, exportState, parentClock, rc)
+subroutine ReadRestart(gridComp, importState, exportState, parentClock, rc)
 
-    type(ESMF_GridComp)   :: gridComp
-    type(ESMF_State)      :: importState
-    type(ESMF_State)      :: exportState
-    type(ESMF_Clock)      :: parentClock
-    integer, intent(out)  :: rc
+  type(ESMF_GridComp)   :: gridComp
+  type(ESMF_State)      :: importState
+  type(ESMF_State)      :: exportState
+  type(ESMF_Clock)      :: parentClock
+  integer, intent(out)  :: rc
 
-    rc=ESMF_SUCCESS
+  integer(ESMF_KIND_I4) :: localrc, i, j, n, fieldCount=0
+  logical               :: isPresent
+  type(ESMF_Clock)      :: clock
+  type(ESMF_Time)       :: currTime
+  character(len=ESMF_MAXSTR) :: message, name, fieldName
 
-    !> Here omes your restart code, which in the simplest case copies
-    !> values from all fields in importState to those in exportState
+  type(ESMF_Field), dimension(:), allocatable :: exportFieldList, importFieldList
+  integer(ESMF_KIND_I4)                       :: importFieldCount, exportFieldCount
+  integer(ESMF_KIND_I4)                       :: rank
+  integer(ESMF_KIND_I4)                       :: ubnd(3), lbnd(3)
+  real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr3 => null()
+  real(ESMF_KIND_R8), dimension(:,:), pointer   :: farrayPtr2 => null()
+  character(len=ESMF_MAXSTR), pointer         :: includeList(:) => null()
 
-  end subroutine ReadRestart
+  rc = ESMF_SUCCESS
 
+  call MOSSCO_CompEntry(gridComp, clock, rc=localrc)
+  _LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  call MOSSCO_StateGet(importState, importFieldList, fieldCount=importFieldCount, &
+    fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
+  _LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  if (associated(includeList)) deallocate(includeList)
+  allocate(includeList(1))
+
+  do i=1, importFieldCount
+
+    call MOSSCO_StateGet(exportState, exportFieldList, fieldCount=exportFieldCount, &
+      fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), include=includeList, rc=localrc)
+    _LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (fieldCount < 1) cycle
+    if (fieldCount > 1) then
+      write(message, '(A)') trim(name)//' has no implementation for restarting from bundle '
+      call MOSSCO_FieldString(importFieldList(i), message )
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+      cycle
+    endif
+
+    call ESMF_FieldGet(importFieldList(i), name=fieldName, rank=rank, rc=localrc)
+    _LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    ubnd(:) = 1
+    lbnd(:) = 1
+    call ESMF_FieldGetBounds(importFieldList(i), exclusiveLBound=lbnd(1:rank), &
+      exclusiveUBound=ubnd(1:rank), rc=localrc)
+    _LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    select case (trim(adjustl(fieldName)))
+    case ('water_depth_at_soil_surface')
+      call ESMF_FieldGet(importFieldList(i), farrayPtr=depth, rc=localrc)
+      _LOG_AND_FINALIZE_ON_ERROR_(rc)
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=z0(RANGE2D), rc=localrc)
+    case ('depth_averaged_x_velocity_in_water')
+      call ESMF_FieldGet(importFieldList(i), farrayPtr=U2D, rc=localrc)
+      _LOG_AND_FINALIZE_ON_ERROR_(rc)
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=SlUx(RANGE2D), rc=localrc)
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=Slru(RANGE2D), rc=localrc)
+    case ('depth_averaged_y_velocity_in_water')
+      call ESMF_FieldGet(importFieldList(i), farrayPtr=V2D, rc=localrc)
+      _LOG_AND_FINALIZE_ON_ERROR_(rc)
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=SlVx(RANGE2D), rc=localrc)
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=Slrv(RANGE2D), rc=localrc)
+
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=ssen(RANGE2D), rc=localrc)
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=ssun(RANGE2D), rc=localrc)
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=sseo(RANGE2D), rc=localrc)
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=ssuo(RANGE2D), rc=localrc)
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=ssvo(RANGE2D), rc=localrc)
+      !
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=Uint(RANGE2D), rc=localrc)
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=Vint(RANGE2D), rc=localrc)
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=Uadv(RANGE2D), rc=localrc)
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=Vadv(RANGE2D), rc=localrc)
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=UEulerInt(RANGE2D), rc=localrc)
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=VEulerInt(RANGE2D), rc=localrc)
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=UEulerAdv(RANGE2D), rc=localrc)
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=VEulerAdv(RANGE2D), rc=localrc)
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=UStokesCint(RANGE2D), rc=localrc)
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=VStokesCint(RANGE2D), rc=localrc)
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=UStokesCadv(RANGE2D), rc=localrc)
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=VStokesCadv(RANGE2D), rc=localrc)
+    case ('x_velocity_in_water')
+      call ESMF_FieldGet(importFieldList(i), farrayPtr=U3D, rc=localrc)
+      _LOG_AND_FINALIZE_ON_ERROR_(rc)
+    case ('y_velocity_in_water')
+      call ESMF_FieldGet(importFieldList(i), farrayPtr=V3D, rc=localrc)
+      _LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      !call ESMF_FieldGet(importFieldList(i), farrayPtr=ww(RANGE3D), rc=localrc)
+      !call ESMF_FieldGet(importFieldList(i), farrayPtr=uuEx(RANGE3D), rc=localrc)
+      !call ESMF_FieldGet(importFieldList(i), farrayPtr=vvEx(RANGE3D), rc=localrc)
+
+    case ('turbulent_kinetic_energy_in_water')
+      call ESMF_FieldGet(importFieldList(i), farrayPtr=tke3d, rc=localrc)
+      _LOG_AND_FINALIZE_ON_ERROR_(rc)
+    case('dissipation_of_tke_in_water')
+      call ESMF_FieldGet(importFieldList(i), farrayPtr=eps3d, rc=localrc)
+      _LOG_AND_FINALIZE_ON_ERROR_(rc)
+    case ('turbulent_diffusivity_of_momentum_in_water')
+      call ESMF_FieldGet(importFieldList(i), farrayPtr=num3d, rc=localrc)
+      _LOG_AND_FINALIZE_ON_ERROR_(rc)
+    case('turbulent_diffusivity_of_heat_in_water')
+      call ESMF_FieldGet(importFieldList(i), farrayPtr=nuh3d, rc=localrc)
+      _LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      !call ESMF_FieldGet(importFieldList(i), farrayPtr=ho(RANGE3D), rc=localrc)
+      !call ESMF_FieldGet(importFieldList(i), farrayPtr=hn(RANGE3D), rc=localrc)
+    case ('temperature_in_water')
+      call ESMF_FieldGet(importFieldList(i), farrayPtr=T3D, rc=localrc)
+      _LOG_AND_FINALIZE_ON_ERROR_(rc)
+    case('practical_salinity_in_water')
+      call ESMF_FieldGet(importFieldList(i), farrayPtr=S3D, rc=localrc)
+      _LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=minus_bnh(RANGE3D), rc=localrc)
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=wco(RANGE3D), rc=localrc)
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=spm(RANGE3D), rc=localrc)
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=spm_pool(RANGE3D), rc=localrc)
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=fabm_pel(RANGE3D,:), rc=localrc)
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=fabm_ben(RANGE2D,:), rc=localrc)
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=cc3d(1:numc,RANGE3D), rc=localrc)
+      ! call ESMF_FieldGet(importFieldList(i), farrayPtr=cc3d(n,RANGE3D), rc=localrc)
+
+    case default
+      cycle
+    end select
+
+    write(message, '(A)') trim(name)//' hotstarted '
+    call MOSSCO_FieldString(importFieldList(i), message)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+  end do ! i = 1, importFieldCount
+
+  if (associated(includeList)) deallocate(includeList)
+  if (allocated(importFieldList)) deallocate(importFieldList)
+
+  call MOSSCO_CompExit(gridComp, rc=localrc)
+  _LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+end subroutine ReadRestart
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Run"
@@ -888,18 +1027,17 @@ module getm_component
     rc=ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, clock, rc=localrc)
+    _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call getmCmp_update_importState()
 
     call ESMF_GridCompGet(gridComp, clock=myClock, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
 !   toplevel modified myClock%stopTime
     call ESMF_ClockGet(myClock,currTime=currTime, advanceCount=advanceCount, &
       timeStep=timeStep, stopTime=stopTime, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !  use clock to do determine time of calling routine
     call ESMF_ClockGetNextTime(clock,nextTime,rc=localrc)
@@ -1464,20 +1602,21 @@ module getm_component
 ! !INTERFACE:
 #undef  ESMF_METHOD
 #define ESMF_METHOD "getmCmp_update_importState"
-   subroutine getmCmp_update_importState()
+
+subroutine getmCmp_update_importState()
 !
 ! !DESCRIPTION:
 !
 ! !USES:
-   use initialise  ,only: runtype
+  use initialise  ,only: runtype
 #ifndef NO_3D
 #ifndef NO_BAROCLINIC
-   use m3d         ,only: calc_temp
-   use variables_3d,only: bioshade_=>bioshade
+  use m3d         ,only: calc_temp
+  use variables_3d,only: bioshade_=>bioshade
 #endif
 #endif
 
-   IMPLICIT NONE
+  IMPLICIT NONE
 !
 ! !INPUT/OUTPUT PARAMETERS:
 !
@@ -1485,15 +1624,15 @@ module getm_component
 !  Original Author(s): Knut Klingbeil
 !
 ! !LOCAL VARIABLES:
-   REALTYPE, parameter :: pi=3.1415926535897932384626433832795029d0
-   REALTYPE, parameter :: deg2rad=pi/180
+  REALTYPE, parameter :: pi=3.1415926535897932384626433832795029d0
+  REALTYPE, parameter :: deg2rad=pi/180.00000000000000000000000000000
 !EOP
 !-----------------------------------------------------------------------
 !BOC
 #ifdef DEBUG
-   integer, save :: Ncall = 0
-   Ncall = Ncall+1
-   write(debug,*) 'getmCmp_update_importState() # ',Ncall
+  integer, save :: Ncall = 0
+  Ncall = Ncall+1
+  write(debug,*) 'getmCmp_update_importState() # ',Ncall
 #endif
 
    if (noKindMatch) then
