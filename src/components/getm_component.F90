@@ -1,6 +1,8 @@
 !> @brief Implementation of a GETM ocean component
 !
 !  This computer program is part of MOSSCO.
+!> @copyright 2013, 2014, 2015, 2016, 2017, 2018, 2019
+!             Institut für Ostseeforschung Warnemünde und Helmholtz-Zentrum Geesthacht
 !> @author Knut Klingbeil <klingbeil@io-warnemuende.de>
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !> @author Richard Hofmeister <richard.hofmeister@hzg.de>
@@ -231,25 +233,33 @@ module getm_component
     type(ESMF_StateItem_Flag),allocatable :: itemTypeList(:)
     integer(ESMF_KIND_I4) :: localrc
     character(ESMF_MAXSTR)  :: name
-    character(ESMF_MAXSTR),allocatable  :: itemNameList(:)
+    character(ESMF_MAXSTR), allocatable  :: itemNameList(:)
 
-    rc=ESMF_SUCCESS
+    rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, clock, rc=localrc)
+    _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_GridCompGet(gridComp,clockIsPresent=clockIsPresent, &
-                                   name=name, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_GridCompGet(gridComp, clockIsPresent=clockIsPresent, &
+      name=name, rc=localrc)
+     _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (clockIsPresent) then
-      call ESMF_GridCompGet(gridComp,clock=myClock)
-      clockIsPresent = ESMF_ClockIsCreated(myClock)
+      call ESMF_GridCompGet(gridComp, clock=myClock, rc=localrc)
+      _LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      clockIsPresent = ESMF_ClockIsCreated(myClock, rc=localrc)
+      _LOG_AND_FINALIZE_ON_ERROR_(rc)
     end if
 
     if (clockIsPresent) then
-      getmClock = ESMF_ClockCreate(myClock)
-      call ESMF_ClockSet(getmClock,name="getmClock")
-      getmComp = ESMF_GridCompCreate(name="getm",clock=getmClock)
+      getmClock = ESMF_ClockCreate(myClock, rc=localrc)
+      _LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_ClockSet(getmClock,name=trim(name)//"Clock", rc=localrc)
+      _LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      getmComp = ESMF_GridCompCreate(name="getm", clock=getmClock)
     else
       getmComp = ESMF_GridCompCreate(name="getm")
     endif
@@ -316,6 +326,8 @@ module getm_component
 
     call getmCmp_init_variables()
 
+    !> Add some variables also to import state to allow initialization/restart
+    !> from the coupled system.  Currently, these are U,V,T,S,tke,eps,nuh, and num
     if (associated(depth)) then
       call getmCmp_StateAddPtr("water_depth_at_soil_surface",depth,exportState,"m",name)
     end if
@@ -333,9 +345,11 @@ module getm_component
     end if
     if (associated(U3D)) then
       call getmCmp_StateAddPtr("x_velocity_in_water",U3D,exportState,"m s-1",name)
+      call getmCmp_StateAddPtr("x_velocity_in_water", U3D, importState, "m s-1", name)
     end if
     if (associated(V3D)) then
       call getmCmp_StateAddPtr("y_velocity_in_water",V3D,exportState,"m s-1",name)
+      call getmCmp_StateAddPtr("y_velocity_in_water", V3D, importState, "m s-1", name)
     end if
     if (associated(Ubot)) then
       call getmCmp_StateAddPtr("x_velocity_at_soil_surface",Ubot,exportState,"m s-1",name)
@@ -348,9 +362,11 @@ module getm_component
     end if
     if (associated(T3D)) then
       call getmCmp_StateAddPtr("temperature_in_water",T3D,exportState,"degC",name)
+      call getmCmp_StateAddPtr("temperature_in_water", T3D, importState, "degC", name)
     end if
     if (associated(S3D)) then
       call getmCmp_StateAddPtr("practical_salinity_in_water",S3D,exportState,"",name)
+      call getmCmp_StateAddPtr("practical_salinity_in_water", S3D, importState, '', name)
     end if
     if (associated(swr)) then
       call getmCmp_StateAddPtr("surface_downwelling_photosynthetic_radiative_flux",swr,exportState,"W m-2",name)
@@ -363,21 +379,29 @@ module getm_component
     end if
     if (associated(num3D)) then
       call getmCmp_StateAddPtr("turbulent_diffusivity_of_momentum_in_water",num3D,exportState,"m2 s-1",name,StaggerLoc=ESMF_STAGGERLOC_CENTER_VFACE)
+      call getmCmp_StateAddPtr("turbulent_diffusivity_of_momentum_in_water", num3D, &
+        importState,'m2 s-1' , name, staggerLoc=ESMF_STAGGERLOC_CENTER_VFACE)
     end if
     if (associated(numbot)) then
       call getmCmp_StateAddPtr("turbulent_diffusivity_of_momentum_at_soil_surface",numbot,exportState,"m2 s-1",name)
     end if
     if (associated(nuh3D)) then
       call getmCmp_StateAddPtr("turbulent_diffusivity_of_heat_in_water",nuh3D,exportState,"m2 s-1",name,StaggerLoc=ESMF_STAGGERLOC_CENTER_VFACE)
+      call getmCmp_StateAddPtr("turbulent_diffusivity_of_heat_in_water", nuh3D, &
+        importState,'m2 s-1' , name, staggerLoc=ESMF_STAGGERLOC_CENTER_VFACE)
     end if
     if (associated(tke3D)) then
       call getmCmp_StateAddPtr("turbulent_kinetic_energy_in_water",tke3D,exportState,"m2 s-2",name,StaggerLoc=ESMF_STAGGERLOC_CENTER_VFACE)
+      call getmCmp_StateAddPtr("turbulent_kinetic_energy_in_water", tke3D, &
+        importState,'m2 s-2' , name, staggerLoc=ESMF_STAGGERLOC_CENTER_VFACE)
     end if
     if (associated(tkebot)) then
       call getmCmp_StateAddPtr("turbulent_kinetic_energy_at_soil_surface",tkebot,exportState,"m2 s-2",name)
     end if
     if (associated(eps3D)) then
       call getmCmp_StateAddPtr("dissipation_of_tke_in_water",eps3D,exportState,"m2 s-3",name,StaggerLoc=ESMF_STAGGERLOC_CENTER_VFACE)
+      call getmCmp_StateAddPtr("dissipation_of_tke_in_water", eps3D, &
+        importState,'m2 s-3' , name, staggerLoc=ESMF_STAGGERLOC_CENTER_VFACE)
     end if
     if (associated(epsbot)) then
       call getmCmp_StateAddPtr("dissipation_of_tke_at_soil_surface",epsbot,exportState,"m2 s-3",name)
@@ -876,7 +900,7 @@ subroutine ReadRestart(gridComp, importState, exportState, parentClock, rc)
 
   rc = ESMF_SUCCESS
 
-  call MOSSCO_CompEntry(gridComp, clock, rc=localrc)
+  call MOSSCO_CompEntry(gridComp, clock, name=name, rc=localrc)
   _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   call MOSSCO_StateGet(importState, importFieldList, fieldCount=importFieldCount, &
@@ -888,13 +912,18 @@ subroutine ReadRestart(gridComp, importState, exportState, parentClock, rc)
 
   do i=1, importFieldCount
 
+    write(message, '(A)') trim(name)//' sees in import '
+    call MOSSCO_FieldString(importFieldList(i), message )
+    !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
     call MOSSCO_StateGet(exportState, exportFieldList, fieldCount=exportFieldCount, &
       fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), include=includeList, rc=localrc)
     _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    if (fieldCount < 1) cycle
-    if (fieldCount > 1) then
-      write(message, '(A)') trim(name)//' has no implementation for restarting from bundle '
+    !> The export state is ignored except for bundles, which are skipped
+    !if (exportFieldCount < 1) cycle
+    if (exportFieldCount > 1) then
+      write(message, '(A)') trim(name)//' has no implementation for restarting a bundle '
       call MOSSCO_FieldString(importFieldList(i), message )
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
       cycle
@@ -909,19 +938,28 @@ subroutine ReadRestart(gridComp, importState, exportState, parentClock, rc)
       exclusiveUBound=ubnd(1:rank), rc=localrc)
     _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+    write(message, '(A)') trim(name)//' would like to restart '
+    call MOSSCO_FieldString(importFieldList(i), message )
+    !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    if (rank == 2) then
+      call ESMF_FieldGet(importFieldList(i), farrayPtr=farrayPtr2, rc=localrc)
+      _LOG_AND_FINALIZE_ON_ERROR_(rc)
+    elseif (rank == 3) then
+      call ESMF_FieldGet(importFieldList(i), farrayPtr=farrayPtr3, rc=localrc)
+      _LOG_AND_FINALIZE_ON_ERROR_(rc)
+    else
+      write(message, '(A,I1,A)') trim(name)//' has no implementation for rank ',rank,' in '
+      call MOSSCO_FieldString(importFieldList(i), message )
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+      _LOG_AND_FINALIZE_ON_ERROR_(rc)
+      cycle
+    endif
+
     select case (trim(adjustl(fieldName)))
-    case ('water_depth_at_soil_surface')
-      call ESMF_FieldGet(importFieldList(i), farrayPtr=depth, rc=localrc)
-      _LOG_AND_FINALIZE_ON_ERROR_(rc)
       ! call ESMF_FieldGet(importFieldList(i), farrayPtr=z0(RANGE2D), rc=localrc)
-    case ('depth_averaged_x_velocity_in_water')
-      call ESMF_FieldGet(importFieldList(i), farrayPtr=U2D, rc=localrc)
-      _LOG_AND_FINALIZE_ON_ERROR_(rc)
       ! call ESMF_FieldGet(importFieldList(i), farrayPtr=SlUx(RANGE2D), rc=localrc)
       ! call ESMF_FieldGet(importFieldList(i), farrayPtr=Slru(RANGE2D), rc=localrc)
-    case ('depth_averaged_y_velocity_in_water')
-      call ESMF_FieldGet(importFieldList(i), farrayPtr=V2D, rc=localrc)
-      _LOG_AND_FINALIZE_ON_ERROR_(rc)
       ! call ESMF_FieldGet(importFieldList(i), farrayPtr=SlVx(RANGE2D), rc=localrc)
       ! call ESMF_FieldGet(importFieldList(i), farrayPtr=Slrv(RANGE2D), rc=localrc)
 
@@ -944,37 +982,28 @@ subroutine ReadRestart(gridComp, importState, exportState, parentClock, rc)
       ! call ESMF_FieldGet(importFieldList(i), farrayPtr=UStokesCadv(RANGE2D), rc=localrc)
       ! call ESMF_FieldGet(importFieldList(i), farrayPtr=VStokesCadv(RANGE2D), rc=localrc)
     case ('x_velocity_in_water')
-      call ESMF_FieldGet(importFieldList(i), farrayPtr=U3D, rc=localrc)
-      _LOG_AND_FINALIZE_ON_ERROR_(rc)
+      U3D(RANGE3D) = farrayPtr3(RANGE3D)
     case ('y_velocity_in_water')
-      call ESMF_FieldGet(importFieldList(i), farrayPtr=V3D, rc=localrc)
-      _LOG_AND_FINALIZE_ON_ERROR_(rc)
+      V3D(RANGE3D) = farrayPtr3(RANGE3D)
+    case ('turbulent_kinetic_energy_in_water')
+      tke3d(RANGE3D) = farrayPtr3(RANGE3D)
+    case ('dissipation_of_tke_in_water')
+      eps3d(RANGE3D) = farrayPtr3(RANGE3D)
+    case ('turbulent_diffusivity_of_momentum_in_water')
+      num3d(RANGE3D) = farrayPtr3(RANGE3D)
+    case ('turbulent_diffusivity_of_heat_in_water')
+      nuh3d(RANGE3D) = farrayPtr3(RANGE3D)
 
       !call ESMF_FieldGet(importFieldList(i), farrayPtr=ww(RANGE3D), rc=localrc)
       !call ESMF_FieldGet(importFieldList(i), farrayPtr=uuEx(RANGE3D), rc=localrc)
       !call ESMF_FieldGet(importFieldList(i), farrayPtr=vvEx(RANGE3D), rc=localrc)
 
-    case ('turbulent_kinetic_energy_in_water')
-      call ESMF_FieldGet(importFieldList(i), farrayPtr=tke3d, rc=localrc)
-      _LOG_AND_FINALIZE_ON_ERROR_(rc)
-    case('dissipation_of_tke_in_water')
-      call ESMF_FieldGet(importFieldList(i), farrayPtr=eps3d, rc=localrc)
-      _LOG_AND_FINALIZE_ON_ERROR_(rc)
-    case ('turbulent_diffusivity_of_momentum_in_water')
-      call ESMF_FieldGet(importFieldList(i), farrayPtr=num3d, rc=localrc)
-      _LOG_AND_FINALIZE_ON_ERROR_(rc)
-    case('turbulent_diffusivity_of_heat_in_water')
-      call ESMF_FieldGet(importFieldList(i), farrayPtr=nuh3d, rc=localrc)
-      _LOG_AND_FINALIZE_ON_ERROR_(rc)
-
       !call ESMF_FieldGet(importFieldList(i), farrayPtr=ho(RANGE3D), rc=localrc)
       !call ESMF_FieldGet(importFieldList(i), farrayPtr=hn(RANGE3D), rc=localrc)
     case ('temperature_in_water')
-      call ESMF_FieldGet(importFieldList(i), farrayPtr=T3D, rc=localrc)
-      _LOG_AND_FINALIZE_ON_ERROR_(rc)
+      T3D(RANGE3D) = farrayPtr3(RANGE3D)
     case('practical_salinity_in_water')
-      call ESMF_FieldGet(importFieldList(i), farrayPtr=S3D, rc=localrc)
-      _LOG_AND_FINALIZE_ON_ERROR_(rc)
+      S3D(RANGE3D) = farrayPtr3(RANGE3D)
 
       ! call ESMF_FieldGet(importFieldList(i), farrayPtr=minus_bnh(RANGE3D), rc=localrc)
       ! call ESMF_FieldGet(importFieldList(i), farrayPtr=wco(RANGE3D), rc=localrc)
@@ -986,16 +1015,21 @@ subroutine ReadRestart(gridComp, importState, exportState, parentClock, rc)
       ! call ESMF_FieldGet(importFieldList(i), farrayPtr=cc3d(n,RANGE3D), rc=localrc)
 
     case default
+      write(message, '(A)') trim(name)//' has not implementation to hotstart '
+      call MOSSCO_FieldString(importFieldList(i), message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       cycle
     end select
 
-    write(message, '(A)') trim(name)//' hotstarted '
+    write(message, '(A)') trim(name)//' hotstarted from '
     call MOSSCO_FieldString(importFieldList(i), message)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
   end do ! i = 1, importFieldCount
 
   if (associated(includeList)) deallocate(includeList)
   if (allocated(importFieldList)) deallocate(importFieldList)
+  nullify(farrayPtr2)
+  nullify(farrayPtr3)
 
   call MOSSCO_CompExit(gridComp, rc=localrc)
   _LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -1799,28 +1833,28 @@ subroutine getmCmp_update_importState()
 ! !INTERFACE:
 #undef  ESMF_METHOD
 #define ESMF_METHOD "getmCmp_StateAddPtr2D"
-  subroutine getmCmp_StateAddPtr2D(name,p2d,state,units,componentName)
+subroutine getmCmp_StateAddPtr2D(name,p2d,state,units,componentName)
 !
 ! !DESCRIPTION:
 !
 ! !USES:
-   use domain, only: imin,imax,jmin,jmax
-   IMPLICIT NONE
+  use domain, only: imin,imax,jmin,jmax
+  IMPLICIT NONE
 !
 ! !INPUT PARAMETERS:
-   character(len=*),intent(in)                          :: name,units,componentName
-   real(ESMF_KIND_R8),dimension(:,:),pointer,intent(in) :: p2d
+  character(len=*),intent(in)                          :: name,units,componentName
+  real(ESMF_KIND_R8),dimension(:,:),pointer,intent(in) :: p2d
 !
 ! !INPUT/OUTPUT PARAMETERS:
-   type(ESMF_State),intent(inout)                       :: state
+  type(ESMF_State),intent(inout)                       :: state
 !
 ! !REVISION HISTORY:
 !  Original Author(s): Knut Klingbeil
 !
 ! !LOCAL VARIABLES
-   type(ESMF_Field) :: field
-   integer          :: rc
-    integer(ESMF_KIND_I4) :: localrc
+  type(ESMF_Field) :: field
+  integer          :: rc
+  integer(ESMF_KIND_I4) :: localrc
 !
 !EOP
 !-----------------------------------------------------------------------
@@ -1843,22 +1877,25 @@ subroutine getmCmp_update_importState()
                             totalLWidth=int((/imin,jmin/)-lbound(p2d)),  &
                             totalUWidth=int(ubound(p2d)-(/imax,jmax/)),  &
                             name=name,rc=localrc)
-   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-   call ESMF_AttributeSet(field,'units',trim(units))
 
-    call ESMF_AttributeSet(field,'creator', trim(componentName), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-   call ESMF_StateAdd(state,(/field/),rc=localrc)
-   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  call ESMF_AttributeSet(field,'units',trim(units))
+  _LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  call ESMF_AttributeSet(field,'creator', trim(componentName), rc=localrc)
+  _LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  call ESMF_StateAddReplace(state,(/field/),rc=localrc)
+  _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
 #ifdef DEBUG
-   write(debug,*) 'Leaving getmCmp_StateAddPtr2D()'
-   write(debug,*)
+  write(debug,*) 'Leaving getmCmp_StateAddPtr2D()'
+  write(debug,*)
 #endif
-   return
+  return
 
-   end subroutine getmCmp_StateAddPtr2D
+end subroutine getmCmp_StateAddPtr2D
 !EOC
 !-----------------------------------------------------------------------
 !BOP
