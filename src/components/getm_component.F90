@@ -224,7 +224,7 @@ module getm_component
     type(ESMF_Clock)      :: myClock,getmClock
     !type(ESMF_Distgrid)   :: distgrid
     type(ESMF_Field)      :: field
-    !type(ESMF_Grid)       :: grid
+    type(ESMF_Grid),allocatable :: gridList(:)
     logical               :: clockIsPresent
     type(ESMF_TimeInterval) :: timeInterval
     integer               :: phase,phase0,phaseCount,itemCount,i
@@ -289,16 +289,15 @@ module getm_component
 
     controlClock = ESMF_ClockCreate(myClock)
 
-    !call ESMF_GridCompGet(getmComp,grid=grid)
-    !call ESMF_GridGet(grid,distgrid=distgrid)
-    !getmGrid3D = ESMF_GridCreate(grid,distgrid,name=trim(name)//"Grid3D")
+#if 0
     call ESMF_GridCompGet(getmComp,grid=getmGrid3D)
-
     call ESMF_StateGet(exportState,"gridSetField2D",field)
-    !call ESMF_FieldGet(field,grid=grid)
-    !call ESMF_GridGet(grid,distgrid=distgrid)
-    !getmGrid2D = ESMF_GridCreate(grid,distgrid,name=trim(name)//"Grid2D")
     call ESMF_FieldGet(field,grid=getmGrid2D)
+#else
+    call ESMF_GridCompGet(getmComp, gridList=gridList)
+    getmGrid3D = gridList(1)
+    getmGrid2D = gridList(2)
+#endif
 
     call ESMF_StateGet(importState,itemCount=itemCount)
     allocate(itemNameList(itemCount))
