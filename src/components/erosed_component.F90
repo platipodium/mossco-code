@@ -1192,6 +1192,8 @@ module erosed_component
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     end do
   else
+    write(message, '(A)') trim(name)//' did not obtain SPM fields, did you forget these in fabm.nml?' 
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
     localrc = ESMF_RC_NOT_FOUND
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
