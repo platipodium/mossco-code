@@ -1,3 +1,4 @@
+test_ESMF_Vm
 test_calculator
 test_link_connector
 test_MOSSCO_Field
