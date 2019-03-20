@@ -31,4 +31,3 @@ fabm_gotm:        q
 fabm_benthic:     i # for 'interface'
 gotm:             j # for 'soft' jotm
 location:         y
-constant:         z # for 'zero' value

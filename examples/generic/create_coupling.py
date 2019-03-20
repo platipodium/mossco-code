@@ -2312,7 +2312,6 @@ libs = {'gotm'       : ['solver', 'mossco_gotm'] ,
         'fabm_sediment' : ['sediment', 'mossco_sediment', 'solver'],
         'fabm_pelagic' : ['mossco_fabmpelagic', 'util', 'solver'],
         'fabm_benthic' : ['mossco_fabmbenthic', 'util', 'solver'],
-        'constant'   : ['constant', 'mossco_util'],
         'default'   :  ['default'],
         'random'    : ['random'],
         'clm_netcdf' : ['mossco_clm'],
@@ -2378,7 +2377,6 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'river'      : ['libmossco_river'],
         'inout'      : ['libmossco_technical'],
         'dummy'      : ['libmossco_technical'],
-        'constant'   : ['libconstant libmossco_util'],
         'default'  : ['libdefault'],
         'random'  : ['libmossco_random'],
         'gotm'       : ['libmossco_gotm', 'libsolver'],
@@ -2466,7 +2464,7 @@ libmossco_gotmfabm libmossco_gotm libmossco_fabmgotm:
 libmossco_util libsolver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
-libsediment libconstant libdefault libmossco_clm libmossco_erosed \
+libsediment libdefault libmossco_clm libmossco_erosed \
 libmossco_fabm0d libmossco_fabmpelagic libmossco_macrobenthos libmossco_grid \
 libmossco_fabmbenthic libmossco_random:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
