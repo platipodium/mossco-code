@@ -4,7 +4,7 @@ Ocean is the local cluster at HZG. It offers recent Intel and PGI compilers and 
 
     /home/lemmen/opt
 
-Choose a version that has both an `esmf.mk` and a `esmf.mod` file, e.g., the version `/home/lemmen/opt/lib/libg/Linux.intel.64.openmpi.ESMF_7_0_0_beta_snapshot_65/esmf-o.mk`
+Choose a version that has both an `esmf.mk` and a `esmf.mod` file, e.g., the version `/home/lemmen/opt/lib/libO/Linux.intel.64.openmpi.ESMF_7_1_0r/esmf.mk`
 
 ## Preparing your environment
 
@@ -17,7 +17,7 @@ Download the latest PyYAML source package, then install it as a user
 ### Environment variables
 
     export PATH=$PATH:/home/lemmen/opt/bin # for cmake
-    export ESMFMKFILE=/home/lemmen/opt/lib/libg/Linux.intel.64.openmpi.ESMF_7_0_0_beta_snapshot_43/esmf.mk
+    export ESMFMKFILE=/home/lemmen/opt/lib/libO/Linux.intel.64.openmpi.ESMF_7_1_0r/esmf.mk
     module load intel openmpi_ib  netcdf/3.6.2
 
     export NETCDF=NETCDF3
@@ -70,10 +70,10 @@ It is already done (usually), but in case you want to do this again:
 		export ESMF_NETCDF_LIBPATH=/opt/netcdf/3.6.2/intel/lib
 		export ESMF_F90COMPILEOPTS=-DESMF_NO_SEQUENCE
 		unset ESMF_PIO
-		export ESMF_SITE=ESMF_7_0_0_beta_snapshot_65
+		export ESMF_SITE=ESMF_7_1_0r
 		export ESMF_COMPILER=intel
 		export ESMF_COMM=openmpi
 		unset ESMF_XERCES
-
+  
 		cd $ESMF_DIR
 		make lib
