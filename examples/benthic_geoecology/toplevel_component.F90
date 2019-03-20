@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF toplevel coupling
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2014, 2015, 2016, 2019 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, <carsten.lemmen@hzg.de>
 
 !
@@ -22,7 +22,7 @@ module toplevel_component
 
   ! Registration routines for fabm
   use benthos_component, only : benthos_SetServices => SetServices
-  use constant_component, only : constant_SetServices => SetServices
+  use default_component, only : default_SetServices => SetServices
   use gotm_component, only : gotm_SetServices => SetServices
   use fabm_gotm_component, only : fabm_gotm_SetServices => SetServices
   use erosed_component, only: erosed_SetServices => SetServices
@@ -36,7 +36,7 @@ module toplevel_component
 
   public SetServices
 
-  type(ESMF_GridComp),save     :: benthosComp, constantComp, gotmComp, fabmgotmComp
+  type(ESMF_GridComp),save     :: benthosComp, defaultComp, gotmComp, fabmgotmComp
   type(ESMF_GridComp), save    :: erosedComp, netcdfComp
   type(ESMF_State),save,target :: state
 
@@ -101,9 +101,9 @@ module toplevel_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompSetServices(fabmgotmComp,fabm_gotm_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    constantComp = ESMF_GridCompCreate(name="constantComp", rc=rc)
+    defaultComp = ESMF_GridCompCreate(name="defaultComp", rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_GridCompSetServices(constantComp,constant_SetServices, rc=rc)
+    call ESMF_GridCompSetServices(defaultComp,default_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     erosedComp = ESMF_GridCompCreate(name="erosedComp", rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -126,7 +126,7 @@ module toplevel_component
     call ESMF_AttributeSet(state,name='filename',value='benthic_geoecology.nc',rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    call ESMF_GridCompInitialize(constantComp, importState=state, exportState=state,clock=clock,rc=rc)
+    call ESMF_GridCompInitialize(defaultComp, importState=state, exportState=state,clock=clock,rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompInitialize(gotmComp, importState=state, exportState=state, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -266,9 +266,9 @@ module toplevel_component
     call ESMF_GridCompDestroy(benthosComp, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    call ESMF_GridCompFinalize(constantComp, rc=rc)
+    call ESMF_GridCompFinalize(defaultComp, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_GridCompDestroy(constantComp, rc=rc)
+    call ESMF_GridCompDestroy(defaultComp, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompFinalize(erosedComp, rc=rc)

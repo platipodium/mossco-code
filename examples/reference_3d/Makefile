@@ -26,7 +26,7 @@ ifneq ($(MOSSCO_EROSED),true)
 $(error This example only works with MOSSCO_EROSED = true)
 endif
 LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS)
-LDFLAGS += -lconstant
+LDFLAGS += -ldefault
 LDFLAGS += -lmossco_getm $(GETM_LDFLAGS)
 LDFLAGS += -lsediment -lmossco_sediment -lsolver $(FABM_LDFLAGS)
 LDFLAGS += -lmossco_connector
@@ -44,9 +44,9 @@ LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS)
 
 all: exec
 
-toplevel_component.o : toplevel_component.F90 libmossco_util  libconstant libmossco_getm libsediment libmossco_sediment libsolver libmossco_connector libpelagicbenthiccoupler libpelagicbenthiccoupler libmossco_simplewave libmossco_netcdf libmossco_clm libmossco_benthos libmossco_fabmpelagic libsolver libmossco_erosed
+toplevel_component.o : toplevel_component.F90 libmossco_util  libdefault libmossco_getm libsediment libmossco_sediment libsolver libmossco_connector libpelagicbenthiccoupler libpelagicbenthiccoupler libmossco_simplewave libmossco_netcdf libmossco_clm libmossco_benthos libmossco_fabmpelagic libsolver libmossco_erosed
 
-exec: libmossco_util  libconstant libmossco_getm libsediment libmossco_sediment libsolver libmossco_connector libpelagicbenthiccoupler libpelagicbenthiccoupler libmossco_simplewave libmossco_netcdf libmossco_clm libmossco_benthos libmossco_fabmpelagic libsolver libmossco_erosed reference_3d
+exec: libmossco_util  libdefault libmossco_getm libsediment libmossco_sediment libsolver libmossco_connector libpelagicbenthiccoupler libpelagicbenthiccoupler libmossco_simplewave libmossco_netcdf libmossco_clm libmossco_benthos libmossco_fabmpelagic libsolver libmossco_erosed reference_3d
 
 reference_3d: toplevel_component.o ../common/main.o
 	$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o $@
@@ -62,7 +62,7 @@ libmossco_gotmfabm libmossco_gotm libmossco_fabmgotm:
 libmossco_util libsolver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
-libsediment libconstant libconstant_grid libmossco_clm libmossco_erosed libmossco_fabm0d libmossco_fabmpelagic:
+libsediment libdefault libdefault_grid libmossco_clm libmossco_erosed libmossco_fabm0d libmossco_fabmpelagic:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libempty libmossco_inout libmossco_getm libmossco_simplewave libmossco_netcdf libmossco_benthos:

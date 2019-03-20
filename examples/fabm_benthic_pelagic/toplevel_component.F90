@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF toplevel coupling
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2014, 2015, 2016, 2019 Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister
 
 !
@@ -19,7 +19,7 @@ module toplevel_component
 
   ! Registration routines for fabm
   use fabm_sediment_component, only : fabmsed_SetServices => SetServices
-  use constant_component, only : constant_SetServices => SetServices
+  use default_component, only : default_SetServices => SetServices
   use gotm_component, only : gotm_SetServices => SetServices
   use fabm_gotm_component, only : fabm_gotm_SetServices => SetServices
   use pelagic_benthic_coupler, only : pb_coupler_SetServices => SetServices
@@ -38,13 +38,13 @@ module toplevel_component
 
   public SetServices
 
-  type(ESMF_GridComp),save     :: fabmsedComp, constantComp, gotmComp, fabmgotmComp
+  type(ESMF_GridComp),save     :: fabmsedComp, defaultComp, gotmComp, fabmgotmComp
 #ifdef MOSSCO_EROSED
   type(ESMF_GridComp), save    :: erosedComp
 #endif
   type(ESMF_GridComp), save    :: netcdfComp
   type(ESMF_CplComp),save      :: pbCplComp,bpCplComp, linkConn
-  type(ESMF_State),save,target :: state, constantState
+  type(ESMF_State),save,target :: state, defaultState
   type(ESMF_State),pointer     :: pelagicstate,sedimentstate
 
   contains
@@ -97,9 +97,9 @@ module toplevel_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompSetServices(fabmsedComp,fabmsed_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    constantComp = ESMF_GridCompCreate(name="constantComp",rc=rc)
+    defaultComp = ESMF_GridCompCreate(name="defaultComp",rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_GridCompSetServices(constantComp,constant_SetServices, rc=rc)
+    call ESMF_GridCompSetServices(defaultComp,default_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     linkConn = ESMF_CplCompCreate(name="linkConn",rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -130,7 +130,7 @@ module toplevel_component
     state = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED,name="Exchange state")
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    constantState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED,name="Constant state")
+    defaultState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED,name="default state")
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     !> use fbp_exchange_state.nc as filename when coupling to netcdf_component
@@ -139,7 +139,7 @@ module toplevel_component
     pelagicstate => state
     sedimentstate => state
 
-    call ESMF_GridCompInitialize(constantComp, importState=pelagicState, exportState=constantState,clock=parentClock,rc=rc)
+    call ESMF_GridCompInitialize(defaultComp, importState=pelagicState, exportState=defaultState,clock=parentClock,rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompInitialize(gotmComp, importState=pelagicstate, exportState=pelagicstate, clock=parentClock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -165,7 +165,7 @@ module toplevel_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_CplCompInitialize(bpCplComp, importState=pelagicstate, exportState=sedimentstate, clock=parentClock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_CplCompInitialize(linkConn, importState=constantState, exportState=sedimentstate, clock=parentClock, rc=rc)
+    call ESMF_CplCompInitialize(linkConn, importState=defaultState, exportState=sedimentstate, clock=parentClock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     call ESMF_LogWrite("Toplevel component initialized",ESMF_LOGMSG_INFO)
@@ -295,9 +295,9 @@ module toplevel_component
     call ESMF_GridCompDestroy(fabmsedComp, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    call ESMF_GridCompFinalize(constantComp, rc=rc)
+    call ESMF_GridCompFinalize(defaultComp, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_GridCompDestroy(constantComp, rc=rc)
+    call ESMF_GridCompDestroy(defaultComp, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
 #ifdef MOSSCO_EROSED

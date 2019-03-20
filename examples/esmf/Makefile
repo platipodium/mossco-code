@@ -18,7 +18,7 @@ EXTRA_DIST=README
 
 # Determine examples to build
 
-SUBDIRS += clm empty remtc  benthos simplewave constant
+SUBDIRS += clm empty remtc  benthos simplewave default
 
 ifeq ($(MOSSCO_EROSED),true)
 SUBDIRS += erosed

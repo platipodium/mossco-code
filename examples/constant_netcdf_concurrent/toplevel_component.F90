@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF toplevel coupling
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2014, 2015, 2016, 2019 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, <carsten.lemmen@hzg.de>
 
 !
@@ -17,7 +17,7 @@ module toplevel_component
   use mossco_state
   use mossco_component
 
-  use constant_component, only : constant_SetServices => SetServices
+  use default_component, only : default_SetServices => SetServices
   use netcdf_component, only : netcdf_SetServices => SetServices
   use redist_coupler, only : redist_coupler_SetServices => SetServices
 
@@ -36,9 +36,9 @@ module toplevel_component
   character(len=ESMF_MAXSTR), dimension(:), save, allocatable :: cplCompNames
   character(len=ESMF_MAXSTR), dimension(:), save, allocatable :: cplNames
   type(ESMF_CplComp), save  :: redist_couplerComp
-  type(ESMF_GridComp), save :: constantComp
+  type(ESMF_GridComp), save :: defaultComp
   type(ESMF_GridComp), save :: netcdfComp
-  type(ESMF_State), save    :: constantExportState, constantImportState
+  type(ESMF_State), save    :: defaultExportState, defaultImportState
   type(ESMF_State), save    :: netcdfExportState, netcdfImportState
 
 
@@ -134,7 +134,7 @@ module toplevel_component
     allocate(importStates(numGridComp))
     allocate(exportStates(numGridComp))
 
-    gridCompNames(1) = 'constant'
+    gridCompNames(1) = 'default'
     gridCompNames(2) = 'netcdf'
 
     !! Create all gridded components, and create import and export states for these
@@ -172,7 +172,7 @@ module toplevel_component
     enddo
 
     !! Now register all setServices routines for the gridded components
-    call ESMF_GridCompSetServices(gridCompList(1), constant_SetServices, rc=rc)
+    call ESMF_GridCompSetServices(gridCompList(1), default_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompSetServices(gridCompList(2), netcdf_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -200,13 +200,13 @@ module toplevel_component
       exportState=importStates(2), clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    !! Initializing 1: constant
+    !! Initializing 1: default
     call ESMF_GridCompInitialize(gridCompList(1), importState=importStates(1), &
       exportState=exportStates(1), clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     !! Initializing 2: netcdf
-    !! which couples from constant
+    !! which couples from default
     call ESMF_CplCompRun(cplCompList(1), importState=exportStates(1), &
       exportState=importStates(2), clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -228,7 +228,7 @@ module toplevel_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     cplAlarmList(1)=ESMF_AlarmCreate(clock=clock,ringTime=startTime+alarmInterval, &
-      ringInterval=alarmInterval, name='constant--netcdf--cplAlarm', rc=rc)
+      ringInterval=alarmInterval, name='default--netcdf--cplAlarm', rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     !! Copy this alarm to all children as well
@@ -236,7 +236,7 @@ module toplevel_component
       call ESMF_GridCompGet(gridCompList(i),name=name, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-      if (trim(name)=='constantComp' .or. trim(name)=='netcdfComp') then
+      if (trim(name)=='defaultComp' .or. trim(name)=='netcdfComp') then
         call ESMF_GridCompGet(gridCompList(i), clockIsPresent=clockIsPresent, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 

@@ -4,7 +4,7 @@
 !> the call 'python ./create_coupling.py reference_3d.yaml'
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2014, 2015, 2016, 2019 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, <carsten.lemmen@hzg.de>
 
 !
@@ -26,7 +26,7 @@ module toplevel_component
 
   use getm_component, only : getm_SetServices => SetServices
   use fabm_pelagic_component, only : fabm_pelagic_SetServices => SetServices
-  use constant_component, only : constant_SetServices => SetServices
+  use default_component, only : default_SetServices => SetServices
   use fabm_sediment_component, only : fabm_sediment_SetServices => SetServices
   use simplewave_component, only : simplewave_SetServices => SetServices
   use netcdf_component, only : netcdf_SetServices => SetServices
@@ -56,7 +56,7 @@ module toplevel_component
   type(ESMF_CplComp), save  :: pelagic_benthic_couplerComp
   type(ESMF_GridComp), save :: getmComp
   type(ESMF_GridComp), save :: fabm_pelagicComp
-  type(ESMF_GridComp), save :: constantComp
+  type(ESMF_GridComp), save :: defaultComp
   type(ESMF_GridComp), save :: fabm_sedimentComp
   type(ESMF_GridComp), save :: simplewaveComp
   type(ESMF_GridComp), save :: netcdfComp
@@ -65,7 +65,7 @@ module toplevel_component
   type(ESMF_GridComp), save :: erosedComp
   type(ESMF_State), save    :: getmExportState, getmImportState
   type(ESMF_State), save    :: fabm_pelagicExportState, fabm_pelagicImportState
-  type(ESMF_State), save    :: constantExportState, constantImportState
+  type(ESMF_State), save    :: defaultExportState, defaultImportState
   type(ESMF_State), save    :: fabm_sedimentExportState, fabm_sedimentImportState
   type(ESMF_State), save    :: simplewaveExportState, simplewaveImportState
   type(ESMF_State), save    :: netcdfExportState, netcdfImportState
@@ -153,7 +153,7 @@ module toplevel_component
 
     gridCompNames(1) = 'getm'
     gridCompNames(2) = 'fabm_pelagic'
-    gridCompNames(3) = 'constant'
+    gridCompNames(3) = 'default'
     gridCompNames(4) = 'fabm_sediment'
     gridCompNames(5) = 'simplewave'
     gridCompNames(6) = 'netcdf'
@@ -217,7 +217,7 @@ module toplevel_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_GridCompSetServices(gridCompList(2), fabm_pelagic_SetServices, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_GridCompSetServices(gridCompList(3), constant_SetServices, rc=localrc)
+    call ESMF_GridCompSetServices(gridCompList(3), default_SetServices, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_GridCompSetServices(gridCompList(4), fabm_sediment_SetServices, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -340,7 +340,7 @@ module toplevel_component
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       endif
     endif
-    !! Initializing phase 1 of constant
+    !! Initializing phase 1 of default
     if (phaseCountList( 3)>=1) then
       call ESMF_GridCompInitialize(gridCompList(3), importState=importStates(3), &
         exportState=exportStates(3), clock=clock, phase=1, rc=localrc)
@@ -556,7 +556,7 @@ module toplevel_component
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       endif
     endif
-    !! Initializing phase 2 of constant
+    !! Initializing phase 2 of default
     if (phaseCountList( 3)>=2) then
       call ESMF_GridCompInitialize(gridCompList(3), importState=importStates(3), &
         exportState=exportStates(3), clock=clock, phase=2, rc=localrc)
@@ -1059,7 +1059,7 @@ module toplevel_component
     if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
     cplAlarmList(10)=ESMF_AlarmCreate(clock=clock,ringTime=startTime+alarmInterval, &
-      ringInterval=alarmInterval, name='constant--fabm_sediment--cplAlarm', rc=localrc)
+      ringInterval=alarmInterval, name='default--fabm_sediment--cplAlarm', rc=localrc)
     if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
     !! Copy this alarm to all children as well
@@ -1067,7 +1067,7 @@ module toplevel_component
       call ESMF_GridCompGet(gridCompList(i),name=name, rc=localrc)
       if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
-      if (trim(name)=='constant' .or. trim(name)=='fabm_sediment') then
+      if (trim(name)=='default' .or. trim(name)=='fabm_sediment') then
         call ESMF_GridCompGet(gridCompList(i), clockIsPresent=clockIsPresent, rc=localrc)
         if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
@@ -1522,7 +1522,7 @@ module toplevel_component
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
           !!>@ todo manual fix for pb coupler
-          if (l==3)  then ! pelagic_benthic coupler from constant + getm
+          if (l==3)  then ! pelagic_benthic coupler from default + getm
              call ESMF_CplCompRun(cplCompList(1), importState=exportStates(3), &
                exportState=impState, clock=clock, rc=localrc)
              if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)

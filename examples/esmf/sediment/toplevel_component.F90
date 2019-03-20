@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF toplevel coupling
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014, Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2014, 2019 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, <carsten.lemmen@hzg.de>
 
 !
@@ -16,7 +16,7 @@ module toplevel_component
 
   ! Registration routines for fabm
   use fabm_sediment_component, only : fabmsed_SetServices => SetServices
-  use constant_component, only : constant_SetServices => SetServices
+  use default_component, only : default_SetServices => SetServices
 
   implicit none
 
@@ -24,7 +24,7 @@ module toplevel_component
 
   public SetServices
 
-  type(ESMF_GridComp),save  :: fabmComp,constantComp
+  type(ESMF_GridComp),save  :: fabmComp,defaultComp
   type(ESMF_State),save     :: fabmExp, fabmImp, constExp
 
   contains
@@ -41,7 +41,7 @@ module toplevel_component
   end subroutine SetServices
 
   subroutine Initialize(gridComp, importState, exportState, parentClock, rc)
-    
+
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState
     type(ESMF_State)      :: exportState
@@ -59,24 +59,24 @@ module toplevel_component
     ! Create component, call setservices, and create states
     fabmComp = ESMF_GridCompCreate(name="fabmComp", rc=rc)
     call ESMF_GridCompSetServices(fabmComp,fabmsed_SetServices, rc=rc)
-    constantComp = ESMF_GridCompCreate(name="constantComp",rc=rc)
-    call ESMF_GridCompSetServices(constantComp,constant_SetServices, rc=rc)
-    
+    defaultComp = ESMF_GridCompCreate(name="defaultComp",rc=rc)
+    call ESMF_GridCompSetServices(defaultComp,default_SetServices, rc=rc)
+
     fabmImp = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name="fabmImp")
     fabmExp = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name="fabmExp")
     constExp = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name="constExp")
 
-    call ESMF_GridCompInitialize(constantComp, importState=fabmExp, exportState=fabmImp,clock=parentClock,rc=rc)
+    call ESMF_GridCompInitialize(defaultComp, importState=fabmExp, exportState=fabmImp,clock=parentClock,rc=rc)
     call ESMF_GridCompInitialize(fabmComp, importState=fabmImp, exportState=fabmExp, clock=parentClock, rc=rc)
-    call ESMF_GridCompInitialize(constantComp, importState=fabmExp, exportState=constExp,clock=parentClock,rc=rc)
+    call ESMF_GridCompInitialize(defaultComp, importState=fabmExp, exportState=constExp,clock=parentClock,rc=rc)
 
-    call ESMF_LogWrite("Toplevel component initialized",ESMF_LOGMSG_INFO) 
+    call ESMF_LogWrite("Toplevel component initialized",ESMF_LOGMSG_INFO)
     call ESMF_LogFlush()
 
   end subroutine Initialize
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
-    
+
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState, exportState
     type(ESMF_Clock)      :: parentClock
@@ -85,20 +85,20 @@ module toplevel_component
     call ESMF_LogWrite("Toplevel component running ... ",ESMF_LOGMSG_INFO)
 
     do while (.not. ESMF_ClockIsStopTime(parentClock, rc=rc))
-      
+
       call ESMF_GridCompRun(fabmComp, importState=constExp, exportState=fabmExp, clock=parentClock, rc=rc)
 
       call ESMF_ClockAdvance(parentClock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      
-    enddo 
+
+    enddo
 
     call ESMF_LogWrite("Toplevel component finished running. ",ESMF_LOGMSG_INFO)
- 
+
   end subroutine Run
 
   subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
-    
+
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState, exportState
     type(ESMF_Clock)      :: parentClock
@@ -110,12 +110,12 @@ module toplevel_component
       clock=parentClock, rc=rc)
     call ESMF_GridCompDestroy(fabmComp, rc=rc)
 
-    call ESMF_GridCompFinalize(constantComp, importState=fabmExp, exportState=fabmImp, &
+    call ESMF_GridCompFinalize(defaultComp, importState=fabmExp, exportState=fabmImp, &
       clock=parentClock, rc=rc)
-    call ESMF_GridCompDestroy(constantComp, rc=rc)
+    call ESMF_GridCompDestroy(defaultComp, rc=rc)
 
     call ESMF_LogWrite("Toplevel component finalized",ESMF_LOGMSG_INFO)
-   
+
     rc=ESMF_SUCCESS
 
   end subroutine Finalize

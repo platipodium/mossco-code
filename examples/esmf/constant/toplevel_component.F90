@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF toplevel coupling
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014, Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2014, 2019 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, <carsten.lemmen@hzg.de>
 
 !
@@ -13,7 +13,7 @@
 module toplevel_component
 
   use esmf
-  use constant_component, only: constant_SetServices => SetServices
+  use default_component, only: default_SetServices => SetServices
 
   implicit none
 
@@ -21,9 +21,9 @@ module toplevel_component
 
   public SetServices
 
-  type(ESMF_GridComp),save    :: constantComp
-  character(len=ESMF_MAXSTR)  :: constantCompName
-  type(ESMF_State)            :: constantImportState, constantExportState
+  type(ESMF_GridComp),save    :: defaultComp
+  character(len=ESMF_MAXSTR)  :: defaultCompName
+  type(ESMF_State)            :: defaultImportState, defaultExportState
 
   contains
 
@@ -50,12 +50,12 @@ module toplevel_component
 
     call ESMF_LogWrite("Toplevel component initializing ... ",ESMF_LOGMSG_INFO)
 
-    constantCompName = "ESMF constant component"
-    constantComp     = ESMF_GridCompCreate(name=constantCompName, contextflag=ESMF_CONTEXT_PARENT_VM,rc=rc)
-    call ESMF_GridCompSetServices(constantcomp, constant_SetServices, rc=rc)
-    constantImportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name="constant Import")
-    constantExportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name="constant Export")
-    call ESMF_GridCompInitialize(constantComp,importState=constantImportState,exportState=constantExportState,&
+    defaultCompName = "ESMF default component"
+    defaultComp     = ESMF_GridCompCreate(name=defaultCompName, contextflag=ESMF_CONTEXT_PARENT_VM,rc=rc)
+    call ESMF_GridCompSetServices(defaultcomp, default_SetServices, rc=rc)
+    defaultImportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name="default Import")
+    defaultExportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name="default Export")
+    call ESMF_GridCompInitialize(defaultComp,importState=defaultImportState,exportState=defaultExportState,&
       clock=parentClock,rc=rc)
 
     call ESMF_LogWrite("Toplevel component initialized",ESMF_LOGMSG_INFO)
@@ -83,8 +83,8 @@ module toplevel_component
       message = "Toplevel ticking at "//trim(timestring)
       call ESMF_LogWrite(message, ESMF_LOGMSG_INFO)
 
-      call ESMF_GridCompRun(constantComp,importState=constantImportState,&
-        exportState=constantExportState,clock=parentclock, rc=rc)
+      call ESMF_GridCompRun(defaultComp,importState=defaultImportState,&
+        exportState=defaultExportState,clock=parentclock, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
       call ESMF_ClockAdvance(parentClock, rc=rc)
@@ -102,9 +102,9 @@ module toplevel_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    call ESMF_GridCompFinalize(constantComp,importState=constantImportState,exportState=constantExportState, &
+    call ESMF_GridCompFinalize(defaultComp,importState=defaultImportState,exportState=defaultExportState, &
                             clock=parentclock, rc=rc)
-    call ESMF_GridCompDestroy(constantComp,rc=rc)
+    call ESMF_GridCompDestroy(defaultComp,rc=rc)
 
     call ESMF_LogWrite("Toplevel component finalized",ESMF_LOGMSG_INFO)
 
