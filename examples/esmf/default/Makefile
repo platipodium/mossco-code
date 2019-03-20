@@ -9,18 +9,18 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/esmf/constant$,,$(CURDIR))
+export MOSSCO_DIR=$(subst /examples/esmf/default$,,$(CURDIR))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-LIBS :=  -lconstant -lmossco_util -lesmf $(LIBS)
+LIBS :=  -ldefault -lmossco_util -lesmf $(LIBS)
 LDFLAGS += $(MOSSCO_F90LDFLAGS)
 
-.PHONY: all exec constant
+.PHONY: all exec default
 
 all: exec
-exec: libmossco_util libconstant constant
+exec: libmossco_util libdefault default
 
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
@@ -35,4 +35,4 @@ libconstant:
 clean: extraclean
 
 extraclean:
-	@rm -f constant main.F90
+	@rm -f default main.F90
