@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014, 2015, 2016, 2017, 2018, 2019 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 # @author Richard Hofmeister <richard.hofmeister@hzg.de>
 #
@@ -17,7 +17,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-TARGETS = libmossco_simplewave libmossco_macrobenthos
+TARGETS = libmossco_simplewave libmossco_macrobenthos # libmossco_particle
 
 ifeq ($(MOSSCO_NETCDF),true)
   TARGETS+=libmossco_clm
@@ -67,6 +67,9 @@ all: $(TARGETS)
 
 libmossco_simplewave: prefix \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a(simplewave_driver.o)
+
+libmossco_particle: prefix \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_particle.a(particle_driver.o)
 
 libmossco_macrobenthos: prefix libmossco_util \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_macrobenthos.a(vertical_macrobenthos_driver.o)
