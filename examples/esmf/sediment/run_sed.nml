@@ -1,22 +1,61 @@
 !--------------
 ! run_nml
 !
-! numyears - number of years (y)
-! dt - timestep (s)
-! output - number of timesteps (#)
-! numlayers - number of sediment layers (#)
+! numyears                 - number of years (y)
+! dt                       - timestep (s)
+! output                   - number of timesteps (#)
+! numlayers                - number of vertical layers (#)
+! dzmin                    - minimum layer thickness (m)
+! ode_method               - numerical solver (-) ,                default: ode_method=_ADAPTIVE_EULER_
+! dt_min                   - minimum (adaptive) timestep (s)       default: dt_min=1.0e-8_rk
+! relative_change_min      - criterium for timestep reduction (-)  default: relative_change_min=-0.9_rk
+! ugrid_name               - (not active / depreciated)            default: ugrid_name=''
+! bcup_dissolved_variables - type of boundary condition for dissolved variables:
+!                            0: no fluxes at boundaries at all
+!                            1: fluxes given at boundary
+!                            2: concentrations given at boundary (default)
+! presimulation_years      - number of years to pre-simulate (y)   default: presimulation_years=-1
+!
+!#boundary conditions for pre-simulation (only active if presimulation_years>0)
+! pel_Temp      - temperature at pelagic boundary           (degC)           default: pel_Temp   =5.0
+! pel_NO3       - nitrate conc. at pelagic boundary         (mmolN m-3)      default: pel_NO3    =5.0
+! pel_NH4       - ammonium conc. at pelagic boundary        (mmolN m-3)      default: pel_NH4    =5.0
+! pel_PO4       - phosphate conc. at pelagic boundary       (mmolP m-3)      default: pel_PO4    =0.5
+! pel_O2        - oxygen conc. at pelagic boundary          (mmolO2 m-3)     default: pel_O2     =250.
+! pflux_lDetC   - pel. flux of labile detritus carbon       (mmolC m-3 d-1)  default: pflux_lDetC=10.0
+! pflux_sDetC   - pel. flux of semilabile detritus carbon   (mmolC m-3 d-1)  default: pflux_sDetC=10.0
+! pflux_lDetN   - pel. flux of labile detritus nitrogen     (mmolC m-3 d-1)  default: pflux_lDetN=1.5
+! pflux_sDetN   - pel. flux of semilabile detritus nitrogen (mmolC m-3 d-1)  default: pflux_sDetN=1.5
+! pflux_lDetP   - pel. flux of (labile) detritus phosphorus (mmolC m-3 d-1)  default: pflux_lDetP=0.2
 !--------------
 &run_nml
-  dt=3600.
-  output=720
-  numlayers=24
-  dzmin=0.003
+  numyears=1
+  dt=360.
+  numlayers=15
+  dzmin=0.004
+  dt_min=1
   ode_method=2
+  bcup_dissolved_variables=1
+  presimulation_years=0
+  pel_Temp=5.0
+  pel_NO3=14.0
+  pel_NH4=4.0
+  pel_PO4=0.6
+  pel_O2=250.0
+  pflux_lDetC=2.0
+  pflux_sDetC=24.0
+  pflux_lDetN=0.44
+  pflux_sDetN=0.12
+  pflux_lDetP=0.08
 /
 
 &sed_nml
   diffusivity   = 0.9
-  bioturbation  = 0.9
+  bioturbation  = 4.5
+  bioturbation_profile = 0
+  bioturbation_depth=11.0
+  bioturbation_min=1.0
   porosity_max  = 0.7
   porosity_fac  = 0.9
+  k_par         = 0.002
 /
