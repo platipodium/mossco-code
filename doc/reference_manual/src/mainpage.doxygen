@@ -191,13 +191,13 @@ Sample setting for `bash` could look as follows
 
 		export MOSSCO_DIR=${HOME}/opt/mossco/code
 		export NETCDF_VERSION=NETCDF4
-    export ESMFMKFILE=/opt/esmf/lib/libo/Linux.gfortran.64.openmpi.ESMF_7_0_1/esmf.mk
+    export ESMFMKFILE=/opt/esmf/lib/libo/Linux.gfortran.64.openmpi.ESMF_7_1_0r/esmf.mk
 
 For `csh` you would, in a similar fashion, say
 
 		setenv MOSSCO_DIR ${HOME}/opt/mossco/code
     setenv NETCDF_VERSION NETCDF4
-    setenv ESMFMKFILE /opt/esmf/lib/libo/Linux.gfortran.64.openmpi.ESMF_7_0_1/esmf.mk
+    setenv ESMFMKFILE /opt/esmf/lib/libo/Linux.gfortran.64.openmpi.ESMF_7_1_0r/esmf.mk
 
 @section reporting Reporting errors
 
