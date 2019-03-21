@@ -329,7 +329,7 @@ module calculator
     rc = ESMF_SUCCESS
 
     allocate(binaryOperatorList(12))
-    binaryOperatorList(1:6)  = (/'*','/','+','-','^ ','%'/)
+    binaryOperatorList(1:6)  = (/'*','/','+','-','^','%'/)
     binaryOperatorList(7:10) =(/'** ','mod','rem','pow'/)
     binaryOperatorList(11:12) =(/'ubound','lbound'/)
     allocate(unaryOperatorList(13))
