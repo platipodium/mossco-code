@@ -20,7 +20,7 @@ LDFLAGS += $(MOSSCO_F90LDFLAGS)
 .PHONY: all exec particle
 
 all: exec
-exec: libmossco_particle particle
+exec: libmossco_particle particle particle_ugrid.nc
 
 particle:  toplevel_component.o ../../common/main.o
 	$(F90) $(F90FLAGS) $^ $(LDFLAGS) $(LIBS) -o $@
@@ -29,7 +29,10 @@ particle:  toplevel_component.o ../../common/main.o
 libmossco_particle:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
+particle_ugrid.nc:
+	ncgen -7 -b particle_ugrid.cdl
+
 clean: extraclean
 
 extraclean:
-	@rm -rf particle particle.dSYM *.o
+	@rm -rf particle particle.dSYM *.o PET*

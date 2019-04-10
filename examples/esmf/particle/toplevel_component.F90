@@ -50,11 +50,11 @@ module toplevel_component
 
     call ESMF_LogWrite("Toplevel component initializing ... ",ESMF_LOGMSG_INFO)
 
-    particleCompName = "ESMF particle component"
+    particleCompName = "particle_component"
     particleComp     = ESMF_GridCompCreate(name=particleCompName, contextflag=ESMF_CONTEXT_PARENT_VM,rc=rc)
     call ESMF_GridCompSetServices(particlecomp, particle_SetServices, rc=rc)
-    particleImportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name="particle Import")
-    particleExportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name="particle Export")
+    particleImportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name="particleImport")
+    particleExportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name="particleExport")
     call ESMF_GridCompInitialize(particleComp,importState=particleImportState,exportState=particleExportState,&
       clock=parentClock,rc=rc)
 

@@ -129,7 +129,7 @@ module particle_component
     type(ESMF_Grid)            :: grid, grid2, grid3
     type(ESMF_Field)           :: field
     character(len=ESMF_MAXSTR) :: configFileName, fileName, creator, dimensionName
-    character(len=ESMF_MAXSTR) :: geomName, itemName
+    character(len=ESMF_MAXSTR) :: geomName, itemName, string
     type(ESMF_Config)          :: config
 
     integer(ESMF_KIND_I4)      :: itemCount, i, j, nlayer
@@ -230,6 +230,24 @@ module particle_component
           endif
           return
         endif
+
+        call MOSSCO_ConfigGet(config, label='format', value=string, &
+          defaultValue='SCRIP', rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        select case(trim(adjustl(string)))
+        case('scrip','SCRIP')
+          fileFormat=ESMF_FILEFORMAT_SCRIP
+        case ('ugrid','UGRID')
+          fileFormat = ESMF_FILEFORMAT_UGRID
+        case ('esmf','ESMF')
+          fileFormat = ESMF_FILEFORMAT_ESMFMESH
+        case default
+          write(message, '(A)') trim(name)//' invalid format '//trim(string)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+          rc = ESMF_RC_NOT_FOUND
+          return
+        end select
+
       else
 
         call MOSSCO_ConfigGet(config, label='dimension', value=dimensionName, &

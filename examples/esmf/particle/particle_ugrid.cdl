@@ -1,0 +1,47 @@
+netcdf bsh_stations_locstream {
+dimensions:
+	nodes = 9 ;
+	edges = 8 ;
+	bounds = 2 ;
+variables:
+	int station_locstream ;
+		station_locstream:cf_role = "mesh_topology" ;
+		station_locstream:topology_dimension = 1. ;
+		station_locstream:node_coordinates = "lon lat" ;
+		station_locstream:edge_node_connectivity = "connectivity" ;
+	double lat(nodes) ;
+		lat:standard_name = "latitude" ;
+		lat:units = "degrees_north" ;
+	double lon(nodes) ;
+		lon:standard_name = "longitude" ;
+		lon:units = "degrees_east" ;
+	int connectivity(edges, bounds) ;
+		connectivity:description = "edge_node_connectivity" ;
+		connectivity:start_index = 0 ;
+
+// global attributes:
+		:Conventions = "CF-1.7, UGRID-1.0" ;
+		:title = "Test file for locstream generation from UGRID in ESMF" ;
+		:institution = "Helmholtz-Zentrum Geesthacht" ;
+		:author = "Carsten Lemmen <carsten.lemmen@hzg.de>" ;
+		:license = "CC-by-SA 4.0" ;
+		:source = "Sample station locations obtained from BSH website" ;
+		:history = "Created with create_bsh_station_locstream.py" ;
+data:
+
+ station_locstream = _ ;
+
+ lat = 55, 54, 55, 55.2, 54.67, 54.67, 53.68, 54.13, 54.18 ;
+
+ lon = 8, 8.11, 6.33, 5, 6.92, 7.4, 6.42, 6.35, 7.46 ;
+
+ connectivity =
+  0, 1,
+  1, 2,
+  2, 3,
+  3, 4,
+  4, 5,
+  5, 6,
+  6, 7,
+  7, 8 ;
+}

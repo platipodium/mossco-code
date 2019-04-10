@@ -190,7 +190,7 @@ subroutine MOSSCO_GeomCreateFromFile(fileName, fileFormat, geomType, &
     write(message, '(A)') trim(owner_)//' created mesh from SCRIP '//trim(fileName)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-  elseif (geomType == ESMF_GEOMTYPE_MESH) then
+  elseif (geomType == ESMF_GEOMTYPE_LOCSTREAM) then
 
     ! ESMF_LocStreamCreateFromFile(filename, &
     !            fileformat, varname, indexflag, centerflag, name, rc)
