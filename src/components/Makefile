@@ -99,6 +99,9 @@ libmossco_clm_driver:    prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_drive
 libmossco_oasis: $(MOSSCO_LIBRARY_PATH)/libmossco_oasis.a(oasis_component.o)
 
 
+$(MOSSCO_LIBRARY_PATH)/libmossco_particle.a(particle_driver.o):
+	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_particle
+
 $(MOSSCO_LIBRARY_PATH)/libmossco_macrobenthos.a(vertical_macrobenthos_driver.o):
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_macrobenthos
 

@@ -17,10 +17,10 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-TARGETS = libmossco_simplewave libmossco_macrobenthos libmossco_particle
+TARGETS = libmossco_simplewave libmossco_macrobenthos
 
 ifeq ($(MOSSCO_NETCDF),true)
-  TARGETS+=libmossco_clm
+  TARGETS+=libmossco_clm libmossco_particle
   #TARGETS+=libmossco_river
 endif
 
@@ -279,6 +279,7 @@ extraclean:
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_sediment.a
+	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_particle.a
 	@-rm -f $(MOSSCO_MODULE_PATH)/fabm_sediment_driver.mod
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a
 	@-rm -f $(MOSSCO_MODULE_PATH)/fabm0d_driver.mod
@@ -289,6 +290,7 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/erosed_driver.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/clm_driver.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/vertical_macrobenthos_driver.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/particle_driver.mod
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a
 	$(RM) $(EROSED_OBJS)
 
