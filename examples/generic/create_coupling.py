@@ -4,7 +4,7 @@
 # This script is is part of MOSSCO. It creates from YAML descriptions of
 # couplings a toplevel_component.F90 source file
 #
-# @copyright (C) 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2014, 2015, 2016, 2017, 2018, 2019 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -2321,6 +2321,7 @@ libs = {'gotm'       : ['solver', 'mossco_gotm'] ,
         'erosed'     : ['mossco_erosed'],
         'filtration'     : ['mossco_macrobenthos'],
         'vertical_macrobenthos' : ['mossco_macrobenthos'],
+        'particle' : ['mossco_particle'],
         'schism'     : ['mossco_schism'],
         'hamsom'     : ['mossco_hamsom'],
         'tracer'     : ['mossco_tracer'],
@@ -2397,6 +2398,7 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'transport_connector' : ['libmossco_connector'],
         'filtration' : ['libmossco_macrobenthos'],
         'vertical_macrobenthos' : ['libmossco_macrobenthos'],
+        'particle' : ['libmossco_particle'],
         'copy_coupler' : ['libcopycoupler'],
         'regrid_coupler' : ['libregridcoupler'],
         'remtc_atmosphere' : ['libremtc'],
@@ -2466,7 +2468,7 @@ libmossco_util libsolver:
 
 libsediment libdefault libmossco_clm libmossco_erosed \
 libmossco_fabm0d libmossco_fabmpelagic libmossco_macrobenthos libmossco_grid \
-libmossco_fabmbenthic libmossco_random:
+libmossco_fabmbenthic libmossco_random libmossco_particle:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libmossco_technical libmossco_getm libmossco_simplewave libmossco_netcdf libmossco_benthos:

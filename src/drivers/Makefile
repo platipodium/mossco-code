@@ -17,7 +17,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-TARGETS = libmossco_simplewave libmossco_macrobenthos # libmossco_particle
+TARGETS = libmossco_simplewave libmossco_macrobenthos libmossco_particle
 
 ifeq ($(MOSSCO_NETCDF),true)
   TARGETS+=libmossco_clm
@@ -68,10 +68,11 @@ all: $(TARGETS)
 libmossco_simplewave: prefix \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a(simplewave_driver.o)
 
-libmossco_particle: prefix \
+libmossco_particle: libmossco_particle_driver
+libmossco_particle_driver: prefix \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_particle.a(particle_driver.o)
 
-libmossco_macrobenthos: prefix libmossco_util \
+libmossco_macrobenthos: prefix libmossco_util libsolver \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_macrobenthos.a(vertical_macrobenthos_driver.o)
 
 libmossco_river: prefix \
