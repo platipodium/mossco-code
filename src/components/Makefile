@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014, 2015, 2016, 2017, 2018, 2019 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 # @author Richard Hofmeister <richard.hofmeister@hzg.de>
 # @author Knut Klingbeil <knut.klingbeil@io-warnemuende.de>
@@ -30,7 +30,7 @@ ifeq ($(MOSSCO_CMAQ),true)
   TARGETS += libmossco_cmaq
 endif
 ifeq ($(MOSSCO_NETCDF),true)
-  TARGETS += libmossco_netcdf libmossco_clm #libmossco_river
+  TARGETS += libmossco_netcdf libmossco_clm libmossco_particle#libmossco_river
 endif
 ifeq ($(MOSSCO_OASIS),true)
   TARGETS += libmossco_oasis #libmossco_river
@@ -75,6 +75,10 @@ libmossco_info: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_info.a(info_component.o)
 
 libmossco_benthos: libmossco_benthos_driver libmossco_util \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthos_component.o)
+
+libmossco_particle: libmossco_particle_driver libmossco_particle_component libmossco_util
+libmossco_particle_driver:  prefix $(MOSSCO_LIBRARY_PATH)/libmossco_particle.a(particle_driver.o)
+libmossco_particle_component: libmossco_particle_driver $(MOSSCO_LIBRARY_PATH)/libmossco_particle.a(particle_component.o)
 
 libmossco_hamsom: libmossco_hamsom_driver libmossco_hamsom_component
 libmossco_hamsom_driver:  prefix $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a(hamsom_driver.o)
