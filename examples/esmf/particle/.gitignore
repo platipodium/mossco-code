@@ -2,3 +2,4 @@ particle
 *.o
 *dSYM
 *nc
+*vtk
