@@ -1,7 +1,7 @@
 !> @brief Implementation of ESMF State utilities
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2014, 2015, 2016, 2017, 2018, 2019 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !> @author Richard Hofmeister <richard.hofmeister@hzg.de>
 !> @author Knut Klingbeil <knut.klingbeil@uni-hamburg.de>
@@ -2332,7 +2332,7 @@ contains
     type(ESMF_Field), allocatable             :: tempList(:), fieldInBundleList(:)
     logical                                   :: isMatch, verbose_
 
-    owner_ = '---'
+    owner_ = '--'
     rc_ = ESMF_SUCCESS
     if (present(rc)) rc = ESMF_SUCCESS
     if (present(kwe)) rc_ = rc_
@@ -2519,7 +2519,7 @@ contains
         fieldList(fieldCount_) = fieldInBundleList(k)
 
         !> Deliver only the first result with itemSearch call
-        if (present(itemSearch) .and. fielDCount_ == 1) exit
+        if (present(itemSearch) .and. fieldCount_ == 1) exit
 
       enddo !> k-loop over fields in bundles and states
     enddo !> i-loop over items ins states

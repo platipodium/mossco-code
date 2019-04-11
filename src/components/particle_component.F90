@@ -159,6 +159,12 @@ module particle_component
     type(ESMF_RouteHandle)             :: routeHandle
     type(ESMF_FILEFORMAT_Flag)         :: fileFormat
 
+    character(len=ESMF_MAXSTR), allocatable :: keyNames(:)
+    character(len=ESMF_MAXSTR)              :: keyUnits, keyLongName
+    integer(ESMF_KIND_I4)                   :: keyCount
+    type(ESMF_Typekind_Flag)                :: typeKind
+    real(ESMF_KIND_R8), pointer             :: farrayPtr1(:)
+
     rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
@@ -301,61 +307,87 @@ module particle_component
     !
     ! endif
 
-    !> @todo not implemented by ESMF7.0.0, re-enable when implemented
     call ESMF_GridCompSet(gridComp, locstream=locstream, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    !> @todo not implemented by ESMF7.0.0, re-enable when implemented
     call ESMF_AttributeSet(locStream, 'creator', trim(name), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    field = ESMF_FieldEmptyCreate(name=trim(name), rc=localrc)
+    call ESMF_LocStreamGet(locStream, keyCount=keycount, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_FieldEmptySet(field, locStream=locStream, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    write(message,'(A)') trim(name)//' created field '
-    call MOSSCO_FieldString(field, message)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    !> If a grid was provided, then create a new field, create a redistribution,
-    !> and move the data from field to the newField
-    if (isPresent) then
-
-      newField = ESMF_FieldEmptyCreate(name=trim(name), rc=localrc)
+    if (keyCount > 0) then
+      allocate(keyNames(keycount), stat=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_FieldEmptySet(newField, locStream=newLocStream, rc=localrc)
+      call ESMF_LocStreamGet(locStream, keyNames=keyNames, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    endif
+
+    do i=1,keyCount
+
+      call ESMF_LocStreamGetKey(locStream, keyNames(i), keyUnits=keyUnits, &
+        keyLongName=keyLongName, typeKind=typeKind, rc=localrc)
+
+      write(message,'(A)') trim(name)//' has key '//trim(keyNames(i))
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      if (trim(keyNames(i)) /= 'ESMF:Lat') cycle
+
+      field = ESMF_FieldEmptyCreate(name=trim(keyLongName), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_FieldEmptySet(field, locStream=locStream, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      !> If a grid was provided, then create a new field, create a redistribution,
+      !> and move the data from field to the newField
+      if (isPresent) then
+
+        newField = ESMF_FieldEmptyCreate(name=trim(keyNames(i)), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        call ESMF_FieldEmptySet(newField, locStream=newLocStream, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        call ESMF_FieldRedistStore(field, newField, routeHandle, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        call ESMF_FieldRedist(field, newField, routeHandle, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        call ESMF_FieldRedistRelease(routeHandle, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        call ESMF_FieldDestroy(field, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        field=newField
+
+      endif
 
       call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_FieldRedistStore(field, newField, routeHandle, rc=localrc)
+      call ESMF_AttributeSet(field, 'units', trim(keyUnits), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_FieldRedist(field, newField, routeHandle, rc=localrc)
+      call ESMF_AttributeSet(field, 'long_name', trim(keyLongName), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_FieldRedistRelease(routeHandle, rc=localrc)
+      call ESMF_LocStreamGetKey(locstream, keyNames(i), farray=farrayPtr1, rc=localrc)
+
+      write(message,'(A)') trim(name)//' created field '
+      call MOSSCO_FieldString(field, message)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_FieldDestroy(field, rc=localrc)
+      call ESMF_FieldEmptyComplete(field, farrayPtr=farrayPtr1, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      call ESMF_StateAddReplace(exportState, (/newField/), rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    else
 
       call ESMF_StateAddReplace(exportState, (/field/), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    endif
+    enddo
 
     call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
