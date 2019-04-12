@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014, 2015, 2016, 2017, 2018, 2019 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -74,7 +74,7 @@ libmossco_db: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_db.a(mossco_db.o)
 # Depends on multiple
 mossco_component.o : mossco_component.F90 mossco_state.o
 mossco_netcdf.o : mossco_netcdf.F90 mossco_state.o mossco_time.o \
-  mossco_variable_types.o mossco_gridspec.o
+  mossco_variable_types.o mossco_gridspec.o versions
 mossco_field.o : mossco_field.F90 mossco_strings.o mossco_attribute.o \
   mossco_geom.o mossco_loc.o
 
@@ -148,6 +148,10 @@ nc_extract_variable: nc_extract_variable.c
 nc_extract_variable_lasttime: nc_extract_variable_lasttime.c
 	$(MOSSCO_CCOMPILER) -I $(MOSSCO_NETCDF_INCLUDE) -c $<
 	$(MOSSCO_CCOMPILER) -o $@ nc_extract_variable_lasttime.o -L $(MOSSCO_NETCDF_LIBPATH) $(MOSSCO_NETCDF_LIBS)
+
+versions:  ../include/git-sha.h
+../include/git-sha.h:
+	make -C ../include/
 
 clean: extraclean
 extraclean:
