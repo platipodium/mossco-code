@@ -85,7 +85,7 @@ module mossco_netcdf
     procedure :: put_state => mossco_netcdf_state_put
     procedure :: create_grid_coordinate =>mossco_netcdf_grid_coordinate_create
     procedure :: create_mesh_coordinate =>mossco_netcdf_mesh_coordinate_create
-    !procedure :: create_locstream_coordinate =>mossco_netcdf_locstream_coordinate_create
+    procedure :: create_locstream_coordinate =>mossco_netcdf_locstream_coordinate_create
     procedure :: ungridded_dimension_id => mossco_netcdf_ungridded_dimension_id
     procedure :: gridget  => mossco_netcdf_grid_get
     procedure :: getvarvar => mossco_netcdf_var_get_var
@@ -1205,7 +1205,8 @@ module mossco_netcdf
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       write(geomname,'(A)') 'locstream'
-      dimids => self%locstream_dimensions(field)
+      dimids => self%locstream_dimensions(locStream, owner=owner_, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       call ESMF_LocStreamGet(locStream, coordSys=coordSys, rc=localrc)
       dimCount = 1
@@ -1407,8 +1408,11 @@ module mossco_netcdf
         call self%create_mesh_coordinate(mesh, owner=owner_, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       elseif (geomType==ESMF_GEOMTYPE_LOCSTREAM) then
-        !dimids => self%locstream_dimensions(locStream, rc=localrc)
-        localrc = ESMF_RC_NOT_IMPL
+        dimids => self%locstream_dimensions(locStream, owner=owner_, rc=localrc)
+        !localrc = ESMF_RC_NOT_IMPL
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        call self%create_locstream_coordinate(locstream, owner=owner_, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       else
         localrc = ESMF_RC_NOT_IMPL
@@ -2677,17 +2681,16 @@ module mossco_netcdf
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_locstream_dimensions"
-  function mossco_netcdf_locstream_dimensions(self, field, kwe, owner, rc) result(dimids)
+  function mossco_netcdf_locstream_dimensions(self, locStream, kwe, owner, rc) result(dimids)
 
     implicit none
 
     class(type_mossco_netcdf)     :: self
-    type(ESMF_Field)              :: field
+    type(ESMF_LocStream), intent(in)                     :: locStream
     type(ESMF_KeyWordEnforcer), optional, intent(in)     :: kwe
     character(len=*), optional, intent(in)               :: owner
     integer(ESMF_KIND_I4), optional, intent(out)         :: rc
 
-    type(ESMF_LocStream)          :: locStream
     integer                       :: ncStatus,rc_, localrc, dimcheck
     character(len=ESMF_MAXSTR)    :: geomName, name
     integer,pointer,dimension(:)  :: dimids
@@ -2702,8 +2705,6 @@ module mossco_netcdf
     if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
 
     dimcheck=0
-    call ESMF_FieldGet(field, locStream=locStream, rank=rank, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_LocStreamGet(locStream, keyCount=keyCount, name=geomName, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -2715,17 +2716,18 @@ module mossco_netcdf
       return
     endif
 
-    if (rank  /= 1) then
-      write(message,'(A)') trim(owner_)//' currently only handles rank 1 fields'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
-      if (present(rc)) rc = ESMF_SUCCESS
-      return
-    endif
+    ! if (rank  /= 1) then
+    !   write(message,'(A)') trim(owner_)//' currently only handles rank 1 fields'
+    !   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+    !   if (present(rc)) rc = ESMF_SUCCESS
+    !   return
+    ! endif
 
     call ESMF_LocStreamGetBounds(locStream, exclusiveCount=locationCount, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     nullify(dimids)
+    rank=1 !> @todo automagically deterimne rank and abort with NOT_IMPL when rank>1
     allocate(dimids(rank+1))
 
     dimids(:)=-1
@@ -2927,8 +2929,8 @@ module mossco_netcdf
   end function mossco_netcdf_grid_dimensions
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "mossco_netcdf_locstream_coordinates_create"
-  subroutine mossco_netcdf_locStream_coordinates_create(self, locStream, kwe, owner, rc)
+#define ESMF_METHOD "mossco_netcdf_locstream_coordinate_create"
+  subroutine mossco_netcdf_locStream_coordinate_create(self, locStream, kwe, owner, rc)
 
     implicit none
 
@@ -3045,7 +3047,7 @@ module mossco_netcdf
     call self%update_variables()
     call self%update()
 
-  end subroutine mossco_netcdf_locstream_coordinates_create
+  end subroutine mossco_netcdf_locstream_coordinate_create
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_mesh_coordinate_create"
