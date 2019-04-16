@@ -159,10 +159,10 @@ module particle_component
     type(ESMF_RouteHandle)             :: routeHandle
     type(ESMF_FILEFORMAT_Flag)         :: fileFormat
 
-    character(len=ESMF_MAXSTR), allocatable :: keyNames(:)
+    character(len=ESMF_MAXSTR), allocatable :: keyNames(:), fieldNames(:)
     character(len=ESMF_MAXSTR)              :: keyUnits, keyLongName
     integer(ESMF_KIND_I4)                   :: keyCount
-    type(ESMF_Typekind_Flag)                :: typeKind
+    type(ESMF_TYPEKIND_Flag)                :: typeKind
     real(ESMF_KIND_R8), pointer             :: farrayPtr1(:)
 
     rc = ESMF_SUCCESS
@@ -332,8 +332,6 @@ module particle_component
       write(message,'(A)') trim(name)//' has key '//trim(keyNames(i))
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      if (trim(keyNames(i)) /= 'ESMF:Lat') cycle
-
       field = ESMF_FieldEmptyCreate(name=trim(keyLongName), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -375,19 +373,55 @@ module particle_component
       call ESMF_AttributeSet(field, 'long_name', trim(keyLongName), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_LocStreamGetKey(locstream, keyNames(i), farray=farrayPtr1, rc=localrc)
+      if (typeKind == ESMF_TYPEKIND_R8) then
+        call ESMF_LocStreamGetKey(locstream, keyNames(i), farray=farrayPtr1, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        call ESMF_FieldEmptyComplete(field, farrayPtr=farrayPtr1, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      else
+        write(message,'(A)') trim(name)//' skipped key '//trim(keynames(i))// &
+          ', no implementation for this type'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        cycle
+      endif
+
+      call ESMF_StateAddReplace(exportState, (/field/), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       write(message,'(A)') trim(name)//' created field '
       call MOSSCO_FieldString(field, message)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_FieldEmptyComplete(field, farrayPtr=farrayPtr1, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      call ESMF_StateAddReplace(exportState, (/field/), rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
     enddo
+
+    allocate(fieldNames(3), stat=localrc)
+    fieldNames(1) = 'x_velocity_in_water'
+    fieldNames(2) = 'y_velocity_in_water'
+    fieldNames(3) = 'z_velocity_in_water'
+
+    do i=1, 1
+      field = ESMF_FieldEmptyCreate(name=trim(fieldNames(i)), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_AttributeSet(field, 'units', 'm s-1', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_FieldEmptySet(field, locStream=locStream, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_StateAddReplace(importState, (/field/), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    enddo
+
+    call MOSSCO_Reallocate(fieldNames, 0, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call MOSSCO_Reallocate(keyNames, 0, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -443,6 +477,21 @@ module particle_component
     integer(ESMF_KIND_I4)      :: localrc
     type(ESMF_Clock)           :: clock
 
+    type(ESMF_Field), allocatable :: fieldList(:)
+    type(ESMF_LocStream)          :: locStream
+    type(ESMF_GeomType_Flag)      :: geomType
+    type(ESMF_Typekind_Flag)      :: typeKind
+    real(ESMF_KIND_R8), pointer   :: farrayPtr1(:)
+    character(ESMF_MAXSTR), allocatable :: keyNames(:)
+    integer(ESMF_KIND_I4)         :: fieldCount, i, j, keycount
+    character(len=ESMF_MAXSTR)    :: keyUnits
+    real(ESMF_KIND_R8)            :: seconds
+    type(ESMF_CoordSys_Flag)      :: CoordSys
+    character(len=ESMF_MAXSTR)    :: message
+
+    real(ESMF_KIND_R8), parameter :: pi = 4.D0 * datan(1.D0)
+    real(ESMF_KIND_R8),parameter  :: radius = 6371000.0d0
+
     rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
@@ -457,7 +506,69 @@ module particle_component
     call MOSSCO_ClockGetTimeStepToNextAlarm(clock, timeStep, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+    call ESMF_TimeIntervalGet(timeStep, s_r8=seconds, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
     call ESMF_ClockGet(clock, stopTime=stopTime, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call MOSSCO_StateGet(exportState, fieldList, fieldCount=fieldCount, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    do i=1, 1 !fieldCount
+
+      !> @todo avoid that a locstream is advected several times !
+
+      call ESMF_FieldGet(fieldList(i), locStream=locStream, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_LocStreamGet(locstream, keyCount=keyCount, coordSys=coordSys, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (keyCount < 1) cycle
+      if (coordSys /= ESMF_COORDSYS_SPH_DEG) then
+        write(message, '(A)') trim(name)//' has not implementation for non-spherical coordinates'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        cycle
+      endif
+
+      allocate(keyNames(keyCount), stat=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_LocStreamGet(locstream, keyNames=keyNames, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      do j=1, keyCount
+        call ESMF_LocStreamGetKey(locStream, keyNames(j), keyUnits=keyUnits, &
+          typeKind=typeKind, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        if (typeKind /= ESMF_TYPEKIND_R8) cycle
+
+        call ESMF_LocStreamGetKey(locStream, keyNames(j),  &
+          farray=farrayPtr1, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        select case(trim(keyNames(j)))
+        case ('ESMF:Lon')
+          !> @todo get x-wind component from importState, for now assume constant
+          !> current comes as m s-1, so needs to be converted to lat
+          farrayPtr1 = farrayPtr1 + seconds * 0.1 * 360 / (2 * pi * radius)
+        case ('ESMF:Lat')
+          !> @todo get y-wind component from importState, for now assume constant
+          !> current comes as m s-1, so needs to be converted to lat
+          farrayPtr1 = farrayPtr1 + seconds * 0.1 * 360 / (2 * pi * radius)
+        case ('ESMF:Radius')
+          !> @todo get z-wind component from importState, for now assume constant
+          farrayPtr1 = farrayPtr1 + seconds * 0.1
+        endselect
+
+      enddo ! j loop over keyCount
+
+      deallocate(keyNames, stat=localrc)
+    enddo ! i loop over fieldCount
+
+    call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !if (timeStep>0) then
