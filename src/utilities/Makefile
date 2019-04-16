@@ -17,7 +17,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-.PHONY: libsolver libmossco_util libmossco_db $(LIBMOSSCO_UTIL_OBJS) libatt
+.PHONY: libsolver libmossco_util libmossco_db $(LIBMOSSCO_UTIL_OBJS) libatt versions
 
 LIBMOSSCO_UTIL_OBJS=							\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_dictionary.o)	\
@@ -70,11 +70,10 @@ libsolver: prefix $(MOSSCO_LIBRARY_PATH)/libsolver.a(solver_library.o)
 libmossco_util:  prefix sha $(LIBMOSSCO_UTIL_OBJS)
 libmossco_db: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_db.a(mossco_db.o)
 
-
 # Depends on multiple
 mossco_component.o : mossco_component.F90 mossco_state.o
 mossco_netcdf.o : mossco_netcdf.F90 mossco_state.o mossco_time.o \
-  mossco_variable_types.o mossco_gridspec.o versions
+  mossco_variable_types.o mossco_gridspec.o #versions
 mossco_field.o : mossco_field.F90 mossco_strings.o mossco_attribute.o \
   mossco_geom.o mossco_loc.o
 
