@@ -880,12 +880,14 @@ endif
 #$(AR) Trus $(MOSSCO_LIBRARY_PATH)/libgetm_external.a $(GETM_LIBRARY_PATH)/lib*_prod.a
 
 install-mossco-bin:
+	@mkdir -p $(MOSSCO_INSTALL_PREFIX)/bin
 	@ln -sf $(MOSSCO_DIR)/scripts/mossco.sh  $(MOSSCO_INSTALL_PREFIX)/bin/mossco
 	@ln -sf $(MOSSCO_DIR)/scripts/stitch_tiles.py  $(MOSSCO_INSTALL_PREFIX)/bin/stitch
 	@echo "Executables 'mossco' and 'stitch' have been installed to $(MOSSCO_INSTALL_PREFIX)/bin. "
 	@echo "Consider to add this directory to your PATH"
 
 install-mossco-include:
+	@mkdir -p $(MOSSCO_INSTALL_PREFIX)/include
 	@cp $(MOSSCO_MODULE_PATH)/*.mod $(MOSSCO_INSTALL_PREFIX)/include
 	@echo "Use includes with  '-I $(MOSSCO_INSTALL_PREFIX)/include'"
 
@@ -895,6 +897,7 @@ install-mossco-lib:
 	@(cd $(MOSSCO_LIBRARY_PATH); for F in *.a ; do $(AR) x $$F; done )
 	@(cd $(MOSSCO_LIBRARY_PATH); $(RM) -f SORTED __*; $(AR) crus libmossco.a *.o )
 	@$(RM) -f $(MOSSCO_LIBRARY_PATH)/*.o
+	@mkdir -p $(MOSSCO_INSTALL_PREFIX)/lib
 	@mv $(MOSSCO_LIBRARY_PATH)/libmossco.a $(MOSSCO_INSTALL_PREFIX)/lib/;
 ifeq ($(MOSSCO_FABM),true)
 	@cp $(MOSSCO_DIR)/external/fabm/install/lib/libfabm.a $(MOSSCO_INSTALL_PREFIX)/lib/libmossco_fabm.a
