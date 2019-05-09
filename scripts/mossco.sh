@@ -4,7 +4,7 @@
 #        You may want to link this script into directory within your $PATH
 #
 # This computer program is part of MOSSCO.
-# @copyright Copyright (C) 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
+# @copyright Copyright (C) 2014, 2015, 2016, 2017, 2018, 2019 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -56,7 +56,7 @@ function usage {
   echo "      [-s P]: PBS system, writes pbs.sh"
   echo "      [-s M]: MOAB system, writes moab.sh"
   echo "      [-s S]: SGE system, e.g. ocean.hzg.de, writes sge.sh"
-  echo "      [-s J]: Slurm system, e.g. Jureca, Mistral, writes slurm.sh"
+  echo "      [-s J]: Slurm system, e.g. Juwels, Mistral, writes slurm.sh"
   echo "      [-s F]: Command line interactive, running in foreground"
   echo "      [-s B]: Command line interactive, running in background"
   echo
@@ -500,10 +500,14 @@ EOT
       echo export I_MPI_STATS=20   >> slurm.sh
 
     else
-      # This is tested on jureca
+      # This is tested on juwels
       if [ ${QUEUE} == undefined ]; then QUEUE=batch; fi
+      echo \#SBATCH --account=$(groups | cut -d" " -f4) >> slurm.sh
       echo \#SBATCH --partition=${QUEUE} >> slurm.sh
       echo \#export OMP_NUM_THREADS=48 >> slurm.sh
+      echo "" >> slurm.sh
+      echo "# module load Intel/2019.0.117-GCC-7.3.0 ParaStationMPI/5.2.1-1" >> slurm.sh
+      echo "# module load ESMF/7.1.0r" >> slurm.sh
     fi
 
     echo "" >> slurm.sh
