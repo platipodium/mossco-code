@@ -240,6 +240,7 @@
     ! Allocate array for photosynthetically active radiation (PAR).
     allocate(pf%par(1:inum,1:jnum,1:knum))
     call fabm_link_bulk_data(pf%model,standard_variables%downwelling_photosynthetic_radiative_flux,pf%par)
+    call fabm_link_horizontal_data(pf%model,standard_variables%surface_downwelling_photosynthetic_radiative_flux,pf%I_0)
 
     ! allocate Albedo array
     allocate(pf%albedo(1:inum,1:jnum))
