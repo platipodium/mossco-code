@@ -9,20 +9,16 @@ large memory and GPU, see https://www.fz-juelich.de/ias/jsc/EN/Expertise/Superco
 ESMF 7.1.0r is preinstalled on this system with four different toolchains, choose one of the
 four below
 
-1. `module load GCC/8.2.0  ParaStationMPI/5.2.1-1`
-2. `module load	 Intel/2019.0.117-GCC-7.3.0  IntelMPI/2018.4.274`
-3. `module load	 Intel/2019.0.117-GCC-7.3.0  IntelMPI/2019.0.117`
-4. `module load	 Intel/2019.0.117-GCC-7.3.0  ParaStationMPI/5.2.1-1`
+1. `module load GCC/8.3.0  ParaStationMPI/5.2.2-1`
+2. `module load Intel/2019.3.199-GCC-8.3.0  IntelMPI/2019.3.19`
+3. `module load Intel/2019.3.199-GCC-8.3.0  ParaStationMPI/5.2.2-1`
+
+> We usually use the third option Intel/ParaStation
 
 Then load ESMF and further requirements
 
-		module load ESMF/7.1.0r
-		module load CMake/3.13.0
-		module load Doxygen/1.8.14
-		module load basemap/1.0.7-Python-2.7.15
-		module load netcdf4-python/1.4.2-Python-2.7.15
-		module load NCO/4.7.7
-		module load CVS
+		module load ESMF CMake Doxygen
+		module load basemap netcdf4-python NCO CVS
 
 		export ESMFMKFILE=$EBROOTESMF/lib/esmf.mk
 
