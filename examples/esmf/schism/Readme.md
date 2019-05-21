@@ -11,3 +11,8 @@ Then, set environment variables to point to these installations:
 2) SCHISM_ESMF_DIR to the source of schism-esmf
 3) PARMETIS_DIR to point to the parmetis library directory
 
+Full instructions are available online at www.mossco.de/doc.  If you run into trouble with lapack, try
+objcopy --redefine-sym xerbla_=schism_lap_xerbla_ $SCHISM_DIR/lib/libhydro.a
+
+
+

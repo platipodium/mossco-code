@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2018 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2018, 2019 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 # @author Richard Hofmeister <richard.hofmeister@hzg.de>
 # @license Dual licensed under GPL v3+ and Apache 2.0
@@ -62,12 +62,12 @@ LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 
 all:  schism_mossco config outputs
 
-schism_mossco:  schism_esmf_component.o toplevel_component.o main.o
+schism_mossco: schism_esmf_component.o toplevel_component.o main.o
 	$(F90) $(CPPFLAGS) $^ -o $@ $(LDFLAGS) $(LIBS)
 
-toplevel_component.o: schism_esmf_component.o
+toplevel_component.o: schism_esmf_component.o toplevel_component.F90
 
-schism_esmf_component.o: schism_driver_interfaces.mod
+schism_esmf_component.o: schism_driver_interfaces.o schism_esmf_component.F90
 
 outputs:
 	mkdir -p outputs
@@ -93,13 +93,13 @@ extraclean: clean
 # Copy/link files from schism_esmf and mossco systems
 
 main.F90:
-	ln -sf $(MOSSCO_DIR)/examples/common/main.F90 .
+	test -l main.F90 | ln -sf $(MOSSCO_DIR)/examples/common/main.F90 .
 
 schism_driver_interfaces.F90:
-	ln -sf $(SCHISM_ESMF_DIR)/schism_driver_interfaces.F90 .
+	test -l schism_driver_interfaces.F90 | ln -sf $(SCHISM_ESMF_DIR)/schism_driver_interfaces.F90 .
 
 schism_esmf_component.F90:
-	ln -sf $(SCHISM_ESMF_DIR)/schism_esmf_component.F90 .
+	test -l schim_esmf_component.F90 | ln -sf $(SCHISM_ESMF_DIR)/schism_esmf_component.F90 .
 
 wind.nc: wind.cdl
 	ncgen -o $@ $<
