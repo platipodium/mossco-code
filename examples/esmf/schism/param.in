@@ -182,6 +182,8 @@
   indvel = 0
   ishapiro = 1
   shapiro = 0.5 !default is 0.5
+  niter_shap = 1 !needed of ishapiro/=0 - # of iterations with Shapiro filter. Suggested: 1
+
 
 !-----------------------------------------------------------------------
 ! Max. horizontal velocity magnitude, used mainly to prevent problem in 
