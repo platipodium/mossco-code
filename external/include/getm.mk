@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2017, 2018 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2017, 2018, 2019 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 # @author Knut Klingbeil, Institut für Ostseeforschung Warnemünde
 #
@@ -14,7 +14,7 @@
 
 getm:
 ifeq ($(wildcard $(external_GETMDIR)/src/getm/main.F90),)
-	@$(GIT) clone -b iow --depth 1 https://git.code.sf.net/p/getm/code $(external_GETMDIR)
+	@$(GIT) clone -b iow --depth 1 https://git.code.sf.net/p/getm/code $(external_GETMDIR) || $(GIT) clone -b iow --depth 1 git://git.code.sf.net/p/getm/code $(external_GETMDIR)
 else
 #	@$(GIT) -C $(external_GETMDIR) pull --ff-only
 #for old git

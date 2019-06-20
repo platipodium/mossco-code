@@ -14,7 +14,7 @@
 
 gotm:
 ifeq ($(wildcard $(external_GOTMDIR)/src/gotm/gotm.F90),)
-	@$(GIT) clone -b master --depth 1 https://github.com/gotm-model/code.git $(external_GOTMDIR)
+	@$(GIT) clone -b master --depth 1 https://github.com/gotm-model/code.git $(external_GOTMDIR) || $(GIT) clone -b master --depth 1 git://github.com/gotm-model/code.git $(external_GOTMDIR)
 else
 #	@$(GIT) -C $(external_GOTMDIR) pull --ff-only
 #for old git

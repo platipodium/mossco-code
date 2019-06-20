@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2017, 2018 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2017, 2018, 2019 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 # @author Knut Klingbeil, Institut für Ostseeforschung Warnemünde
 #
@@ -14,7 +14,7 @@
 
 fabm:
 ifeq ($(wildcard $(external_FABMDIR)/src/fabm.F90),)
-	@$(GIT) clone -b master --depth 1 https://git.code.sf.net/p/mossco/fabm $(external_FABMDIR)
+	@$(GIT) clone -b master --depth 1 https://git.code.sf.net/p/mossco/fabm $(external_FABMDIR) || $(GIT) clone -b master --depth 1 git://git.code.sf.net/p/mossco/fabm $(external_FABMDIR)
 else
 #	@$(GIT) -C $(external_FABMDIR) pull --ff-only
 #for old git
