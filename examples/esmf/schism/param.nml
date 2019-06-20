@@ -281,7 +281,7 @@
   flag_ic(8) = 1 !CoSINE
   flag_ic(9) = 1 !FIB
   flag_ic(10) = 1 !TIMOR
-  flag_ic(11) = 1 !FABM
+  flag_ic(11) = 0 !FABM
 
 !  ic_GEN = 1 !user defined module
 !  ic_AGE = 1 !Age
