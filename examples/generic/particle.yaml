@@ -1,0 +1,9 @@
+instances:
+  - mossco_lowres: netcdf
+  - particle_component: particle
+
+coupling:
+  - components:
+     - particle_component
+     - mossco_lowres
+    interval: 1 h

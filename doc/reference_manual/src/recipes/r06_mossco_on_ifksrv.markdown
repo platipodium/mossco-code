@@ -1,12 +1,6 @@
 # Recipe #06: MOSSCO on ifksrv
 
-Ifksrv is a new local compute node at HZG. It offers recent Intel,  PGI, and GNU compilers and parallelism via openmpi.  ESMF is preinstalled with some of these compilers in subdirectories of
-
-    /opt/gnu
-    /opt/intel
-    /opt/pgi
-
-Choose a version that has both an `esmf.mk` and a `esmf.mod` file.
+Ifksrv are several local compute node at HZG. They offer recent Intel,  PGI, and GNU compilers and parallelism via openmpi.
 
 This example assumes that you have downloaded or `git clone`d MOSSCO into a directory referred to by the environment variable `$MOSSCO_DIR`, and have `git clone`d the MOSSCO setups into `$MOSSCO_SETUPDIR`.
 
@@ -15,7 +9,7 @@ This example assumes that you have downloaded or `git clone`d MOSSCO into a dire
 
 ## Preparing your environment
 
-    export COMPILER=intel  # choose from gnu intel, or pgi
+    export COMPILER=gnu
     export PATH=/opt/${COMPILER}/openmpi/bin:/opt/${COMPILER}/netcdf/bin:${PATH}
     export PATH=$PATH:$HOME/opt/bin # for mossco.sh link
     export NETCDF=NETCDF4
@@ -23,15 +17,22 @@ This example assumes that you have downloaded or `git clone`d MOSSCO into a dire
 
 ### Specifics for the GNU compilers
 
-    export ESMFMKFILE=/opt/gnu/esmf_6_3_0rp1/lib/libO/Linux.gfortran.64.openmpi.default/esmf.mk
+ESMF is preinstalled in the following versions (choose one)
 
+    export ESMFMKFILE=/ocean-home/lemmen/software/esmf-ifksrv/lib/libg/Linux.gfortran.64.openmpi.ESMF_7_1_0r/esmf.mk
+    export ESMFMKFILE=/ocean-home/lemmen/software/esmf-ifksrv/lib/libO/Linux.gfortran.64.openmpi.ESMF_7_1_0r/esmf.mk
+    
 ### Specifics for the Intel compilers
+
+(only on ifksrv04, outdated ESMF)
 
     export ESMFMKFILE=/opt/intel/esmf_6_3_0rp1/lib/libO/Linux.intel.64.openmpi.default/esmf.mk
     source /opt/intel/bin/iccvars.sh intel64
     source /opt/intel/bin/ifortvars.sh intel64
 
 ### Specifics for the PGI compilers
+
+(only on ifksrv04, outdated ESMF)
 
     export ESMFMKFILE=/opt/pgi/esmf_6_3_0rp1/lib/libO/Linux.pgi.64.openmpi.default/esmf.mk
     export PATH=/opt/pgi/linux86-64/2015/bin/:$PATH

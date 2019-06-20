@@ -101,7 +101,7 @@ module time_aggregation_component
       convention="NUOPC", purpose="General", rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
   end subroutine InitializeP0
@@ -205,7 +205,7 @@ module time_aggregation_component
       deallocate(filterExcludeList)
     endif
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
   end subroutine InitializeP1
@@ -288,7 +288,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (alarmCount == 0 .and. advanceCount > 0) then
       write(message,'(A)') trim(name)//' '//trim(timestring)//' did not find any ringing alarms'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-      call MOSSCO_CompExit(gridComp, localrc)
+      call MOSSCO_CompExit(gridComp, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
       return
     endif
@@ -402,7 +402,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
       include(1)=trim(itemNameList(i))
       call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
-        include=include, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+        include=include, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (fieldCount < 1) then
@@ -639,7 +639,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     call ESMF_ClockAdvance(clock, timeStep=timeStep, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
   end subroutine Run
@@ -701,7 +701,7 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     !call MOSSCO_DestroyOwn(exportState, trim(name), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
   end subroutine Finalize

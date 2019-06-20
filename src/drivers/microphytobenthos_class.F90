@@ -1,7 +1,18 @@
-module Microphytobenthos_class
+!> @brief Implementation of a driver for microphytobenthos !
+!  This computer program is part of MOSSCO.
+!> @copyright Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht, Bundesanstalt für Wasserbau
+!> @author M. Hassan Nasermoaddeli
+!> @author Carsten Lemmen
+!
+! MOSSCO is free software: you can redistribute it and/or modify it under the
+! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
+!
 ! The microphytobenthos class is a subclass of superclass Benthos_Effect.
 ! It comprises the effect of microphytobenthos on erodibility and
 ! crticial bed shear stress.
+module Microphytobenthos_class
 
 use BioTypes
 use BenthosEffect_class
@@ -69,7 +80,7 @@ subroutine set_microphyt (this, spatialvar, biounit)
 
   class (Microphytobenthos)  :: this
   real (fp), dimension (:,:), pointer, optional  :: spatialvar
-  character (len = 255), optional  :: Biounit
+  character (len = *), optional  :: Biounit
 
   real (fp), dimension (:,:), allocatable  :: Biomass
   character (len = 255)      :: units
@@ -84,7 +95,7 @@ subroutine set_microphyt (this, spatialvar, biounit)
   if (.not.present(spatialvar)) then
 
     this%Species = 'Microphytobenthos'
-    Units        = ''
+    Units        = 'mug g-1'
 
     allocate ( Biomass ( this%inum , this%jnum ) )
     Biomass(:,:) = mass

@@ -79,7 +79,7 @@ module pelagic_benthic_mediator
 
     rc = ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(GridComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(GridComp, parentClock, name=name, currTime=currTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
@@ -202,7 +202,7 @@ module pelagic_benthic_mediator
 
     rc = ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(GridComp, externalClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(GridComp, externalClock, name=name, currTime=currTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 
@@ -404,7 +404,7 @@ module pelagic_benthic_mediator
 
     rc = ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(GridComp, externalClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(GridComp, externalClock, name=name, currTime=currTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> fdet + sdet = CN_det*det
@@ -590,7 +590,7 @@ module pelagic_benthic_mediator
     type(ESMF_Time)             :: currTime, stopTime
     integer                     :: localrc
 
-    call MOSSCO_CompEntry(GridComp, externalClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(GridComp, externalClock, name=name, currTime=currTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !call ESMF_ArraySpecDestroy(pelagic_bdy_array, rc)

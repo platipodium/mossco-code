@@ -315,7 +315,7 @@ subroutine mcpl_finalize(cplcomp, importState, exportState, externalclock, rc)
     !------------------------------------------------------------------
     rc = ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, externalClock, name=name, currTime=currTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -478,7 +478,7 @@ subroutine InitializeP0(cplComp, importState, exportState, parentClock, rc)
     end if
 
     !> Calls incoming couple/grid component method and receives clock
-    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -495,7 +495,7 @@ subroutine InitializeP0(cplComp, importState, exportState, parentClock, rc)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> Calls outgoing couple/grid component method and passes clock
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1151,7 +1151,7 @@ subroutine Finalize(cplcomp, importState, exportState, externalclock, rc)
     end if
     rc = ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, externalClock, name=name, currTime=currTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1164,7 +1164,7 @@ subroutine Finalize(cplcomp, importState, exportState, externalclock, rc)
         write(*,*) "> ", message
     end if
 
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 

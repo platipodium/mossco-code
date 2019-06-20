@@ -4,7 +4,7 @@
 !! MOSSCO pelagic component.
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018, 2019 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !> @author Richard Hofmeister <richard.hofmeister@hzg.de>
 !
@@ -132,7 +132,7 @@ module fabm_pelagic_component
       convention="NUOPC", purpose="General", rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP0
@@ -317,7 +317,10 @@ module fabm_pelagic_component
     real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2=>null()
     real(ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3=>null()
     real(ESMF_KIND_R8),dimension(:,:,:,:),pointer :: ptr_f4=>null()
+    real(ESMF_KIND_R4)    :: attribute_r4
     real(ESMF_KIND_R8)    :: attribute_r8
+    real(ESMF_KIND_I4)    :: attribute_i4
+    logical               :: attribute_l
     real(ESMF_KIND_R8)    :: background_extinction=0.13
     real(ESMF_KIND_R8)    :: albedo_const=0.78
     integer(ESMF_KIND_I4) :: fieldcount
@@ -734,24 +737,62 @@ module fabm_pelagic_component
 
       call pel%model%state_variables(n)%properties%keys(itemNameList)
       do i=1, itemCount
-        !>@todo
-        !if (pel%model%state_variables(n)%properties%get_property(itemNameList(i))%typecode()==1)
-        !attribute_r8 = pel%model%state_variables(n)%properties%get_real(itemNameList(i), default=-1d30)
-        !call ESMF_AttributeSet(concfield,trim(itemNameList(i)), attribute_r8)
-        !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        call ESMF_AttributeSet(concfield,trim(itemNameList(i)), pel%model%state_variables(n)%properties%get_string(itemNameList(i),''))
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       enddo
 
       call MOSSCO_Reallocate(itemNameList, 0, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      !> add attributes relevant for MOSSCO
+      !> add attributes especially relevant for MOSSCO and overwrite those
+      !> given above.
       !! mean_particle_diameter and particle density given only,
       !! if property persent
       !! this section can be removed once the more generic one above works
       attribute_name=trim('mean_particle_diameter')
       attribute_r8 = pel%model%state_variables(n)%properties%get_real('diameter',default=-99.d0)
-      if (attribute_r8 > 0.0d0) call ESMF_AttributeSet(concfield,attribute_name, attribute_r8)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      if (attribute_r8 > 0.0d0) then
+        call ESMF_AttributeSet(concfield, attribute_name, attribute_r8, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        call ESMF_AttributeSet(concfield, 'mean_particle_diameter_unit', '10-6 m', rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        attribute_name=trim('particle_type')
+        attribute_l = pel%model%state_variables(n)%properties%get_logical('cohesive', default=.false.)
+        call ESMF_AttributeSet(concfield, attribute_name, attribute_l)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        attribute_name=trim('sinking_method')
+        attribute_i4 = pel%model%state_variables(n)%properties%get_integer('sinking_method', default=0)
+
+        if (attribute_i4 == 0) then
+          call ESMF_AttributeSet(concfield, 'sinking_method', 'constant', rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          attribute_name=trim('sinking_velocity')
+          attribute_r8 = pel%model%state_variables(n)%properties%get_real('ws_const', default=0.001_ESMF_KIND_R8)
+
+          call ESMF_AttributeSet(concfield, attribute_name, attribute_r8, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          call ESMF_AttributeSet(concfield, 'sinking_velocity_unit', 'm s-1', rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        elseif (attribute_i4 == 1 .and. attribute_l) then  !cohesive
+          call ESMF_AttributeSet(concfield, 'sinking_method', 'Krone 1963', rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        elseif (attribute_i4 == 1 .and. .not. attribute_l) then !noncohesive
+          call ESMF_AttributeSet(concfield, 'sinking_method', 'Soulsby 1997', rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        elseif (attribute_i4 == 2 .and. attribute_l) then !cohesive
+          call ESMF_AttributeSet(concfield, 'sinking_method', 'Winterwerp 2001', rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        elseif (attribute_i4 == 2 .and. .not. attribute_l) then !noncohesive
+          call ESMF_AttributeSet(concfield, 'sinking_method', 'Stokes-Newton', rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        elseif (attribute_i4 == 2 .and. attribute_l) then !cohesive
+          call ESMF_AttributeSet(concfield, 'sinking_method', 'Mehta 1986', rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        endif
+      endif
 
       attribute_name=trim('particle_density')
       attribute_r8 = pel%model%state_variables(n)%properties%get_real('density',default=-99.d0)
@@ -792,6 +833,15 @@ module fabm_pelagic_component
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       call ESMF_AttributeSet(wsfield, 'creator', trim(name), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      attribute_name=trim('mean_particle_diameter')
+      attribute_r8 = pel%model%state_variables(n)%properties%get_real('diameter',default=-99.d0)
+      if (attribute_r8 > 0.0d0) then
+        call ESMF_AttributeSet(wsfield, attribute_name, attribute_r8, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        call ESMF_AttributeSet(wsfield, 'mean_particle_diameter_unit', '10-6 m', rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      endif
 
       write(message,'(A)') trim(name)//' created field '
       call MOSSCO_FieldString(wsfield, message)
@@ -947,6 +997,27 @@ module fabm_pelagic_component
       endif
 
     enddo
+
+    if (associated(pel%par)) then
+
+      ptr_f2 => pel%par(:,:,1) !> @todo this is the center of the lowest layer
+      field = ESMF_FieldCreate(horizontal_grid, farrayPtr=ptr_f2, name= &
+        'downwelling_photosynthetic_radiative_flux_at_soil_surface', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_AttributeSet(field,'units','W m-2')
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message,'(A)') trim(name)//' created diagnostic field '
+      call MOSSCO_FieldString(field, message, rc=localrc)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+      call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    endif
 
     !> this will not work, is state_grid contains halo zones
     do n=1, size(pel%model%diagnostic_variables)
@@ -1269,7 +1340,7 @@ module fabm_pelagic_component
     !!       and forcing
     call pel%update_export_states(update_sinking=.true.)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP1
@@ -1308,7 +1379,7 @@ module fabm_pelagic_component
     allocate(nameList(1))
     nameList(1) = 'volume_flux_in_water'
     call MOSSCO_StateGetFieldList(importState, fieldList, include=nameList, &
-      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      fieldCount=fieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (fieldCount > 0) then
@@ -1324,7 +1395,7 @@ module fabm_pelagic_component
     !> update sinking after restart
     call pel%update_export_states(update_sinking=.true.)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP2
@@ -1517,7 +1588,7 @@ module fabm_pelagic_component
     !> update sinking after restart
     call pel%update_export_states(update_sinking=.true.)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine ReadRestart
@@ -1722,7 +1793,8 @@ module fabm_pelagic_component
         do k = 1, size(suffixList)
 
           call MOSSCO_StateGetFieldList(importState, fieldList, itemSearch=trim(prefix)//trim(suffixList(k)), &
-            fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+            fieldCount=fieldCount, &
+            fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           if (fieldCount == 0) cycle
@@ -1756,7 +1828,8 @@ module fabm_pelagic_component
 
         do k = 1, size(suffixList)
           call MOSSCO_StateGetFieldList(importState, fieldList, itemSearch=trim(prefix)//trim(suffixList(k)), &
-            fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+            fieldCount=fieldCount, &
+            fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
           if (fieldCount /= 1 .and. fieldCount /= exportFieldCount ) cycle
 
           nmatch = nmatch + fieldCount
@@ -2034,7 +2107,7 @@ module fabm_pelagic_component
     !> prepare component's export
     call pel%update_export_states()
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Run
@@ -2066,7 +2139,7 @@ module fabm_pelagic_component
 
     if (associated(bfl)) deallocate(bfl)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Finalize
@@ -2165,7 +2238,7 @@ module fabm_pelagic_component
 
       call MOSSCO_StateGet(importState, fieldList, &
         itemSearch=trim(varname)//'_flux_in_water', fieldCount=fieldCount, &
-        fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+        fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       !> If the item is not found, return

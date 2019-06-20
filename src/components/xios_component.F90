@@ -22,7 +22,9 @@ module xios_component
 
   use esmf
   use mossco_component
+#ifdef MOSSCO_XIOS
   use xios
+#endif
 
   implicit none
 
@@ -94,7 +96,7 @@ module xios_component
       convention="NUOPC", purpose="General", rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP0
@@ -145,9 +147,10 @@ module xios_component
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !! Finally, log the successful completion of this function
-    call MOSSCO_CompExit(gridComp, rc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+#ifdef MOSSCO_XIOS
     INTEGER :: rank, size, ts
     TYPE(xios_time) :: dtime
     DOUBLE PRECISION,ALLOCATABLE :: lon(:,:),lat(:,:),a_field (:,:) ! other variable declaration and initialisation .....
@@ -159,6 +162,7 @@ module xios_component
       dtime%second=3600
     call xios_set_timestep(dtime) ! Closing definition
     call xios_close_context_definition() ! Entering time loop
+#endif
 
   end subroutine InitializeP1
 
@@ -193,6 +197,7 @@ module xios_component
     call ESMF_StateValidate(exportState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+#ifdef MOSSCO_XIOS
     ! XIOS initialization
     call xios_initialize('xios', return_comm=comm)
     call xios_context_initialize(trim(name),comm) ! Complete horizontal domain definition
@@ -202,9 +207,9 @@ module xios_component
     xios_time_step%second=3600 ! Obtain proper time here
     call xios_set_timestep(xios_time_step) ! Closing definition
     call xios_close_context_definition() ! Entering time loop
-
+#endif
     !! Finally, log the successful completion of this function
-    call MOSSCO_CompExit(gridComp, rc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP2
@@ -269,8 +274,10 @@ module xios_component
 
     if (stopTime>currTime) then
 
+#ifdef MOSSCO_XIOS
       call xios_update_calendar(advanceCount)
       call xios_send_field("a_field",farray)
+#endif
 
       call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -289,7 +296,7 @@ module xios_component
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !! Finally, log the successful completion of this function
-    call MOSSCO_CompExit(gridComp, rc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Run
@@ -347,10 +354,12 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+#ifdef MOSSCO_XIOS
     call xios_context_finalize()
     call xios_finalize()
+#endif
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 

@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014, 2015, 2016, 2017, 2018, 2019 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 # @author Richard Hofmeister <richard.hofmeister@hzg.de>
 # @author Knut Klingbeil <knut.klingbeil@io-warnemuende.de>
@@ -24,13 +24,13 @@ SUBDIRS=gotm remtc
 
 TARGETS=libmossco_technical libmossco_default libmossco_random
 TARGETS+=libmossco_aggregation libmossco_grid
-TARGETS+=libmossco_simplewave libmossco_info libmossco_filtration
+TARGETS+=libmossco_simplewave libmossco_info libmossco_macrobenthos
 
 ifeq ($(MOSSCO_CMAQ),true)
   TARGETS += libmossco_cmaq
 endif
 ifeq ($(MOSSCO_NETCDF),true)
-  TARGETS += libmossco_netcdf libmossco_clm #libmossco_river
+  TARGETS += libmossco_netcdf libmossco_clm libmossco_particle#libmossco_river
 endif
 ifeq ($(MOSSCO_OASIS),true)
   TARGETS += libmossco_oasis #libmossco_river
@@ -76,6 +76,10 @@ libmossco_info: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_info.a(info_component.o)
 libmossco_benthos: libmossco_benthos_driver libmossco_util \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthos_component.o)
 
+libmossco_particle: libmossco_particle_driver libmossco_particle_component libmossco_util
+libmossco_particle_driver:  prefix $(MOSSCO_LIBRARY_PATH)/libmossco_particle.a(particle_driver.o)
+libmossco_particle_component: libmossco_particle_driver $(MOSSCO_LIBRARY_PATH)/libmossco_particle.a(particle_component.o)
+
 libmossco_hamsom: libmossco_hamsom_driver libmossco_hamsom_component
 libmossco_hamsom_driver:  prefix $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a(hamsom_driver.o)
 libmossco_hamsom_component: libmossco_hamsom_driver $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a(hamsom_component.o)
@@ -93,6 +97,18 @@ libmossco_clm_component: libmossco_clm_driver $(MOSSCO_LIBRARY_PATH)/libmossco_c
 libmossco_clm_driver:    prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
 
 libmossco_oasis: $(MOSSCO_LIBRARY_PATH)/libmossco_oasis.a(oasis_component.o)
+
+
+$(MOSSCO_LIBRARY_PATH)/libmossco_particle.a(particle_driver.o):
+	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_particle
+
+$(MOSSCO_LIBRARY_PATH)/libmossco_macrobenthos.a(vertical_macrobenthos_driver.o):
+	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_macrobenthos
+
+libmossco_macrobenthos: prefix libmossco_util \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_macrobenthos.a(vertical_macrobenthos_driver.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_macrobenthos.a(vertical_macrobenthos_component.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_macrobenthos.a(filtration_component.o)
 
 libmossco_simplewave: libmossco_simplewave_driver libmossco_util \
   $(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a(simplewave_component.o)
@@ -228,6 +244,10 @@ test_component.F90: $(MOSSCO_DIR)/src/config/test_component.yaml $(MOSSCO_DIR)/s
 	@echo "Creating $@"
 	python $(MOSSCO_DIR)/scripts/create_component.py $(MOSSCO_DIR)/src/config/test_component.yaml
 
+calculator_component.F90: $(MOSSCO_DIR)/src/mediators/calculator.F90
+	@-echo "Creating $@"
+	@-sed 's/cplComp/gridComp/g;s/CplComp/GridComp/g' $< > $@
+
 # KK-TODO: this can be removed when gotm's timestep routine is used
 ifeq ($(MOSSCO_GOTM_FABM),true)
 gotm_component.o: gotm_component.F90
@@ -267,12 +287,12 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/cmaq_component.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/tracer_component.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/schism_component.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/calculator_component.mod
 
 subdirs: $(SUBDIRS)
 
 $(SUBDIRS):
 	$(MAKE) -C $@
-
 
 ifneq ($(wildcard *.make),)
   include *.make

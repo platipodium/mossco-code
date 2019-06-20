@@ -4,7 +4,7 @@
 # This script is is part of MOSSCO. It creates from YAML descriptions of
 # couplings a toplevel_component.F90 source file
 #
-# @copyright (C) 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2014, 2015, 2016, 2017, 2018, 2019 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -156,8 +156,8 @@ for i, item in enumerate(coupling):
             elif n==2:
                 couplingList.append([item["components"][0], "link_connector", item["components"][-1]])
                 cplCompList.append("link_connector")
-            for i in range(1,n-1):
-                cplCompList.append(item["components"][i])
+            for j in range(1,n-1):
+                cplCompList.append(item["components"][j])
             if 'interval' in item.keys():
                 intervals[i] = item["interval"]
             if 'direction' in item.keys():
@@ -178,6 +178,7 @@ cplCompSet=set(cplCompList)
 cplCompList=list(cplCompSet)
 componentSet=gridCompSet.union(cplCompSet)
 componentList=list(componentSet)
+
 
 # if there are any dependencies specified, go through the list of components
 # and sort this list
@@ -320,6 +321,7 @@ for item in gridCompList:
   else:
     sortedGridCompList.append(item)
 gridCompList = sortedGridCompList
+
 
 #if 'rename_connector' in cplCompList:
 #  c=cplCompList.pop(cplCompList.index('rename_connector'))
@@ -478,7 +480,7 @@ fid.write('''
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -685,7 +687,7 @@ fid.write('''
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_LogWrite(trim(myName)//' reconciles '//trim(gridCompNameList(i))//'Export', ESMF_LOGMSG_INFO)
-      call ESMF_StateReconcile(gridExportStateList(i), rc=localrc)
+      !call ESMF_StateReconcile(gridExportStateList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       gridImportStateList(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED, &
@@ -693,7 +695,7 @@ fid.write('''
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_LogWrite(trim(myName)//' reconciles '//trim(gridCompNameList(i))//'Import', ESMF_LOGMSG_INFO)
-      call ESMF_StateReconcile(gridImportStateList(i), rc=localrc)
+      !call ESMF_StateReconcile(gridImportStateList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
@@ -1044,7 +1046,8 @@ fid.write('''
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_LogOpen(stateLog,'states_'//trim(message), rc=localrc)
+      call ESMF_LogOpen(stateLog,'PET.states_'//trim(message), appendFlag=.false., &
+        logkindFlag=ESMF_LOGKIND_SINGLE, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1118,10 +1121,10 @@ fid.write('    !! End of ReadRestart \n\n')
 fid.write('''
     do i=1, numGridComp
       call ESMF_LogWrite(trim(myName)//' reconciles '//trim(gridCompNameList(i))//'Import', ESMF_LOGMSG_INFO)
-      call ESMF_StateReconcile(state=gridImportStateList(i), rc=localrc)
+      !call ESMF_StateReconcile(state=gridImportStateList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_LogWrite(trim(myName)//'reconciles '//trim(gridCompNameList(i))//'Export', ESMF_LOGMSG_INFO)
-      call ESMF_StateReconcile(state=gridExportStateList(i), rc=localrc)
+      !call ESMF_StateReconcile(state=gridExportStateList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
  ''')
@@ -1144,6 +1147,11 @@ fid.write('''
 # Go through all components and log their import and export states
 fid.write('''
     !> Go through all components and log their import and export states
+    call ESMF_LogOpen(stateLog,'PET.states_'//trim(message), appendFlag=.false., &
+      logkindFlag=ESMF_LOGKIND_SINGLE, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_LogWrite('====== Status at end of child readrestarting ======', ESMF_LOGMSG_INFO, log=stateLog)
 
     !do i=1,numGridComp
@@ -1151,6 +1159,8 @@ fid.write('''
     !  call MOSSCO_StateLog(gridImportStateList(i))
     !  call MOSSCO_StateLog(gridExportStateList(i))
     !enddo
+
+    call ESMF_LogClose(stateLog, rc=localrc)
 ''')
 
 #fid.write('''
@@ -1428,7 +1438,7 @@ fid.write('''
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Flush the log at the end of Initialize()
@@ -1475,7 +1485,8 @@ fid.write('''
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name=myName, currTime=currTime, importState=importState, &
+    call MOSSCO_CompEntry(gridComp, parentClock, name=myName, currTime=currTime, &
+      importState=importState, &
       exportState=exportState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -1901,11 +1912,11 @@ fid.write('''
         do phase=1,gridCompPhaseCountList(i)
           !call MOSSCO_GridCompFieldsTable(gridCompList(i), importState=gridImportStateList(i), exportState=gridExportStateList(i),rc=localrc)
           call ESMF_LogWrite(trim(myName)//' reconciles '//trim(gridCompNameList(i))//'Import', ESMF_LOGMSG_INFO)
-          call ESMF_StateReconcile(gridImportStateList(i), rc=localrc)
+          !call ESMF_StateReconcile(gridImportStateList(i), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           call ESMF_LogWrite(trim(myName)//' reconciles '//trim(gridCompNameList(i))//'Export', ESMF_LOGMSG_INFO)
-          call ESMF_StateReconcile(gridExportStateList(i), rc=localrc)
+          !call ESMF_StateReconcile(gridExportStateList(i), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           call cpu_time(wallTimeStart(i))
@@ -1933,7 +1944,12 @@ fid.write('''
           if (ms_r8>0.0d0 .and. realValue>0.0d0) then
             realValue = realValue / ms_r8
             write(formatString,'(A)') '(A,X,'//intformat(int(realValue))//')'
-            write(message, formatString) trim(message)//' with speedup ', int(realValue)
+            write(message, formatString, iostat=localrc) trim(message)//' with speedup ', int(realValue)
+            if (localrc /= ESMF_SUCCESS) then
+              write(0,*,iostat=localrc) trim(formatString), realValue, int(realValue)
+              write(0,*,iostat=localrc) trim(message)
+            endif
+
           endif
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
@@ -2012,7 +2028,8 @@ fid.write('''
         call ESMF_AttributeGet(importState, name='simulation_title', value=message, defaultvalue='Untitled', rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        call ESMF_LogOpen(stateLog,'states_'//trim(message), rc=localrc)
+        call ESMF_LogOpen(stateLog,'PET.states_'//trim(message), appendFlag=.true., &
+          logkindFlag=ESMF_LOGKIND_SINGLE, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call ESMF_LogWrite('====== Status at end of first run loop  ======', ESMF_LOGMSG_INFO, log=stateLog)
@@ -2106,7 +2123,7 @@ fid.write('''
     if (allocated(wallTimeStart)) deallocate(wallTimeStart)
     if (allocated(wallTimeStop)) deallocate(wallTimeStop)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Run
@@ -2245,7 +2262,7 @@ fid.write('''
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -2295,7 +2312,6 @@ libs = {'gotm'       : ['solver', 'mossco_gotm'] ,
         'fabm_sediment' : ['sediment', 'mossco_sediment', 'solver'],
         'fabm_pelagic' : ['mossco_fabmpelagic', 'util', 'solver'],
         'fabm_benthic' : ['mossco_fabmbenthic', 'util', 'solver'],
-        'constant'   : ['constant', 'mossco_util'],
         'default'   :  ['default'],
         'random'    : ['random'],
         'clm_netcdf' : ['mossco_clm'],
@@ -2303,7 +2319,9 @@ libs = {'gotm'       : ['solver', 'mossco_gotm'] ,
         'grid'       : ['mossco_grid'],
         'location'   : ['mossco_location'],
         'erosed'     : ['mossco_erosed'],
-        'filtration'     : ['mossco_filtration'],
+        'filtration'     : ['mossco_macrobenthos'],
+        'vertical_macrobenthos' : ['mossco_macrobenthos'],
+        'particle' : ['mossco_particle'],
         'schism'     : ['mossco_schism'],
         'hamsom'     : ['mossco_hamsom'],
         'tracer'     : ['mossco_tracer'],
@@ -2322,8 +2340,8 @@ libs = {'gotm'       : ['solver', 'mossco_gotm'] ,
 #        'pelagic_benthic_mediator' : ['mossco_mediator'],
         'pelagic_soil_connector' : ['mossco_mediator'],
         'soil_pelagic_connector' : ['mossco_mediator'],
+        'calculator' : ['mossco_mediator'],
         'vertical_reduction' : ['verticalreduction'],
-        'calculator' : ['mossco_calculator'],
         'pelagic_benthic_coupler' : ['pelagicbenthiccoupler'],
         'benthic_pelagic_coupler' : ['pelagicbenthiccoupler'],
         'xgrid_coupler' : ['xgridcoupler'],
@@ -2360,7 +2378,6 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'river'      : ['libmossco_river'],
         'inout'      : ['libmossco_technical'],
         'dummy'      : ['libmossco_technical'],
-        'constant'   : ['libconstant libmossco_util'],
         'default'  : ['libdefault'],
         'random'  : ['libmossco_random'],
         'gotm'       : ['libmossco_gotm', 'libsolver'],
@@ -2369,17 +2386,19 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
 #        'pelagic_benthic_mediator' : ['libmossco_mediator'],
         'pelagic_soil_connector' : ['libmossco_mediator'],
         'soil_pelagic_connector' : ['libmossco_mediator'],
+        'calculator' : ['libmossco_mediator'],
         'pelagic_benthic_coupler' : ['libpelagicbenthiccoupler'],
         'benthic_pelagic_coupler' : ['libpelagicbenthiccoupler'],
         'vertical_reduction' : ['libverticalreduction'],
-        'calculator' : ['libmossco_calculator'],
         'xgrid_coupler' : ['libxgridcoupler'],
         'link_connector' : ['libmossco_connector'],
         'nudge_connector' : ['libmossco_connector'],
         'rename_connector' : ['libmossco_connector'],
         'flux_connector' : ['libmossco_connector'],
         'transport_connector' : ['libmossco_connector'],
-        'filtration' : ['libmossco_filtration'],
+        'filtration' : ['libmossco_macrobenthos'],
+        'vertical_macrobenthos' : ['libmossco_macrobenthos'],
+        'particle' : ['libmossco_particle'],
         'copy_coupler' : ['libcopycoupler'],
         'regrid_coupler' : ['libregridcoupler'],
         'remtc_atmosphere' : ['libremtc'],
@@ -2447,9 +2466,9 @@ libmossco_gotmfabm libmossco_gotm libmossco_fabmgotm:
 libmossco_util libsolver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
-libsediment libconstant libdefault libmossco_clm libmossco_erosed \
-libmossco_fabm0d libmossco_fabmpelagic libmossco_filtration libmossco_grid \
-libmossco_fabmbenthic libmossco_random:
+libsediment libdefault libmossco_clm libmossco_erosed \
+libmossco_fabm0d libmossco_fabmpelagic libmossco_macrobenthos libmossco_grid \
+libmossco_fabmbenthic libmossco_random libmossco_particle:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libmossco_technical libmossco_getm libmossco_simplewave libmossco_netcdf libmossco_benthos:
@@ -2470,7 +2489,7 @@ libsurfacescouplerlibaocoupler liblinkcoupler libxgridcoupler libregridcoupler l
 libmossco_connector:
 	$(MAKE) -C $(MOSSCO_DIR)/src/connectors $@
 
-libverticalreduction libmossco_calculator:
+libverticalreduction:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
 libremtc:

@@ -2,7 +2,7 @@
 # This script is is part of MOSSCO. It creates from YAML description of components
 # and their one-letter abbreviations short links to all coupling specs.
 #
-# @copyright (C) 2016 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2016, 2017, 2018, 2019 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the

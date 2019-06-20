@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF component for simplewave
 !!
 !! This computer program is part of MOSSCO.
-!! @copyright Copyright 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
+!! @copyright 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 !! @author Knut Klingbeil <knut.klingbeil@uni-hamburg.de>
 !! @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
@@ -18,15 +18,16 @@
 
 #define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-#define RANGE2D lbnd(1):ubnd(1),lbnd(2):ubnd(2)
-#define RANGE3D lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)
+#define RANGE1D lbnd(1):ubnd(1)
+#define RANGE2D RANGE1D,lbnd(2):ubnd(2)
+#define RANGE3D RANGE2D,lbnd(3):ubnd(3)
 
 module simplewave_component
 
   use esmf
   use simplewave_driver
   use mossco_variable_types
-  use mossco_component
+  use mossco_component, Finalize => MOSSCO_GridCompFinalize
   use mossco_state
   use mossco_field
   use mossco_config
@@ -53,19 +54,15 @@ module simplewave_component
 
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=0, &
       userRoutine=InitializeP0, rc=localrc)
-     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=1, &
       userRoutine=InitializeP1, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=2, &
       userRoutine=InitializeP2, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_READRESTART, phase=1, &
-      userRoutine=ReadRestart, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -107,7 +104,7 @@ module simplewave_component
       convention="NUOPC", purpose="General", rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP0
@@ -136,6 +133,8 @@ module simplewave_component
     type(ESMF_Grid)        :: grid, grid2
     type(ESMF_Field)       :: field
     type(ESMF_StateItem_Flag) :: itemType
+    type(ESMF_GeomType_Flag)  :: geomType
+    type(ESMF_Mesh)           :: mesh
 
     call MOSSCO_CompEntry(gridComp, clock, name=name, currTime=currTime, &
       importState=importState, exportState=exportState, rc=localrc)
@@ -149,8 +148,8 @@ module simplewave_component
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (isPresent) then
-      write(message,'(A)') trim(name)//' found grid in component'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      write(message,'(A)') trim(name)//' found grid within component'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       call ESMF_GridCompGet(gridComp, grid=grid, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -158,15 +157,18 @@ module simplewave_component
       hasGrid=.true.
     endif
 
-    call ESMF_AttributeGet(importState, 'foreign_grid_field_name', isPresent=isPresent, rc=localrc)
+    call ESMF_AttributeGet(importState, 'foreign_grid_field_name', &
+      isPresent=isPresent, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (isPresent .and. .not.hasGrid) then
 
-      call ESMF_AttributeGet(importState, 'foreign_grid_field_name', foreignGridFieldName, rc=localrc)
+      call ESMF_AttributeGet(importState, 'foreign_grid_field_name', &
+        foreignGridFieldName, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call MOSSCO_StateGetForeignGrid(importState, grid=grid, owner=trim(name), &
+      call MOSSCO_StateGetForeignGrid(importState, geomType=geomType, &
+        grid=grid, mesh=mesh, owner=trim(name), &
         attributeName='foreign_grid_field_name', totalUWidth=totalUWidth, &
         totalLWidth=totalLWidth, rank=rank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -195,7 +197,8 @@ module simplewave_component
 
       inquire(file=trim(gridFileName), exist=isPresent)
       if (isPresent) then
-        grid = ESMF_GridCreate(trim(gridFileName),ESMF_FILEFORMAT_SCRIP,(/1,1/), &
+        grid = ESMF_GridCreate(filename=trim(gridFileName), &
+          fileformat=ESMF_FILEFORMAT_SCRIP, regDecomp=(/1,1/), &
           addCornerStagger=.true., rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -210,8 +213,8 @@ module simplewave_component
     endif
 
     if (.not.hasGrid) then
-        grid = ESMF_GridCreateNoPeriDim(maxIndex=(/1,1/),coordDep1=(/1/),coordDep2=(/2/), &
-          name="simplewaveGrid2D_"//trim(name),rc=localrc)
+        grid = ESMF_GridCreateNoPeriDim(maxIndex=(/1,1/), coordDep1=(/1/), &
+          coordDep2=(/2/), name="simplewaveGrid2D_"//trim(name), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call ESMF_AttributeSet(grid,'creator',trim(name), rc=localrc)
@@ -284,7 +287,8 @@ module simplewave_component
       field=ESMF_FieldEmptyCreate(name=trim(importList(i)%name), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_FieldEmptySet(field, grid, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
+      call ESMF_FieldEmptySet(field, grid, staggerloc=ESMF_STAGGERLOC_CENTER, &
+        rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_AttributeSet(field,'creator',trim(name), rc=localrc)
@@ -311,7 +315,8 @@ module simplewave_component
     do i=1,size(exportList)
 
       !! Avoid duplication of fields (this should actually never occur)
-      call ESMF_StateGet(exportState, trim(exportList(i)%name), itemType=itemType, rc=localrc)
+      call ESMF_StateGet(exportState, trim(exportList(i)%name), &
+        itemType=itemType, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (itemType /= ESMF_STATEITEM_NOTFOUND) then
@@ -324,7 +329,8 @@ module simplewave_component
       field = ESMF_FieldEmptyCreate(name=trim(exportList(i)%name), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_FieldEmptySet(field, grid, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
+      call ESMF_FieldEmptySet(field, grid, staggerloc=ESMF_STAGGERLOC_CENTER, &
+        rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_AttributeSet(field,'creator',trim(name), rc=localrc)
@@ -342,7 +348,7 @@ module simplewave_component
     if (allocated(totalLWidth)) deallocate(totalLWidth)
     !> @todo add optional fields (see Run method)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP1
@@ -389,7 +395,8 @@ module simplewave_component
         exclusiveLBound=exclusiveLBound,exclusiveUBound=exclusiveUBound)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_GridGet(grid,coordDimCount=coordDimCount,coordDimMap=coordDimMap, rc=localrc)
+    call ESMF_GridGet(grid, coordDimCount=coordDimCount, &
+      coordDimMap=coordDimMap, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     do i=1,2
@@ -412,16 +419,7 @@ module simplewave_component
 
    if (isPresent) then
      call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask, rc=localrc)
-     if (localrc .ne. ESMF_SUCCESS) then
-       call ESMF_LogWrite('ignore ERROR messages above related to GridGetItem - waiting for new ESMF release', &
-                         ESMF_LOGMSG_INFO,ESMF_CONTEXT)
-      endif
-   end if
-
-   if (isPresent .and. localrc == ESMF_SUCCESS) then
-
-      call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
    else
       allocate(mask(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
       mask = 0
@@ -433,26 +431,28 @@ module simplewave_component
       call ESMF_StateGet(importState,trim(importList(i)%name),field)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_FieldGet(field,status=status, rc=localrc)
+      call ESMF_FieldGet(field, status=status, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (status == ESMF_FIELDSTATUS_GRIDSET) then
-        write(message, '(A)') trim(name)//' imports internal field '
+        write(message, '(A)') trim(name)//' uses internal field '
         call MOSSCO_FieldString(field, message)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
-        allocate(importList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
+        allocate(importList(i)%data(totalLBound(1):totalUBound(1), &
+          totalLBound(2):totalUBound(2)))
 
+        !> @todo The other way around?
         call ESMF_FieldEmptyComplete(field, importList(i)%data, &
-                                     totalLWidth=int(exclusiveLBound-totalLBound),  &
-                                     totalUWidth=int(totalUBound-exclusiveUBound),  &
-                                     rc=localrc)
+          totalLWidth=int(exclusiveLBound-totalLBound),  &
+          totalUWidth=int(totalUBound-exclusiveUBound),  &
+          rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         importList(i)%data = 0.0d0
 
       else if (status == ESMF_FIELDSTATUS_COMPLETE) then
-        write(message, '(A)') trim(name)//' imports external field '
+        write(message, '(A)') trim(name)//' imports external '
         call MOSSCO_FieldString(field, message)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
@@ -461,13 +461,29 @@ module simplewave_component
 
         if (.not. (      all(lbound(importList(i)%data) .eq. totalLBound)          &
                    .and. all(ubound(importList(i)%data) .eq. totalUBound) ) ) then
-          call ESMF_LogWrite('invalid field bounds', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-          call ESMF_Finalize(endflag=ESMF_END_ABORT)
+          write(message, '(A)') trim(name)//' invalid field bounds '
+          call MOSSCO_FieldString(field, message)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+          rc = ESMF_RC_ARG_BAD
+          return
         end if
+
+        if(sum(importList(i)%data, mask > 0) /= sum(importList(i)%data, mask > 0)) then
+          write(message, '(A)') trim(name)//' got invalid data in  '
+          call MOSSCO_FieldString(field, message)
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+
+          rc = ESMF_RC_ARG_OUTOFRANGE
+          call MOSSCO_CompExit(gridComp, rc=localrc)
+          return
+        endif
+
       else
-        write(message, '(A)') trim(message)//' encountered unexpected empty field '//trim(importList(i)%name)
+        write(message, '(A)') trim(message)//' encountered unexpected empty'
+        call MOSSCO_FieldString(field, message)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-        call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        rc = ESMF_RC_ARG_BAD
+        return
       end if
     end do
 
@@ -480,11 +496,13 @@ module simplewave_component
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (status == ESMF_FIELDSTATUS_GRIDSET) then
+
         write(message, '(A)') trim(name)//' exports to internal field '
         call MOSSCO_FieldString(field, message)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
-        allocate(exportList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
+        allocate(exportList(i)%data(totalLBound(1):totalUBound(1), &
+          totalLBound(2):totalUBound(2)))
 
         call ESMF_FieldEmptyComplete(field, exportList(i)%data, &
                                      totalLWidth=int(exclusiveLBound-totalLBound),  &
@@ -495,7 +513,7 @@ module simplewave_component
         exportList(i)%data = 0.0d0
 
       else if (status == ESMF_FIELDSTATUS_COMPLETE) then
-        write(message, '(A)') trim(name)//' exports to external field '
+        write(message, '(A)') trim(name)//' exports to external '
         call MOSSCO_FieldString(field, message)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
@@ -508,35 +526,21 @@ module simplewave_component
           call ESMF_Finalize(endflag=ESMF_END_ABORT)
         end if
       else
-        write(message, '(A)') trim(message)//' encountered unexpected empty field '//trim(importList(i)%name)
+        write(message, '(A)') trim(message)//' encountered unexpected empty field '//trim(exportList(i)%name)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       end if
     end do
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call do_simplewave()
+
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP2
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "ReadRestart"
-  subroutine ReadRestart(gridComp, importState, exportState, parentClock, rc)
-
-    type(ESMF_GridComp)   :: gridComp
-    type(ESMF_State)      :: importState
-    type(ESMF_State)      :: exportState
-    type(ESMF_Clock)      :: parentClock
-    integer, intent(out)  :: rc
-
-    rc=ESMF_SUCCESS
-
-    !> Here omes your restart code, which in the simplest case copies
-    !> values from all fields in importState to those in exportState
-
-  end subroutine ReadRestart
-
-
+#define ESMF_METHOD "Run"
   subroutine Run(gridComp, importState, exportState, clock, rc)
 
     type(ESMF_GridComp)  :: gridComp
@@ -550,13 +554,6 @@ module simplewave_component
 
     type(ESMF_Clock)        :: myClock
     type(ESMF_Time)         :: nextTime
-    real(ESMF_KIND_R8),dimension(:,:),pointer :: waveH,waveT,waveK,waveDir
-    real(ESMF_KIND_R8),dimension(:,:),pointer :: depth,windx,windy
-    real(ESMF_KIND_R8)           :: wdepth,wind,wwind
-    real(ESMF_KIND_R8),parameter :: max_depth_windwaves=30.0
-    real(ESMF_KIND_R8),parameter :: kD_deepthresh = 100.0d0
-    integer,dimension(2)         :: totalLBound,totalUBound
-    integer                      :: i,j
 
     call MOSSCO_CompEntry(gridComp, clock, name=name, currTime=currTime, &
       importState=importState, exportState=exportState, rc=localrc)
@@ -565,8 +562,30 @@ module simplewave_component
     call ESMF_GridCompGet(gridcomp, clock=myClock, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_ClockGetNextTime(clock,nextTime, rc=localrc)
+    call ESMF_ClockGetNextTime(clock, nextTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call do_simplewave()
+
+    call ESMF_ClockAdvance(myClock, timeStep=nextTime-currTime, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call MOSSCO_CompExit(gridComp, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  end subroutine Run
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "do_simplewave"
+  subroutine do_simplewave()
+
+    real(ESMF_KIND_R8),dimension(:,:),pointer :: waveH,waveT,waveK,waveDir
+    real(ESMF_KIND_R8),dimension(:,:),pointer :: depth, windx, windy
+    real(ESMF_KIND_R8)           :: wdepth, wind
+    real(ESMF_KIND_R8),parameter :: max_depth_windwaves=30.0
+    real(ESMF_KIND_R8),parameter :: kD_deepthresh = 100.0d0
+    integer,dimension(2)         :: totalLBound,totalUBound
+    integer                      :: i,j
 
     depth   => importList(1)%data
     windx   => importList(2)%data
@@ -586,8 +605,8 @@ module simplewave_component
         wind = sqrt( windx(i,j)*windx(i,j) + windy(i,j)*windy(i,j) )
         if (wind .gt. 0.0d0) then
           wdepth = min( depth(i,j) , max_depth_windwaves )
-          waveH(i,j) = wind2waveHeight(wind,wdepth)
-          waveT(i,j) = wind2wavePeriod(wind,wdepth)
+          waveH(i,j) = wind2waveHeight(wind, wdepth)
+          waveT(i,j) = wind2wavePeriod(wind, wdepth)
           waveK(i,j) = wavePeriod2waveNumber(waveT(i,j),depth(i,j))
           waveDir(i,j) = atan2(windy(i,j),windx(i,j)) ! cartesian convention and in radians
         else
@@ -600,43 +619,6 @@ module simplewave_component
       end do
     end do
 
-    call ESMF_ClockAdvance(myClock, timeStep=nextTime-currTime, rc=localrc)
-
-    call MOSSCO_CompExit(gridComp, localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-  end subroutine Run
-
-  subroutine Finalize(gridComp, importState, exportState, clock, rc)
-
-    type(ESMF_GridComp)   :: gridComp
-    type(ESMF_State)      :: importState, exportState
-    type(ESMF_Clock)      :: clock
-    integer, intent(out)  :: rc
-
-    character(ESMF_MAXSTR)  :: name
-    type(ESMF_Time)         :: currTime
-    type(ESMF_Clock)        :: myClock
-    integer                 :: localrc
-
-    call MOSSCO_CompEntry(gridComp, clock, name=name, currTime=currTime, &
-      importState=importState, exportState=exportState, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    deallocate(importList)
-    deallocate(exportList)
-
-    call ESMF_GridCompGet(gridComp, clock=myClock, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    !! Here comes your own finalization code
-    !! 1. Destroy all fields that you created, be aware that other components
-    !!    might have interfered with your fields, e.g., moved them into a fieldBundle
-    !! 2. Deallocate all your model's internal allocated memory
-
-    call MOSSCO_CompExit(gridComp, localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-  end subroutine Finalize
+  end subroutine do_simplewave
 
 end module simplewave_component

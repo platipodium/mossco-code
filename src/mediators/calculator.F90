@@ -3,7 +3,7 @@
 !> @file calculator.F90
 !!
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2017 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2017, 2018, 2019 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -17,8 +17,12 @@
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "calculator.F90"
 
-#define RANGE2D lbnd(1):ubnd(1),lbnd(2):ubnd(2)
-#define RANGE3D lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)
+#define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+#define RANGE1D lbnd(1):ubnd(1)
+#define RANGE2D RANGE1D,lbnd(2):ubnd(2)
+#define RANGE3D RANGE2D,lbnd(3):ubnd(3)
+#define RANGE4D RANGE3D,lbnd(4):ubnd(4)
 
 module calculator
 
@@ -35,15 +39,26 @@ module calculator
 
   public SetServices
 
+  private
+
+  type MOSSCO_StackType
+    integer(ESMF_KIND_I4)           :: rank = -1
+    real(ESMF_KIND_R8), allocatable     :: scalar(:)
+    real(ESMF_KIND_R8), allocatable     :: farray1(:)
+    real(ESMF_KIND_R8), allocatable     :: farray2(:,:)
+    real(ESMF_KIND_R8), allocatable     :: farray3(:,:,:)
+    real(ESMF_KIND_R8), allocatable     :: farray4(:,:,:,:)
+    logical, allocatable     :: mask1(:), mask2(:,:), mask3(:,:,:), mask4(:,:,:,:)
+  end type MOSSCO_StackType
+
   contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "SetServices"
   subroutine SetServices(cplComp, rc)
 
-    type(ESMF_cplComp)  :: cplComp
+    type(ESMF_cplComp)   :: cplComp
     integer, intent(out) :: rc
-
     integer              :: localrc
 
     rc=ESMF_SUCCESS
@@ -81,7 +96,7 @@ module calculator
     type(ESMF_Time)             :: currTime
     integer(ESMF_KIND_I4)       :: localrc
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
@@ -100,7 +115,7 @@ module calculator
     call ESMF_StateReconcile(exportState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP0
@@ -118,16 +133,19 @@ module calculator
     character(len=ESMF_MAXSTR)      :: name, message, configFileName
     type(ESMF_Time)                 :: currTime
 
-    integer(ESMF_KIND_I4)           :: localrc, i, j
+    integer(ESMF_KIND_I4)           :: localrc, i, j, k,   n
 
     type(ESMF_Config)               :: config
     logical                         :: labelIsPresent, isPresent, fileIsPresent
-    character(len=ESMF_MAXSTR), allocatable :: filterExcludeList(:), filterIncludeList(:)
-    character(len=ESMF_MAXSTR), allocatable :: aliasList(:,:), rpnList(:,:)
+    character(len=ESMF_MAXSTR), allocatable :: exportList(:,:), rpnList(:,:)
+    character(len=ESMF_MAXSTR), allocatable :: aliasList(:,:)
+    type(ESMF_Field)                :: field
+    type(ESMF_Field), allocatable   :: fieldList(:)
+    integer(ESMF_KIND_I4)           :: fieldCount
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     configfilename=trim(name)//'.cfg'
@@ -142,35 +160,18 @@ module calculator
       config = ESMF_ConfigCreate(rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+      call ESMF_CplCompSet(cplComp, config=config, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
       call ESMF_ConfigLoadFile(config, trim(configfilename), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call MOSSCO_ConfigGet(config, 'exclude', filterExcludeList)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      call MOSSCO_ConfigGet(config, 'include', filterIncludeList, localrc)
+      call MOSSCO_ConfigGet(config, 'export', exportList, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call MOSSCO_ConfigGet(config, 'alias', aliasList, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call MOSSCO_ConfigGet(config, 'rpn', rpnList, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      call ESMF_CplCompSet(cplComp, config=config, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    endif
-
-    !> Add all configurable options as attributes
-    if (allocated(filterExcludeList)) then
-      call MOSSCO_AttributeSet(cplComp, 'filter_pattern_exclude', filterExcludeList, localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-    endif
-
-    if (allocated(filterIncludeList)) then
-      call MOSSCO_AttributeSet(cplComp, 'filter_pattern_include', filterIncludeList, localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
 
     if (allocated(aliasList)) then
@@ -192,22 +193,92 @@ module calculator
       enddo
     endif
 
-    if (allocated(rpnList)) then
+    if (allocated(exportList)) then
 
-      do i = lbound(rpnList,1), ubound(rpnList,1)
-        write(message,'(A)') trim(name)//' perform calculation: '
+      call MOSSCO_AttributeSet(exportState, 'export_items', exportList, &
+        owner=trim(name), separator=',', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        call MOSSCO_MessageAdd(message, trim(rpnList(i,1))//' = '//trim(rpnList(i,2)), rc=localrc)
+      call MOSSCO_Reallocate(exportList, 0, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        do j = 3, ubound(rpnList,2)
-          call MOSSCO_MessageAdd(message, ' '//trim(rpnList(i,j)), rc=localrc)
-          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-        enddo
+      call MOSSCO_AttributeGet(exportState, 'export_items', exportList, &
+        owner=name, separator=',', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      do i = lbound(exportList,1), ubound(exportList,1)
+        write(message,'(A)') trim(name)//' uses export: '
+        call MOSSCO_MessageAdd(message, trim(exportList(i,1)), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       enddo
     endif
 
-    call MOSSCO_CompExit(cplComp, rc)
+    n=0
+    if (allocated(exportList)) n=size(exportList)
+    j=1
+
+    do i=1,ubound(exportList,1)
+      do j=1,ubound(exportList,2)
+    !do i=1, n
+      call MOSSCO_ConfigGet(config, exportList(i,j), rpnList, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (trim(exportList(i,j)) == '') cycle
+      !write(0,*) i,j,shape(exportList), '"'//trim(exportList(i,j))//'"'
+
+      if (.not.allocated(rpnList)) then
+        write(message,'(A,A)') trim(name)//' does not define calculation for ', &
+          trim(exportList(i,j))
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        cycle
+      endif
+
+      call MOSSCO_AttributeSet(exportState, 'rpn_'//exportList(i,j), rpnList, &
+        owner=name, separator=',', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call MOSSCO_Reallocate(rpnList, 0, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call MOSSCO_AttributeGet(exportState, 'rpn_'//exportList(i,j), rpnList, &
+        owner=name, separator=',', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message,'(A)') trim(name)//' will calculate '//trim(exportList(i,j))
+      call MOSSCO_MessageAdd(message,' as ')
+      do k = lbound(rpnList,1), ubound(rpnList,1)
+        !> @todo add multiline rpn
+        call MOSSCO_MessageAdd(message, ' '//trim(rpnList(k,1)), rc=localrc)
+      enddo
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      call MOSSCO_StateGet(exportState, fieldList, itemSearch=exportList(i,j), &
+        fieldCount=fieldCount, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (fieldCount > 0) cycle
+
+      field = ESMF_FieldEmptyCreate(name = exportList(i,j), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      !call MOSSCO_AttributeSet(field, 'rpn_'//exportList(i,j), rpnList, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_StateAddReplace(exportState, (/field/), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      write(message,'(A)') trim(name)//' created for export '
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    enddo
+  enddo
+
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP1
@@ -225,22 +296,1119 @@ module calculator
     type(ESMF_Time)         :: currTime
     integer(ESMF_KIND_I4)   :: localrc
 
+    character(len=ESMF_MAXSTR), allocatable :: exportList(:,:), rpnList(:,:)
+    character(len=ESMF_MAXSTR), allocatable :: aliasList(:,:), itemNameList(:)
+    type(ESMF_Field)                :: field
+    type(ESMF_Field), allocatable   :: fieldList(:), importFieldList(:)
+    integer(ESMF_KIND_I4)           :: fieldCount, itemCount, n, i, j, k
+    character(len=ESMF_MAXSTR), pointer :: includeList(:) => null()
+    character(len=ESMF_MAXSTR)      :: message
+    type(ESMF_STATEITEM_Flag), allocatable:: itemTypeList(:)
+    logical                         :: isMatch, verbose
+    character(len=ESMF_MAXSTR), allocatable, dimension(:) :: binaryOperatorList
+    character(len=ESMF_MAXSTR), allocatable, dimension(:) :: unaryOperatorList
+    character(len=ESMF_MAXSTR), allocatable, dimension(:) :: reductionOperatorList
+
+    integer(ESMF_KIND_I4)              :: sp
+    character(len=ESMF_MAXSTR)         :: rpnTypeString
+    type(MOSSCO_StackType), allocatable   :: stack(:)
+
+    real(ESMF_KIND_R8), pointer     :: farrayPtr1(:) => null()
+    real(ESMF_KIND_R8), pointer     :: farrayPtr2(:,:) => null()
+    real(ESMF_KIND_R8), pointer     :: farrayPtr3(:,:,:) => null()
+    real(ESMF_KIND_R8), pointer     :: farrayPtr4(:,:,:,:) => null()
+
+    integer(ESMF_KIND_I4)            :: rank, ubnd(4), lbnd(4)
+    real(ESMF_KIND_R8), allocatable  :: scalarList(:)
+    integer(ESMF_KIND_I4), allocatable  :: matchIndex(:)
+    type(ESMF_FieldStatus_Flag)      :: fieldStatus
+    type(ESMF_GeomType_Flag)         :: geomType = ESMF_GEOMTYPE_GRID
+    type(ESMF_Mesh)                  :: mesh
+    type(ESMF_Grid)                  :: grid, grid3
+
     rc = ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
+    allocate(binaryOperatorList(12))
+    binaryOperatorList(1:6)  = (/'*','/','+','-','^','%'/)
+    binaryOperatorList(7:10) =(/'** ','mod','rem','pow'/)
+    binaryOperatorList(11:12) =(/'ubound','lbound'/)
+    allocate(unaryOperatorList(13))
+    unaryOperatorList = (/'e    ','log  ','ln   ','exp  ', 'lg   ','sin  ', 'cos  ', &
+      'tan  ', 'sqrt ','asin ','atan ','acos ','abs  '/)
+    allocate(reductionOperatorList(6))
+    reductionOperatorList = (/'vmean','vsum ','upper','lower','vmax ','vmin '/)
+
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CreateCalculatedExportFields(cplComp, importState, exportState, rc=localrc)
+    verbose = .true.
+
+    call MOSSCO_AttributeGet(exportState, 'export_items', exportList, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CalculateFields(cplComp, importState, exportState, rc=localrc)
+    n = 0
+    if (allocated(exportList)) n = ubound(exportList,1)
+    if (.not.associated(includeList)) allocate(includeList(1), stat=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    !call MOSSCO_AttributeGet(exportState, 'alias_definition', aliasList, rc=localrc)
+    !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (itemCount > 0) then
+      allocate(itemTypeList(itemCount), stat=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      allocate(itemNameList(itemCount), stat=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_StateGet(importState, itemTypeList=itemTypeList, &
+        itemNameList=itemNameList, rc=localrc )
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    endif
+
+    do i=1, n
+
+      call MOSSCO_AttributeGet(exportState, 'rpn_'//exportList(i,1), rpnList, &
+        owner=name, separator=',', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      !> Don't do anything if there is no calculation to be performed
+      if (.not.allocated(rpnList)) then
+        if (verbose) then
+          write(message, '(A,A)') trim(name)//' did not define calculation for ', &
+            trim(exportList(i,1))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        endif
+        cycle
+      endif
+
+      includeList(1) = exportList(i,1)
+      call MOSSCO_StateGet(exportState, fieldList, include=includeList, &
+        fieldCount=fieldCount, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      !> Don't do anything if the field is not in the export state
+      if (fieldCount < 1) then
+        if (verbose) then
+          write(message, '(A,A)') trim(name)//' did not find in export state ', &
+            trim(exportList(i,1))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        endif
+        cycle
+      endif
+
+      !> find symbols in rpnList and determine their grid
+      !> @todo this only looks for the first grid, others are disregarded
+
+      if (allocated(stack)) deallocate(stack)
+      if (allocated(scalarList)) deallocate(scalarList)
+
+      allocate(stack(ubound(rpnList,1)))
+      allocate(scalarList(ubound(rpnList,1)))
+      call MOSSCO_Reallocate(importFieldList, ubound(rpnList,1), rc=localrc)
+      rpnTypeString(1:ubound(rpnList,1)) = 'x'
+
+      do j=1, ubound(rpnList,1)
+
+        call MOSSCO_StringFind(rpnList(j,1), reductionOperatorList, &
+          isMatch=isMatch, owner=name, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        if (isMatch) then
+          rpnTypeString(j:j) = 'r' ! unary reduction operator
+          cycle
+        endif
+
+        call MOSSCO_StringFind(rpnList(j,1), unaryOperatorList, &
+          isMatch=isMatch, owner=name, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        if (isMatch) then
+          rpnTypeString(j:j) = 'u' ! unary operator
+          cycle
+        endif
+
+        call MOSSCO_StringFind(rpnList(j,1), binaryOperatorList, &
+          isMatch=isMatch, owner=name, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        if (isMatch) then
+          rpnTypeString(j:j) = 'b' ! binary operator
+          cycle
+        endif
+
+        if (isDecimal(rpnList(j,1), rc=localrc)) then
+          read(unit=rpnList(j,1), fmt=*, iostat=localrc) scalarList(j)
+          rpnTypeString(j:j) = 'd' ! this is a isDecimal
+          cycle
+        endif
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      enddo !j=1, size(rpnList), looking for operators 'rub'
+
+      !> By default assume isMatch, use .false. to indicate an
+      !> error and skip processing after the next loop
+      isMatch = .true.
+
+      do j=1, ubound(rpnList,1)
+
+        !> Skip operators and numbers which we have dealt with
+        if (index('rubd',rpnTypeString(j:j))>0) cycle
+
+        if (allocated(matchIndex)) deallocate(matchIndex)
+        call MOSSCO_StringFind(rpnList(j,1), itemNameList, isMatch=isMatch, &
+          matchIndex=matchIndex, owner=name, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        if (.not.isMatch) then
+          write(message,'(A)') trim(name)//' item "'//trim(rpnList(j,1))// &
+            '" is not operator or input or number.'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+          exit
+        endif
+
+        rpnTypeString(j:j) = 's' ! this is a symbol
+
+        !> @todo consider alias
+        includeList(1) = itemNameList(matchIndex(1))
+        call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
+          include=includeList, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), &
+          rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        if (fieldCount == 0) then
+          write(message, '(A)') trim(name)//' could not find complete item "'// &
+            trim(includeList(1))//'" required to calculate '//trim(exportList(i,1))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+          rc = ESMF_RC_NOT_FOUND
+          return
+        endif
+
+        importFieldList(j) = fieldList(1)
+
+        call ESMF_FieldGet(fieldList(1), geomType=geomType, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        if (geomType == ESMF_GEOMTYPE_MESH) then
+          call ESMF_FieldGet(fieldList(1), mesh=mesh, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        elseif (geomType == ESMF_GEOMTYPE_GRID) then
+
+          call ESMF_FieldGet(fieldList(1), grid=grid, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          !> Reduce the grid if reduction operator present
+          if (index(rpnTypeString,'r') > 0) then
+
+            call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+            if (rank /= 3) then
+              localrc = ESMF_RC_NOT_IMPL
+              _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+            endif
+
+            grid3 = grid
+            grid = MOSSCO_GridCreateFromOtherGrid(grid3, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+          endif
+        else
+          localrc = ESMF_RC_NOT_IMPL
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        endif
+
+      enddo
+
+      !> Bail out here on previous non-matching symbol
+      if (.not.isMatch) then
+        write(message,'(A)') trim(name)//' skipped calculation of '//trim(exportList(i,1))
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        exit
+      endif
+
+      includeList(1) = exportList(i,1)
+      call MOSSCO_StateGet(exportState, fieldList, include=includeList, &
+        fieldCount=fieldCount, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_FieldGet(fieldList(1), status=fieldStatus, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
+        if (geomType == ESMF_GEOMTYPE_GRID) then
+          call ESMF_FieldEmptySet(fieldList(1), grid=grid, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        elseif (geomType == ESMF_GEOMTYPE_MESH) then
+          call ESMF_FieldEmptySet(fieldList(1), mesh=mesh, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        endif
+        write(message, '(A)') trim(name)//' added geometry to '
+        call MOSSCO_FieldString(fieldList(1), message)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
+
+      call ESMF_FieldGet(fieldList(1), status=fieldStatus, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (fieldStatus == ESMF_FIELDSTATUS_GRIDSET) then
+        call ESMF_FieldEmptyComplete(fieldList(1), typeKind=ESMF_TYPEKIND_R8, &
+          rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        write(message, '(A)') trim(name)//' completed '
+        call MOSSCO_FieldString(fieldList(1), message)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
+
+      sp = 0
+      do j=lbound(rpnList,1), ubound(rpnList,1)
+
+        !> push item onto stack if it is not an operator
+        if (index('rub', rpnTypeString(j:j)) < 1) then
+          sp = sp + 1
+
+          if (rpnTypeString(j:j) == 'd') then
+            stack(sp)%rank=0
+            allocate(stack(sp)%scalar(1))
+            stack(sp)%scalar(1) = scalarList(j)
+
+          elseif (rpnTypeString(j:j) == 's') then
+
+            call MOSSCO_StringFind(rpnList(j,1), itemNameList, isMatch=isMatch, &
+              matchIndex=matchIndex, owner=name, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+            !> @todo consider alias
+
+            includeList(1) = itemNameList(matchIndex(1))
+            call MOSSCO_StateGet(importState, fieldList, include=includeList, &
+                fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+            call ESMF_FieldGet(fieldList(1), rank=stack(sp)%rank, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+            call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=&
+              lbnd(1:stack(sp)%rank), &
+              exclusiveUBound=ubnd(1:stack(sp)%rank), rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+            if (stack(sp)%rank == 4) then
+              call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr4, rc=localrc)
+              _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+              allocate(stack(sp)%farray4(RANGE4D))
+              stack(sp)%farray4(RANGE4D) = farrayPtr4(RANGE4D)
+              call MOSSCO_FieldGetMask(fieldList(1), mask4=stack(sp)%mask4, owner=name, rc=localrc)
+              _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+            elseif (stack(sp)%rank == 3) then
+              call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr3, rc=localrc)
+              _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+              allocate(stack(sp)%farray3(RANGE3D))
+              stack(sp)%farray3(RANGE3D) = farrayPtr3(RANGE3D)
+              call MOSSCO_FieldGetMask(fieldList(1), mask3=stack(sp)%mask3, owner=name, rc=localrc)
+              _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+            elseif (stack(sp)%rank == 2) then
+              call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr2, rc=localrc)
+              _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+              allocate(stack(sp)%farray2(RANGE2D))
+              stack(sp)%farray2(RANGE2D) = farrayPtr2(RANGE2D)
+              call MOSSCO_FieldGetMask(fieldList(1), mask2=stack(sp)%mask2, owner=name, rc=localrc)
+              _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+            elseif (stack(sp)%rank == 1) then
+              call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr1, rc=localrc)
+              _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+              allocate(stack(sp)%farray1(RANGE1D))
+              stack(sp)%farray1(RANGE1D) = farrayPtr1(RANGE1D)
+              call MOSSCO_FieldGetMask(fieldList(1), mask1=stack(sp)%mask1, owner=name, rc=localrc)
+              _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+            endif
+
+          else
+            write(message,'(A)') trim(name)//' encountered invalid rpn type'
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+            rc = ESMF_RC_ARG_BAD
+            return
+          endif
+
+          cycle
+        endif
+
+        !> We found an operator, deal with unary and reduction first, i.e. pop item off the
+        !> stack, operate on it, and push it back.  The stack pointer is not
+        !> changed
+        if (index('ru', rpnTypeString(j:j)) > 0) then
+          write(0,*) 'rpn',j, sp, stack(sp)%rank, rpnTypeString(1:j), trim(rpnList(j,1))
+          if (sp < 1) localrc=ESMF_RC_ARG_BAD
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          select case(stack(sp)%rank)
+          case (0)
+            write(message,'(A,ES10.3,A)') trim(name)//' calculates '//&
+              trim(rpnList(j,1))//'(',stack(sp)%scalar(1),')'
+
+            select case (trim(adjustl(rpnList(j,1))))
+            case ('abs') ; stack(sp)%scalar(1) = abs(stack(sp)%scalar(1))
+            case ('acos') ; stack(sp)%scalar(1) = acos(stack(sp)%scalar(1))
+            case ('asin') ; stack(sp)%scalar(1) = asin(stack(sp)%scalar(1))
+            case ('atan') ; stack(sp)%scalar(1) = atan(stack(sp)%scalar(1))
+            case ('cos') ; stack(sp)%scalar(1) = cos(stack(sp)%scalar(1))
+            case ('exp','e') ; stack(sp)%scalar(1) = exp(stack(sp)%scalar(1))
+            case ('log','ln')
+              if (stack(sp)%scalar(1) > 0) then
+                stack(sp)%scalar(1) = log(stack(sp)%scalar(1))
+              else ; stack(sp)%scalar(1) = -1D30; endif
+            case ('lg')
+              if (stack(sp)%scalar(1) > 0) then
+                stack(sp)%scalar(1) = log10(stack(sp)%scalar(1))
+              else ; stack(sp)%scalar(1) = -1D30; endif
+            case ('sqrt') ; stack(sp)%scalar(1) = sqrt(stack(sp)%scalar(1))
+              if (stack(sp)%scalar(1) < 0) then ; stack(sp)%scalar(1) = -1D30
+              else ; stack(sp)%scalar(1) = sqrt(stack(sp)%scalar(1)); endif
+            case ('sin') ; stack(sp)%scalar(1) = sin(stack(sp)%scalar(1))
+            case default
+              write(message,'(A)') trim(name)//' does not implement operation "'// &
+                rpnList(j,1)//'" for scalar'
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+            end select
+            write(message,'(A,ES10.3)') trim(message)//' = ', stack(sp)%scalar(1)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          case (1)
+            write(message,'(A,ES10.3,A)') trim(name)//' calculates '//&
+              trim(rpnList(j,1))//'(',sum(stack(sp)%farray1,stack(sp)%mask1)/count(stack(sp)%mask1),')'
+
+            select case (trim(adjustl(rpnList(j,1))))
+            case ('abs')
+              where(stack(sp)%mask1) ; stack(sp)%farray1 = abs(stack(sp)%farray1); endwhere
+            case ('acos')
+              where(stack(sp)%mask1) ; stack(sp)%farray1 = acos(stack(sp)%farray1); endwhere
+            case ('asin')
+              where(stack(sp)%mask1) ; stack(sp)%farray1 = asin(stack(sp)%farray1); endwhere
+            case ('atan')
+              where(stack(sp)%mask1) ; stack(sp)%farray1 = atan(stack(sp)%farray1); endwhere
+            case ('cos')
+              where(stack(sp)%mask1) ; stack(sp)%farray1 = cos(stack(sp)%farray1); endwhere
+            case ('exp','e')
+              where(stack(sp)%mask1) ; stack(sp)%farray1 = exp(stack(sp)%farray1); endwhere
+            case ('log','ln')
+              where(stack(sp)%mask1 .and. stack(sp)%farray1 > 0)
+                stack(sp)%farray1 = log(stack(sp)%farray1)
+              endwhere
+            case ('lg')
+              where(stack(sp)%mask1 .and. stack(sp)%farray1 > 0)
+                stack(sp)%farray1 = log10(stack(sp)%farray1)
+              endwhere
+            case ('sqrt')
+              where(stack(sp)%mask1 .and. stack(sp)%farray1 > -tiny(0.0d0))
+                stack(sp)%farray1 = sqrt(stack(sp)%farray1)
+              endwhere
+            case ('sin')
+              where(stack(sp)%mask1) ; stack(sp)%farray1 = sin(stack(sp)%farray1); endwhere
+            case default
+              write(message,'(A,I1)') trim(name)//' does not implement operation "'// &
+                rpnList(j,1)//'" for rank ',stack(sp)%rank
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+            end select
+            write(message,'(A,ES10.3)') trim(message)//' = ', &
+              sum(stack(sp)%farray1,stack(sp)%mask1)/count(stack(sp)%mask1)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          case (2)
+            write(message,'(A,ES10.3,A)') trim(name)//' calculates '//&
+              trim(rpnList(j,1))//'(',sum(stack(sp)%farray2,stack(sp)%mask2)/count(stack(sp)%mask2),')'
+
+            select case (trim(adjustl(rpnList(j,1))))
+            case ('abs')
+              where(stack(sp)%mask2) ; stack(sp)%farray2 = abs(stack(sp)%farray2); endwhere
+            case ('acos')
+              where(stack(sp)%mask2) ; stack(sp)%farray2 = acos(stack(sp)%farray2); endwhere
+            case ('asin')
+              where(stack(sp)%mask2) ; stack(sp)%farray2 = asin(stack(sp)%farray2); endwhere
+            case ('atan')
+              where(stack(sp)%mask2) ; stack(sp)%farray2 = atan(stack(sp)%farray2); endwhere
+            case ('cos')
+              where(stack(sp)%mask2) ; stack(sp)%farray2 = cos(stack(sp)%farray2); endwhere
+            case ('exp','e')
+              where(stack(sp)%mask2) ; stack(sp)%farray2 = exp(stack(sp)%farray2); endwhere
+            case ('log','ln')
+              where(stack(sp)%mask2 .and. stack(sp)%farray2 > 0)
+                stack(sp)%farray2 = log(stack(sp)%farray2)
+              endwhere
+            case ('lg')
+              where(stack(sp)%mask2 .and. stack(sp)%farray2 > 0)
+                stack(sp)%farray2 = log10(stack(sp)%farray2)
+              endwhere
+            case ('sqrt')
+              where(stack(sp)%mask2 .and. stack(sp)%farray2 > -tiny(0.0d0))
+                stack(sp)%farray2 = sqrt(stack(sp)%farray2)
+              endwhere
+            case ('sin')
+              where(stack(sp)%mask2) ; stack(sp)%farray2 = sin(stack(sp)%farray2); endwhere
+            case default
+              write(message,'(A,I1)') trim(name)//' does not implement operation "'// &
+                rpnList(j,1)//'" for rank ',stack(sp)%rank
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+            end select
+            write(message,'(A,ES10.3)') trim(message)//' = ', &
+              sum(stack(sp)%farray2,stack(sp)%mask2)/count(stack(sp)%mask2)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          case (3)
+            write(message,'(A,ES10.3,A)') trim(name)//' calculates '//&
+              trim(rpnList(j,1))//'(',sum(stack(sp)%farray3,stack(sp)%mask3)/count(stack(sp)%mask3),')'
+
+            select case (trim(adjustl(rpnList(j,1))))
+            case ('abs')
+              where(stack(sp)%mask3) ; stack(sp)%farray3 = abs(stack(sp)%farray3); endwhere
+            case ('acos')
+              where(stack(sp)%mask3) ; stack(sp)%farray3 = acos(stack(sp)%farray3); endwhere
+            case ('asin')
+              where(stack(sp)%mask3) ; stack(sp)%farray3 = asin(stack(sp)%farray3); endwhere
+            case ('atan')
+              where(stack(sp)%mask3) ; stack(sp)%farray3 = atan(stack(sp)%farray3); endwhere
+            case ('cos')
+              where(stack(sp)%mask3) ; stack(sp)%farray3 = cos(stack(sp)%farray3); endwhere
+            case ('exp','e')
+              where(stack(sp)%mask3) ; stack(sp)%farray3 = exp(stack(sp)%farray3); endwhere
+            case ('log','ln')
+              where(stack(sp)%mask3 .and. stack(sp)%farray3 > 0)
+                stack(sp)%farray3 = log(stack(sp)%farray3)
+              endwhere
+            case ('lg')
+              where(stack(sp)%mask3 .and. stack(sp)%farray3 > 0)
+                stack(sp)%farray3 = log10(stack(sp)%farray3)
+              endwhere
+            case ('sqrt')
+              where(stack(sp)%mask3 .and. stack(sp)%farray3 > -tiny(0.0d0))
+                stack(sp)%farray3 = sqrt(stack(sp)%farray3)
+              endwhere
+            case ('sin')
+              where(stack(sp)%mask3) ; stack(sp)%farray3 = sin(stack(sp)%farray3); endwhere
+            case ('lower','upper','vmean','vsum','vmax','vmin')
+              allocate(stack(sp)%mask2(RANGE2D))
+              allocate(stack(sp)%farray2(RANGE2D))
+              if (trim(adjustl(rpnList(j,1)))=='lower') then
+                stack(sp)%farray2 = stack(sp)%farray3(RANGE2D,lbnd(3))
+              elseif (trim(adjustl(rpnList(j,1)))=='upper') then
+                stack(sp)%farray2 = stack(sp)%farray3(RANGE2D,ubnd(3))
+              elseif (trim(adjustl(rpnList(j,1)))=='vmin') then
+                stack(sp)%farray2 = minval(stack(sp)%farray3, &
+                  dim=stack(sp)%rank, mask=stack(sp)%mask3)
+              elseif (trim(adjustl(rpnList(j,1)))=='vmax') then
+                stack(sp)%farray2 = maxval(stack(sp)%farray3, &
+                  dim=stack(sp)%rank, mask=stack(sp)%mask3)
+              elseif (trim(adjustl(rpnList(j,1)))=='vsum') then
+                stack(sp)%farray2 = sum(stack(sp)%farray3, &
+                  dim=stack(sp)%rank, mask=stack(sp)%mask3)
+              elseif (trim(adjustl(rpnList(j,1)))=='vmean') then
+                stack(sp)%farray2 = sum(stack(sp)%farray3, &
+                  dim=stack(sp)%rank, mask=stack(sp)%mask3) / &
+                  count(stack(sp)%mask3,dim=stack(sp)%rank)
+              else
+                localrc = ESMF_RC_NOT_IMPL
+                _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+              endif
+              stack(sp)%mask2 = all(stack(sp)%mask3, dim=stack(sp)%rank)
+              deallocate(stack(sp)%mask3,stack(sp)%farray3)
+              stack(sp)%rank=stack(sp)%rank-1
+            case default
+              write(message,'(A,I1)') trim(name)//' does not implement operation "'// &
+                rpnList(j,1)//'" for rank ',stack(sp)%rank
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+            end select
+            if (stack(sp)%rank == 3) then
+              write(message,'(A,ES10.3)') trim(message)//' = ', &
+                sum(stack(sp)%farray3,stack(sp)%mask3)/count(stack(sp)%mask3)
+            elseif (stack(sp)%rank == 2) then
+              write(message,'(A,ES10.3)') trim(message)//' = ', &
+                sum(stack(sp)%farray2,stack(sp)%mask2)/count(stack(sp)%mask2)
+            endif
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          case (4)
+            write(message,'(A,ES10.3,A)') trim(name)//' calculates '//&
+              trim(rpnList(j,1))//'(',sum(stack(sp)%farray4,stack(sp)%mask4)/count(stack(sp)%mask4),')'
+
+            select case (trim(adjustl(rpnList(j,1))))
+            case ('abs')
+              where(stack(sp)%mask4) ; stack(sp)%farray4 = abs(stack(sp)%farray4); endwhere
+            case ('acos')
+              where(stack(sp)%mask4) ; stack(sp)%farray4 = acos(stack(sp)%farray4); endwhere
+            case ('asin')
+              where(stack(sp)%mask4) ; stack(sp)%farray4 = asin(stack(sp)%farray4); endwhere
+            case ('atan')
+              where(stack(sp)%mask4) ; stack(sp)%farray4 = atan(stack(sp)%farray4); endwhere
+            case ('cos')
+              where(stack(sp)%mask4) ; stack(sp)%farray4 = cos(stack(sp)%farray4); endwhere
+            case ('exp','e')
+              where(stack(sp)%mask4) ; stack(sp)%farray4 = exp(stack(sp)%farray4); endwhere
+            case ('log','ln')
+              where(stack(sp)%mask4 .and. stack(sp)%farray4 > 0)
+                stack(sp)%farray4 = log(stack(sp)%farray4)
+              endwhere
+            case ('lg')
+              where(stack(sp)%mask4 .and. stack(sp)%farray4 > 0)
+                stack(sp)%farray4 = log10(stack(sp)%farray4)
+              endwhere
+            case ('sqrt')
+              where(stack(sp)%mask4 .and. stack(sp)%farray4 > -tiny(0.0d0))
+                stack(sp)%farray4 = sqrt(stack(sp)%farray4)
+              endwhere
+            case ('sin')
+              where(stack(sp)%mask4) ; stack(sp)%farray4 = sin(stack(sp)%farray4); endwhere
+            case default
+              write(message,'(A,I1)') trim(name)//' does not implement operation "'// &
+                rpnList(j,1)//'" for rank ',stack(sp)%rank
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+            end select
+            write(message,'(A,ES10.3)') trim(message)//' = ', &
+              sum(stack(sp)%farray4,stack(sp)%mask4)/count(stack(sp)%mask4)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          end select
+
+        elseif (rpnTypeString(j:j) == 'b') then
+          write(0,*) 'rpn',j, sp, stack(sp)%rank, stack(sp-1)%rank, rpnTypeString(1:j), trim(rpnList(j,1))
+          if (sp < 2) localrc=ESMF_RC_ARG_BAD
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          ! Promote a scalar first argument (which is overwritten) to rank of
+          ! second argument
+          if (stack(sp-1)%rank == 0 .and. stack(sp)%rank > 0) then
+            select case(stack(sp)%rank)
+            case(1)
+              allocate(stack(sp-1)%mask1(RANGE1D)); stack(sp-1)%mask1=stack(sp)%mask1
+              allocate(stack(sp-1)%farray1(RANGE1D))
+              stack(sp-1)%farray1=stack(sp-1)%scalar(1)
+            case(2)
+              allocate(stack(sp-1)%mask2(RANGE2D)); stack(sp-1)%mask2=stack(sp)%mask2
+              allocate(stack(sp-1)%farray2(RANGE2D))
+              stack(sp-1)%farray2=stack(sp-1)%scalar(1)
+            case(3)
+              allocate(stack(sp-1)%mask3(RANGE3D)); stack(sp-1)%mask3=stack(sp)%mask3
+              allocate(stack(sp-1)%farray3(RANGE3D))
+              stack(sp-1)%farray3=stack(sp-1)%scalar(1)
+            case(4)
+              allocate(stack(sp-1)%mask4(RANGE4D)); stack(sp-1)%mask4=stack(sp)%mask4
+              allocate(stack(sp-1)%farray4(RANGE4D))
+              stack(sp-1)%farray4=stack(sp-1)%scalar(1)
+            end select ! stack(sp)%rank
+            stack(sp-1)%rank = stack(sp)%rank
+            deallocate(stack(sp-1)%scalar)
+          endif
+
+          if (stack(sp)%rank /= 0 .and. stack(sp)%rank /= stack(sp-1)%rank) then
+            write(message,'(A,I1,A,I1)') trim(name)//' does not implement operation "'// &
+              rpnList(j,1)//'" for ranks ',stack(sp-1)%rank,' and ',stack(sp)%rank
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+          endif
+
+          if (stack(sp)%rank == 0) then
+            select case(stack(sp-1)%rank)
+            case (0)
+              write(message,'(A,ES10.3,X,A,X,ES10.3)') trim(name)//' calculates ',&
+                stack(sp-1)%scalar(1),trim(rpnList(j,1)),stack(sp)%scalar(1)
+              select case(trim(adjustl(rpnList(j,1))))
+              case('+')
+                stack(sp-1)%scalar(1) = stack(sp-1)%scalar(1) + stack(sp)%scalar(1)
+              case('-')
+                stack(sp-1)%scalar(1) = stack(sp-1)%scalar(1) - stack(sp)%scalar(1)
+              case('*')
+                stack(sp-1)%scalar(1) = stack(sp-1)%scalar(1) * stack(sp)%scalar(1)
+              case('/')
+                if (abs(stack(sp)%scalar(1)) > tiny(0.0d0)) then
+                  stack(sp-1)%scalar(1)  = stack(sp-1)%scalar(1)  / stack(sp)%scalar(1)
+                else
+                  stack(sp-1)%scalar(1)  = -1.0d30
+                endif
+              case ('**','^','pow')
+                stack(sp-1)%scalar(1) = stack(sp-1)%scalar(1) ** stack(sp)%scalar(1)
+              case('%','mod')
+                stack(sp-1)%scalar(1)  = modulo(stack(sp-1)%scalar(1) ,stack(sp)%scalar(1))
+              case('ubound')
+                stack(sp-1)%scalar(1)  = min(stack(sp-1)%scalar(1) ,stack(sp)%scalar(1))
+              case('lbound')
+                stack(sp-1)%scalar(1)  = max(stack(sp-1)%scalar(1) ,stack(sp)%scalar(1))
+              case default
+                write(message,'(A,I1,A)') trim(name)//' does not implement operation "'// &
+                  rpnList(j,1)//'" for two scalars'
+                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+              end select
+              write(message,'(A,ES10.3)') trim(message)//' = ', stack(sp-1)%scalar(1)
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+            case (1)
+              write(message,'(A,ES10.3,X,A,X,ES10.3)') trim(name)//' calculates ',&
+                sum(stack(sp-1)%farray1, &
+                stack(sp-1)%mask1)/count(stack(sp-1)%mask1),trim(rpnList(j,1)), &
+                stack(sp)%scalar(1)
+              select case(trim(adjustl(rpnList(j,1))))
+              case('+')
+                where(stack(sp-1)%mask1)
+                  stack(sp-1)%farray1 = stack(sp-1)%farray1 + stack(sp)%scalar(1)
+                endwhere
+              case('-')
+                where(stack(sp-1)%mask1)
+                  stack(sp-1)%farray1 = stack(sp-1)%farray1 - stack(sp)%scalar(1)
+                endwhere
+              case('*')
+                where(stack(sp-1)%mask1)
+                  stack(sp-1)%farray1 = stack(sp-1)%farray1 * stack(sp)%scalar(1)
+                endwhere
+              case('/')
+                if (abs(stack(sp)%scalar(1)) > tiny(0.0d0)) then
+                  where(stack(sp-1)%mask1)
+                    stack(sp-1)%farray1 = stack(sp-1)%farray1 / stack(sp)%scalar(1)
+                  endwhere
+                else
+                  stack(sp-1)%farray1 = -1.0d30
+                endif
+              case ('**','^','pow')
+                where(stack(sp-1)%mask1)
+                  stack(sp-1)%farray1 = stack(sp-1)%farray1 ** stack(sp)%scalar(1)
+                endwhere
+              case('%','mod')
+                where(stack(sp-1)%mask1)
+                  stack(sp-1)%farray1 = modulo(stack(sp-1)%farray1,stack(sp)%scalar(1))
+                endwhere
+              case('ubound')
+                where(stack(sp-1)%mask1)
+                  stack(sp-1)%farray1 = min(stack(sp-1)%farray1,stack(sp)%scalar(1))
+                endwhere
+              case('lbound')
+                where(stack(sp-1)%mask1)
+                  stack(sp-1)%farray1 = max(stack(sp-1)%farray1,stack(sp)%scalar(1))
+                endwhere
+              case default
+                write(message,'(A,I1,A)') trim(name)//' does not implement operation "'// &
+                  rpnList(j,1)//'" for ranks ',stack(sp-1)%rank,' and scalar'
+                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+              end select
+              write(message,'(A,ES10.3)') trim(message)//' = ', &
+                sum(stack(sp-1)%farray1,stack(sp-1)%mask1)/count(stack(sp-1)%mask1)
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+            case (2)
+              write(message,'(A,ES10.3,X,A,X,ES10.3)') trim(name)//' calculates ',&
+                sum(stack(sp-1)%farray2, &
+                stack(sp-1)%mask2)/count(stack(sp-1)%mask2),trim(rpnList(j,1)), &
+                stack(sp)%scalar(1)
+              select case(trim(adjustl(rpnList(j,1))))
+              case('+')
+                where(stack(sp-1)%mask2)
+                  stack(sp-1)%farray2 = stack(sp-1)%farray2 + stack(sp)%scalar(1)
+                endwhere
+              case('-')
+                where(stack(sp-1)%mask2)
+                  stack(sp-1)%farray2 = stack(sp-1)%farray2 - stack(sp)%scalar(1)
+                endwhere
+              case('*')
+                where(stack(sp-1)%mask2)
+                  stack(sp-1)%farray2 = stack(sp-1)%farray2 * stack(sp)%scalar(1)
+                endwhere
+              case('/')
+                if (abs(stack(sp)%scalar(1)) > tiny(0.0d0)) then
+                  where(stack(sp-1)%mask2)
+                    stack(sp-1)%farray2 = stack(sp-1)%farray2 / stack(sp)%scalar(1)
+                  endwhere
+                else
+                  stack(sp-1)%farray2 = -1.0d30
+                endif
+              case ('**','^','pow')
+                where(stack(sp-1)%mask2)
+                  stack(sp-1)%farray2 = stack(sp-1)%farray2 ** stack(sp)%scalar(1)
+                endwhere
+              case('%','mod')
+                where(stack(sp-1)%mask2)
+                  stack(sp-1)%farray2 = modulo(stack(sp-1)%farray2,stack(sp)%scalar(1))
+                endwhere
+              case('ubound')
+                where(stack(sp-1)%mask2)
+                  stack(sp-1)%farray2 = min(stack(sp-1)%farray2,stack(sp)%scalar(1))
+                endwhere
+              case('lbound')
+                where(stack(sp-1)%mask2)
+                  stack(sp-1)%farray2 = max(stack(sp-1)%farray2,stack(sp)%scalar(1))
+                endwhere
+              case default
+                write(message,'(A,I1,A)') trim(name)//' does not implement operation "'// &
+                  rpnList(j,1)//'" for ranks ',stack(sp-1)%rank,' and scalar'
+                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+              end select
+              write(message,'(A,ES10.3)') trim(message)//' = ', &
+                sum(stack(sp-1)%farray2,stack(sp-1)%mask2)/count(stack(sp-1)%mask2)
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+            case (3)
+              write(message,'(A,ES10.3,X,A,X,ES10.3)') trim(name)//' calculates ',&
+                sum(stack(sp-1)%farray3, &
+                stack(sp-1)%mask3)/count(stack(sp-1)%mask3),trim(rpnList(j,1)), &
+                stack(sp)%scalar(1)
+              select case(trim(adjustl(rpnList(j,1))))
+              case('+')
+                where(stack(sp-1)%mask3)
+                  stack(sp-1)%farray3 = stack(sp-1)%farray3 + stack(sp)%scalar(1)
+                endwhere
+              case('-')
+                where(stack(sp-1)%mask3)
+                  stack(sp-1)%farray3 = stack(sp-1)%farray3 - stack(sp)%scalar(1)
+                endwhere
+              case('*')
+                where(stack(sp-1)%mask3)
+                  stack(sp-1)%farray3 = stack(sp-1)%farray3 * stack(sp)%scalar(1)
+                endwhere
+              case('/')
+                if (abs(stack(sp)%scalar(1)) > tiny(0.0d0)) then
+                  where(stack(sp-1)%mask3)
+                    stack(sp-1)%farray3 = stack(sp-1)%farray3 / stack(sp)%scalar(1)
+                  endwhere
+                else
+                  stack(sp-1)%farray3 = -1.0d30
+                endif
+              case ('**','^','pow')
+                where(stack(sp-1)%mask3)
+                  stack(sp-1)%farray3 = stack(sp-1)%farray3 ** stack(sp)%scalar(1)
+                endwhere
+              case('%','mod')
+                where(stack(sp-1)%mask3)
+                  stack(sp-1)%farray3 = modulo(stack(sp-1)%farray3,stack(sp)%scalar(1))
+                endwhere
+              case('ubound')
+                where(stack(sp-1)%mask3)
+                  stack(sp-1)%farray3 = min(stack(sp-1)%farray3,stack(sp)%scalar(1))
+                endwhere
+              case('lbound')
+                where(stack(sp-1)%mask3)
+                  stack(sp-1)%farray3 = max(stack(sp-1)%farray3,stack(sp)%scalar(1))
+                endwhere
+              case default
+                write(message,'(A,I1,A)') trim(name)//' does not implement operation "'// &
+                  rpnList(j,1)//'" for ranks ',stack(sp-1)%rank,' and scalar'
+                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+              end select
+              write(message,'(A,ES10.3)') trim(message)//' = ', &
+                sum(stack(sp-1)%farray3,stack(sp-1)%mask3)/count(stack(sp-1)%mask3)
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+            case (4)
+              write(message,'(A,ES10.3,X,A,X,ES10.3)') trim(name)//' calculates ',&
+                sum(stack(sp-1)%farray4, &
+                stack(sp-1)%mask4)/count(stack(sp-1)%mask4),trim(rpnList(j,1)), &
+                stack(sp)%scalar(1)
+              select case(trim(adjustl(rpnList(j,1))))
+              case('+')
+                where(stack(sp-1)%mask4)
+                  stack(sp-1)%farray4 = stack(sp-1)%farray4 + stack(sp)%scalar(1)
+                endwhere
+              case('-')
+                where(stack(sp-1)%mask4)
+                  stack(sp-1)%farray4 = stack(sp-1)%farray4 - stack(sp)%scalar(1)
+                endwhere
+              case('*')
+                where(stack(sp-1)%mask4)
+                  stack(sp-1)%farray4 = stack(sp-1)%farray4 * stack(sp)%scalar(1)
+                endwhere
+              case('/')
+                if (abs(stack(sp)%scalar(1)) > tiny(0.0d0)) then
+                  where(stack(sp-1)%mask4)
+                    stack(sp-1)%farray4 = stack(sp-1)%farray4 / stack(sp)%scalar(1)
+                  endwhere
+                else
+                  stack(sp-1)%farray4 = -1.0d30
+                endif
+              case ('**','^','pow')
+                where(stack(sp-1)%mask4)
+                  stack(sp-1)%farray4 = stack(sp-1)%farray4 ** stack(sp)%scalar(1)
+                endwhere
+              case('%','mod')
+                where(stack(sp-1)%mask4)
+                  stack(sp-1)%farray4 = modulo(stack(sp-1)%farray4,stack(sp)%scalar(1))
+                endwhere
+              case('ubound')
+                where(stack(sp-1)%mask4)
+                  stack(sp-1)%farray4 = min(stack(sp-1)%farray4,stack(sp)%scalar(1))
+                endwhere
+              case('lbound')
+                where(stack(sp-1)%mask4)
+                  stack(sp-1)%farray4 = max(stack(sp-1)%farray4,stack(sp)%scalar(1))
+                endwhere
+              case default
+                write(message,'(A,I1,A)') trim(name)//' does not implement operation "'// &
+                  rpnList(j,1)//'" for ranks ',stack(sp-1)%rank,' and scalar'
+                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+              end select
+              write(message,'(A,ES10.3)') trim(message)//' = ', &
+                sum(stack(sp-1)%farray4,stack(sp-1)%mask4)/count(stack(sp-1)%mask4)
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+            end select
+            deallocate(stack(sp)%scalar)
+            stack(sp)%rank = -1
+          elseif (stack(sp)%rank == stack(sp-1)%rank) then
+            select case(stack(sp)%rank)
+            case (1)
+              stack(sp-1)%mask1 = (stack(sp-1)%mask1 .and. stack(sp)%mask1)
+              write(message,'(A,ES10.3,X,A,X,ES10.3)') trim(name)//' calculates ',&
+                sum(stack(sp-1)%farray1, &
+                stack(sp-1)%mask1)/count(stack(sp-1)%mask1),trim(rpnList(j,1)), &
+                sum(stack(sp)%farray1,stack(sp-1)%mask1)/count(stack(sp-1)%mask1)
+              select case(trim(adjustl(rpnList(j,1))))
+              case('+')
+                where(stack(sp-1)%mask1)
+                  stack(sp-1)%farray1 = stack(sp-1)%farray1 + stack(sp)%farray1
+                endwhere
+              case('-')
+                where(stack(sp-1)%mask1)
+                  stack(sp-1)%farray1 = stack(sp-1)%farray1 - stack(sp)%farray1
+                endwhere
+              case('*')
+                where(stack(sp-1)%mask1)
+                  stack(sp-1)%farray1 = stack(sp-1)%farray1 * stack(sp)%farray1
+                endwhere
+              case('/')
+                where(stack(sp-1)%mask1 .and. stack(sp)%farray1>0)
+                  stack(sp-1)%farray1 = stack(sp-1)%farray1 / stack(sp)%farray1
+                endwhere
+              case('%','mod')
+                where(stack(sp-1)%mask1)
+                  stack(sp-1)%farray1 = modulo(stack(sp-1)%farray1,stack(sp)%farray1)
+                endwhere
+              case('ubound')
+                where(stack(sp-1)%mask1)
+                  stack(sp-1)%farray1 = min(stack(sp-1)%farray1,stack(sp)%farray1)
+                endwhere
+              case('lbound')
+                where(stack(sp-1)%mask1)
+                  stack(sp-1)%farray1 = max(stack(sp-1)%farray1,stack(sp)%farray1)
+                endwhere
+              case default
+                write(message,'(A,I1,A,I1)') trim(name)//' does not implement operation "'// &
+                  rpnList(j,1)//'" for ranks ',stack(sp-1)%rank,' and ',stack(sp)%rank
+                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+              end select
+              write(message,'(A,ES10.3)') trim(message)//' = ', &
+                sum(stack(sp-1)%farray1,stack(sp-1)%mask1)/count(stack(sp-1)%mask1)
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+              deallocate(stack(sp)%farray1,stack(sp)%mask1)
+              stack(sp)%rank = -1
+            case (2)
+              stack(sp-1)%mask2 = (stack(sp-1)%mask2 .and. stack(sp)%mask2)
+              write(message,'(A,ES10.3,X,A,X,ES10.3)') trim(name)//' calculates ',&
+                sum(stack(sp-1)%farray2, &
+                stack(sp-1)%mask2)/count(stack(sp-1)%mask2),trim(rpnList(j,1)), &
+                sum(stack(sp)%farray2,stack(sp-1)%mask2)/count(stack(sp-1)%mask2)
+              select case(trim(adjustl(rpnList(j,1))))
+              case('+')
+                where(stack(sp-1)%mask2)
+                  stack(sp-1)%farray2 = stack(sp-1)%farray2 + stack(sp)%farray2
+                endwhere
+              case('-')
+                where(stack(sp-1)%mask2)
+                  stack(sp-1)%farray2 = stack(sp-1)%farray2 - stack(sp)%farray2
+                endwhere
+              case('*')
+                where(stack(sp-1)%mask2)
+                  stack(sp-1)%farray2 = stack(sp-1)%farray2 * stack(sp)%farray2
+                endwhere
+              case('/')
+                where(stack(sp-1)%mask2 .and. stack(sp)%farray2>0)
+                  stack(sp-1)%farray2 = stack(sp-1)%farray2 / stack(sp)%farray2
+                endwhere
+              case('%','mod')
+                where(stack(sp-1)%mask2)
+                  stack(sp-1)%farray2 = modulo(stack(sp-1)%farray2,stack(sp)%farray2)
+                endwhere
+              case('ubound')
+                where(stack(sp-1)%mask2)
+                  stack(sp-1)%farray2 = min(stack(sp-1)%farray2,stack(sp)%farray2)
+                endwhere
+              case('lbound')
+                where(stack(sp-1)%mask2)
+                  stack(sp-1)%farray2 = max(stack(sp-1)%farray2,stack(sp)%farray2)
+                endwhere
+              case default
+                write(message,'(A,I1,A,I1)') trim(name)//' does not implement operation "'// &
+                  rpnList(j,1)//'" for ranks ',stack(sp-1)%rank,' and ',stack(sp)%rank
+                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+              end select
+              write(message,'(A,ES10.3)') trim(message)//' = ', &
+                sum(stack(sp-1)%farray2,stack(sp-1)%mask2)/count(stack(sp-1)%mask2)
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+              deallocate(stack(sp)%farray2,stack(sp)%mask2)
+              stack(sp)%rank = -1
+            case (3)
+              stack(sp-1)%mask3 = (stack(sp-1)%mask3 .and. stack(sp)%mask3)
+              write(message,'(A,ES10.3,X,A,X,ES10.3)') trim(name)//' calculates ',&
+                sum(stack(sp-1)%farray3, &
+                stack(sp-1)%mask3)/count(stack(sp-1)%mask3),trim(rpnList(j,1)), &
+                sum(stack(sp)%farray3,stack(sp-1)%mask3)/count(stack(sp-1)%mask3)
+              select case(trim(adjustl(rpnList(j,1))))
+              case('+')
+                where(stack(sp-1)%mask3)
+                  stack(sp-1)%farray3 = stack(sp-1)%farray3 + stack(sp)%farray3
+                endwhere
+              case('-')
+                where(stack(sp-1)%mask3)
+                  stack(sp-1)%farray3 = stack(sp-1)%farray3 - stack(sp)%farray3
+                endwhere
+              case('*')
+                where(stack(sp-1)%mask3)
+                  stack(sp-1)%farray3 = stack(sp-1)%farray3 * stack(sp)%farray3
+                endwhere
+              case('/')
+                where(stack(sp-1)%mask3 .and. stack(sp)%farray3>0)
+                  stack(sp-1)%farray3 = stack(sp-1)%farray3 / stack(sp)%farray3
+                endwhere
+              case('%','mod')
+                where(stack(sp-1)%mask3)
+                  stack(sp-1)%farray3 = modulo(stack(sp-1)%farray3,stack(sp)%farray3)
+                endwhere
+              case('ubound')
+                where(stack(sp-1)%mask3)
+                  stack(sp-1)%farray3 = min(stack(sp-1)%farray3,stack(sp)%farray3)
+                endwhere
+              case('lbound')
+                where(stack(sp-1)%mask3)
+                  stack(sp-1)%farray3 = max(stack(sp-1)%farray3,stack(sp)%farray3)
+                endwhere
+              case default
+                write(message,'(A,I1,A,I1)') trim(name)//' does not implement operation "'// &
+                  rpnList(j,1)//'" for ranks ',stack(sp-1)%rank,' and ',stack(sp)%rank
+                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+              end select
+              write(message,'(A,ES10.3)') trim(message)//' = ', &
+                sum(stack(sp-1)%farray3,stack(sp-1)%mask3)/count(stack(sp-1)%mask3)
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+              deallocate(stack(sp)%farray3,stack(sp)%mask3)
+              stack(sp)%rank = -1
+            case (4)
+              stack(sp-1)%mask4 = (stack(sp-1)%mask4 .and. stack(sp)%mask4)
+              write(message,'(A,ES10.3,X,A,X,ES10.3)') trim(name)//' calculates ',&
+                sum(stack(sp-1)%farray4, &
+                stack(sp-1)%mask4)/count(stack(sp-1)%mask4),trim(rpnList(j,1)), &
+                sum(stack(sp)%farray4,stack(sp-1)%mask4)/count(stack(sp-1)%mask4)
+              select case(trim(adjustl(rpnList(j,1))))
+              case('+')
+                where(stack(sp-1)%mask4)
+                  stack(sp-1)%farray4 = stack(sp-1)%farray4 + stack(sp)%farray4
+                endwhere
+              case('-')
+                where(stack(sp-1)%mask4)
+                  stack(sp-1)%farray4 = stack(sp-1)%farray4 - stack(sp)%farray4
+                endwhere
+              case('*')
+                where(stack(sp-1)%mask4)
+                  stack(sp-1)%farray4 = stack(sp-1)%farray4 * stack(sp)%farray4
+                endwhere
+              case('/')
+                where(stack(sp-1)%mask4 .and. stack(sp)%farray4>0)
+                  stack(sp-1)%farray4 = stack(sp-1)%farray4 / stack(sp)%farray4
+                endwhere
+              case('%','mod')
+                where(stack(sp-1)%mask4)
+                  stack(sp-1)%farray4 = modulo(stack(sp-1)%farray4,stack(sp)%farray4)
+                endwhere
+              case('ubound')
+                where(stack(sp-1)%mask4)
+                  stack(sp-1)%farray4 = min(stack(sp-1)%farray4,stack(sp)%farray4)
+                endwhere
+              case('lbound')
+                where(stack(sp-1)%mask4)
+                  stack(sp-1)%farray4 = max(stack(sp-1)%farray4,stack(sp)%farray4)
+                endwhere
+              case default
+                write(message,'(A,I1,A,I1)') trim(name)//' does not implement operation "'// &
+                  rpnList(j,1)//'" for ranks ',stack(sp-1)%rank,' and ',stack(sp)%rank
+                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+              end select
+              write(message,'(A,ES10.3)') trim(message)//' = ', &
+                sum(stack(sp-1)%farray4,stack(sp-1)%mask4)/count(stack(sp-1)%mask4)
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+              deallocate(stack(sp)%farray4,stack(sp)%mask4)
+              stack(sp)%rank = -1
+            end select !case(stack(sp)%rank)
+          endif ! stack(sp)%rank == stack(sp-1)%rank
+
+          sp = sp - 1
+
+        else
+          localrc = ESMF_RC_NOT_IMPL
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        endif
+
+      enddo ! j=lbound(rpnList,1), ubound(rpnList,1)
+
+      if (sp /= 1) then
+        write(0,*) 'j=', j, sp
+        localrc = ESMF_RC_NOT_IMPL
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      endif
+
+      includeList(1) = exportList(i,1)
+      call MOSSCO_StateGet(exportState, fieldList, include=includeList, &
+        fieldCount=fieldCount, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_FieldGetBounds(fieldList(1), exclusiveLBound=lbnd(1:rank), &
+        exclusiveUbound=ubnd(1:rank), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      if (rank == 4) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr4, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        farrayPtr4(RANGE4D) = stack(sp)%farray4(RANGE4D)
+        write(message,'(A,ES10.3)') trim(name)//' assigns to  '// &
+          trim(includeList(1))//' value ', &
+          sum(stack(sp)%farray4,stack(sp)%mask4)/count(stack(sp)%mask4)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        deallocate(stack(sp)%mask4,stack(sp)%farray4)
+      elseif (rank == 3) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr3, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        farrayPtr3(RANGE3D) = stack(sp)%farray3(RANGE3D)
+        write(message,'(A,ES10.3)') trim(name)//' assigns to  '// &
+          trim(includeList(1))//' value ', &
+          sum(stack(sp)%farray3,stack(sp)%mask3)/count(stack(sp)%mask3)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        deallocate(stack(sp)%mask3,stack(sp)%farray3)
+      elseif (rank == 2) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr2, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        farrayPtr2(RANGE2D) = stack(sp)%farray2(RANGE2D)
+        write(message,'(A,ES10.3)') trim(name)//' assigns to  '// &
+          trim(includeList(1))//' value ', &
+          sum(stack(sp)%farray2,stack(sp)%mask2)/count(stack(sp)%mask2)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        deallocate(stack(sp)%mask2,stack(sp)%farray2)
+      elseif (rank == 1) then
+        call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr1, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        farrayPtr1(RANGE1D) = stack(sp)%farray1(RANGE1D)
+        write(message,'(A,ES10.3)') trim(name)//' assigns to  '// &
+          trim(includeList(1))//' value ', &
+          sum(stack(sp)%farray1,stack(sp)%mask1)/count(stack(sp)%mask1)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        deallocate(stack(sp)%mask1,stack(sp)%farray1)
+      endif
+    enddo ! exportItems
+
+    nullify(farrayPtr1)
+    nullify(farrayPtr2)
+    nullify(farrayPtr3)
+    nullify(farrayPtr4)
+
+    if (allocated(exportList)) deallocate(exportList)
+    if (associated(includeList)) deallocate(includeList)
+    if (allocated(reductionOperatorList)) deallocate(reductionOperatorList)
+    if (allocated(unaryOperatorList)) deallocate(unaryOperatorList)
+    if (allocated(binaryOperatorList)) deallocate(binaryOperatorList)
+    if (allocated(scalarList)) deallocate(scalarList)
+    if (allocated(matchIndex)) deallocate(matchIndex)
+    if (allocated(stack)) deallocate(stack)
+    if (allocated(rpnList)) deallocate(rpnList)
+    if (allocated(aliasList)) deallocate(aliasList)
+    if (allocated(itemTypeList)) deallocate(itemTypeList)
+    if (allocated(itemNameList)) deallocate(itemNameList)
 
     !! Finally, log the successful completion of this function
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Run
+
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Finalize"
@@ -275,18 +1443,19 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
 
     end if
 
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Finalize
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_CreateCalculatedExportFields"
-  subroutine MOSSCO_CreateCalculatedExportFields(cplComp, importState, exportState, rc)
+  subroutine MOSSCO_CreateCalculatedExportFields(cplComp, importState, exportState, kwe, rc)
 
-    type(ESMF_CplComp), intent(in)         :: cplComp
-    type(ESMF_State)                       :: importState, exportState
-    integer(ESMF_KIND_I4), optional        :: rc
+    type(ESMF_CplComp), intent(inout)                :: cplComp
+    type(ESMF_State)                                 :: importState, exportState
+    type(ESMF_KeywordEnforcer), optional, intent(in) :: kwe
+    integer(ESMF_KIND_I4), optional, intent(out)     :: rc
 
     type(ESMF_Field), allocatable          :: importfieldList(:), exportFieldList(:), fieldList(:)
     character(ESMF_MAXSTR)                 :: message, itemName, name, operator
@@ -550,8 +1719,8 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
       !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call MOSSCO_StateGetFieldList(importState, importFieldList, fieldCount=importFieldCount, &
-        itemSearch=trim(importItemName), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      call MOSSCO_StateGet(importState, importFieldList, fieldCount=importFieldCount, &
+        itemSearch=trim(importItemName), fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       !call ESMF_LogWrite(trim(name)//' in loop'//trim(importItemName), ESMF_LOGMSG_INFO)

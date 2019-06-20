@@ -96,6 +96,16 @@
   drampbc = 1. !not used if nrampbc=0
 
 !-----------------------------------------------------------------------
+! Baroclinicity calculation in off/nearshore. The 'below-bottom' gradient
+! is zeroed out if h>=h2_bcc (i.e. like Z) or uses const extrap
+! (i.e. like terrain-following) if h<=h1_bcc(<h2_bcc) (and linear
+! transition in between based on local depth)
+!-----------------------------------------------------------------------
+  h1_bcc = 50. ![m]
+  h2_bcc = 100. ![m]; >h1_bcc
+
+
+!-----------------------------------------------------------------------
 ! Hotstart option. 0: cold start; 1: hotstart with time reset to 0; 2: 
 ! continue from the step in hotstart.in
 !-----------------------------------------------------------------------
@@ -172,6 +182,8 @@
   indvel = 0
   ishapiro = 1
   shapiro = 0.5 !default is 0.5
+  niter_shap = 1 !needed of ishapiro/=0 - # of iterations with Shapiro filter. Suggested: 1
+
 
 !-----------------------------------------------------------------------
 ! Max. horizontal velocity magnitude, used mainly to prevent problem in 

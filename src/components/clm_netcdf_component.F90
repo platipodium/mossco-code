@@ -2,7 +2,7 @@
 !! This module contains routines of the CLM atmospheric component.
 !!
 !! This computer program is part of MOSSCO.
-!! @copyright Copyright (C) 2014, 2015 Helmholtz-Zentrum Geesthacht
+!! @copyright Copyright (C) 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 !! @author Hartmut Kapitza, Carsten Lemmen
 
 !
@@ -133,7 +133,7 @@ module clm_netcdf_component
       convention="NUOPC", purpose="General", rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP0
@@ -184,8 +184,6 @@ module clm_netcdf_component
     call ESMF_GridCompGet(gridComp, clock=clock, localPet=localPet, petCount=petCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-
-
     !> @ todo rethink parallel layout
     iprocs = petCount
     jprocs = 1
@@ -206,8 +204,8 @@ module clm_netcdf_component
 
     call ESMF_ConfigFindLabel(config, label='nvar:', isPresent=ispresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-		if (.not.isPresent) then
-		  write(message, '(A)') trim(name)//' required attribute "nvar" not found in '//trim(configFileName)//'. Set to default value 24'
+    if (.not.isPresent) then
+      write(message, '(A)') trim(name)//' required attribute "nvar" not found in '//trim(configFileName)//'. Set to default value 24'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
       nvar = 24
     else
@@ -422,7 +420,7 @@ module clm_netcdf_component
 
     deallocate ( de )
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     end subroutine InitializeP1
@@ -523,7 +521,7 @@ module clm_netcdf_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Run
@@ -580,7 +578,7 @@ module clm_netcdf_component
 
     call CLM_final(localPet)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Finalize

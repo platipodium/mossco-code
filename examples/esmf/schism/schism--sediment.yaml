@@ -49,6 +49,6 @@ coupling:
     interval: 30 m
   - components:
     - fabm_sediment
-    - pelagic_soil_connector
+    - soil_pelagic_connector
     - schism
     interval: 30 m

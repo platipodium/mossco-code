@@ -63,7 +63,7 @@ subroutine set_Mbalthica(this, spatialvar, Biounit)
 
   class (Mbalthica_Object)  :: this
   real (fp), dimension (:,:), pointer, optional  :: spatialvar
-  character (len = 255), optional  :: Biounit
+  character (len = *), optional  :: Biounit
 
   real (fp), dimension (:,:), allocatable :: amounts
   character (len = 255)     :: units
@@ -78,7 +78,7 @@ subroutine set_Mbalthica(this, spatialvar, Biounit)
   if (.not.present(spatialvar)) then
 
     this%Species = 'Mbalthica'
-    units        = ''
+    units        = 'm-2'
 
     allocate ( amounts ( this%inum, this%jnum ) )
     amounts(:,:) = amount
@@ -118,7 +118,7 @@ subroutine set_Mbalthica(this, spatialvar, Biounit)
       return
     end if
 
-    if (trim(units) == 'm**-2') then
+    if (trim(units) == 'm-2') then
 
       !write (*,*) ' In Mbalthica_class, the dimensionless density of Mbalthica is ', amount
       amounts(:,:)= amount
@@ -154,7 +154,7 @@ subroutine set_Mbalthica(this, spatialvar, Biounit)
 
   else  ! use spatialvar
 
-    if (trim(biounit) == 'm**-2')then
+    if (trim(biounit) == 'm-2')then
 
       this%StateVar%intensity = spatialvar
       nullify(this%StateVar%amount)

@@ -30,7 +30,7 @@ use mossco_strings
 implicit none
 
 private
-public MOSSCO_AttributeGet, MOSSCO_AttributeSet
+public MOSSCO_AttributeGet, MOSSCO_AttributeSet, MOSSCO_AttributesCopy
 
 !> This interface sets values of attributes and accepts
 !> a variety of ESMF objects (states and components) as well
@@ -71,6 +71,14 @@ interface MOSSCO_AttributeGet
   module procedure MOSSCO_CplCompAttributeGetInt4List1
   module procedure MOSSCO_StateAttributeGetInt4List1
 end interface MOSSCO_AttributeGet
+
+interface MOSSCO_AttributesCopy
+  module procedure MOSSCO_StateStateAttributesCopy
+end interface MOSSCO_AttributesCopy
+
+interface MOSSCO_AttributeCopy
+  module procedure MOSSCO_StateStateAttributeCopy
+end interface MOSSCO_AttributeCopy
 
 interface MOSSCO_AttributeGetForeignGrid
   module procedure MOSSCO_StateAttributeGetForeignGrid
@@ -297,28 +305,60 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_StateAttributeSetList2"
-  subroutine MOSSCO_StateAttributeSetList2(state, label, stringList, rc)
+  subroutine MOSSCO_StateAttributeSetList2(state, label, stringList, kwe, &
+    separator, owner, verbose, rc)
 
     type(ESMF_State), intent(inout)  :: state
     character(len=*), intent(in)  :: label
-    character(len=VARLEN), intent(in), allocatable :: stringList(:,:)
-    integer(ESMF_KIND_I4), intent(out), optional :: rc
+    character(len=VARLEN), intent(in), allocatable   :: stringList(:,:)
+    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+    character(len=1), intent(in), optional           :: separator
+    character(len=*), intent(in), optional           :: owner
+    integer(ESMF_KIND_I4), intent(out), optional     :: rc
+    logical, intent(in), optional                    :: verbose
 
-    integer(ESMF_KIND_I4)                :: localrc, rc_, i
-    character(len=4096)                  :: attributeString
+    integer(ESMF_KIND_I4)                :: localrc, rc_, i, j
+    character(len=ESMF_MAXSTR)           :: attributeString
+    character(len=1)                     :: separator_
+    character(len=ESMF_MAXSTR)           :: owner_, message
+    logical                              :: verbose_
 
-    if (present(rc)) rc=ESMF_SUCCESS
+    rc_ = ESMF_SUCCESS
+    separator_ = '='
+    owner_ = '--'
+    verbose_ = .true.
+
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+    if (present(separator)) separator_ = separator
+    if (present(verbose)) verbose_ = verbose
     if (.not.allocated(stringList)) return
+    !> @todo the following gives a segfault on mistral
+    !if (present(rc)) rc = ESMF_SUCCESS
 
-    attributeString=''
+    if (ubound(stringList,1) > 1 .and. separator_ == ',') then
+      write(message, '(A)') trim(owner_)//' uses "," for both column and row separation'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+    endif
+
     do i=lbound(stringList,1), ubound(stringList,1)
-      if (len_trim(attributeString)>0) write(attributeString,'(A)') trim(attributeString)//','
-      write(attributeString,'(A)') trim(attributeString)//trim(stringlist(i,1))//'='//trim(stringlist(i,2))
+
+      if (i==1) then
+        write(attributeString,'(A)') trim(stringlist(i,1))
+      else
+        call MOSSCO_MessageAdd(attributeString, ','//trim(stringlist(i,1)), rc=localrc)
+      endif
+
+      j=1
+      do j=lbound(stringList,2)+1, ubound(stringList,2)
+        if (len_trim(stringlist(i,j)) == 0) exit
+        call MOSSCO_MessageAdd(attributeString, separator_//trim(stringlist(i,j)), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      enddo
     enddo
 
-    call ESMF_AttributeSet(state, trim(label), value=attributeString, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_AttributeSet(state, trim(label), value=trim(attributeString), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   end subroutine MOSSCO_StateAttributeSetList2
 
@@ -500,37 +540,65 @@ contains
 
   end subroutine MOSSCO_cplCompAttributeGetInt4List1
 
-  subroutine MOSSCO_StateAttributeGetList2(state, label, stringList, rc)
+  subroutine MOSSCO_StateAttributeGetList2(state, label, stringList, kwe, &
+    owner, separator, verbose, rc)
 
-    type(ESMF_State), intent(in)  :: state
-    character(len=*), intent(in)  :: label
+    type(ESMF_State), intent(in)       :: state
+    character(len=*), intent(in)       :: label
     character(len=ESMF_MAXSTR), intent(out), allocatable :: stringList(:,:)
-    integer(ESMF_KIND_I4), intent(out), optional :: rc
+    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+    character(len=1), intent(in), optional           :: separator
+    character(len=VARLEN), intent(in), optional      :: owner
+    integer(ESMF_KIND_I4), intent(out), optional     :: rc
+    logical, intent(in), optional                    :: verbose
 
-    integer(ESMF_KIND_I4)                :: localrc, rc_, i, n, j
-    logical                              :: isPresent
+    integer(ESMF_KIND_I4)                :: localrc, rc_, i, n, j, ni, nj, k
+    logical                              :: isPresent, verbose_
     character(len=4096)                  :: attributeString
-    character(len=ESMF_MAXSTR)           :: currString
+    character(len=1)                     :: separator_
+    character(len=ESMF_MAXSTR)           :: currString, message, owner_
 
-    if (present(rc)) rc=ESMF_SUCCESS
+    rc_ = ESMF_SUCCESS
+    owner_ = '--'
+    separator_ = '='
+    verbose_ = .true.
+
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = ESMF_SUCCESS
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+    if (present(separator)) separator_ = separator
+    if (present(verbose)) verbose_ = verbose
 
     call ESMF_AttributeGet(state, name=trim(label), isPresent=isPresent, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (.not.isPresent) return
 
     call ESMF_AttributeGet(state, trim(label), value=attributeString, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    n=1
+    n=0
+    ni=1
+    nj=1
     do i=1,len_trim(attributeString)
-      if (attributeString(i:i)==',') n=n+1
+      if (attributeString(i:i)==separator_) nj=nj+1
+      if (attributeString(i:i)==',') then
+        if (nj > n) n=nj
+        nj = 1
+        ni = ni+1
+      endif
     enddo
+    !write(0,*) 'Att=',trim(attributeString),' '//separator_,nj,ni
 
-    if (n>0) allocate(stringList(n,2))
-    do i=1,n
+    if (n>nj) nj=n
+    if (ni<1 .or. nj<1) return
+
+    allocate(stringList(ni,nj))
+    stringList(:,:)=''
+
+    do i=1,ni
+
+      ! Separate rows
       j=index(attributeString,',')
       if (j>0) then
         currString=attributeString(1:j-1)
@@ -539,12 +607,22 @@ contains
       endif
       attributeString = attributeString(j+1:len_trim(attributeString))
 
-      j=index(currString,'=')
-      if (j>1) then
-        stringList(i,1)=trim(currString(1:j-1))
-        stringList(i,2)=trim(currString(j+1:len_trim(currString)))
-      endif
+      ! Separate columns
+      do j=1,nj
+
+        k=index(currString,separator_)
+        if (k<1) then
+          stringList(i,j) = trim(currString)
+          !write(0,*) i,j,'|',trim(attributeString), '|',trim(stringList(i,j))
+          exit
+        else
+          stringList(i,j) = trim(currString(1:k-1))
+          currString= currString(k+1:len_trim(currString))
+          !write(0,*) i,j,'|',trim(attributeString), '|',trim(stringList(i,j))
+        endif
+      enddo
     enddo
+    !write(0,*) 'Str: ',shape(stringList),stringList
 
   end subroutine MOSSCO_StateAttributeGetList2
 
@@ -1128,6 +1206,118 @@ contains
     if (present(rc)) rc=localrc
 
   end subroutine MOSSCO_FieldAttributeGetReal8
+
+#undef ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_StateStateAttributesCopy"
+subroutine MOSSCO_StateStateAttributesCopy(to, from, kwe, overwrite, rc)
+
+  type(ESMF_State), intent(inout)                :: to
+  type(ESMF_State), intent(in)                   :: from
+  type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+  logical, intent(in), optional                  :: overwrite
+  integer(ESMF_KIND_I4), intent(out), optional   :: rc
+
+  integer(ESMF_KIND_I4)        :: localrc, rc_, i, attributeCount
+  character(len=ESMF_MAXSTR)   :: attributeName
+  logical                      :: overwrite_, isPresent
+
+  overwrite_ = .false.
+  rc_ = ESMF_SUCCESS
+  if (present(rc)) rc = rc_
+  if (present(kwe)) rc_ = ESMF_SUCCESS
+  if (present(overwrite)) overwrite_ = overwrite
+
+  call ESMF_AttributeGet(from, count=attributeCount, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  do i = 1, attributeCount
+    call ESMF_AttributeGet(from, attributeIndex=i , name=attributeName, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_AttributeGet(to, attributeName, isPresent=isPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (isPresent .and. (.not.overwrite_)) cycle
+
+    call MOSSCO_AttributeCopy(to, from, trim(attributeName), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  enddo
+
+end subroutine MOSSCO_StateStateAttributesCopy
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_StateStateAttributeCopy"
+subroutine MOSSCO_StateStateAttributeCopy(to, from, attributeName, kwe, rc)
+
+  type(ESMF_State), intent(inout)              :: to
+  type(ESMF_State), intent(in)                 :: from
+  character(len=*), intent(in)                 :: attributeName
+  type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+  integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+  real(ESMF_KIND_R4)                           :: fromReal4
+  real(ESMF_KIND_R8)                           :: fromReal8
+  integer(ESMF_KIND_I8)                        :: fromInt8
+  integer(ESMF_KIND_I4)                        :: localrc, rc_, fromInt4
+  logical                                      :: isPresent, fromBool
+  character(len=ESMF_MAXSTR)                   :: message
+  character(len=ESMF_MAXSTR)                   :: fromString
+  type(ESMF_TypeKind_Flag)                     :: fromTypeKind
+
+  rc_ = ESMF_SUCCESS
+  if (present(rc)) rc = rc_
+  if (present(kwe)) rc_ = ESMF_SUCCESS
+
+  call ESMF_AttributeGet(from, name=attributeName, typeKind=fromTypeKind, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  if (fromTypeKind == ESMF_TYPEKIND_I4) then
+    call ESMF_AttributeGet(from, name=attributeName, value=fromInt4, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_AttributeSet(to, name=attributeName, value=fromInt4, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  elseif (fromTypeKind == ESMF_TYPEKIND_I8) then
+    call ESMF_AttributeGet(from, name=attributeName, value=fromInt8, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_AttributeSet(to, name=attributeName, value=fromInt8, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  elseif (fromTypeKind == ESMF_TYPEKIND_R4) then
+    call ESMF_AttributeGet(from, name=attributeName, value=fromReal4, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_AttributeSet(to, name=attributeName, value=fromReal4, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  elseif (fromTypeKind == ESMF_TYPEKIND_R8) then
+    call ESMF_AttributeGet(from, name=attributeName, value=fromReal8, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_AttributeSet(to, name=attributeName, value=fromReal8, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  elseif (fromTypeKind == ESMF_TYPEKIND_CHARACTER) then
+    call ESMF_AttributeGet(from, name=attributeName, value=fromString, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_AttributeSet(to, name=attributeName, value=trim(fromString), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  elseif (fromTypeKind == ESMF_TYPEKIND_LOGICAL) then
+    call ESMF_AttributeGet(from, name=attributeName, value=fromBool, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_AttributeSet(to, name=attributeName, value=fromReal4, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  else
+    localrc = ESMF_RC_ARG_BAD
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  endif
+
+end subroutine MOSSCO_StateStateAttributeCopy
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_FieldAttributeGetString"

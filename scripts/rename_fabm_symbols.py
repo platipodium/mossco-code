@@ -39,7 +39,7 @@ def replace_fabm_symbols_objcopy(MOSSCO_INSTALL_PREFIX, OBJC):
         for item in list(itemsymbols):
             replace = prefix + 'mossco_' + item[len(prefix):]
             f.write(' '.join([item,replace,'\n']))
-	for item in items:
+        for item in items:
             replace = prefix + 'mossco_' + item + '.' + postfix
             f.write(' '.join([prefix + item + '.' + postfix,replace,'\n']))
 

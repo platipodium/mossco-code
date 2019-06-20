@@ -13,17 +13,19 @@ interface erodibility_bioeffect
 ! with the same arguments as an already avaialble function listed here.
 ! If it is inevitable then the function is not allowed to be defined within this interface,
 ! but as a seprate function within this module.
-  module procedure mircophyto_erodibility_func
-  module procedure Mbalthica_erodibility_func
+  module procedure benthos_microphyto_erodibility_function
+  module procedure benthos_macrofauna_erodibility_function
 end interface
 
 !------------------------------------------------------------
   contains
 !------------------------------------------------------------
 
-function mircophyto_erodibility_func ( Chl, inum, jnum) result (g_erod_microphyto)
+function benthos_microphyto_erodibility_function ( Chl, inum, jnum) result (g_erod_microphyto)
 ! Function to determine the effect of microphytobenthos on sediment erodibility.
 ! By production of biofilm, this value can be decreased.
+! Paarlberg describes this effect as g_s (c_p )=1 - 0.018 * c_p, where
+! c_p is Chlorophyll mass fraction relative to dry sediment in 10E-6 gram gram-1
 
   implicit none
   integer                            :: inum, jnum  !number of elements in x and y directions
@@ -35,14 +37,17 @@ function mircophyto_erodibility_func ( Chl, inum, jnum) result (g_erod_microphyt
   ! local parameters Paarlberg et al. 2005
   real(fp), parameter :: b1     = 0.018
 
-  !units    ! Unit of Biomass (mgg: microgram/ g dry sediment weight)
-            ! or            (mgm-2: microgram/ m**2 area)
+  !units    ! Unit of Biomass (mug g-1: microgram per gram dry sediment weight)
+            ! or            (mug m-2 : microgram per m**2 area)
 
   g_erod_microphyto = 1.0
 
   select case (trim(Chl%units))
 
-    case ( 'mgg**-1' ) ! according to Paarlberg et al (2005)
+    case ( 'mug g-1' ) ! according to Paarlberg et al (2005)
+      ! Measurements by MacIntyre 1996 showed values of 0--150 mug g-1,
+      ! with the above parameter b1 there is an effect from microphytobenthos
+      ! in the range 0-55 mug g-1; above, the sediment is completely stabilized.
 
       do j = 1, jnum
         do i = 1, inum
@@ -53,21 +58,26 @@ function mircophyto_erodibility_func ( Chl, inum, jnum) result (g_erod_microphyt
 
     case default
 
+      write(0,*) 'FATAL ERROR erodibilityeffect.F90:',__LINE__,' microphytobenthos needs unit "mug g-1", got '//trim(Chl%units)
+      stop
       !do nothing except applying default value
 
       !write (*,*) ' WARNING: the microphytobenthos effect on the erodibility was calculated base on'// &
-      !            ' Chlorophyll a content in UNIT microgram /g dry Sediment (mgg**-1)'// &
+      !            ' Chlorophyll a content in UNIT microgram /g dry Sediment (mug g-1)'// &
       !            ' area. Therefore, the bioeffect was not considered.'
 
   end select
+  where (g_erod_microphyto < 0)
+    g_erod_microphyto = 0
+  endwhere
 
   return
 
-end function mircophyto_erodibility_func
+end function benthos_microphyto_erodibility_function
 
 !------------------------------------------------------------
 
-function Mbalthica_erodibility_func (Mbalthica, inum, jnum)  result (g_erod_macrofauna)
+function benthos_macrofauna_erodibility_function (Mbalthica, inum, jnum)  result (g_erod_macrofauna)
 ! Effect of Macoma balthica on the sediment erodibility.
 
   implicit none
@@ -95,7 +105,7 @@ function Mbalthica_erodibility_func (Mbalthica, inum, jnum)  result (g_erod_macr
   g_erod_Macrofauna = 1.0
 
   select case (trim(Mbalthica%units))
-    case ( 'm**-2' ) ! according to Paarlberg et al (2005)
+    case ( 'm-2' ) ! according to Paarlberg et al (2005)
 
       do j = 1, jnum
         do i = 1, inum
@@ -110,7 +120,7 @@ function Mbalthica_erodibility_func (Mbalthica, inum, jnum)  result (g_erod_macr
         end do
       end do
 
-    case ( 'gCm**-2' ) ! according to Borsje et al. (2008)
+    case ( 'gC m-2' ) ! according to Borsje et al. (2008)
 
       do j = 1, jnum
         do i = 1, inum
@@ -119,13 +129,16 @@ function Mbalthica_erodibility_func (Mbalthica, inum, jnum)  result (g_erod_macr
           if ( a <= 1.0_fp ) then
             cycle
           else
-            g_erod_Macrofauna(i,j) = c1 *log(a) +c2
+            g_erod_Macrofauna(i,j) = c1 *log(a) + c2
           endif
 
         end do
       end do
 
     case default
+
+      write(0,*) 'FATAL ERROR criticalsheareffect.F90:',__LINE__,' macrofauna needs unit "gC m-2" or "m-2", got '//trim(Mbalthica%units)
+      stop
 
       !do nothing except applying default value
 
@@ -137,7 +150,7 @@ function Mbalthica_erodibility_func (Mbalthica, inum, jnum)  result (g_erod_macr
 
   return
 
-end function Mbalthica_erodibility_func
+end function benthos_macrofauna_erodibility_function
 
 !------------------------------------------------------------
 

@@ -22,7 +22,7 @@ ifneq ($(MOSSCO_GOTM_FABM),true)
 $(error This example only works with MOSSCO_GOTM_FABM=true)
 endif
 
-LIBS := -lconstant -lmossco_erosed -lmossco_benthos -lmossco_netcdf -lesmf  $(LIBS)
+LIBS := -ldefault -lmossco_erosed -lmossco_benthos -lmossco_netcdf -lesmf  $(LIBS)
 NC_LIBS += $(shell nf-config --flibs)
 
 LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
@@ -31,10 +31,10 @@ LDFLAGS += $(GOTM_LDFLAGS)
 LDFLAGS += $(FABM_LDFLAGS)
 LDFLAGS += -lmossco_util -lesmf $(NC_LIBS)
 
-.PHONY: all exec benthic_geoecology libmossco_fabmgotm libconstant libmossco_gotm libmossco_erosed libmossco_benthos
+.PHONY: all exec benthic_geoecology libmossco_fabmgotm libdefault libmossco_gotm libmossco_erosed libmossco_benthos
 
 all: exec
-exec: libmossco_util libmossco_fabmgotm libconstant libmossco_gotm libmossco_erosed libmossco_benthos libmossco_netcdf benthic_geoecology
+exec: libmossco_util libmossco_fabmgotm libdefault libmossco_gotm libmossco_erosed libmossco_benthos libmossco_netcdf benthic_geoecology
 
 benthic_geoecology: toplevel_component.o ../common/main.o
 	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
@@ -46,7 +46,7 @@ libmossco_fabmgotm libmossco_gotm:
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
-libsediment libconstant libmossco_erosed libmossco_benthos libmossco_netcdf:
+libsediment libdefault libmossco_erosed libmossco_benthos libmossco_netcdf:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 clean: extraclean

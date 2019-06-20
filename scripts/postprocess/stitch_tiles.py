@@ -3,7 +3,7 @@
 #  netcdf components
 
 #  This computer program is part of MOSSCO.
-#> @copyright Copyright (C) 2015, 2016, 2017, 2018 Helmholtz Zentrum Geesthacht
+#> @copyright (c) 2015, 2016, 2017, 2018, 2019 Helmholtz Zentrum Geesthacht
 #> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the

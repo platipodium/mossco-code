@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF netcdf output component
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2014, 2015, 2016, 2017, 2018, 2019 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
 !
@@ -59,10 +59,6 @@ module netcdf_component
       userRoutine=InitializeP1, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_READRESTART, phase=1, &
-      userRoutine=ReadRestart, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -104,7 +100,7 @@ module netcdf_component
       convention="NUOPC", purpose="General", rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP0
@@ -283,46 +279,10 @@ module netcdf_component
     call ESMF_AttributeSet(exportState, 'netcdf_file_name', trim(fileName), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP1
-
-#undef  ESMF_METHOD
-#define ESMF_METHOD "ReadRestart"
-  subroutine ReadRestart(gridComp, importState, exportState, parentClock, rc)
-
-    type(ESMF_GridComp)   :: gridComp
-    type(ESMF_State)      :: importState
-    type(ESMF_State)      :: exportState
-    type(ESMF_Clock)      :: parentClock
-    integer, intent(out)  :: rc
-
-    integer(ESMF_KIND_I4)      :: localrc
-    character(len=ESMF_MAXSTR) :: name
-
-    rc = ESMF_SUCCESS
-
-    !> Here omes your restart code, which in the simplest case copies
-    !> values from all fields in importState to those in exportState
-
-    call ESMF_GridCompGet(gridComp, name=name, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_StateGet(importState, name=name, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_StateGet(exportState, name=name, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_ClockGet(parentClock, name=name, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-  end subroutine ReadRestart
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Run"
@@ -355,6 +315,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     logical                    :: checkNaN=.true., checkInf=.true.
     type(ESMF_Field), allocatable :: fieldList(:), itemFieldList(:)
     type(ESMF_FieldBundle)        :: fieldBundle
+    type(ESMF_State)              :: state
     character(len=ESMF_MAXSTR), pointer :: itemSearch(:) => null()
 
     rc = ESMF_SUCCESS
@@ -468,14 +429,15 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         write(message, '(A)')  trim(name)//' '//trim(timeString)//' cannot insert time before'
-        localrc = ESMF_RC_NOT_IMPL
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call ESMF_TimeGet(maxTime, timeStringISOFrac=timeString, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call MOSSCO_MessageAdd(message,' '//trim(timeString))
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+
+        localrc = ESMF_RC_NOT_IMPL
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         itemCount=0
       endif
@@ -487,7 +449,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     !> Get all fields irrespective of bundle and that satisfy include/exclude
     call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
-        fieldStatus=ESMF_FIELDSTATUS_COMPLETE, include=filterIncludeList, &
+        fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), include=filterIncludeList, &
         exclude=filterExcludeList, verbose=verbose, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -503,7 +465,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       !> We need to know whether this field occurs multiple times
       itemSearch(1)=trim(fieldName)
       call MOSSCO_StateGet(importState, itemfieldList, &
-        fieldCount=itemfieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, &
+        fieldCount=itemfieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), &
         include=itemSearch, verbose=verbose,  rc=localrc)
 
       !> Simple case: field occurs only once
@@ -562,7 +524,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         itemSearch(1)=trim(fieldNameList(i))
 
         call MOSSCO_StateGet(importState, itemfieldList, &
-          fieldCount=itemfieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, &
+          fieldCount=itemfieldCount, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), &
           include=itemSearch, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -633,27 +595,53 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
    ! 7.0.0 b64
    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+
+    !> Look for states in states and write them as a non-dimensional
+    !> variable to record model metadata that is not stored in variables
     call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    ! The removal creates problesm, it is disabled here for further testing.  Is
-    ! it needed at all?
-    if (itemcount>0) then
+    if (allocated(itemTypeList)) deallocate(itemTypeList)
+    if (allocated(itemNameList)) deallocate(itemNameList)
+    allocate(itemTypeList(itemCount))
+    allocate(itemNameList(itemCount))
 
-      allocate(itemNameList(itemCount))
+    call ESMF_StateGet(importState, itemTypeList=itemTypeList, &
+      itemNameList=itemNameList, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_StateGet(importState, itemNameList=itemNameList, rc=localrc)
+    do i=1, itemCount
+
+      if (itemTypeList(i) /= ESMF_STATEITEM_STATE) cycle
+
+      call ESMF_StateGet(importState, itemNameList(i), state, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      !call ESMF_StateRemove(importState, itemNameList, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
-        write(message,'(A)') trim(name)//' ignores error above '
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-        localrc = ESMF_SUCCESS
-        !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
+      call nc%put_state(state, name=trim(itemNameList(i)), &
+        owner=trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    endif
+    enddo
+
+
+    ! The removal creates problesm, it is disabled here for further testing.  Is
+    ! it needed at all?
+    ! if (itemcount>0) then
+    !
+    !   allocate(itemNameList(itemCount))
+    !
+    !   call ESMF_StateGet(importState, itemNameList=itemNameList, rc=localrc)
+    !   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !
+    !   !call ESMF_StateRemove(importState, itemNameList, rc=localrc)
+    !   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
+    !     write(message,'(A)') trim(name)//' ignores error above '
+    !     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+    !     localrc = ESMF_SUCCESS
+    !     !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    !   endif
+    !
+    ! endif
 
     call nc%close()
 
@@ -688,7 +676,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     !endif
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Run
@@ -748,7 +736,7 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     call MOSSCO_DestroyOwn(exportState, trim(name), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CompExit(gridComp, localrc)
+    call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Finalize
@@ -908,7 +896,7 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     call nc%put_variable(field, name=trim(fieldName), &
       checkNaN=checkNaN_, checkInf=checkInf_, owner=trim(owner_), rc=localrc)
     if (localrc /= ESMF_SUCCESS) then
-      write(message,'(A)') '-- could not write'
+      write(message,'(A)') trim(owner_)//' could not write'
       call MOSSCO_FieldString(field, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
     endif

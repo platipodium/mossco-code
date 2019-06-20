@@ -83,7 +83,7 @@ module vertical_reduction
     type(ESMF_Time)             :: currTime
     integer(ESMF_KIND_I4)       :: localrc
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
@@ -102,7 +102,7 @@ module vertical_reduction
     call ESMF_StateReconcile(exportState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP0
@@ -131,7 +131,7 @@ module vertical_reduction
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !> Default values for operations
@@ -191,7 +191,7 @@ module vertical_reduction
       operator = 'maximum'
     case default
       write(message, '(A)') trim(name)//' obtained invalid operator '//trim(operator)
-      call MOSSCO_CompExit(cplComp, rc)
+      call MOSSCO_CompExit(cplComp, rc=localrc)
       rc = ESMF_RC_ARG_BAD
       return
     end select
@@ -219,7 +219,7 @@ module vertical_reduction
     call ESMF_AttributeSet(cplComp, 'add_offset', offset, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call MOSSCO_CompExit(cplComp, rc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP1
@@ -239,7 +239,7 @@ module vertical_reduction
 
     rc = ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_CreateVerticallyReducedExportFields(cplComp, importState, &
@@ -250,7 +250,7 @@ module vertical_reduction
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !! Finally, log the successful completion of this function
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Run
@@ -288,7 +288,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
 
     end if
 
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Finalize
@@ -366,7 +366,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call MOSSCO_StateGet(importState, fieldList=importFieldList, fieldCount=importFieldCount, &
-        fieldStatus=ESMF_FIELDSTATUS_COMPLETE, include=filterIncludeList, &
+        fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), include=filterIncludeList, &
         exclude=filterExcludeList, verbose=.true., rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -507,7 +507,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     includeList(1) = 'vred_'//operator(1:4)//'_*'
     call MOSSCO_StateGet(exportState, exportFieldList, &
       include=includeList, fieldCount=exportFieldCount, &
-      fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (exportFieldCount < 1) then
@@ -527,7 +527,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
       includeList(1) = importItemName
 
       call MOSSCO_StateGet(importState, fieldList=importFieldList, fieldCount=importFieldCount, &
-        include=includeList, fieldStatus=ESMF_FIELDSTATUS_COMPLETE,rc=localrc)
+        include=includeList, fieldStatusList=(/ESMF_FIELDSTATUS_COMPLETE/),rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       !> if not found, or if multiple fields with the same name, then skip this

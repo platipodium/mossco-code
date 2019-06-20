@@ -2,7 +2,7 @@
 !> @brief 3D generic driver for the Framework for Aquatic Biogeochemical Models (FABM)
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2013,2014,2015,2016,2017, 2018 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2013, 2014, 2015, 2016, 2017, 2018, 2019 Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister <richard.hofmeister@hzg.de>
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de
 !
@@ -240,6 +240,7 @@
     ! Allocate array for photosynthetically active radiation (PAR).
     allocate(pf%par(1:inum,1:jnum,1:knum))
     call fabm_link_bulk_data(pf%model,standard_variables%downwelling_photosynthetic_radiative_flux,pf%par)
+    call fabm_link_horizontal_data(pf%model,standard_variables%surface_downwelling_photosynthetic_radiative_flux,pf%I_0)
 
     ! allocate Albedo array
     allocate(pf%albedo(1:inum,1:jnum))
@@ -919,6 +920,7 @@ if ( any(pf%par(i,j,:) /= pf%par(i,j,:)) ) write(0,*) 'ERROR: fabm_pelagic_drive
           do j=1,pf%jnum
             do i=1,pf%inum
               if (pf%conc(i,j,k,n) .lt. pf%model%state_variables(n)%minimum) then
+write(*,*) 'clip_below_minimum',real(pf%conc(i,j,k,n))
                 pf%conc(i,j,k,n) = pf%model%state_variables(n)%minimum
               end if
             end do
