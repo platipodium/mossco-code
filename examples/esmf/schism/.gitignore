@@ -16,3 +16,7 @@ flux.dat
 fort.*
 *.xml
 mirror.out
+*stdout
+*stderr
+param.out.nml
+
