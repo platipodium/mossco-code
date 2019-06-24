@@ -1,6 +1,9 @@
 # Recipe #08: MOSSCO on ocean
 
-Ocean is the local cluster at HZG. It offers recent Intel and PGI compilers and parallelism via openmpi/ib (Infiniband).  ESMF is preinstalled with some of these compilers in subdirectories of
+> Ocean has been retired in June 2019.  Instructions below are for historic reference
+> information only
+
+Ocean was the local cluster at HZG. It offers recent Intel and PGI compilers and parallelism via openmpi/ib (Infiniband).  ESMF is preinstalled with some of these compilers in subdirectories of
 
     /home/lemmen/opt
 
@@ -58,7 +61,7 @@ It is already done (usually), but in case you want to do this again:
 
 		export ESMF_DIR=$HOME/ESMF/esmf-code
 		mkdir -p $ESMF_DIR
-                git clone git://esmf.git.sourceforge.net/gitroot/esmf/esmf $ESMF_DIR
+    git clone git://esmf.git.sourceforge.net/gitroot/esmf/esmf $ESMF_DIR
 		export ESMF_BOPT=g
 		export ESMF_ABI=64
 		export ESMF_MOAB=OFF
@@ -74,6 +77,6 @@ It is already done (usually), but in case you want to do this again:
 		export ESMF_COMPILER=intel
 		export ESMF_COMM=openmpi
 		unset ESMF_XERCES
-  
+
 		cd $ESMF_DIR
 		make lib
