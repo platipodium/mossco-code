@@ -56,16 +56,17 @@ else
 endif
 
 # System-dependent flags
+export ARFLAGS=rvU
 ifeq ($(shell hostname),rznp0023)
   export ARFLAGS=rv
   export AR=ar
-  $(warning use changed ARFLAGS=rvU)
+  $(warning use changed ARFLAGS=rv)
 endif
 
 ifeq ($(shell hostname),KSEZ8002)
-  export ARFLAGS=rvU
+  #export ARFLAGS=rvU
   export AR=ar
-  $(warning use changed ARFLAGS=rvU)
+  #$(warning use changed ARFLAGS=rvU)
 endif
 
 export MOSSCO_INSTALL_PREFIX?=$(MOSSCO_DIR)
