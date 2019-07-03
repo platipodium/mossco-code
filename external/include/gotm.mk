@@ -15,10 +15,14 @@
 gotm:
 ifeq ($(wildcard $(external_GOTMDIR)/src/gotm/gotm.F90),)
 	@$(GIT) clone -b master --depth 1 https://github.com/gotm-model/code.git $(external_GOTMDIR) || $(GIT) clone -b master --depth 1 git://github.com/gotm-model/code.git $(external_GOTMDIR)
+	@( cd $(external_GOTMDIR) && $(GIT) submodule update --init --recursive extern/flexout )
 else
-#	@$(GIT) -C $(external_GOTMDIR) pull --ff-only
+ifeq ($(wildcard $(external_GOTMDIR)/extern/flexout/src/output_manager.F90),)
+	@( cd $(external_GOTMDIR) && $(GIT) submodule update --init --recursive extern/flexout )
+endif
+#	@$(GIT) -C $(external_GOTMDIR) pull --ff-only && $(GIT) submodule update --recursive
 #for old git
-	@( cd $(external_GOTMDIR) && $(GIT) pull --ff-only )
+	@( cd $(external_GOTMDIR) && $(GIT) pull --ff-only && $(GIT) submodule update --recursive )
 endif
 
 gotm_distclean:

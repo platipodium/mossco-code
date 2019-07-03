@@ -386,7 +386,7 @@ endif
 
 ifeq ($(MOSSCO_GOTM),true)
   export GOTM_LIBRARY_PATH=$(GOTM_PREFIX)/lib
-  GOTM_LIBS:=-lgotm -lairsea -lmeanflow -loutput_manager
+  GOTM_LIBS:=-lgotm -lairsea -lmeanflow -loutput_manager -lfield_manager -lyaml
   GOTM_LIBS+=-lobservations -linput -lturbulence $(GOTM_PREFIX)/lib/libutil.a
   #export GOTM_LIBRARY_PATH=$(GOTMDIR)/lib/$(FORTRAN_COMPILER)
   #GOTM_LIBS:=-lgotm_prod -lairsea_prod -lmeanflow_prod -lseagrass_prod -loutput_prod
@@ -416,7 +416,7 @@ ifeq ($(MOSSCO_GETM),true)
     GETM_LINKDIRS += -L$(FABM_LIBRARY_PATH)
     GETM_LIBS += -lgotm_fabm_prod $(FABM_LIBS)
   endif
-  GETM_LIBS += -lturbulence -lutil -loutput_manager
+  GETM_LIBS += -lturbulence -lutil -loutput_manager -lfield_manager -lyaml
 
   ifeq ($(FORTRAN_COMPILER), XLF)
     export STATIC += -WF,$(GETM_STATIC_DEFINES)
