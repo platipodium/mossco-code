@@ -860,7 +860,8 @@ ifeq ($(MOSSCO_GOTM),true)
 ifdef GOTM_BINARY_DIR
 	@echo Recreating the GOTM library in $(GOTM_PREFIX)
 	$(MAKE) -sC $(GOTM_BINARY_DIR) install
-#	cp $(GOTM_BINARY_DIR)/*.mod $(GOTM_PREFIX)/include/
+	cp $(GOTM_BINARY_DIR)/modules/*.mod $(GOTM_PREFIX)/include/
+	#cp $(GOTM_BINARY_DIR)/*.mod $(GOTM_PREFIX)/include/
 #	( for lib in gotm airsea meanflow observations input ; do \
 #       $(AR) rcs $(GOTM_PREFIX)/lib/lib$$lib.a $(GOTM_BINARY_DIR)/CMakeFiles/$$lib.dir/$$lib/*.o ; \
 #     done )
