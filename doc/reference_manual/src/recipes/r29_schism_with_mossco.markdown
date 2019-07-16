@@ -18,7 +18,10 @@ In the following instructions, we assume that `$SCHISM_DIR` is a directory paral
 		export SCHISM_ESMF_DIR=$SCHISM_DIR/../esmf
 		export PARMETIS_DIR=$SCHISM_DIR/../trunk/src/ParMetis-3.1-Sep2010
 
-> On HPC systems, you can often load ParMETIS as a library with `module load ParMETIS`, you then have to set the path to this library in the environment variable `$PARMETIS_DIR`
+> On HPC systems, you can often load ParMETIS as a library with `module load ParMETIS`, you then have to set the path to this library in the environment variable `$PARMETIS_DIR`, e.g. on JUWELS
+
+		module load ParMETIS
+		export PARMETIS_DIR=/gpfs/software/juwels/stages/2019a/software/ParMETIS/4.0.3-ipsmpi-2019a/lib
 
 ## Download SCHISM
 
@@ -35,7 +38,7 @@ Instructions for downloading and installing SCHISM are provided in their documen
 
 SCHISM has `CMake` and `netCDF` as dependencies and an MPI Fortran compiler (you may need to adjust your MPI compilers in the `cmake` command below), so make sure you have those installed and available in your environment.  SCHISM can be built with FABM support from the offical FABM repository (currently not the one distributed with MOSSCO).  The ESMF interface has the ESMF library as a dependency, which needs to be pointed to by the environment variable `$ESMFMKFILE`.
 
-If you do not have the ParMETIS library in your system, compile this library within the SCHISM source tree *before* compiling SCHISM
+> If you do not have the ParMETIS library in your system, compile this library within the SCHISM source tree *before* compiling SCHISM
 
 		cd $PARMETIS_DIR
 		make
@@ -43,13 +46,24 @@ If you do not have the ParMETIS library in your system, compile this library wit
 Then compile SCHISM and use `CMake` define flags for providing the location to `netCDF`
 
 		cd $SCHISM_DIR
-		cmake ../trunk/src -DNetCDF_FORTRAN_DIR=`nf-config --prefix` \
+		cmake ../trunk/src -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+		  -DNetCDF_FORTRAN_DIR=`nf-config --prefix` \
+	    -DCMAKE_Fortran_COMPILER=mpifort -DCMAKE_CXX_COMPILER=mpicc \
+	    -DNetCDF_C_DIR=`nc-config --prefix` -DTVD_LIM=SB -DUSE_FABM=OFF
+		make pschism combine_hotstart7 combine_output11
+		mv bin/pschism bin/pschism_no_fabm
+
+		cmake ../trunk/src -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+		  -DNetCDF_FORTRAN_DIR=`nf-config --prefix` \
 	    -DCMAKE_Fortran_COMPILER=mpifort -DCMAKE_CXX_COMPILER=mpicc \
 	    -DNetCDF_C_DIR=`nc-config --prefix` -DTVD_LIM=SB -DUSE_FABM=ON \
 	    -DFABM_BASE=../fabm
-		make pschism
+		make pschism combine_hotstart7 combine_output11
+		mv bin/pschism bin/pschism_fabm
 
-Your SCHISM executable is now `$SCHISM_DIR/bin/pschism`
+> On some systems (like MISTRAL), the intel mpi executables are named `mpiifort` and `mpiicc` instead.
+
+Your SCHISM executables are now `$SCHISM_DIR/bin/pschism_no_fabm` and `$SCHISM_DIR/bin/pschism_fabm`
 
 ## Compile a MOSSCO/SCHISM example
 
