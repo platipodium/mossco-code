@@ -311,7 +311,7 @@
     class(type_mossco_fabm_pelagic) :: pf
 
     integer  :: i,j,k
-    real(rk) :: rhs(1:pf%nvar),bottom_flux(1:0)
+    real(rk) :: rhs(1:pf%inum,1:pf%nvar),bottom_flux(1:pf%inum,1:0)
 
     if (.not.pf%fabm_ready) then
       call fabm_check_ready(pf%model)
@@ -334,16 +334,11 @@
       stop
     end if
     !> call fabm_do to fill diagnostic variables and pre-fetch data
-    do i=1,pf%inum
-      do j=1,pf%jnum
-        ! sigma coordinate masking
-        if (.not.pf%mask(i,j,pf%knum)) then
-          call fabm_do_surface(pf%model,i,j,rhs(:))
-          call fabm_do_bottom(pf%model,i,j,rhs(:),bottom_flux(:))
-          do k=1,pf%knum
-            call fabm_do(pf%model,i,j,k,rhs(:))
-          end do
-        end if
+    do j=1,pf%jnum
+      call fabm_do_surface(pf%model,1,pf%inum,j,rhs(:,:))
+      call fabm_do_bottom(pf%model,1,pf%inum,j,rhs(:,:),bottom_flux(:,:))
+      do k=1,pf%knum
+        call fabm_do(pf%model,1,pf%inum,j,k,rhs(:,:))
       end do
     end do
     !call pf%update_expressions()
@@ -389,23 +384,19 @@
     ! get fluxes through surface and bottom
     ! just to update the pelagic variables
     do j=1,rhs_driver%jnum
+      call fabm_do_surface(rhs_driver%model,1,rhs_driver%inum,j,rhs(:,j,rhs_driver%knum,:))
       do i=1,rhs_driver%inum
-        if (.not.rhs_driver%mask(i,j,rhs_driver%knum)) then
-          call fabm_do_surface(rhs_driver%model,i,j,rhs(i,j,rhs_driver%knum,:))
-          rhs(i,j,rhs_driver%knum,:) = rhs(i,j,rhs_driver%knum,:)/rhs_driver%layer_height(i,j,rhs_driver%knum)
-        end if
-        !if (.not.rhs_driver%mask(i,j,1)) then
-        !  call fabm_do_bottom()
-        !end if
+        rhs(i,j,rhs_driver%knum,:) = rhs(i,j,rhs_driver%knum,:)/rhs_driver%layer_height(i,j,rhs_driver%knum)
       end do
+      !if (.not.rhs_driver%mask(i,j,1)) then
+      !  call fabm_do_bottom()
+      !end if
     end do
 
     ! get local rates of change
     do k=1,rhs_driver%knum
       do j=1,rhs_driver%jnum
-        do i=1,rhs_driver%inum
-          if (.not.rhs_driver%mask(i,j,k)) call fabm_do(rhs_driver%model,i,j,k,rhs(i,j,k,:))
-        end do
+        call fabm_do(rhs_driver%model,1,rhs_driver%inum,j,k,rhs(:,j,k,:))
      end do
     end do
 
@@ -662,11 +653,9 @@
     update_sinking_eff=.true.
     if (present(update_sinking)) update_sinking_eff=update_sinking
     if (update_sinking_eff) then
-      do i=1,pf%inum
+      do k=1,pf%knum
         do j=1,pf%jnum
-          do k=1,pf%knum
-            call fabm_get_vertical_movement(pf%model, i, j, k, wstmp(i,j,k,:))
-          end do
+          call fabm_get_vertical_movement(pf%model, 1, pf%inum, j, k, wstmp(:,j,k,:))
         end do
       end do
     end if
@@ -772,35 +761,31 @@
 
      class(type_mossco_fabm_pelagic)     :: pf
      integer  :: i,j,k
-     real(rk) :: bioext(1:pf%knum)
-     real(rk) :: localpar,localext
+     real(rk) :: bioext(1:pf%inum,1:pf%knum)
+     real(rk) :: localpar(1:pf%inum),localext(1:pf%inum)
 
 
-     do i=1,pf%inum
-       do j=1,pf%jnum
-         localpar = pf%I_0(i,j) * (1.0d0-pf%albedo(i,j))
+     do j=1,pf%jnum
+         localpar = pf%I_0(:,j) * (1.0d0-pf%albedo(:,j))
          bioext = 0.0_rk
-         if (pf%mask(i,j,1)) then
-           pf%par(i,j,:) = localpar
-         else
-           do k=pf%knum,2,-1
-             if (.not.pf%mask(i,j,k)) then
-               call fabm_get_light_extinction(pf%model,i,j,k,localext)
+         do k=pf%knum,2,-1
+           call fabm_get_light_extinction(pf%model,1,pf%inum,j,k,localext)
 
-               ! Add the extinction of the first half of the grid box.
-               bioext(k) = bioext(k) + (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,k)
+           ! Add the extinction of the first half of the grid box.
+           do i=1,pf%inum
+             bioext(i,k) = bioext(i,k) + (localext(i)+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,k)
 
                ! Add the extinction of the second half of the grid box.
-               bioext(k-1) = bioext(k) + (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,k)
-             end if
+               bioext(i,k-1) = bioext(i,k) + (localext(i)+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,k)
            end do
-           ! Add the extinction of the upper half of the last layer
-           call fabm_get_light_extinction(pf%model,i,j,1,localext)
-           bioext(1) = bioext(1) + (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,1)
-           pf%par(i,j,:) = localpar * exp(-bioext(:))
-if ( any(bioext(:) /= bioext(:)) ) write(0,*) 'ERROR: fabm_pelagic_driver#800 bioext = ',i,j,bioext(:)
-         endif
-       end do
+         end do
+         ! Add the extinction of the upper half of the last layer
+         call fabm_get_light_extinction(pf%model,1,pf%inum,j,1,localext)
+         do i=1,pf%inum
+           bioext(i,1) = bioext(i,1) + (localext(i)+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,1)
+           pf%par(i,j,:) = localpar(i) * exp(-bioext(i,:))
+if ( any(bioext /= bioext) ) write(0,*) 'ERROR: fabm_pelagic_driver#800 bioext = ',i,j,bioext
+         end do
      end do
 
      do i=1,pf%inum
