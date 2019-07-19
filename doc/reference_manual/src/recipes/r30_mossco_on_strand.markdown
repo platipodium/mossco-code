@@ -26,7 +26,8 @@ export MOSSCO_SETUPDIR=/your/path/to/mossco/setups/sns
 Try to use the preinstalled ESMF with
 
 ```bash
-export ESMFMKFILE=/home/lemmen/opt/lib/libO/Linux.intel.64.openmpi.ESMF_7_1_0r/esmf.mk
+export ESMFMKFILE=/gpfs/home/lemmen/opt/lib/libO/Linux.intel.64.intelmpi.ESMF_7_1_0r/esmf.mk
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${ESMFMKFILE%%/esmf.mk}
 ```
 
 and continue to the next section.   Otherwise, it is easy to install ESMF yourself by setting the environment variables below, issueing `make && make install` and setting the `$ESMFMFKILE`
@@ -60,6 +61,7 @@ To use ESMF, add the following to your default environment:
 
 ```bash
 export ESMFMKFILE=${ESMF_INSTALL_PREFIX}/lib/lib${BOPT}/Linux.${ESMF_COMPILER}.${ESMF_ABI}.${ESMF_COMM}.${ESMF_SITE}/esmf.mk
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${ESMFMKFILE%%/esmf.mk}
 ```
 
 ### MOSSCO
@@ -114,11 +116,11 @@ export FABM_DIR=/your/path/to/fabm
 git clone https://coastgit.hzg.de/hofmeist/fabm.git $FABM_DIR # HZG internal only, otherwise get public fabm repo
 
 cd $SCHISM_BUILD_DIR
-cmake $SCHISM_SRC_DIR -DCMAKE_Fortran_COMPILER=mpiifort \
-  -DCMAKE_CXX_COMPILER=mpicc -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-  -DDNetCDF_FORTRAN_DIR=`nf-config --prefix` \
-  -DNetCDF_C_DIR=`nc-config --prefix`\
-  -DTVD_LIM=SB -DCMAKE_Fortran_FLAGS="-xCORE-AVX2" \
+cmake $SCHISM_SRC_DIR  -DCMAKE_Fortran_COMPILER=mpiifort   \
+  -DCMAKE_CXX_COMPILER=mpiicc -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+  -DNetCDF_FORTRAN_DIR=`nc-config --prefix` \
+  -DNetCDF_C_DIR=`nc-config --prefix`  -DTVD_LIM=SB \
+  -DCMAKE_Fortran_FLAGS="-xCORE-AVX2"\
   -DUSE_FABM=ON -DFABM_BASE=$FABM_DIR
 
 make pschism
