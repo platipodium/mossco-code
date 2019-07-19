@@ -748,13 +748,13 @@ module netcdf_input_component
       call MOSSCO_MessageAdd(message, trim(itemName)//'"')
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      write(*,*) 'name=',trim(name), ' unit=',trim(nc%variables(i)%units)
+      !write(*,*) 'name=',trim(name), ' unit=',trim(nc%variables(i)%units)
 
       write(message,'(A,I3,A,I1,A)') trim(name)//' '//trim(itemName)//' varid = ', &
          nc%variables(i)%varid,', rank = ',nc%variables(i)%rank,' units = "'//trim(nc%variables(i)%units)//'"'
 
-      write(*,*) trim(message)
-      write(0,*) trim(message)
+      !write(*,*) trim(message)
+      !write(0,*) trim(message)
 
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
