@@ -647,9 +647,10 @@ subroutine get_rhs(rhs_driver, rhs)
   rhs=0.0_rk
   do k=1,rhs_driver%knum
     do j=1,rhs_driver%jnum
+      call fabm_do(rhs_driver%model,1,rhs_driver%inum,j,k,rhs(:,j,k,:))
       do i=1,rhs_driver%inum
          if (.not.rhs_driver%mask(i,j,k)) then
-           call fabm_do(rhs_driver%model,i,j,k,rhs(i,j,k,:))
+           !call fabm_do(rhs_driver%model,i,j,k,rhs(i,j,k,:))
          else
            ! set transport to 0.0 - evtl. skip calculation of transport completely
            rhs(i,j,k,:) = 0.0d0
