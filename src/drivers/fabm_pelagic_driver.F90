@@ -66,6 +66,8 @@
     integer                            :: ndiag_hz
     integer                            :: ndiag_int=0
     integer                            :: ndiag_hz_int=0
+    integer                            :: nvar_bottom=0
+    integer                            :: nvar_surface=0
     logical                            :: fabm_ready
     type(type_bulk_standard_variable),dimension(:),pointer :: bulk_dependencies => null()
     type(type_horizontal_standard_variable), dimension(:), pointer :: horizontal_dependencies => null()
@@ -161,6 +163,8 @@
     endif
 
     pf%nvar = size(pf%model%state_variables)
+    pf%nvar_bottom = size(pf%model%bottom_state_variables)
+    pf%nvar_surface = size(pf%model%surface_state_variables)
     pf%ndiag = size(pf%model%diagnostic_variables)
     pf%ndiag_hz = size(pf%model%horizontal_diagnostic_variables)
     allocate(pf%int_idx_from_diag_idx(pf%ndiag))
@@ -311,7 +315,7 @@
     class(type_mossco_fabm_pelagic) :: pf
 
     integer  :: i,j,k
-    real(rk) :: rhs(1:pf%inum,1:pf%nvar),bottom_flux(1:pf%inum,1:0)
+    real(rk) :: rhs(1:pf%inum,1:pf%nvar),bottom_flux(1:pf%inum,1:pf%nvar_bottom)
 
     if (.not.pf%fabm_ready) then
       call fabm_check_ready(pf%model)
