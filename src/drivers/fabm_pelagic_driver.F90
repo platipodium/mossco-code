@@ -243,8 +243,13 @@
 
     ! Allocate array for photosynthetically active radiation (PAR).
     allocate(pf%par(1:inum,1:jnum,1:knum))
+    allocate(pf%I_0(1:inum,1:jnum))
+    ! todo: I_0 is a dummy so far, will be deallocated a few lines below. 
+    ! FABM checks for shape of I_0, but the pointer will be linked
+    ! to the physical model later.
     call fabm_link_bulk_data(pf%model,standard_variables%downwelling_photosynthetic_radiative_flux,pf%par)
     call fabm_link_horizontal_data(pf%model,standard_variables%surface_downwelling_photosynthetic_radiative_flux,pf%I_0)
+    deallocate(pf%I_0) ! deallocate dummy (potentially leads to segfault)
 
     ! allocate Albedo array
     allocate(pf%albedo(1:inum,1:jnum))
