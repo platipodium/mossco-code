@@ -7,12 +7,23 @@
 #define XYT_SHAPE       4
 #define XYZT_SHAPE      5
 
+! Old definitions
+#ifndef LEVEL1
+#define STDERR write(0,*)
+#define FATAL  STDERR 'FATAL ERROR: ',
+#define LEVEL1 STDERR '   ',
+#define LEVEL2 STDERR '       ',
+#define LEVEL3 STDERR '           ',
+#define LEVEL4 STDERR '               ',
+#endif
+
 !> @file fabm_gotm_driver.F90
 !> @brief MOSSCO's GOTM driver for the Framework for Aquatic Biogeochemical Models (FABM),
 !>        adopted from the GOTM model
 !!
 !! @author Jorn Bruggeman
 !! @author Richard Hofmeister
+!! @author Carsten Lemmen
 
 module gotm_mossco_fabm
 
@@ -367,7 +378,7 @@ end type
    REALTYPE, intent(in),target,dimension(1:gotmfabm%knum)   :: bioshade_,z_
 
    REALTYPE, intent(in),target                              :: I_0_,cloud,wnd,precip_,evap_,taub
-   
+
    REALTYPE, intent(in),target :: A_,g1_,g2_
    integer,  intent(in),target :: yearday_,secondsofday_
    REALTYPE, intent(in),optional,target,dimension(:) :: SRelaxTau_,sProf_
