@@ -499,8 +499,8 @@ EOT
       echo export I_MPI_LARGE_SCALE_THRESHOLD=8192  >> slurm.sh
       echo export I_MPI_STATS=20   >> slurm.sh
 
-    else
-      # This is tested on juwels
+    elif [  $(echo $HOSTNAME |grep -c juwels) == 1 ]; then
+      # This is tested on juwels.fz-juelich.de
       if [ ${QUEUE} == undefined ]; then QUEUE=batch; fi
       echo \#SBATCH --account=$(groups | cut -d" " -f4) >> slurm.sh
       echo \#SBATCH --partition=${QUEUE} >> slurm.sh
@@ -508,6 +508,14 @@ EOT
       echo "" >> slurm.sh
       echo "# module load Intel/2019.0.117-GCC-7.3.0 ParaStationMPI/5.2.1-1" >> slurm.sh
       echo "# module load ESMF/7.1.0r" >> slurm.sh
+    else
+      # Tested on strand.hzg.de
+      if [ ${QUEUE} == undefined ]; then QUEUE=pCluster; fi
+      echo \#SBATCH --partition=${QUEUE} >> slurm.sh
+      echo \#export OMP_NUM_THREADS=48 >> slurm.sh
+      echo "" >> slurm.sh
+      echo "module load compilers/intel intelmpi" >> slurm.sh
+      echo "/project/opt/intel/bin/compilervars.sh intel64" >> slurm.sh
     fi
 
     echo "" >> slurm.sh
