@@ -43,6 +43,7 @@ type, public :: fabm_sed_grid !< sediment grid type (part of type_sed)
    real(rk) :: dzmin
    logical  :: use_ugrid=.false.
    logical, dimension(:,:,:), pointer :: mask => null()
+   logical, dimension(:,:), pointer :: mask_hz => null()
    integer  :: type=LOCAL_GRID
 contains
    procedure :: init_grid
@@ -236,6 +237,10 @@ if (.not.associated(sed%mask)) then
   allocate(sed%mask(sed%grid%inum,sed%grid%jnum,sed%grid%knum))
   sed%mask = .false.
 end if
+if (.not.associated(sed%grid%mask_hz)) then
+  allocate(sed%grid%mask_hz(sed%grid%inum,sed%grid%jnum))
+  sed%grid%mask_hz = .false.
+end if
 ! add mask to grid
 sed%grid%mask => sed%mask
 
@@ -302,6 +307,8 @@ sed%model => fabm_create_model_from_file(nml_unit,'fabm_sed.nml')
 call fabm_set_domain(sed%model,_INUM_,_JNUM_,_KNUM_)
 call sed%model%set_surface_index(1)
 call sed%model%set_bottom_index(_KNUM_)
+
+call fabm_set_mask(sed%model, sed%mask, sed%grid%mask_hz)
 
 ! allocate state variables
 sed%nvar = size(sed%model%state_variables)
@@ -647,7 +654,9 @@ subroutine get_rhs(rhs_driver, rhs)
   rhs=0.0_rk
   do k=1,rhs_driver%knum
     do j=1,rhs_driver%jnum
+      write(0,*) 'FABM ',shape(rhs), j,k,rhs_driver%inum, rhs
       call fabm_do(rhs_driver%model,1,rhs_driver%inum,j,k,rhs(:,j,k,:))
+
       do i=1,rhs_driver%inum
          if (.not.rhs_driver%mask(i,j,k)) then
            !call fabm_do(rhs_driver%model,i,j,k,rhs(i,j,k,:))
