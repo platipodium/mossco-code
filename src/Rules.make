@@ -56,7 +56,7 @@ else
 endif
 
 # System-dependent flags
-export ARFLAGS=rvU
+export ARFLAGS=rv
 ifeq ($(shell hostname),rznp0023)
   export ARFLAGS=rv
   export AR=ar
