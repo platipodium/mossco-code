@@ -26,11 +26,10 @@ endif
 
 ifeq ($(MOSSCO_FABM),true)
   TARGETS+=libmossco_sediment libmossco_fabmpelagic #libmossco_fabmbenthic #libmossco_fabm0d
-  ifeq ($(MOSSCO_GOTM),true)
-    ifeq ($(MOSSCO_NETCDF),true)
-      TARGETS+=libmossco_fabmgotm
-    endif
-  endif
+	# @todo Introduce vectorization to fabm_gotm_driver
+  #ifeq ($(MOSSCO_GOTM),true)
+  #    TARGETS+=libmossco_fabmgotm
+  #endif
 endif
 
 ifeq ($(MOSSCO_GETM),true)
@@ -86,8 +85,8 @@ libmossco_sediment: prefix libmossco_util libsolver libfabm_external \
 libmossco_fabm0d: prefix libsolver libfabm_external libgotm_external \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a(fabm0d_driver.o)
 
-libmossco_fabmgotm: prefix libmossco_util libsolver libfabm_external libgotm_external \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_fabmgotm.a(fabm_gotm_driver.o)
+#libmossco_fabmgotm: prefix libmossco_util libsolver libfabm_external libgotm_external \
+#	$(MOSSCO_LIBRARY_PATH)/libmossco_fabmgotm.a(fabm_gotm_driver.o)
 
 libmossco_clm: prefix libmossco_clm_driver
 libmossco_clm_driver: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
@@ -115,9 +114,9 @@ fabm0d_driver.o: fabm0d_driver.F90
 	@echo "Compiling $<"
 	$(F90) $(GOTM_CPPFLAGS) $(FABM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
-fabm_gotm_driver.o: fabm_gotm_driver.F90
-	@echo "Compiling $<"
-	$(F90) $(GOTM_CPPFLAGS) $(FABM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
+#fabm_gotm_driver.o: fabm_gotm_driver.F90
+#	@echo "Compiling $<"
+#	$(F90) $(GOTM_CPPFLAGS) $(FABM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
 getm_driver.o: getm_driver.F90
 	@echo "Compiling $<"

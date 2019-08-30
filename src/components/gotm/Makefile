@@ -21,8 +21,9 @@ EXTRA_DIST=README
 ifeq ($(MOSSCO_GOTM),true)
 TARGETS += libmossco_gotm
 ifeq ($(MOSSCO_FABM),true)
-TARGETS += libmossco_fabmgotm
-TARGETS += libmossco_gotmfabm
+# @todo re-enable once the gotmfabm driver is vectorized
+#TARGETS += libmossco_fabmgotm
+#TARGETS += libmossco_gotmfabm
 endif
 endif
 

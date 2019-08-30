@@ -217,6 +217,7 @@
     integer  :: inum,jnum,knum
     real(rk) :: dt
     logical, dimension(1:inum,1:jnum,1:knum), optional :: mask
+    logical, dimension(1:inum,1:jnum), target :: mask_hz
 
     type(export_state_type), pointer :: export_state
     integer :: n
@@ -232,19 +233,22 @@
     call pf%model%set_surface_index(knum)
 
     ! set mask (valid data point: mask=.false.)
-    ! fabm_set_mask is not used, since MOSSCO does not use a
-    ! particular vectorized dimension
+    ! fabm_set_mask was not used before, but now we have
+    ! a vectorized dimension in fabm_driver.h
     allocate(pf%mask(1:inum,1:jnum,1:knum))
     if (present(mask)) then
       pf%mask=mask
     else
       pf%mask(:,:,:) = .false.
     end if
+    mask_hz = any(pf%mask, dim=3)
+
+    call fabm_set_mask(pf%model, pf%mask, mask_hz)
 
     ! Allocate array for photosynthetically active radiation (PAR).
     allocate(pf%par(1:inum,1:jnum,1:knum))
     allocate(pf%I_0(1:inum,1:jnum))
-    ! todo: I_0 is a dummy so far, will be deallocated a few lines below. 
+    ! todo: I_0 is a dummy so far, will be deallocated a few lines below.
     ! FABM checks for shape of I_0, but the pointer will be linked
     ! to the physical model later.
     call fabm_link_bulk_data(pf%model,standard_variables%downwelling_photosynthetic_radiative_flux,pf%par)
