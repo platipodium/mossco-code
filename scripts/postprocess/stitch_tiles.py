@@ -70,15 +70,16 @@ for i in range(1,len(sys.argv)):
 
 files=glob.glob(pattern)
 if len(petlist) > 0 and len(files) > 0:
-    fileparts=files[0].split('.')
+    fileparts=os.path.splitext(os.path.splitext(files[0])[0])
     files=[]
-    petlen=len(fileparts[-2])
+    petlen=len(fileparts[-1])-1
+    print(fileparts,petlen)
     for i,p in enumerate(petlist):
-        if petlen==1: f='%s.%1.1d.nc'%(os.path.join(fileparts[:-2])[0],int(p))
-        if petlen==2: f='%s.%2.2d.nc'%(os.path.join(fileparts[:-2])[0],int(p))
-        if petlen==3: f='%s.%3.3d.nc'%(os.path.join(fileparts[:-2])[0],int(p))
-        if petlen==4: f='%s.%4.4d.nc'%(os.path.join(fileparts[:-2])[0],int(p))
-        if petlen==5: f='%s.%5.5d.nc'%(os.path.join(fileparts[:-2])[0],int(p))
+        if petlen==1: f='%s.%1.1d.nc'%(os.path.join(fileparts[0]),int(p))
+        if petlen==2: f='%s.%2.2d.nc'%(os.path.join(fileparts[0]),int(p))
+        if petlen==3: f='%s.%3.3d.nc'%(os.path.join(fileparts[0]),int(p))
+        if petlen==4: f='%s.%4.4d.nc'%(os.path.join(fileparts[0]),int(p))
+        if petlen==5: f='%s.%5.5d.nc'%(os.path.join(fileparts[0]),int(p))
         files.append(f)
 
 if len(files)<1:
@@ -96,7 +97,9 @@ alon={}
 try:
     nc=netcdf.Dataset(files[0],'r')
 except:
-    pass
+    print('Could not open {}'.format(files[0]))
+    print(files)
+    sys.exit(1)
 
 for key, value in nc.variables.items():
     dim=value.dimensions
