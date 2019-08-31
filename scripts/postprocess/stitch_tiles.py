@@ -276,39 +276,39 @@ for f in files[:]:
       #print('Skipped variable ', key)
       continue
 
-    print(f, key, value.shape)
-
     dims=list(value.dimensions)
     n=len(dims)
-    lbnd=[]
-    ubnd=[]
-    inlbnd=[]
-    inubnd=[]
-    for i in range(0,n):
-      # set default values for bounds
-      lbnd.append(0)
-      ubnd.append(len(nc.dimensions[dims[i]]))
-      inlbnd.append(0)
-      inubnd.append(len(nc.dimensions[dims[i]]))
 
+    # set default values for bounds
+    inlbnd = [0 for i in range(n)]
+    inubnd = [len(nc.dimensions[dims[i]]) for i in range(n)]
+    lbnd = [0 for i in range(n)]
+    ubnd = [len(nc.dimensions[dims[i]]) for i in range(n)]
+
+    print(f, key, value.shape, n, dims, lbnd, ubnd)
+    for i in range(n):
+ 
       # find coordinate variable with axis attribute and same dimension
       for item in coords:
-        if ncout.variables[item].dimensions[0]==dims[i]:
-          if item in alon:
+        if not ncout.variables[item].dimensions[0]==dims[i]:
+            continue
+
+        if item in alon:
             lbnd[i]=meta[item]['x'][0]
             ubnd[i]=meta[item]['x'][1]+1
-
-          else:
+        elif item in alat:
             lbnd[i]=meta[item]['y'][0]
             ubnd[i]=meta[item]['y'][1]+1
+        else:
+            print('Something is wrong')
+            sys.exit(1)
 
-          try:
-            inlbnd[i]= np.min(np.where((nc.variables[item][:]).mask == False))
-            inubnd[i]= np.max(np.where((nc.variables[item][:]).mask == False))+1
-
-          except:
-            inlbnd[i]=0
-            inubnd[i]=len(nc.dimensions[dims[i]])
+        try:
+            if np.any(nc.variables[item][:].mask):
+              inlbnd[i] = np.argmin(not nc.variables[item][:].mask)
+              inubnd[i] = np.argmax(not nc.variables[item][:].mask) + 1 
+        except:
+            pass
 
     if np.any(np.array(inubnd)-np.array(inlbnd) != np.array(ubnd) - np.array(lbnd)) :
       print('skipped ' + key, lbnd, ubnd, inubnd, inlbnd)
