@@ -888,7 +888,7 @@ endif
 install-mossco-bin:
 	@mkdir -p $(MOSSCO_INSTALL_PREFIX)/bin
 	@ln -sf $(MOSSCO_DIR)/scripts/mossco.sh  $(MOSSCO_INSTALL_PREFIX)/bin/mossco
-	@ln -sf $(MOSSCO_DIR)/scripts/stitch_tiles.py  $(MOSSCO_INSTALL_PREFIX)/bin/stitch
+	@ln -sf $(MOSSCO_DIR)/scripts/postprocess/stitch_tiles.py  $(MOSSCO_INSTALL_PREFIX)/bin/stitch
 	@echo "Executables 'mossco' and 'stitch' have been installed to $(MOSSCO_INSTALL_PREFIX)/bin. "
 	@echo "Consider to add this directory to your PATH"
 
