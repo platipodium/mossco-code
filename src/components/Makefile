@@ -30,7 +30,7 @@ ifeq ($(MOSSCO_CMAQ),true)
   TARGETS += libmossco_cmaq
 endif
 ifeq ($(MOSSCO_NETCDF),true)
-  TARGETS += libmossco_netcdf libmossco_clm libmossco_particle#libmossco_river
+  TARGETS += libmossco_netcdf libmossco_clm #libmossco_particle#libmossco_river
 endif
 ifeq ($(MOSSCO_OASIS),true)
   TARGETS += libmossco_oasis #libmossco_river
