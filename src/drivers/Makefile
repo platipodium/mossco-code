@@ -20,7 +20,7 @@ EXTRA_DIST=README
 TARGETS = libmossco_simplewave libmossco_macrobenthos
 
 ifeq ($(MOSSCO_NETCDF),true)
-  TARGETS+=libmossco_clm libmossco_particle
+  TARGETS+=libmossco_clm #libmossco_particle
   #TARGETS+=libmossco_river
 endif
 
