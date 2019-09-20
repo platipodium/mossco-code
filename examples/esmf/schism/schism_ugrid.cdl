@@ -1,0 +1,31 @@
+netcdf schism_ugrid {
+dimensions:
+	node = 63 ;
+	element = 80 ;
+	node_per_element = 3 ;
+variables:
+	int schism_mesh ;
+		schism_mesh:cf_role = "mesh_topology" ;
+		schism_mesh:topology_dimension = 2. ;
+		schism_mesh:node_coordinates = "lon lat" ;
+		schism_mesh:face_node_connectivity = "nv" ;
+	int nv(element, node_per_element) ;
+		nv:start_index = 1 ;
+	double lat(node) ;
+		lat:standard_name = "latitude" ;
+		lat:units = "degrees_north" ;
+	double lon(node) ;
+		lon:standard_name = "longitude" ;
+		lon:units = "degrees_east" ;
+	double z(node) ;
+		z:standard_name = "depth" ;
+		z:units = "m" ;
+		z:location = "node" ;
+		z:mesh = "schism_mesh" ;
+	int element(element) ;
+		element:location = "face" ;
+		element:mesh = "schism_mesh" ;
+
+// global attributes:
+		:Conventions = "CF-1.7, UGRID-1.0" ;
+}

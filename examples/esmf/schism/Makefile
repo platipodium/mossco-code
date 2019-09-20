@@ -86,7 +86,7 @@ clean:
 	@$(RM) -rf *dSYM *.out core.* *.stderr *.stdout fort.* mirror.out
 	@$(RM) -f *.xml
 
-config:  grid_input.cfg wind_input.cfg wind.nc
+config:  grid_input.cfg wind_input.cfg wind.nc schism_ugrid.nc
 
 extraclean: clean
 	@$(RM) schism_mossco schism_driver_interfaces.F90 schism_esmf_component.F90 main.F90 wind.nc
@@ -101,6 +101,9 @@ schism_driver_interfaces.F90:
 
 schism_esmf_component.F90:
 	test -l schim_esmf_component.F90 | ln -sf $(SCHISM_ESMF_DIR)/schism_esmf_component.F90 .
+
+schism_ugrid.nc: schism_ugrid.cdl
+	ncgen -o $@ $<
 
 wind.nc: wind.cdl
 	ncgen -o $@ $<
