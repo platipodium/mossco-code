@@ -15,7 +15,6 @@ on:
 #  - schedule:
 #    - cron:  '5 23 * * *' # minute hour day month year, so each day at 23:05
 
-
 jobs:
   download-esmf-job:
     name: Download and build ESMF
@@ -36,7 +35,7 @@ jobs:
           cd ${ESMF_DIR}
           make esmflib
           make install
-    checkout-externals-job:
+  checkout-externals-job:
       name: Checkout externals
       runs-on: ubuntu-latest
       env:
