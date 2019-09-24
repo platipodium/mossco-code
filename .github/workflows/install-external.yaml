@@ -15,11 +15,13 @@ on:
 #  - schedule:
 #    - cron:  '5 23 * * *' # minute hour day month year, so each day at 23:05
 
-runs-on: ubuntu-18.04
 
 jobs:
   download-esmf-job:
     name: Download and build ESMF
+    runs-on: ubuntu-latest
+    on: push
+     - branches: master
     steps:
       - name: Download ESMF
         env:
@@ -36,6 +38,7 @@ jobs:
           make install
     checkout-externals-job:
       name: Checkout externals
+      runs-on: ubuntu-latest
       env:
         MOSSCO_DIR: devel/mossco-code
       steps:
