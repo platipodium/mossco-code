@@ -16,8 +16,8 @@ on:
     - cron:  '5 23 * * *' # minute hour day month year, so each day at 23:05
 
 runs-on:
-  - ubuntu-18.04
-  - macosx
+  - ubuntu-latest
+  - macOS-latest
 
 jobs:
   download-esmf-job:
