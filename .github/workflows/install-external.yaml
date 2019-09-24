@@ -1,0 +1,55 @@
+# This workflow definition is part of MOSSCO
+#
+# @copyright (C) 2019 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hzg.de>
+#
+# MOSSCO is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
+#
+
+name: install-externals
+on:
+  - push
+  - schedule:
+    - cron:  '5 23 * * *' # minute hour day month year, so each day at 23:05
+
+runs-on: ubuntu-latest
+
+jobs:
+  download-esmf-job:
+    name: Download and build ESMF
+    steps:
+      - name: Download ESMF
+        env:
+          ESMF_DIR: devel/esmf
+        run:
+          rm -rf ${ESMF_DIR}/*
+          git clone --depth=1 git://esmf.git.sourceforge.net/gitroot/esmf/esmf ${ESMF_DIR}
+      - name: Build ESMF
+        env:
+          ESMF_INSTALL_PREFIX:
+        run:
+          cd ${ESMF_DIR}
+          make esmflib
+          make install
+    checkout-externals-job:
+      name: Checkout externals
+      env:
+        MOSSCO_DIR: devel/mossco-code
+      steps:
+        - name: Checkout yourself
+          uses: actions/checkout@v1
+          with:
+            fetch-depth: 1
+          path:
+            ${MOSSCO_DIR}
+        - name: Checkout gotm
+          run: make -C ${MOSSCO_DIR}/external gotm
+        - name: Checkout getm
+          run: make -C ${MOSSCO_DIR}/external getm
+        - name: Checkout fabm
+          run: make -C ${MOSSCO_DIR}/external fabm
+        - name: Update all
+          run: make -C {MOSSCO_DIR} external
