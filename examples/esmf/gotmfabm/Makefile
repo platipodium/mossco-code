@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2014 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2014--2019 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -44,4 +44,5 @@ libmossco_util libsolver:
 clean: extraclean
 
 extraclean:
-	@-rm -f gotmfabm main.F90
+	@-rm -f gotmfabm main.F90 toplevel_component.o
+
