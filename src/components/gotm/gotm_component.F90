@@ -6,7 +6,7 @@
 !> @export water_temperature, grid_height, (FABM variables)
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018, 2019 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !> @author Richard Hofmeister <richard.hofmeister@hzg.de>
 !
@@ -43,6 +43,7 @@ module gotm_component
   use time, only: gotm_time_init_time => init_time
   use time, only: timestepkind,update_time
   use gotm, only: init_gotm, gotm_time_loop => time_loop, clean_up
+  !use input, only: type_input, type_scalar_input
 
   use mossco_variable_types
   use mossco_component
@@ -430,8 +431,8 @@ module gotm_component
     variables_2d(1,1, 8) = gotm_tknu(1)
     variables_2d(1,1, 9) = gotm_radiation(nlev) ! @gotm/temperature.F90: rad(nlev)=I_0               ! at watersurface
     variables_2d(1,1,10) = gotm_radiation(0)    ! @gotm/temperature.F90: rad(0)=I_O*A*exp(-sum(h)/g) ! at soilsurface
-    variables_2d(1,1,11) = gotm_u10
-    variables_2d(1,1,12) = gotm_v10
+    variables_2d(1,1,11) = gotm_u10%value
+    variables_2d(1,1,12) = gotm_v10%value
 
     call ESMF_ArraySpecSet(arrayspec, rank=2, typekind=ESMF_TYPEKIND_R8, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -781,8 +782,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     variables_2d(1,1, 8) = gotm_tknu(1)
     variables_2d(1,1, 9) = gotm_radiation(nlev) ! @gotm/temperature.F90: rad(nlev)=I_0               ! at watersurface
     variables_2d(1,1,10) = gotm_radiation(0)    ! @gotm/temperature.F90: rad(0)=I_O*A*exp(-sum(h)/g) ! at soilsurface
-    variables_2d(1,1,11) = gotm_u10
-    variables_2d(1,1,12) = gotm_v10
+    variables_2d(1,1,11) = gotm_u10%value
+    variables_2d(1,1,12) = gotm_v10%value
 
     call MOSSCO_CompExit(gridComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -905,8 +906,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
   GOTM_REALTYPE             :: tFlux,btFlux,sFlux,bsFlux
   GOTM_REALTYPE             :: tRad(0:nlev),bRad(0:nlev)
+  logical  :: calc_fluxes
 
-
+  calc_fluxes = (fluxes_method > 0)
 !     all observations/data
   call do_input(julianday,secondsofday,nlev,z)
   call get_all_obs(julianday,secondsofday,nlev,z)
@@ -934,11 +936,11 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
   call friction(kappa,avmolu,tx,ty)
 
 !     update temperature and salinity
-  if (s_prof_method .ne. 0) then
+  if (sprof%method .ne. 0) then
     call salinity(nlev,timestep,cnpar,nus,gams)
   endif
 
-  if (t_prof_method .ne. 0) then
+  if (tprof%method .ne. 0) then
     call temperature(nlev,timestep,cnpar,I_0,heat,nuh,gamh,rad)
   endif
 
@@ -954,8 +956,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
                                    buoy_method,gravity,rho_0)
   case (99)
 !        update KPP model
-    call convert_fluxes(nlev,gravity,cp,rho_0,heat,precip+evap,    &
+    call convert_fluxes(nlev,gravity,cp,rho_0,heat%value,precip%value+evap, &
                              rad,T,S,tFlux,sFlux,btFlux,bsFlux,tRad,bRad)
+
 
     call do_kpp(nlev,depth,h,rho,u,v,NN,NNT,NNS,SS,                &
                      u_taus,u_taub,tFlux,btFlux,sFlux,bsFlux,           &
