@@ -918,7 +918,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     call set_sst(T(nlev))
     call set_ssuv(u(nlev),v(nlev))
   end if
-  call do_air_sea(julianday,secondsofday)
+  call do_airsea(julianday,secondsofday)
 
 !     reset some quantities
   tx = tx/rho_0
