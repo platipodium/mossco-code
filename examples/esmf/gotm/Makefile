@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013--2019 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 # @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
 #
@@ -18,28 +18,19 @@ include $(MOSSCO_DIR)/src/Rules.make
 EXTRA_DIST=README
 
 LDFLAGS += -L$(MOSSCO_LIBRARY_PATH)
-
-ifeq ($(MOSSCO_GOTM_FABM),true)
-  LDFLAGS += -lmossco_gotmfabm -lsolver
-endif
-
 LDFLAGS += -lmossco_gotm -lmossco_util
 LDFLAGS += $(GOTM_LDFLAGS)
-ifeq ($(MOSSCO_GOTM_FABM),true)
-  LDFLAGS += $(FABM_LDFLAGS)
-endif
-  LDFLAGS += $(ESMF_F90LDFLAGS)
-
+LDFLAGS += $(ESMF_F90LDFLAGS)
 
 .PHONY: all exec gotm libmossco_gotm libmossco_util
 
 all: exec
-exec: libmossco_util libsolver libmossco_gotmfabm gotm
+exec: libmossco_util libmossco_gotm gotm
 
 libsolver libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
-libmossco_gotmfabm:
+libmossco_gotm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
 
 gotm: toplevel_component.o ../../common/main.o
@@ -49,5 +40,5 @@ gotm: toplevel_component.o ../../common/main.o
 clean: extraclean
 
 extraclean:
-	@rm -f gotm main.F90
+	@rm -f gotm toplevel_component.o
 	@rm -f PET*.*
