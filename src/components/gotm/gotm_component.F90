@@ -43,7 +43,6 @@ module gotm_component
   use time, only: gotm_time_init_time => init_time
   use time, only: timestepkind,update_time
   use gotm, only: init_gotm, gotm_time_loop => time_loop, clean_up
-  !use input, only: type_input, type_scalar_input
 
   use mossco_variable_types
   use mossco_component
@@ -168,8 +167,8 @@ module gotm_component
     use meanflow, only : gotm_v => v
     use meanflow, only: h
     use turbulence, only : gotm_tknu => num
-    use airsea, only : gotm_u10 => u10
-    use airsea, only : gotm_v10 => v10
+    use airsea_driver, only : gotm_u10 => u10
+    use airsea_driver, only : gotm_v10 => v10
 
     implicit none
 
@@ -673,8 +672,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     use meanflow, only : gotm_u => u
     use meanflow, only : gotm_v => v
     use turbulence, only : gotm_tknu => num
-    use airsea, only : gotm_u10 => u10
-    use airsea, only : gotm_v10 => v10
+    use airsea_driver, only : gotm_u10 => u10
+    use airsea_driver, only : gotm_v10 => v10
 
 
     type(ESMF_GridComp)  :: gridComp
@@ -900,7 +899,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
   use meanflow
   use input
   use observations
-  use airsea
+  use airsea_driver
   use turbulence
   use kpp
 

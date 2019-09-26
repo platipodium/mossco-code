@@ -14,7 +14,7 @@
 
 gotm:
 ifeq ($(wildcard $(external_GOTMDIR)/src/gotm/gotm.F90),)
-	@$(GIT) clone -b v5.4rc --depth 1 https://github.com/gotm-model/code.git $(external_GOTMDIR) || $(GIT) clone -b v5.4rc --depth 1 git://github.com/gotm-model/code.git $(external_GOTMDIR)
+	@$(GIT) clone -b master --depth 1 https://github.com/gotm-model/code.git $(external_GOTMDIR) || $(GIT) clone -b master --depth 1 git://github.com/gotm-model/code.git $(external_GOTMDIR)
 	@( cd $(external_GOTMDIR) && $(GIT) submodule update --init --recursive extern/flexout )
 else
 ifeq ($(wildcard $(external_GOTMDIR)/extern/flexout/src/output_manager.F90),)
