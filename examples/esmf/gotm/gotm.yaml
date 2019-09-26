@@ -102,8 +102,8 @@ surface:
          column: 1                 # index of column to read from [default=1]
          flux_impact: false        # include effect on fluxes of sensible heat and momentum [default=false]
       calc_evaporation: false      # calculate evaporation from meteorological conditions [default=false]
-   back_radiation:                 # longwave back radiation
-      method: 1                    # method [0=from file, 1=Clark, 2=Hastenrath, 3=Bignami, 4=Berliand; default=1]
+   longwave_radiation:             # net longwave radiation
+      method: 1                    # method [0=from file, 1=Clark, 2=Hastenrath, 3=Bignami, 4=Berliand, 5=Josey-1, 6=Josey-2; default=1]
       file:                        # path to file with time series [default=]
       column: 1                    # index of column to read from [default=1]
    albedo:
@@ -150,7 +150,7 @@ turbulence:
       const_num: 5.00000000E-04    # constant eddy diffusivity [m^2/s; min=0.0; default=5.00000000E-04]
       const_nuh: 5.00000000E-04    # constant heat diffusivity [m^2/s; min=0.0; default=5.00000000E-04]
       k_min: 1.00000000E-10        # minimum turbulent kinetic energy [m^2/s^2; min=0.0; default=1.00000000E-10]
-      eps_min: 1.00000000E-10      # minimum dissipation rate [m^2/s^3; min=0.0; default=1.00000000E-10]
+      eps_min: 1.00000000E-12      # minimum dissipation rate [m^2/s^3; min=0.0; default=1.00000000E-12]
       kb_min: 1.00000000E-10       # minimum buoyancy variance [m^2/s^4; min=0.0; default=1.00000000E-10]
       epsb_min: 1.00000000E-14     # minimum buoyancy variance destruction rate [m^2/s^5; min=0.0; default=1.00000000E-14]
 mimic_3d:                          # effects of horizontal gradients
@@ -182,22 +182,22 @@ mimic_3d:                          # effects of horizontal gradients
       PeriodM: 44714.0             # period of 1st tidal harmonic (eg. M2-tide) [s; default=44714.0]
       PeriodS: 43200.0             # period of 2nd tidal harmonic (eg. S2-tide) [s; default=43200.0]
    int_press:                      # internal pressure
-      dsdx:                        # salinity gradient in West-East direction
-         method: 0                 # method [0=off, 1=constant, 2=from file; default=0]
-         constant_value: 0.0       # value to use throughout the simulation [Celsius/m; default=0.0]
-         file:                     # path to file with series of profiles [default=]
-         column: 1                 # index of column to read from [default=1]
-      dsdy:                        # salinity gradient in South-North direction
-         method: 0                 # method [0=off, 1=constant, 2=from file; default=0]
-         constant_value: 0.0       # value to use throughout the simulation [Celsius/m; default=0.0]
-         file:                     # path to file with series of profiles [default=]
-         column: 1                 # index of column to read from [default=1]
       dtdx:                        # temperature gradient in West-East direction
+         method: 0                 # method [0=off, 1=constant, 2=from file; default=0]
+         constant_value: 0.0       # value to use throughout the simulation [Celsius/m; default=0.0]
+         file:                     # path to file with series of profiles [default=]
+         column: 1                 # index of column to read from [default=1]
+      dtdy:                        # temperature gradient in South-North direction
+         method: 0                 # method [0=off, 1=constant, 2=from file; default=0]
+         constant_value: 0.0       # value to use throughout the simulation [Celsius/m; default=0.0]
+         file:                     # path to file with series of profiles [default=]
+         column: 1                 # index of column to read from [default=1]
+      dsdx:                        # salinity gradient in West-East direction
          method: 0                 # method [0=off, 1=constant, 2=from file; default=0]
          constant_value: 0.0       # value to use throughout the simulation [psu/m; default=0.0]
          file:                     # path to file with series of profiles [default=]
          column: 1                 # index of column to read from [default=1]
-      dtdy:                        # temperature gradient in South-North direction
+      dsdy:                        # salinity gradient in South-North direction
          method: 0                 # method [0=off, 1=constant, 2=from file; default=0]
          constant_value: 0.0       # value to use throughout the simulation [psu/m; default=0.0]
          file:                     # path to file with series of profiles [default=]
