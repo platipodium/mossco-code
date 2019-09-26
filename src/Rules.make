@@ -386,7 +386,7 @@ endif
 
 ifeq ($(MOSSCO_GOTM),true)
   export GOTM_LIBRARY_PATH=$(GOTM_PREFIX)/lib
-  GOTM_LIBS:=-lgotm -lairsea -lmeanflow -loutput_manager -lfield_manager -lyaml
+  GOTM_LIBS:=-lgotm -lairsea_driver -lairsea -lmeanflow -loutput_manager -lfield_manager -lyaml
   GOTM_LIBS+=-lobservations -linput_manager -lturbulence $(GOTM_PREFIX)/lib/libutil.a
   GOTM_LIBS+=-lconfig
   #export GOTM_LIBRARY_PATH=$(GOTMDIR)/lib/$(FORTRAN_COMPILER)
@@ -866,7 +866,7 @@ ifdef GOTM_BINARY_DIR
 #       $(AR) rcs $(GOTM_PREFIX)/lib/lib$$lib.a $(GOTM_BINARY_DIR)/CMakeFiles/$$lib.dir/$$lib/*.o ; \
 #     done )
 	( for lib in airsea meanflow observations ; do \
-	cp $(GOTM_BINARY_DIR)/$$lib/lib$$lib.a $(GOTM_PREFIX)/lib; \
+	cp $(GOTM_BINARY_DIR)/$$lib/lib$$li*.a $(GOTM_PREFIX)/lib; \
      done; cp $(GOTM_BINARY_DIR)/gotmlib/libgotm.a $(GOTM_PREFIX)/lib; \
      cp $(GOTM_BINARY_DIR)/input/libinput_manager.a $(GOTM_PREFIX)/lib)
 endif
