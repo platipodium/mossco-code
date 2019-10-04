@@ -26,6 +26,12 @@ env:
   MOSSCO_DIR: /home/runner/devel/mossco/code
   ESMF_INSTALL_PREFIX: /home/runner/opt
 
+env:
+  ESMFMKFILE: /home/runner/opt/Linux/gfortran.mpiuni/esmf.mk
+  ESMF_DIR: /home/runner/devel/esmf
+  MOSSCO_DIR: /home/runner/devel/mossco/code
+  ESMF_INSTALL_PREFIX: /home/runner/opt
+
 jobs:
   download-esmf-job:
     #if: "[[ ! -f ${ESMFMKFILE} ]]"
