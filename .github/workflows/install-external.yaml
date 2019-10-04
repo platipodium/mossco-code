@@ -25,7 +25,7 @@ env:
 jobs:
   download-esmf-job:
     if: "[[ ! -f ${ESMFMKFILE} ]]"
-    shell: bash
+    #shell: bash
     name: Download and build ESMF
     runs-on: ubuntu-latest
     env:
@@ -58,7 +58,7 @@ jobs:
   checkout-externals-job:
       name: Checkout externals
       runs-on: ubuntu-latest
-      shell: bash
+      #shell: bash
       env:
         MOSSCO_DIR: ${HOME}/devel/mossco-code
       steps:
@@ -72,6 +72,9 @@ jobs:
           run:
             rm -rf ${MOSSCO_DIR}/* &&
             git clone --depth=1 https://github.com/${GITHUB_REPOSITORY} ${MOSSCO_DIR}
+        - name: Test git
+          run:
+            echo $(which git)
         - name: Checkout gotm
           run: make -C ${MOSSCO_DIR}/external gotm
         - name: Checkout getm
