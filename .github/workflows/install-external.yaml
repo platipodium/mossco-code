@@ -25,8 +25,8 @@ jobs:
     steps:
       - name: Clean ESMF directory
         run:
-          - mkdir -p ${ESMF_DIR}/..
-          - rm -rf ${ESMF_DIR}
+          mkdir -p ${ESMF_DIR}/.. &&
+          rm -rf ${ESMF_DIR}
       - name: Clone ESMF
         run:
           git clone --shallow git://esmf.git.sourceforge.net/gitroot/esmf/esmf ${ESMF_DIR}
@@ -36,9 +36,9 @@ jobs:
           ESMF_COMM: mpiuni
           # @todo ESMF variable specification
         run:
-          - cd ${ESMF_DIR}
-          - make esmflib
-          - make install
+          cd ${ESMF_DIR} &&
+          make esmflib &&
+          make install
   checkout-externals-job:
       name: Checkout externals
       runs-on: ubuntu-latest
