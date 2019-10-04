@@ -20,8 +20,8 @@ jobs:
     name: Download and build ESMF
     runs-on: ubuntu-latest
     env:
-      - ESMF_DIR: ${HOME}/opt/devel/esmf
-      - ESMF_INSTALL_PREFIX: ${HOME}/opt
+      ESMF_DIR: ${HOME}/opt/devel/esmf
+      ESMF_INSTALL_PREFIX: ${HOME}/opt
     steps:
       - name: Clean ESMF directory
         run:
@@ -32,8 +32,8 @@ jobs:
           git clone --shallow git://esmf.git.sourceforge.net/gitroot/esmf/esmf ${ESMF_DIR}
       - name: Build ESMF
         env:
-          - ESMF_BOPT: O
-          - ESMF_COMM: mpiuni
+          ESMF_BOPT: O
+          ESMF_COMM: mpiuni
           # @todo ESMF variable specification
         run:
           cd ${ESMF_DIR}
