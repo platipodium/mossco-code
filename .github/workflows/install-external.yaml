@@ -31,7 +31,7 @@ jobs:
     #shell: bash
     name: Download and build ESMF
     runs-on: ubuntu-latest
-    env:
+#    env:
     steps:
       - name: Clean ESMF directory
         run:
@@ -60,7 +60,7 @@ jobs:
       name: Checkout externals
       runs-on: ubuntu-latest
       #shell: bash
-      env:
+#      env:
       steps:
 #        - name: Setup debug for actions
 #          uses: hmarr/debug-action@v1
