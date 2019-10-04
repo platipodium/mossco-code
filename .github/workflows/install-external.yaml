@@ -76,7 +76,7 @@ jobs:
           run:
             echo $(which git) ${HOME} ${MOSSCO_DIR}
         - name: Checkout gotm
-          if: test -f ${MOSSCO_DIR}
+          #if: test -f ${MOSSCO_DIR}
           run: make -C ${MOSSCO_DIR}/external gotm
         - name: Checkout getm
           run: make -C ${MOSSCO_DIR}/external getm
