@@ -19,7 +19,6 @@ jobs:
   download-esmf-job:
     name: Download and build ESMF
     runs-on: ubuntu-latest
-    on: push
     steps:
       - name: Download ESMF
         env:
