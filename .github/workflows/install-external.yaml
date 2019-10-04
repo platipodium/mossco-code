@@ -24,7 +24,7 @@ env:
 
 jobs:
   download-esmf-job:
-    if: "[[ ! -f ${ESMFMKFILE} ]]"
+    #if: "[[ ! -f ${ESMFMKFILE} ]]"
     #shell: bash
     name: Download and build ESMF
     runs-on: ubuntu-latest
