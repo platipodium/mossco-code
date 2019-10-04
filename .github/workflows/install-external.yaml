@@ -43,8 +43,8 @@ jobs:
           uses: actions/checkout@v1
           with:
             fetch-depth: 1
-          path:
-            ${MOSSCO_DIR}
+          #path:
+          #  ${MOSSCO_DIR}
         - name: Checkout gotm
           run: make -C ${MOSSCO_DIR}/external gotm
         - name: Checkout getm
