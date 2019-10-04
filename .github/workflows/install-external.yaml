@@ -20,7 +20,9 @@ on: [push]
 #    - cron:  '5 23 * * *' # minute hour day month year, so each day at 23:05
 
 env:
-  ESMFMKFILE: ${HOME}/opt/Linux/gfortran.mpiuni/esmf.mk
+  DEVEL: /home/runner/devel
+  OPT: /home/runner/opt
+  ESMFMKFILE: ${OPT}/Linux/gfortran.mpiuni/esmf.mk
 
 jobs:
   download-esmf-job:
@@ -29,8 +31,8 @@ jobs:
     name: Download and build ESMF
     runs-on: ubuntu-latest
     env:
-      ESMF_DIR: ${HOME}/opt/devel/esmf
-      ESMF_INSTALL_PREFIX: ${HOME}/opt
+      ESMF_DIR: ${DEVEL}/esmf
+      ESMF_INSTALL_PREFIX: ${OPT}
     steps:
       - name: Clean ESMF directory
         run:
@@ -60,7 +62,7 @@ jobs:
       runs-on: ubuntu-latest
       #shell: bash
       env:
-        MOSSCO_DIR: ${HOME}/devel/mossco-code
+        MOSSCO_DIR: ${DEVEL}/mossco/code
       steps:
 #        - name: Setup debug for actions
 #          uses: hmarr/debug-action@v1
@@ -72,9 +74,6 @@ jobs:
           run:
             rm -rf ${MOSSCO_DIR}/* &&
             git clone --depth=1 https://github.com/${GITHUB_REPOSITORY} ${MOSSCO_DIR}
-        - name: Test git
-          run:
-            echo $(which git) ${HOME} ${MOSSCO_DIR}
         - name: Checkout gotm
           #if: test -f ${MOSSCO_DIR}
           run: make -C ${MOSSCO_DIR}/external gotm
