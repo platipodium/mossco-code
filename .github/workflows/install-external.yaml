@@ -39,12 +39,16 @@ jobs:
       env:
         MOSSCO_DIR: ${HOME}/devel/mossco-code
       steps:
+        - name: Setup debug for actions
+          uses: hmarr/debug-action@v1
         - name: Checkout yourself with action
           uses: actions/checkout@v1
           with:
             fetch-depth: 1
-          path:
-            ${MOSSCO_DIR}
+        - name: Checkout yourself manually
+          run:
+            rm -rf ${MOSSCO_DIR}/*
+            git clone --depth=1 ${GITHUB_REPOSITORY} ${MOSSCO_DIR}
         - name: Checkout gotm
           run: make -C ${MOSSCO_DIR}/external gotm
         - name: Checkout getm
