@@ -22,13 +22,13 @@ jobs:
     steps:
       - name: Download ESMF
         env:
-          ESMF_DIR: devel/esmf
+          ESMF_DIR: ${GITHUB_WORKSPACE}/opt/devel/esmf
         run:
           rm -rf ${ESMF_DIR}/*
           git clone --depth=1 git://esmf.git.sourceforge.net/gitroot/esmf/esmf ${ESMF_DIR}
       - name: Build ESMF
         env:
-          ESMF_INSTALL_PREFIX:
+          ESMF_INSTALL_PREFIX: ${GITHUB_WORKSPACE}/opt
         run:
           cd ${ESMF_DIR}
           make esmflib
@@ -37,14 +37,14 @@ jobs:
       name: Checkout externals
       runs-on: ubuntu-latest
       env:
-        MOSSCO_DIR: devel/mossco-code
+        MOSSCO_DIR: ${GITHUB_WORKSPACE}/devel/mossco-code
       steps:
         - name: Checkout yourself
           uses: actions/checkout@v1
           with:
             fetch-depth: 1
-          #path:
-          #  ${MOSSCO_DIR}
+          path:
+            ${MOSSCO_DIR}
         - name: Checkout gotm
           run: make -C ${MOSSCO_DIR}/external gotm
         - name: Checkout getm
