@@ -53,8 +53,8 @@ jobs:
             fetch-depth: 1
         - name: Checkout yourself manually
           run:
-            - rm -rf ${MOSSCO_DIR}/*
-            - git clone --depth=1 ${GITHUB_REPOSITORY} ${MOSSCO_DIR}
+            rm -rf ${MOSSCO_DIR}/* &&
+            git clone --depth=1 ${GITHUB_REPOSITORY} ${MOSSCO_DIR}
         - name: Checkout gotm
           run: make -C ${MOSSCO_DIR}/external gotm
         - name: Checkout getm
