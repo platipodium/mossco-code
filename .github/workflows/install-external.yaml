@@ -21,7 +21,7 @@ on: [push]
 
 env:
   DEVEL: /home/runner/devel
-  OPT: /home/runner/opt
+  OPT: $HOME/opt
   ESMFMKFILE: ${OPT}/Linux/gfortran.mpiuni/esmf.mk
 
 jobs:
@@ -31,16 +31,16 @@ jobs:
     name: Download and build ESMF
     runs-on: ubuntu-latest
     env:
-      ESMF_DIR: ${DEVEL}/esmf
+      ESMF_DIR: $DEVEL/esmf
       ESMF_INSTALL_PREFIX: ${OPT}
     steps:
       - name: Clean ESMF directory
         run:
-          mkdir -p ${ESMF_DIR}/.. &&
-          rm -rf ${ESMF_DIR}
+          mkdir -p ESMF_DIR/.. &&
+          rm -rf ESMF_DIR
       - name: Clone ESMF
         run:
-          git clone --depth=1 git://esmf.git.sourceforge.net/gitroot/esmf/esmf ${ESMF_DIR}
+          git clone --depth=1 git://esmf.git.sourceforge.net/gitroot/esmf/esmf ESMF_DIR
       - name: Build ESMF
         env:
           ESMF_BOPT: O
@@ -53,16 +53,16 @@ jobs:
           ESMF_F90COMPILEOPTS: -DESMF_NO_SEQUENCE
           ESMF_COMPILER: gfortran
         run:
-          make -C ${ESMF_DIR}
+          make -C ESMF_DIR
       - name: Install ESMF
         run:
-          make -C ${ESMF_DIR} install
+          make -C ESMF_DIR install
   checkout-externals-job:
       name: Checkout externals
       runs-on: ubuntu-latest
       #shell: bash
       env:
-        MOSSCO_DIR: ${DEVEL}/mossco/code
+        MOSSCO_DIR: $DEVEL/mossco/code
       steps:
 #        - name: Setup debug for actions
 #          uses: hmarr/debug-action@v1
@@ -72,13 +72,13 @@ jobs:
 #            fetch-depth: 1
         - name: Checkout yourself manually
           run:
-            rm -rf ${MOSSCO_DIR}/* &&
+            rm -rf $MOSSCO_DIR/* &&
             git clone --depth=1 https://github.com/${GITHUB_REPOSITORY} ${MOSSCO_DIR}
         - name: Checkout gotm
           #if: test -f ${MOSSCO_DIR}
-          run: make -C ${MOSSCO_DIR}/external gotm
+          run: make -C $MOSSCO_DIR/external gotm
         - name: Checkout getm
-          run: make -C ${MOSSCO_DIR}/external getm
+          run: make -C $MOSSCO_DIR/external getm
         - name: Checkout fabm
           run: make -C ${MOSSCO_DIR}/external fabm
         - name: Update all
