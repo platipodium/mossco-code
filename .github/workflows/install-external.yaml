@@ -19,16 +19,22 @@ jobs:
   download-esmf-job:
     name: Download and build ESMF
     runs-on: ubuntu-latest
+    env:
+      - ESMF_DIR: ${HOME}/opt/devel/esmf
+      - ESMF_INSTALL_PREFIX: ${HOME}/opt
     steps:
-      - name: Download ESMF
-        env:
-          ESMF_DIR: ${HOME}/opt/devel/esmf
+      - name: Clean ESMF directory
         run:
-          rm -rf ${ESMF_DIR}/*
-          git clone --depth=1 git://esmf.git.sourceforge.net/gitroot/esmf/esmf ${ESMF_DIR}
+          mkdir -p ${ESMF_DIR}/..
+          rm -rf ${ESMF_DIR}
+      - name: Clone ESMF
+        run:
+          git clone --shallow git://esmf.git.sourceforge.net/gitroot/esmf/esmf ${ESMF_DIR}
       - name: Build ESMF
         env:
-          ESMF_INSTALL_PREFIX: ${HOME}/opt
+          - ESMF_BOPT: O
+          - ESMF_COMM: mpiuni
+          # @todo ESMF variable specification
         run:
           cd ${ESMF_DIR}
           make esmflib
@@ -39,8 +45,8 @@ jobs:
       env:
         MOSSCO_DIR: ${HOME}/devel/mossco-code
       steps:
-        - name: Setup debug for actions
-          uses: hmarr/debug-action@v1
+#        - name: Setup debug for actions
+#          uses: hmarr/debug-action@v1
         - name: Checkout yourself with action
           uses: actions/checkout@v1
           with:
