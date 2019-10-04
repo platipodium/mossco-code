@@ -16,8 +16,8 @@ on:
   - push:
     branches:
       - master
-  - schedule:
-    - cron:  '5 23 * * *' # minute hour day month year, so each day at 23:05
+#  - schedule:
+#    - cron:  '5 23 * * *' # minute hour day month year, so each day at 23:05
 
 env:
   ESMFMKFILE: ${HOME}/opt/Linux/gfortran.mpiuni/esmf.mk
