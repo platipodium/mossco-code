@@ -123,7 +123,7 @@
 !
 ! !INPUT/OUPUT PARAMETERS:
    REALTYPE,dimension(I3DFIELD),intent(inout) :: f
-   REALTYPE,dimension(:,:,:),pointer,intent(in),optional :: ffluxu,ffluxv
+   REALTYPE,dimension(:,:,:),pointer,intent(inout),optional :: ffluxu,ffluxv
 !
 ! !REVISION HISTORY:
 !  Original Author(s): Knut Klingbeil
@@ -153,7 +153,7 @@
    call wait_halo(H_TAG)
    call do_advection_3d(dt,f,uu,vv,ww,hun,hvn,ho,hn,                   &
                         HALFSPLIT,P2_PDM,P2_PDM,_ZERO_,H_TAG,          &
-                        ffluxu=ffluxu,ffluxv=ffluxv)
+                        ffluxu=ffluxu, ffluxv=ffluxv)
 
    if (les_mode.eq.LES_BOTH .or. les_mode.eq.LES_TRACER) then
 
