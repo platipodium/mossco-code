@@ -1,8 +1,8 @@
 # This Makefile snippet is part of MOSSCO; definition of MOSSCO-wide
 # make rules
 #
-# Copyright (C) 2013--2019 Helmholtz-Zentrum Geesthacht
-# Author Carsten Lemmen <carsten.lemmen@hzg.de>
+# @copyright (C) 2013--2019 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -86,11 +86,15 @@ ifndef ESMFMKFILE
   #$(error Compiling without ESMF support. Comment this line in Rules.make if you want to proceed at your own risk)
   MOSSCO_ESMF=false
 else
+  # Make sure ESMFMKFILE exists and read it, set MOSSCO_ESMF to true
   ifeq ($(wildcard $(ESMFMKFILE)),)
     $(error The file you specified as ESMFMKFILE=$(ESMFMKFILE) does not exist)
   endif
   include $(ESMFMKFILE)
   MOSSCO_ESMF=true
+
+	# Find the communicator and determine whether this is parallel device, this
+	# is still buggy with mpiifort and needs improvement
   ESMF_COMM = $(strip $(shell grep "\# ESMF_COMM:" $(ESMFMKFILE) | cut -d':' -f2-))
   ifeq ("$(ESMF_COMM)","mpiuni")
     export MOSSCO_MPI ?= false
