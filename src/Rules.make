@@ -1,8 +1,8 @@
 # This Makefile snippet is part of MOSSCO; definition of MOSSCO-wide
 # make rules
 #
-# Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
-# Author Carsten Lemmen
+# Copyright (C) 2013--2019 Helmholtz-Zentrum Geesthacht
+# Author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -386,7 +386,7 @@ endif
 
 ifeq ($(MOSSCO_GOTM),true)
   export GOTM_LIBRARY_PATH=$(GOTM_PREFIX)/lib
-  GOTM_LIBS:=-lgotm -lairsea -lmeanflow -loutput_manager -lfield_manager -lyaml
+  GOTM_LIBS:=-lgotm -lairsea_driver -lairsea -lmeanflow -loutput_manager -lfield_manager -lyaml
   GOTM_LIBS+=-lobservations -linput_manager -lturbulence $(GOTM_PREFIX)/lib/libutil.a
   GOTM_LIBS+=-lconfig
   #export GOTM_LIBRARY_PATH=$(GOTMDIR)/lib/$(FORTRAN_COMPILER)
@@ -866,7 +866,7 @@ ifdef GOTM_BINARY_DIR
 #       $(AR) rcs $(GOTM_PREFIX)/lib/lib$$lib.a $(GOTM_BINARY_DIR)/CMakeFiles/$$lib.dir/$$lib/*.o ; \
 #     done )
 	( for lib in airsea meanflow observations ; do \
-	cp $(GOTM_BINARY_DIR)/$$lib/lib$$lib.a $(GOTM_PREFIX)/lib; \
+	cp $(GOTM_BINARY_DIR)/$$lib/lib$$li*.a $(GOTM_PREFIX)/lib; \
      done; cp $(GOTM_BINARY_DIR)/gotmlib/libgotm.a $(GOTM_PREFIX)/lib; \
      cp $(GOTM_BINARY_DIR)/input/libinput_manager.a $(GOTM_PREFIX)/lib)
 endif

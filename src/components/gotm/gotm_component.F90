@@ -18,8 +18,13 @@
 
 #define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
 #define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
+
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "gotm_component.F90"
+
+#ifndef _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_
+#define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+#endif
 
 #ifndef GOTM_REALTYPE
 #define GOTM_REALTYPE real(kind=selected_real_kind(13))
@@ -42,8 +47,7 @@ module gotm_component
   use time, only: gotm_time_timefmt => timefmt
   use time, only: gotm_time_init_time => init_time
   use time, only: timestepkind,update_time
-  use gotm, only: init_gotm, gotm_time_loop => time_loop, clean_up
-  !use input, only: type_input, type_scalar_input
+  use gotm, only: init_gotm, read_nml, gotm_time_loop => time_loop, clean_up
 
   use mossco_variable_types
   use mossco_component
@@ -90,26 +94,21 @@ module gotm_component
 
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=0, &
       userRoutine=InitializeP0, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=1, &
       userRoutine=InitializeP1, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=2, &
       userRoutine=InitializeP2, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
   end subroutine SetServices
 
@@ -134,6 +133,7 @@ module gotm_component
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -142,17 +142,14 @@ module gotm_component
 
     call ESMF_AttributeAdd(gridComp, convention="NUOPC", purpose="General", &
       attrList=(/"InitializePhaseMap"/), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
     call ESMF_AttributeSet(gridComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
       convention="NUOPC", purpose="General", rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
     call MOSSCO_CompExit(gridComp, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
   end subroutine InitializeP0
 
@@ -168,8 +165,8 @@ module gotm_component
     use meanflow, only : gotm_v => v
     use meanflow, only: h
     use turbulence, only : gotm_tknu => num
-    use airsea, only : gotm_u10 => u10
-    use airsea, only : gotm_v10 => v10
+    use airsea_driver, only : gotm_u10 => u10
+    use airsea_driver, only : gotm_v10 => v10
 
     implicit none
 
@@ -188,15 +185,16 @@ module gotm_component
     integer                     :: nimport,nexport_3d, nexport_2d
     real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2=>null()
 
-    logical                    :: clockIsPresent
+    logical                    :: clockIsPresent, labelIsPresent, fileIsPresent, isPresent
     integer(ESMF_KIND_I8)      :: advanceCount
     integer(ESMF_KIND_I4)      :: localPet, petCount, localrc
     integer(ESMF_KIND_I4)      :: hours, minutes, seconds
-    character(len=ESMF_MAXSTR) :: message, name
+    character(len=ESMF_MAXSTR) :: message, name, configTypeString, configFileName
 
     type(ESMF_DistGrid)  :: distgrid
     type(ESMF_Grid)      :: grid,grid2d
     type(ESMF_ArraySpec) :: arrayspec
+    type(ESMF_Config)    :: config
 
     type(ESMF_Field), dimension(:), allocatable  :: exportFieldList
     real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr
@@ -211,16 +209,53 @@ module gotm_component
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
 
-    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_GridCompGet(gridComp, clock=clock, configIsPresent=isPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+ 
+    if (isPresent) then
+      call ESMF_GridCompGet(gridComp, config=config, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    else
+      config = ESMF_ConfigCreate(rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    endif
+
+    configFileName=trim(name)//'.cfg'
+    inquire(file=trim(configFileName), exist=fileIsPresent)
+
+    if (fileIsPresent) then
+
+      write(message,'(A)')  trim(name)//' reads configuration from '//trim(configFileName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      call ESMF_ConfigLoadFile(config, trim(configfilename), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+      call ESMF_GridCompSet(gridComp, config=config, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+      labelIsPresent = .false. 
+      !call ESMF_ConfigGet(config, label='config', value=configTypeString, &
+     !   defaultValue='yaml', isPresent=labelIsPresent, rc = localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+      if (labelIsPresent) then
+        if ((trim(adjustl(configTypeString)) == 'nml') &
+           .or. trim(adjustl(configTypeString)) == 'namelist') then
+          read_nml = .true.
+        endif
+      endif
+    endif
 
     call init_gotm()
+    !call init_gotm(t1='1998-02-01 00:00:00',t2='1998-07-01 00:00:00')
+
 
     ! read model_setup namelist
+    inquire(file='gotmrun.nml', exist=fileIsPresent)
+    ! @todo what happens when this file is not present?
     open(921,file='gotmrun.nml',status='old',action='read')
     read(921,nml=model_setup)
     read(921,nml=station)
@@ -673,8 +708,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     use meanflow, only : gotm_u => u
     use meanflow, only : gotm_v => v
     use turbulence, only : gotm_tknu => num
-    use airsea, only : gotm_u10 => u10
-    use airsea, only : gotm_v10 => v10
+    use airsea_driver, only : gotm_u10 => u10
+    use airsea_driver, only : gotm_v10 => v10
 
 
     type(ESMF_GridComp)  :: gridComp
@@ -833,11 +868,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         call ESMF_StateGet(exportState, trim(itemNameList(i)), field, rc=localrc)
         if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
-#if ESMF_VERSION_MAJOR > 5
-        call ESMF_StateRemove(exportState,trim(itemNameList(i)),rc=localrc)
-#else
-        call ESMF_StateRemove(exportState,trim(itemNameList(i)),rc=localrc)
-#endif
+        call ESMF_StateRemove(exportState,(/trim(itemNameList(i))/),rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -900,7 +931,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
   use meanflow
   use input
   use observations
-  use airsea
+  use airsea_driver
   use turbulence
   use kpp
 

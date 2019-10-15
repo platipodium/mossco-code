@@ -1,7 +1,7 @@
 !> @brief Implementation ESMF/NetCDF utility functions
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2014--2019 Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister <richard.hofmeister@hzg.de>
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
@@ -2236,23 +2236,26 @@ module mossco_netcdf
 
 #endif
 
-!
-!     !>@todo move this to a place where it reads attributes of a state/gridComp (toplevel/main), such that information
-!     !> from the coupling specification is represented here
-!     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'title','MOSSCO coupled simulation')
-!     if (ncStatus /= NF90_NOERR) then
-!       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute title', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-!       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!     endif
-!
+    !> @todo move this to a place where it knows what Conventions (ugrid, CF) are actually
+    !> present in the file
+    call nc%putattstring(NF90_GLOBAL, 'Conventions', 'CF-1.6', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    !>@todo move this to a place where it reads attributes of a state/gridComp (toplevel/main), such that information
+    !> from the coupling specification is represented here
+    call nc%putattstring(NF90_GLOBAL, 'title', 'MOSSCO coupled simulation', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattstring(NF90_GLOBAL,'source','model_mossco', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call nc%putattstring(NF90_GLOBAL, 'institution', 'MOSSCO partners (HZG, IOW, and BAW)', rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call nc%putattstring(NF90_GLOBAL, 'institution_hzg', 'Helmholtz-Zentrum Geesthacht', rc=localrc)
+    call nc%putattstring(NF90_GLOBAL, 'institution_hzg', 'Helmholtz-Zentrum Geesthacht Zentrum für Material- und Küstenforschung', rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call nc%putattstring(NF90_GLOBAL, 'institution_iow', 'Institut für Ostseeforschung Warnemünde', rc=localrc)
+    call nc%putattstring(NF90_GLOBAL, 'institution_iow', 'Leibniz-Institut für Ostseeforschung Warnemünde', rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call nc%putattstring(NF90_GLOBAL, 'institution_baw', 'Bundesanstalt für Wasserbau', rc=localrc)
@@ -2261,20 +2264,50 @@ module mossco_netcdf
     call nc%putattstring(NF90_GLOBAL,'history','Created by MOSSCO', rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call nc%putattstring(NF90_GLOBAL,'source','model_mossco', rc=localrc)
+    call nc%putattstring(NF90_GLOBAL,'references','Lemmen et al. (2018) Geoscientific Model Development', rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call nc%putattstring(NF90_GLOBAL,'references','', rc=localrc)
+    call nc%putattstring(NF90_GLOBAL,'contact','http://www.mossco.de/doc', rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call nc%putattstring(NF90_GLOBAL,'documentation','http://www.mossco.de/doc', rc=localrc)
+#ifndef MOSSCO_USER_EMAIL
+    call nc%putattstring(NF90_GLOBAL,'originator','carsten.lemmen@hzg.de', rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-    call nc%putattstring(NF90_GLOBAL,'contact','carsten.lemmen@hzg.de', rc=localrc)
+#else
+    call nc%putattstring(NF90_GLOBAL,'originator',"'"//MOSSCO_USER_EMAIL//"'", rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+#endif
 
     call nc%putattstring(NF90_GLOBAL,'crs','EPSG:4326', rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattstring(NF90_GLOBAL,'StartTime','', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattstring(NF90_GLOBAL,'StopTime','', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattr4(NF90_GLOBAL,'geospatial_lat_min',90.0, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattr4(NF90_GLOBAL,'geospatial_lat_max',-90.0, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattr4(NF90_GLOBAL,'geospatial_lon_min',180.0, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattr4(NF90_GLOBAL,'geospatial_lon_max',-180.0, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattstring(NF90_GLOBAL,'StopTime','', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattstring(NF90_GLOBAL,'licence','Creative Commons Attribution Share-Alike (CC-by-SA) 4.0 unported', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call nc%putattstring(NF90_GLOBAL,'distribution_statement','Data can be used, reused and distributed under the CC-by-SA', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
 
 !> @todo write global attributes
     if (present(state)) then
@@ -3270,6 +3303,8 @@ module mossco_netcdf
     logical                          :: logvalue
     type(ESMF_Field)                 :: field
 
+    real(ESMF_KIND_R8) :: geoMin, geoMax
+
     rc_ = ESMF_SUCCESS
     owner_ = '--'
     if (present(kwe)) rc_ = ESMF_SUCCESS
@@ -3533,12 +3568,18 @@ module mossco_netcdf
         case (1)
           call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr1, exclusiveLBound=lbnd, exclusiveUBound=ubnd, rc=localrc)
           ncStatus = nf90_put_var(self%ncid, varid, farrayPtr1(RANGE1D))
+          geoMin = minval(farrayPtr1(RANGE1D))
+          geoMax = maxval(farrayPtr1(RANGE1D))
         case (2)
           call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr2, exclusiveLBound=lbnd, exclusiveUBound=ubnd, rc=localrc)
           ncStatus = nf90_put_var(self%ncid, varid, farrayPtr2(RANGE2D))
+          geoMin = minval(farrayPtr2(RANGE2D))
+          geoMax = maxval(farrayPtr2(RANGE2D))
         case (3)
           call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr3, exclusiveLBound=lbnd, exclusiveUBound=ubnd, rc=localrc)
           ncStatus = nf90_put_var(self%ncid, varid, farrayPtr3(RANGE3D))
+          geoMin = minval(farrayPtr3(RANGE3D))
+          geoMax = maxval(farrayPtr3(RANGE3D))
         case default
           write(message,'(A)')  '  cannot deal with less than 1 or more than 3 coordinate dimensions'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
@@ -3554,14 +3595,43 @@ module mossco_netcdf
         cycle
       endif
 
-      call ESMF_GridGetCoord(grid, coordDim=i, staggerloc=ESMF_STAGGERLOC_CENTER, array=array, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if ((coordSys == ESMF_COORDSYS_SPH_DEG) .and. (i<3)) then
+        if (i==1) then
+          ncStatus = nf90_get_att(self%ncid,NF90_GLOBAL,'geospatial_lon_min',real8)
+          if (geoMin < real8) then
+            ncStatus = nf90_redef(self%ncid)
+            ncStatus = nf90_put_att(self%ncid,NF90_GLOBAL,'geospatial_lon_min',geoMin)
+            ncStatus = nf90_enddef(self%ncid)
+          endif
+
+          ncStatus = nf90_get_att(self%ncid,NF90_GLOBAL,'geospatial_lon_max',real8)
+          if (geoMax > real8) then
+            ncStatus = nf90_redef(self%ncid)
+            ncStatus = nf90_put_att(self%ncid,NF90_GLOBAL,'geospatial_lon_max',geoMax)
+            ncStatus = nf90_enddef(self%ncid)
+          endif
+        else
+          ncStatus = nf90_get_att(self%ncid,NF90_GLOBAL,'geospatial_lat_min',real8)
+          if (geoMin < real8) then
+            ncStatus = nf90_redef(self%ncid)
+            ncStatus = nf90_put_att(self%ncid,NF90_GLOBAL,'geospatial_lat_min',geoMin)
+            ncStatus = nf90_enddef(self%ncid)
+          endif
+
+          ncStatus = nf90_get_att(self%ncid,NF90_GLOBAL,'geospatial_lat_max',real8)
+          if (geoMax > real8) then
+            ncStatus = nf90_redef(self%ncid)
+            ncStatus = nf90_put_att(self%ncid,NF90_GLOBAL,'geospatial_lat_max',geoMax)
+            ncStatus = nf90_enddef(self%ncid)
+          endif
+
+        endif
+      endif
 
       if (allocated(lbnd)) deallocate(lbnd)
       if (allocated(ubnd)) deallocate(ubnd)
 
-    enddo
+    enddo ! cycle over dimensions lon/lat/depth
     if (allocated(coordDimCount)) deallocate(coordDimCount)
 
     call self%update_variables()
