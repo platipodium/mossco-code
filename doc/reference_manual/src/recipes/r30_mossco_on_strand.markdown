@@ -1,18 +1,18 @@
 # Recipe #30: MOSSCO on STRAND
 
-STRAND is the local cluster at HZG. It offers recent Intel and GNU compilers and parallelism via openmpi and intelmpi.  STRAND is currently being customized for users, expect this document to change frequently.  This page gives instructions for building **MOSSCO**, **ESMF**, and **SCHISM** on STRAND.
+STRAND is the local cluster at HZG. It offers recent Intel and GNU compilers and parallelism via openmpi and intelmpi.  STRAND is currently being customized for users, expect this document to change frequently.  This page gives instructions for building **MOSSCO** and **SCHISM** on STRAND in the intel/intelmpi toolchain.
 
 ## Preparing your environment
 
 ```bash
-module load compilers/intel
+module load compilers/intel/2018.1.163
 module load intelmpi
+module load esmf
 module load netcdf
+module load hdf5
 
 alias cmake='cmake3 '
 ```
-
-> There is also a gcc/openmpi toolchain available
 
 ```bash
 export MOSSCO_DIR=/your/path/to/mossco/code
@@ -20,49 +20,6 @@ export MOSSCO_SETUPDIR=/your/path/to/mossco/setups/sns
 ```
 
 ## Download and compilation of software
-
-### ESMF
-
-Try to use the preinstalled ESMF with
-
-```bash
-export ESMFMKFILE=/gpfs/home/lemmen/opt/lib/libO/Linux.intel.64.intelmpi.ESMF_7_1_0r/esmf.mk
-export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${ESMFMKFILE%%/esmf.mk}
-```
-
-and continue to the next section.   Otherwise, it is easy to install ESMF yourself by setting the environment variables below, issueing `make && make install` and setting the `$ESMFMFKILE`
-
-```bash
-export ESMF_DIR=/your/path/to/esmf/code
-export ESMF_INSTALL_PREFIX=/where/you/want/esmf/installed
-
-git clone git://git.code.sf.net/p/esmf/esmf $ESMF_DIR
-
-export ESMF_BOPT=O
-export ESMF_ABI=64
-export ESMF_MOAB=OFF
-export ESMF_OPTLEVEL=2
-export ESMF_LAPACK=internal
-export ESMF_NETCDF=split
-export ESMF_NETCDF_INCLUDE=`nf-config --includedir`
-export ESMF_NETCDF_LIBPATH="/project/opt/software/netcdf/4.7.0/intel/lib -L/project/opt/software/hdf5/1.10.5/intel/lib"
-export ESMF_F90COMPILEOPTS=-DESMF_NO_SEQUENCE
-unset ESMF_PIO
-export ESMF_SITE=ESMF_7_1_0r
-export ESMF_COMPILER=intel
-export ESMF_COMM=intelmpi
-unset ESMF_XERCES
-
-cd ${ESMF_DIR}
-make && make install
-```
-
-To use ESMF, add the following to your default environment:
-
-```bash
-export ESMFMKFILE=${ESMF_INSTALL_PREFIX}/lib/lib${BOPT}/Linux.${ESMF_COMPILER}.${ESMF_ABI}.${ESMF_COMM}.${ESMF_SITE}/esmf.mk
-export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${ESMFMKFILE%%/esmf.mk}
-```
 
 ### MOSSCO
 
