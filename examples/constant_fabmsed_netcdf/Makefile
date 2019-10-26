@@ -21,11 +21,11 @@ EXTRA_DIST=README
 LIBS := -lsediment -ldefault -lmossco_sediment -lmossco_netcdf -lesmf  $(LIBS)
 NC_LIBS += $(shell nf-config --flibs)
 
-LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
-LDFLAGS += -lpelagicbenthiccoupler -lsolver -lmossco_util
-LDFLAGS += $(FABM_LDFLAGS)
-LDFLAGS += -lmossco_util -lesmf
-LDFLAGS += $(NC_LIBS)
+MOSSCO_LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
+MOSSCO_LDFLAGS += -lpelagicbenthiccoupler -lsolver -lmossco_util
+MOSSCO_LDFLAGS += $(FABM_LDFLAGS)
+MOSSCO_LDFLAGS += -lmossco_util -lesmf
+MOSSCO_LDFLAGS += $(NC_LIBS)
 
 .PHONY: all exec default_fabmsed_netcdf libsediment libmossco_sediment libdefault libmossco_netcdf
 
@@ -43,7 +43,7 @@ deprecation:
 	@-echo     $(MOSSCO_DIR)/examples/generic/coupling
 
 default_fabmsed_netcdf: toplevel_component.o ../common/main.o
-	$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o $@
+	$(F90) $(F90FLAGS) $^ $(MOSSCO_LDFLAGS) $(LDFLAGS) -o $@
 	@echo "Created example binary $(CURDIR)/$@"
 
 libmossco_util:

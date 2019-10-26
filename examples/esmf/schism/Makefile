@@ -55,7 +55,7 @@ LIBS+= -L$(MOSSCO_DIR)/lib -lmossco -lmossco_fabm
 F90FLAGS+= -DUSE_FABM
 F90FLAGS+= -I$(SCHISM_DIR)/include
 F90FLAGS+= -I$(MOSSCO_DIR)/include
-LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
+MOSSCO_LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 
 
 .PHONY: all clean distclean config
@@ -64,7 +64,7 @@ all:  schism_mossco config outputs
 
 schism_mossco: schism_esmf_component.o toplevel_component.o main.o
 	echo objcopy --redefine-sym xerbla_=schism_lap_xerbla_ $SCHISM_DIR/lib/libhydro.a
-	$(F90) $(CPPFLAGS) $^ -o $@ $(LDFLAGS) $(LIBS)
+	$(F90) $(CPPFLAGS) $^ -o $@ $(MOSSCO_LDFLAGS) $(LDFLAGS) $(LIBS)
 
 toplevel_component.o: schism_esmf_component.o toplevel_component.F90
 

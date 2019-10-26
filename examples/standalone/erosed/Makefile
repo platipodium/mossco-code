@@ -17,7 +17,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 LIBS := -lmossco_erosed -lmossco_benthos $(LIBS)
 
 F90FLAGS += $(INCLUDES)
-LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
+MOSSCO_LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 
 .PHONY: all exec erosed libmossco_erosed
 
@@ -28,7 +28,7 @@ libmossco_erosed libmossco_benthos:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
 erosed: delft_erosed_example.o
-	$(F90) -o $@ $< $(LDFLAGS)
+	$(F90) -o $@ $< $(MOSSCO_LDFLAGS) $(LDFLAGS)
 	@echo "Created example binary erosed in  $(CURDIR)" 
 	@echo "Please change to $(MOSSCO_DIR)/examples/standalone/erosed to run the example." > $(MOSSCO_BIN_PATH)/erosed.txt
 

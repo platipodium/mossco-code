@@ -15,7 +15,7 @@ endif
 include $(MOSSCO_DIR)/src/Rules.make
 
 LIBS :=  -lmossco_particle -lmossco_util -lesmf $(LIBS)
-LDFLAGS += $(MOSSCO_F90LDFLAGS)
+MOSSCO_LDFLAGS += $(MOSSCO_F90LDFLAGS)
 
 .PHONY: all exec particle libmossco_particle
 

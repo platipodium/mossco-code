@@ -2409,12 +2409,12 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
 }
 
 #fid.write('\nNC_LIBS += $(shell nf-config --flibs)\n\n')
-fid.write('LDFLAGS += -L$(MOSSCO_LIBRARY_PATH)\n')
+fid.write('MOSSCO_LDFLAGS += -L$(MOSSCO_LIBRARY_PATH)\n')
 for item in gridCompSet.union(cplCompSet):
     if item in instanceDict.keys():
         item=instanceDict[item]
     if item in libs.keys():
-        fid.write('LDFLAGS +=')
+        fid.write('MOSSCO_LDFLAGS +=')
         for lib in libs[item]:
             fid.write(' -l' + lib)
         if item=='gotm':
@@ -2431,8 +2431,8 @@ for item in gridCompSet.union(cplCompSet):
             fid.write(' $(GOTM_LDFLAGS) $(FABM_LDFLAGS)')
         fid.write('\n')
 
-#fid.write('LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS)  -llapack\n\n')
-fid.write('LDFLAGS += -lmossco_util $(ESMF_F90LDFLAGS)  \n\n')
+#fid.write('MOSSCO_LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS)  -llapack\n\n')
+fid.write('MOSSCO_LDFLAGS += -lmossco_util $(ESMF_F90LDFLAGS)  \n\n')
 
 #for item in gridCompSet.union(cplCompSet):
 #    if libs.has_key(item):
@@ -2453,7 +2453,7 @@ for item in gridCompSet.union(cplCompSet):
             fid.write(' ' + dep)
 fid.write(' ' + coupling_name + '\n\n')
 fid.write(coupling_name + ': toplevel_component.o ../common/main.o\n')
-fid.write('\t$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o $(PWD)/$@\n')
+fid.write('\t$(F90) $(F90FLAGS) $^ $(MOSSCO_LDFLAGS) $(LDFLAGS) -o $(PWD)/$@\n')
 fid.write('\t@echo "Created example binary $(PWD)/$@"\n')
 fid.write('''
 

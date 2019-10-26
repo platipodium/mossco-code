@@ -25,20 +25,20 @@ endif
 ifneq ($(MOSSCO_EROSED),true)
 $(error This example only works with MOSSCO_EROSED = true)
 endif
-LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS)
-LDFLAGS += -ldefault
-LDFLAGS += -lmossco_getm $(GETM_LDFLAGS)
-LDFLAGS += -lsediment -lmossco_sediment -lsolver $(FABM_LDFLAGS)
-LDFLAGS += -lmossco_connector
-LDFLAGS += -lpelagicbenthiccoupler
-LDFLAGS += -lpelagicbenthiccoupler
-LDFLAGS += -lmossco_simplewave
-LDFLAGS += -lmossco_netcdf
-LDFLAGS += -lmossco_clm
-LDFLAGS += -lmossco_benthos
-LDFLAGS += -lmossco_fabmpelagic -lutil -lsolver $(FABM_LDFLAGS)
-LDFLAGS += -lmossco_erosed
-LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS)
+MOSSCO_LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS)
+MOSSCO_LDFLAGS += -ldefault
+MOSSCO_LDFLAGS += -lmossco_getm $(GETM_LDFLAGS)
+MOSSCO_LDFLAGS += -lsediment -lmossco_sediment -lsolver $(FABM_LDFLAGS)
+MOSSCO_LDFLAGS += -lmossco_connector
+MOSSCO_LDFLAGS += -lpelagicbenthiccoupler
+MOSSCO_LDFLAGS += -lpelagicbenthiccoupler
+MOSSCO_LDFLAGS += -lmossco_simplewave
+MOSSCO_LDFLAGS += -lmossco_netcdf
+MOSSCO_LDFLAGS += -lmossco_clm
+MOSSCO_LDFLAGS += -lmossco_benthos
+MOSSCO_LDFLAGS += -lmossco_fabmpelagic -lutil -lsolver $(FABM_LDFLAGS)
+MOSSCO_LDFLAGS += -lmossco_erosed
+MOSSCO_LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS)
 
 .PHONY: all exec reference_3d
 
@@ -49,7 +49,7 @@ toplevel_component.o : toplevel_component.F90 libmossco_util  libdefault libmoss
 exec: libmossco_util  libdefault libmossco_getm libsediment libmossco_sediment libsolver libmossco_connector libpelagicbenthiccoupler libpelagicbenthiccoupler libmossco_simplewave libmossco_netcdf libmossco_clm libmossco_benthos libmossco_fabmpelagic libsolver libmossco_erosed reference_3d
 
 reference_3d: toplevel_component.o ../common/main.o
-	$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o $@
+	$(F90) $(F90FLAGS) $^ $(MOSSCO_LDFLAGS) $(LDFLAGS) -o $@
 	@echo "Created example binary $(CURDIR)/$@"
 
 

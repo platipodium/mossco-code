@@ -16,7 +16,7 @@ endif
 include $(MOSSCO_DIR)/src/Rules.make
 
 LIBS :=  -lmossco_hamsom -lmossco_util -lesmf $(LIBS)
-LDFLAGS += $(MOSSCO_F90LDFLAGS)
+MOSSCO_LDFLAGS += $(MOSSCO_F90LDFLAGS)
 
 .PHONY: all exec hamsom
 
@@ -27,7 +27,7 @@ libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
 hamsom: toplevel_component.o ../../common/main.o
-	$(F90) $^ $(LDFLAGS) $(LIBS) -o $@
+	$(F90) $^ $(MOSSCO_LDFLAGS) $(LDFLAGS) $(LIBS) -o $@
 	@echo "Created example binary $(CURDIR)/$@"
 
 libmossco_hamsom:

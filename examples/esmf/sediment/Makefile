@@ -16,8 +16,8 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 LIBS := -lsediment -lmossco_sediment -ldefault -lmossco_util -lsolver -lesmf $(LIBS)
 
-LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
-LDFLAGS += $(FABM_LDFLAGS)
+MOSSCO_LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
+MOSSCO_LDFLAGS += $(FABM_LDFLAGS)
 
 .PHONY: all exec sediment libsediment libmossco_util
 
@@ -25,7 +25,7 @@ all: exec
 exec: libmossco_util libsediment libdefault sediment
 
 sediment: toplevel_component.o ../../common/main.o
-	$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o $@
+	$(F90) $(F90FLAGS) $^ $(MOSSCO_LDFLAGS) $(LDFLAGS) -o $@
 	@echo "Created example $(CURDIR)/$@"
 
 libdefault libsediment:

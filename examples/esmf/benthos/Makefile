@@ -16,7 +16,7 @@ endif
 include $(MOSSCO_DIR)/src/Rules.make
 
 LIBS := -lmossco_benthos -lmossco_util -lesmf $(LIBS)
-LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
+MOSSCO_LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 
 .PHONY: all exec benthos libmossco_benthos libmossco_util
 
@@ -24,7 +24,7 @@ all: exec
 exec: libmossco_util libmossco_benthos benthos
 
 benthos: toplevel_component.o ../../common/main.o
-	$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o $@
+	$(F90) $(F90FLAGS) $^ $(MOSSCO_LDFLAGS) $(LDFLAGS) -o $@
 	@echo "Created example $(CURDIR)/$@"
 
 libmossco_benthos:

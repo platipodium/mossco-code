@@ -25,11 +25,11 @@ endif
 LIBS := -ldefault -lmossco_erosed -lmossco_benthos -lmossco_netcdf -lesmf  $(LIBS)
 NC_LIBS += $(shell nf-config --flibs)
 
-LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
-LDFLAGS += -lmossco_gotm -lmossco_fabmgotm -lsolver -lmossco_util
-LDFLAGS += $(GOTM_LDFLAGS)
-LDFLAGS += $(FABM_LDFLAGS)
-LDFLAGS += -lmossco_util -lesmf $(NC_LIBS)
+MOSSCO_LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
+MOSSCO_LDFLAGS += -lmossco_gotm -lmossco_fabmgotm -lsolver -lmossco_util
+MOSSCO_LDFLAGS += $(GOTM_LDFLAGS)
+MOSSCO_LDFLAGS += $(FABM_LDFLAGS)
+MOSSCO_LDFLAGS += -lmossco_util -lesmf $(NC_LIBS)
 
 .PHONY: all exec benthic_geoecology libmossco_fabmgotm libdefault libmossco_gotm libmossco_erosed libmossco_benthos
 
@@ -37,7 +37,7 @@ all: exec
 exec: libmossco_util libmossco_fabmgotm libdefault libmossco_gotm libmossco_erosed libmossco_benthos libmossco_netcdf benthic_geoecology
 
 benthic_geoecology: toplevel_component.o ../common/main.o
-	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
+	$(F90) $(F90FLAGS) -o $@  $^ $(MOSSCO_LDFLAGS) $(LDFLAGS)
 	@echo "Created example binary $(CURDIR)/$@"
 
 libmossco_fabmgotm libmossco_gotm:

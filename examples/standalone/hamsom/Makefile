@@ -17,7 +17,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 LIBS := -lmossco_hamsom $(LIBS)
 
-LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBS)
+MOSSCO_LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBS)
 
 .PHONY: all exec hamsom-standalone libmossco_hamsom
 
@@ -33,7 +33,7 @@ libmossco_hamsom:
 hamsom-standalone: F90FLAGS += $(HAMSOM_FFLAGS)
 hamsom-standalone: CPPFLAGS += $(HAMSOM_CPPFLAGS)
 hamsom-standalone: hamsom-standalone.o
-	$(F90) $^ $(LDFLAGS) -o $@
+	$(F90) $^ $(MOSSCO_LDFLAGS) $(LDFLAGS) -o $@
 	@echo "Created example binary $(CURDIR)/$@"
 
 #	$(F90)  $(HAMSOM_CPPFLAGS) $(CPPFLAGS) $(HAMSOM_FFLAGS) $(F90FLAGS) $(LDFLAGS) -c $< -o $@

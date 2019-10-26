@@ -18,7 +18,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 LIBS := -lmossco_benthos  $(LIBS)
 
 F90FLAGS += $(INCLUDES)
-LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
+MOSSCO_LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 
 .PHONY: all exec benthos libmossco_benthos
 
@@ -29,7 +29,7 @@ libmossco_benthos:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
 benthos: BioDriver.o
-	$(F90) -o $@ $< $(LDFLAGS)
+	$(F90) -o $@ $< $(MOSSCO_LDFLAGS) $(LDFLAGS)
 	@echo "Created example $(CURDIR)/$@" 
 
 clean: extraclean

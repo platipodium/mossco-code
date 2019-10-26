@@ -32,12 +32,12 @@ endif
 LIBS := -lsediment -ldefault $(EROSED_LIB) -lmossco_sediment -lmossco_connector -lmossco_netcdf -lesmf  $(LIBS)
 NC_LIBS += $(shell nf-config --flibs)
 
-LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
-LDFLAGS += -lmossco_gotm -lmossco_fabmgotm -lpelagicbenthiccoupler -lsolver -lmossco_util
-LDFLAGS += $(GOTM_LDFLAGS)
-LDFLAGS += $(FABM_LDFLAGS)
-LDFLAGS += -lmossco_util -lesmf
-LDFLAGS += $(NC_LIBS)
+MOSSCO_LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
+MOSSCO_LDFLAGS += -lmossco_gotm -lmossco_fabmgotm -lpelagicbenthiccoupler -lsolver -lmossco_util
+MOSSCO_LDFLAGS += $(GOTM_LDFLAGS)
+MOSSCO_LDFLAGS += $(FABM_LDFLAGS)
+MOSSCO_LDFLAGS += -lmossco_util -lesmf
+MOSSCO_LDFLAGS += $(NC_LIBS)
 
 .PHONY: all exec fabm_benthic_pelagic libsediment libmossco_fabmgotm libmossco_sediment libdefault libmossco_gotm $(EROSED_DEP)
 
@@ -45,7 +45,7 @@ all: exec
 exec: libmossco_util libmossco_fabmgotm libsediment libmossco_sediment libdefault libmossco_gotm libpelagicbenthiccoupler $(EROSED_DEP) libmossco_connector libmossco_netcdf fabm_benthic_pelagic
 
 fabm_benthic_pelagic: toplevel_component.o ../common/main.o
-	$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o $@
+	$(F90) $(F90FLAGS) $^ $(MOSSCO_LDFLAGS) $(LDFLAGS) -o $@
 	@echo "Created example binary $(CURDIR)/$@"
 
 libmossco_fabmgotm libmossco_gotm:

@@ -21,12 +21,12 @@ ifneq ($(MOSSCO_GOTM),true)
 $(error You need GOTM to compile this example)
 endif
 
-LDFLAGS += -L$(MOSSCO_LIBRARY_PATH) -lmossco_fabm0d -lsolver -lmossco_util
-LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea -linput -lutil
-LDFLAGS += $(FABM_LDFLAGS)
-LDFLAGS += $(ESMF_F90LDFLAGS)
+MOSSCO_LDFLAGS += -L$(MOSSCO_LIBRARY_PATH) -lmossco_fabm0d -lsolver -lmossco_util
+MOSSCO_LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea -linput -lutil
+MOSSCO_LDFLAGS += $(FABM_LDFLAGS)
+MOSSCO_LDFLAGS += $(ESMF_F90LDFLAGS)
 #ifeq ($(HAVE_LD_FORCE_LOAD),true)
-#LDFLAGS += -Wl,-force_load
+#MOSSCO_LDFLAGS += -Wl,-force_load
 #endif
 
 .PHONY: all exec fabm0d
@@ -41,7 +41,7 @@ libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
 fabm0d: toplevel_component.o ../../common/main.o
-	$(F90) $(F90FLAGS) $^ -o $@ $(LDFLAGS)
+	$(F90) $(F90FLAGS) $^ -o $@ $(MOSSCO_LDFLAGS) $(LDFLAGS)
 	@echo "Created example binary $(CURDIR)/$@"
 
 clean: extraclean
