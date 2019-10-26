@@ -873,6 +873,7 @@ ifdef GOTM_BINARY_DIR
 	cp $(GOTM_BINARY_DIR)/$$lib/lib$$li*.a $(GOTM_PREFIX)/lib; \
      done; cp $(GOTM_BINARY_DIR)/gotmlib/libgotm.a $(GOTM_PREFIX)/lib; \
      cp $(GOTM_BINARY_DIR)/input/libinput_manager.a $(GOTM_PREFIX)/lib)
+	cp $(GOTM_BINARY_DIR)/extern/flexout/extern/yaml/modules/yaml_settings.mod $(GOTM_PREFIX)/include/
 endif
 endif
 
