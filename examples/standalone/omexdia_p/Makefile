@@ -17,8 +17,8 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 LIBS := -lmossco_sediment -lsolver -lmossco_util $(LIBS)
 
-LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBS)
-LDFLAGS += $(FABM_LDFLAGS)
+MOSSCO_LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBS)
+MOSSCO_LDFLAGS += $(FABM_LDFLAGS)
 F90FLAGS += $(FABM_CPPFLAGS)
 
 .PHONY: all exec omexdia_p libmossco_sediment
@@ -30,7 +30,7 @@ libmossco_sediment:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
 omexdia_p: main.o
-	$(F90) $^ $(FABM_CPPFLAGS) $(LDFLAGS) -o $@
+	$(F90) $^ $(FABM_CPPFLAGS) $(MOSSCO_LDFLAGS) $(LDFLAGS) -o $@
 	@echo "Created example binary $(CURDIR)/$@"
 
 clean: extraclean

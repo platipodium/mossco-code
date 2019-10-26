@@ -16,7 +16,7 @@ endif
 include $(MOSSCO_DIR)/src/Rules.make
 
 LIBS := -lremtc -lmossco_util $(LIBS)
-LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
+MOSSCO_LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 
 .PHONY: all exec remtc libmossco_util libremtc
 
@@ -24,7 +24,7 @@ all: exec
 exec: libmossco_util libremtc remtc
 
 remtc: toplevel_component.o ../../common/main.o
-	$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o $@
+	$(F90) $(F90FLAGS) $^ $(MOSSCO_LDFLAGS) $(LDFLAGS) -o $@
 	@echo "Created example $(CURDIR)/$@"
 
 libremtc:

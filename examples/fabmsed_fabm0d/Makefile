@@ -16,10 +16,10 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-LDFLAGS += -L$(MOSSCO_LIBRARY_PATH) -lsediment -lmossco_fabm0d -lmossco_sediment -lsolver -lmossco_util
-LDFLAGS += $(FABM_LDFLAGS)
-LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea -linput -lutil
-LDFLAGS += $(ESMF_F90LDFLAGS)
+MOSSCO_LDFLAGS += -L$(MOSSCO_LIBRARY_PATH) -lsediment -lmossco_fabm0d -lmossco_sediment -lsolver -lmossco_util
+MOSSCO_LDFLAGS += $(FABM_LDFLAGS)
+MOSSCO_LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea -linput -lutil
+MOSSCO_LDFLAGS += $(ESMF_F90LDFLAGS)
 
 .PHONY: all exec fabmsed_fabm0d
 
@@ -27,7 +27,7 @@ all: exec
 exec: libmossco_util libmossco_fabm0d libsediment fabmsed_fabm0d
 
 fabmsed_fabm0d: toplevel_component.o ../common/main.o
-	$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o $@
+	$(F90) $(F90FLAGS) $^ $(MOSSCO_LDFLAGS) $(LDFLAGS) -o $@
 	@echo "Created example binary $(CURDIR)/$@"
 
 libmossco_fabm0d libsediment:

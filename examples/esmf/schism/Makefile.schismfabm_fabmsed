@@ -39,7 +39,7 @@ LIBS+= -L$(SCHISM_ESMF_DIR) -lschism_esmf
 LIBS+= -Wl,--exclude-libs,$(SCHISM_ESMF_DIR)/libschism_esmf.a -L$(MOSSCO_DIR)/lib -lmossco
 F90FLAGS+= -I$(SCHISM_DIR)/fabmbuild/include
 F90FLAGS+= -I$(MOSSCO_DIR)/include
-LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
+MOSSCO_LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 
 
 .PHONY: all clean distclean config
@@ -47,7 +47,7 @@ LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 all:  schism_mossco config outputs
 
 schism_mossco:  schism_esmf_component.o toplevel_component.o main.o
-	$(F90) $(CPPFLAGS) $^ -o $@ $(LDFLAGS)
+	$(F90) $(CPPFLAGS) $^ -o $@ $(MOSSCO_LDFLAGS) $(LDFLAGS)
 
 toplevel_component.o: schism_esmf_component.o
 

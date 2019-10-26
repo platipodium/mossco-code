@@ -16,7 +16,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 LIBS := -lmossco_macrobenthos -lsolver $(LIBS)
 
-LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBS)
+MOSSCO_LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBS)
 
 .PHONY: all exec vertical-macrobenthos libmossco_macrobenthos
 
@@ -27,7 +27,7 @@ libmossco_macrobenthos: libmossco_util libsolver
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
 vertical_macrobenthos: main.o
-	$(F90) $^ $(LDFLAGS) -o $@
+	$(F90) $^ $(MOSSCO_LDFLAGS) $(LDFLAGS) -o $@
 	@echo "Created example binary $(CURDIR)/$@"
 
 clean: extraclean

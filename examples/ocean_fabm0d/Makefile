@@ -18,21 +18,21 @@ OCEAN?=GOTM
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-LDFLAGS += -L$(MOSSCO_LIBRARY_PATH)
+MOSSCO_LDFLAGS += -L$(MOSSCO_LIBRARY_PATH)
 ifeq ($(OCEAN),GOTM)
 CPPFLAGS += -D_GOTMOCEAN_
-LDFLAGS += -lmossco_gotm -lmossco_fabm0d -lsolver -lmossco_util
-LDFLAGS += $(GOTM_LDFLAGS)
+MOSSCO_LDFLAGS += -lmossco_gotm -lmossco_fabm0d -lsolver -lmossco_util
+MOSSCO_LDFLAGS += $(GOTM_LDFLAGS)
 dep := libmossco_gotm
 else
-LDFLAGS += -lremtc -lmossco_fabm0d -lsolver -lmossco_util
-LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea -linput -lutil
+MOSSCO_LDFLAGS += -lremtc -lmossco_fabm0d -lsolver -lmossco_util
+MOSSCO_LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea -linput -lutil
 dep := libremtc
 endif
-LDFLAGS += $(FABM_LDFLAGS)
-LDFLAGS += $(ESMF_F90LDFLAGS)
+MOSSCO_LDFLAGS += $(FABM_LDFLAGS)
+MOSSCO_LDFLAGS += $(ESMF_F90LDFLAGS)
 ifeq ($(HAVE_LD_FORCE_LOAD),true)
-#LDFLAGS += -Wl,-force_load
+#MOSSCO_LDFLAGS += -Wl,-force_load
 endif
 
 
@@ -42,7 +42,7 @@ all: exec
 exec: libmossco_util libmossco_fabm0d $(dep) ocean_fabm0d
 
 ocean_fabm0d: toplevel_component.o ../common/main.o
-	$(F90) $(F90FLAGS)  $^ $(LDFLAGS) -o $@
+	$(F90) $(F90FLAGS)  $^ $(MOSSCO_LDFLAGS) $(LDFLAGS) -o $@
 	@echo "Created example binary $(CURDIR)/$@"
 
 libremtc:

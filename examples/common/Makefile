@@ -25,14 +25,14 @@ SUBDIRS =
 
 LIBS += lmossco_util
 
-LDFLAGS += $(MOSSCO_F90LDFLAGS)
+MOSSCO_LDFLAGS += $(MOSSCO_F90LDFLAGS)
 
 .PHONY: all clean extraclean subdirs $(SUBDIRS) libmossco_util
 
 all: exec
 
 exec: toplevel_component.o main.o
-	$(F90) $(F90FLAGS) -o example $^ $(LDFLAGS)
+	$(F90) $(F90FLAGS) -o example $^ $(MOSSCO_LDFLAGS) $(LDFLAGS)
 	@echo "Created example binary $(CURDIR)/example"
 
 main.o: toplevel_component.o

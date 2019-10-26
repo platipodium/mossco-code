@@ -21,10 +21,10 @@ ifneq ($(MOSSCO_GOTM_FABM),true)
 $(error This example only works with MOSSCO_GOTM_FABM=true)
 endif
 
-LDFLAGS += -L$(MOSSCO_LIBRARY_PATH) -lmossco_gotmfabm -lmossco_fabmgotm -lmossco_gotm -lsolver -lmossco_util
-LDFLAGS += $(GOTM_LDFLAGS)
-LDFLAGS += $(FABM_LDFLAGS)
-LDFLAGS += $(ESMF_F90LDFLAGS)
+MOSSCO_LDFLAGS += -L$(MOSSCO_LIBRARY_PATH) -lmossco_gotmfabm -lmossco_fabmgotm -lmossco_gotm -lsolver -lmossco_util
+MOSSCO_LDFLAGS += $(GOTM_LDFLAGS)
+MOSSCO_LDFLAGS += $(FABM_LDFLAGS)
+MOSSCO_LDFLAGS += $(ESMF_F90LDFLAGS)
 
 .PHONY: all exec gotmfabm libmossco_gotmfabm
 
@@ -32,7 +32,7 @@ all: exec
 exec: libmossco_util libsolver libmossco_gotmfabm gotmfabm
 
 gotmfabm: toplevel_component.o ../../common/main.o
-	$(F90) $^ $(F90FLAGS) $(LDFLAGS) -o $@
+	$(F90) $^ $(F90FLAGS) $(MOSSCO_LDFLAGS) $(LDFLAGS) -o $@
 	@echo "Created example binary $(CURDIR)/$@"
 
 libmossco_gotmfabm:

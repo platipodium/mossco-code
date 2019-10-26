@@ -15,7 +15,7 @@ endif
 include $(MOSSCO_DIR)/src/Rules.make
 
 LIBS :=  -lempty -lmossco_util -lesmf $(LIBS)
-LDFLAGS += $(MOSSCO_F90LDFLAGS)
+MOSSCO_LDFLAGS += $(MOSSCO_F90LDFLAGS)
 
 .PHONY: all exec empty
 
@@ -26,7 +26,7 @@ libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
 empty: toplevel_component.o ../../common/main.o
-	$(F90) $(F90FLAGS) $^ $(LDFLAGS) $(LIBS) -o $@
+	$(F90) $(F90FLAGS) $^ $(MOSSCO_LDFLAGS) $(LDFLAGS) $(LIBS) -o $@
 	@echo "Created example $(CURDIR)/$@"
 
 libempty:

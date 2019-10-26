@@ -16,12 +16,12 @@ endif
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-LDFLAGS += -L$(MOSSCO_LIBRARY_PATH) -lsediment -lremtc -loceansedimentcoupler -lmossco_fabm0d -lmossco_util -lmossco_sediment -lsolver
-LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea -linput -lutil
-LDFLAGS += $(FABM_LDFLAGS)
-LDFLAGS += $(ESMF_F90LDFLAGS)
+MOSSCO_LDFLAGS += -L$(MOSSCO_LIBRARY_PATH) -lsediment -lremtc -loceansedimentcoupler -lmossco_fabm0d -lmossco_util -lmossco_sediment -lsolver
+MOSSCO_LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea -linput -lutil
+MOSSCO_LDFLAGS += $(FABM_LDFLAGS)
+MOSSCO_LDFLAGS += $(ESMF_F90LDFLAGS)
 #ifeq ($(HAVE_LD_FORCE_LOAD),true)
-#LDFLAGS += -Wl,-force_load
+#MOSSCO_LDFLAGS += -Wl,-force_load
 #endif
 
 .PHONY: all exec ocean_fabm0d_fabmsed libremtc libsediment liboceansedimentcoupler libmossco_util
@@ -30,7 +30,7 @@ all: exec
 exec: libmossco_util libmossco_fabm0d libsediment libremtc liboceansedimentcoupler ocean_fabm0d_fabmsed
 
 ocean_fabm0d_fabmsed: toplevel_component.o ../common/main.o
-	$(F90) $(F90FLAGS)  $^ $(LDFLAGS) -o $@
+	$(F90) $(F90FLAGS)  $^ $(MOSSCO_LDFLAGS) $(LDFLAGS) -o $@
 	@echo "Created example binary $(CURDIR)/$@"
 
 libremtc:
