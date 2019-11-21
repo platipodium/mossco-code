@@ -912,7 +912,7 @@ install-mossco-lib:
 	@mv $(MOSSCO_LIBRARY_PATH)/libmossco.a $(MOSSCO_INSTALL_PREFIX)/lib/;
 ifeq ($(MOSSCO_FABM),true)
 	@cp $(MOSSCO_DIR)/external/fabm/install/lib/libfabm.a $(MOSSCO_INSTALL_PREFIX)/lib/libmossco_fabm.a
-	@(cd $(MOSSCO_INSTALL_PREFIX)/lib; python $(MOSSCO_DIR)/scripts/rename_fabm_symbols.py)
+	@(cd $(MOSSCO_INSTALL_PREFIX)/lib; python $(MOSSCO_DIR)/scripts/rename_fabm_symbols.py $(MOSSCO_INSTALL_PREFIX))
 	@echo "Renamed symbols in fabm library __fabm_* => ___mossco_fabm_*"
 	@echo "Use library with '-L $(MOSSCO_INSTALL_PREFIX)/lib -lmossco -lmossco_fabm'"
 else
