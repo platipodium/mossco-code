@@ -3,7 +3,7 @@
 from matplotlib import dates
 import datetime
 import pylab
-import numpy
+import numpy as np
 import csv
 from matplotlib import pyplot
 
@@ -14,26 +14,28 @@ titles={'lines of code':'total lines of code','files by date':'total files'}
 for counter in counters:
 
   fieldnames=['time',counter]
-  fid=open('../gitstats/' + counter.replace(' ','_') + '.dat','rb')
-  reader=csv.DictReader(fid,fieldnames=fieldnames,delimiter=' ')
-  fields=[]
-  for row in reader:
-    fields.append(map(numpy.int,row.values()))
-  fid.close()
-  fields=numpy.array(fields)
-  fieldnames=row.keys()
+  with  open('../gitstats/' + counter.replace(' ','_') + '.dat','r') as fid: 
+      reader=csv.DictReader(fid,fieldnames=fieldnames,delimiter=' ')
+      fields=[]
+      for row in reader:
+          #print(np.int(row['time']),np.int(row[counter]))
+          fields.append([np.int(row['time']),np.int(row[counter])])
+          
+          
+  fields=np.array(fields)
+#  fieldnames=row.keys()
 
   # convert epoch to matplotlib float format
-  time=fields[:,fieldnames.index('time')]
+  time=fields[:,0]
   dts = map(datetime.datetime.fromtimestamp, time)
-  fds = dates.date2num(dts) # converted
+  fds = dates.date2num(list(dts)) # converted
   hfmt = dates.DateFormatter('%y %m %d')
 
   fig=pylab.figure(1, figsize=(12,6))
   fig.clf()
 
   ax = pylab.axes([0.1, 0.2, 0.8, 0.7])
-  value=fields[:,fieldnames.index(counter)]
+  value=fields[:,1]
 
   pyplot.plot(fds,value,'k-',linewidth=3)
 
