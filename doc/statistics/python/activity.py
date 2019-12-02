@@ -41,20 +41,20 @@ for counter in counters:
 
   fieldnames=['time']
   fieldnames.extend(authornames)
-  fid=open('../gitstats/' + counter.replace(' ','_') + '_by_author.dat','rb')
+  fid=open('../gitstats/' + counter.replace(' ','_') + '_by_author.dat','r')
   reader=csv.DictReader(fid,fieldnames=fieldnames,delimiter=' ')
   fields=[]
   for row in reader:
-    fields.append(map(np.int,row.values()))
+    fields.append(list(map(np.int,row.values())))
   fid.close()
   fields=np.array(fields)
-  fieldnames=row.keys()
+  fieldnames=list(row.keys())
 
   authorfields={}
   for author in pylab.unique(authoralias.values()):
     af=[]
     for i in range(1,np.size(fieldnames)):
-      if authoralias.has_key(fieldnames[i]):
+      if fieldnames[i] in authoralias:
         if authoralias[fieldnames[i]]==author:
           af.append(i)
     authorfields[author]=af
@@ -67,7 +67,7 @@ for counter in counters:
     for i in range(0,np.size(fieldnames)):
       if fieldnames[i]=='time':
         continue
-      if authorinstitute.has_key(authoralias[fieldnames[i]]):
+      if authoralias[fieldnames[i]] in authorinstitute:
         if authorinstitute[authoralias[fieldnames[i]]]==institute:
           af.append(i)
     institutefields[institute]=af
@@ -86,7 +86,7 @@ for counter in counters:
 
   # convert epoch to matplotlib float format
   time=fields[:,fieldnames.index('time')]
-  dts = map(datetime.datetime.fromtimestamp, time)
+  dts = list(map(datetime.datetime.fromtimestamp, time))
   fds = dates.date2num(dts) # converted
   hfmt = dates.DateFormatter('%y %m %d')
 
