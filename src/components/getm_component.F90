@@ -1594,6 +1594,7 @@ end subroutine ReadRestart
    if (waveforcing_method.eq.WAVES_FROMWIND .or. waveforcing_method.eq.WAVES_FROMFILE) then
       waveDir = atan2(sinwavedir,coswavedir) - convc*deg2rad
    end if
+#ifdef _GETM_EXPORT_EULERIAN_VELOCITIES_
    if (waveforcing_method .ne. NO_WAVES .and. waves_method.ne.WAVES_NOSTOKES) then
 !     provide Eulerian velocities
       U2D = U2D - (  cosconv*UStokesC + sinconv*VStokesC )/Dvel
@@ -1617,6 +1618,7 @@ end subroutine ReadRestart
       end if
 #endif
    end if
+#endif
 
 
 #ifdef DEBUG
