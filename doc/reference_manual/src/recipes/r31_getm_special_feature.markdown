@@ -10,4 +10,4 @@ and in its MOSSCO component some features that are documented her
  * `-D_NO_SEALEVEL_CHECK_`: Do not check for negative sealevel (which occurs
      whenever any transported variable becomes undefined)
  * `-D_GETM_EXPORT_EULERIAN_VELOCITIES_`: Do not include Stokes drift in your 
-     velocity output, but use Lagrangian velocities
+     velocity output
