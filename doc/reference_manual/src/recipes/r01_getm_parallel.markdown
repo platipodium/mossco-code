@@ -1,4 +1,4 @@
-# Recipe #01: GETM parallel in MOSSCO
+# Recipe #01: Running both GETM and MOSSCO/GETM 
 
 This recipe describes how to get a GETM test case running in parallel within MOSSCO. 
 
@@ -9,12 +9,14 @@ This recipe describes how to get a GETM test case running in parallel within MOS
 
 ## GETM setups
 
-GETM setups are available from a separate repository.  It is not required to define the environment varialbe GETM_SETUPDIR, however, we do this for convenience here. 
+GETM setups are available from a separate repository.  It is not required to define 
+the environment varialbe GETM_SETUPDIR, however, we do this for convenience here. 
 
 	git clone git://git.code.sf.net/p/getm/getm-setups
 	export GETM_SETUPDIR=`pwd`/getm-setups
 
-GETM should be compiled *within* a test case (because arrays are then allocated correctly at compile time)
+GETM should be compiled *within* a test case (because arrays are then allocated 
+correctly at compile time)
 
 Most setups are only serial, As a parallel setup, choose  `box_cartesian`
 
@@ -44,15 +46,13 @@ For parallel execution, change the `parallel` setting in your getm.inp file
 	cd $GETM_SETUPDIR/box_cartesian
 	sed -i s/parallel=.false./parallel=.true./ getm.inp
 
+For MOSSCO, also create a file `mossco_run.nml` with start and stop dates as in `getm.inp`
+
 ## Run the simulation
 	
 Then, execute the example with four processors.
 
 	mpirun -np 4 $MOSSCO_DIR/examples/esmf/getm/getm
+	mpirun -np 4 ./getm_prod
 	
 	
-
-	
-
-
-
