@@ -20,23 +20,23 @@ endif
 include $(MOSSCO_DIR)/src/Rules.make
 
 # add SCHISM, PARMETIS
-ifndef SCHISM_DIR
-$(error SCHISM_DIR has to be set in environment)
+ifndef SCHISM_BUILD_DIR
+$(error SCHISM_BUILD_DIR has to be set in environment)
 endif
-ifndef PARMETIS_DIR
-$(error PARMETIS_DIR has to be set in environment)
-endif
+#ifndef PARMETIS_DIR
+#$(error PARMETIS_DIR has to be set in environment)
+#endif
 
-ifeq ($(wildcard $(SCHISM_DIR)/lib/libhydro.a),)
+ifeq ($(wildcard $(SCHISM_BUILD_DIR)/lib/libhydro.a),)
 $(error You need to compile schism externally.)
 endif
 
 #ifndef SCHISM_ESMF_DIR
-ifneq ($(wildcard $(SCHISM_DIR)/../esmf/schism_esmf_component.F90),)
-export SCHISM_ESMF_DIR=$(SCHISM_DIR)/../esmf
+ifneq ($(wildcard $(SCHISM_BUILD_DIR)/../esmf/schism_esmf_component.F90),)
+export SCHISM_ESMF_DIR=$(SCHISM_BUILD_DIR)/../esmf
 else
-ifneq ($(wildcard $(SCHISM_DIR)/../../schism-esmf/schism_esmf_component.F90),)
-export SCHISM_ESMF_DIR=$(SCHISM_DIR)/../../schism-esmf
+ifneq ($(wildcard $(SCHISM_BUILD_DIR)/../schism-esmf/schism_esmf_component.F90),)
+export SCHISM_ESMF_DIR=$(SCHISM_BUILD_DIR)/../schism-esmf
 else
 $(error Cannot find schism ESMF directory)
 endif
@@ -49,11 +49,11 @@ ifeq ($(wildcard $(SCHISM_ESMF_DIR)/schism_esmf_component.F90),)
 $(error Cannot find schism_esmf_component.)
 endif
 
-LIBS+= -L$(SCHISM_DIR)/lib -lhydro -lcore -lfabm_schism -lfabm
+LIBS+= -L$(SCHISM_BUILD_DIR)/lib -lhydro -lcore -lfabm_schism -lfabm
 LIBS+= -L$(PARMETIS_DIR) -lparmetis -lmetis $(PARMETIS_DIR)/libmetis.a
 LIBS+= -L$(MOSSCO_DIR)/lib -lmossco -lmossco_fabm
 F90FLAGS+= -DUSE_FABM
-F90FLAGS+= -I$(SCHISM_DIR)/include
+F90FLAGS+= -I$(SCHISM_BUILD_DIR)/include
 F90FLAGS+= -I$(MOSSCO_DIR)/include
 MOSSCO_LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 
@@ -63,7 +63,7 @@ MOSSCO_LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 all:  schism_mossco config outputs
 
 schism_mossco: schism_esmf_component.o toplevel_component.o main.o
-	echo objcopy --redefine-sym xerbla_=schism_lap_xerbla_ $SCHISM_DIR/lib/libhydro.a
+	echo objcopy --redefine-sym xerbla_=schism_lap_xerbla_ $SCHISM_BUILD_DIR/lib/libhydro.a
 	$(F90) $(CPPFLAGS) $^ -o $@ $(MOSSCO_LDFLAGS) $(LDFLAGS) $(LIBS)
 
 toplevel_component.o: schism_esmf_component.o toplevel_component.F90
