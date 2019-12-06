@@ -3348,7 +3348,6 @@ module mossco_netcdf
     axisNameList=(/'X','Y','Z'/)
 
     allocate(coordDimCount(dimCount))
-    allocate(computationalCount(dimCount))
     call ESMF_GridGet(grid, coordDimCount=coordDimCount, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
@@ -3361,7 +3360,6 @@ module mossco_netcdf
       s1=12
     endif
 
-    allocate(lbnd(dimCount))
     do s=s0, s1
 
       staggerLoc = staggerLocs(s)
@@ -3438,135 +3436,131 @@ module mossco_netcdf
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
       enddo
-    enddo
-    deallocate(computationalCount)
-    deallocate(lbnd)
 
-    !> @todo from here for other staggers
+      do i=1,dimCount
 
-    do i=1,dimCount
-
-      write(varName,'(A)') trim(geomName)//'_'//trim(coordNames(i))
-      if (self%variable_present(varName)) then
-        !write(message,'(A)') 'A variable with the name "'//trim(varName)//'" already exists'
-        !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-        cycle
-      endif
-
-      if (allocated(coordDimids)) deallocate(coordDimids)
-      allocate(coordDimids(coordDimCount(i)))
-      if (allocated(exclusiveCount)) deallocate(exclusiveCount)
-      allocate(exclusiveCount(coordDimCount(i)))
-
-!     TODO: The following is a really dirty hack for non-rectilinear coordinates.
-!           Correct would be use of coordDimMap.
-      if (coordDimCount(i) .gt. 1) then
-        do j=1,coordDimCount(i)
-          write(dimName,'(A,I1)') trim(geomName)//'_',j
-          ncStatus = nf90_inq_dimid(self%ncid,trim(dimName),coordDimids(j))
-        enddo
-      else
-        write(dimName,'(A,I1)') trim(geomName)//'_',i
-        ncStatus = nf90_inq_dimid(self%ncid,trim(dimName),coordDimids(1))
-      end if
-
-      call self%redef(owner=owner_, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-      if (ncStatus /= NF90_NOERR) then
-        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot enter definition mode',ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
-
-      ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_DOUBLE,coordDimids,varid)
-      if (ncStatus /= NF90_NOERR) then
-        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot define variable '//trim(varname),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
-      !! Write default attributes into netCDF
-      ncStatus = nf90_put_att(self%ncid,varid,'standard_name',trim(standardNameList(i)))
-      ncStatus = nf90_put_att(self%ncid,varid,'long_name',trim(varName))
-      ncStatus = nf90_put_att(self%ncid,varid,'units',trim(coordUnits(i)))
-      !ncStatus = nf90_put_att(self%ncid,varid,'formula_terms','')
-      ncStatus = nf90_put_att(self%ncid,varid,'horizontal_stagger_location','center')
-      !! axis attribute added only for 1-D coordinate variables
-      if (coordDimCount(i)==1) then
-        ncStatus = nf90_put_att(self%ncid,varid,'axis',axisNameList(i))
-      end if
-
-
-      !! Inquire array for attributes and create / overwrite attributes
-      call ESMF_GridGetCoord(grid, i, staggerloc=ESMF_STAGGERLOC_CENTER, array=array, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-      call ESMF_AttributeGet(array, count=attributeCount, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-      do j=1, attributeCount
-         call ESMF_AttributeGet(array, attributeIndex=j, name=attributeName, &
-           typekind=typekind, rc=localrc)
-         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-         if (typekind==ESMF_TYPEKIND_I4) then
-           call ESMF_AttributeGet(array, attributeName, int4, rc=localrc)
-           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-           ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),int4)
-         elseif (typekind==ESMF_TYPEKIND_I8) then
-           call ESMF_AttributeGet(array, attributeName, int8, rc=localrc)
-           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-           ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),int8)
-         elseif (typekind==ESMF_TYPEKIND_R4) then
-           call ESMF_AttributeGet(array, attributeName, real4, rc=localrc)
-           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-           ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),real4)
-         elseif (typekind==ESMF_TYPEKIND_R8) then
-           call ESMF_AttributeGet(array, attributeName, real8, rc=localrc)
-           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-           ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),real8)
-         elseif (typekind==ESMF_TYPEKIND_CHARACTER) then
-           call ESMF_AttributeGet(array, attributeName, string, rc=localrc)
-           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-           ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName), trim(string))
-         elseif (typekind==ESMF_TYPEKIND_LOGICAL) then
-           call ESMF_AttributeGet(array, attributeName, logvalue, rc=localrc)
-           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-           if (logValue) then
-             ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),'.true.')
-          else
-              ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),'.false.')
-          endif
-        else
-          write(message, '(A,I2)') '  attribute '//trim(attributeName)//' has unknown typekind ',typeKind
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        write(varName,'(A)') trim(geomName)//'_'//trim(coordNames(i))
+        if (staggerLocCount > 1) then
+          write(varName,'(A)') trim(varName)//'_'//trim(staggerNames(s))
         endif
-      enddo
+        if (self%variable_present(varName)) cycle
 
-      if (allocated(coordDimids)) deallocate(coordDimids)
+        if (allocated(coordDimids)) deallocate(coordDimids)
+        allocate(coordDimids(coordDimCount(i)))
+        if (allocated(exclusiveCount)) deallocate(exclusiveCount)
+        allocate(exclusiveCount(coordDimCount(i)))
 
-      if (coordDimCount(i)==1) then
-        ncStatus = nf90_put_att(self%ncid,varid,'axis',axisNameList(i))
-      end if
+!       TODO: The following is a really dirty hack for non-rectilinear coordinates.
+!           Correct would be use of coordDimMap.
+        if (coordDimCount(i) .gt. 1) then
+          do j=1,coordDimCount(i)
+            write(dimName,'(A,I1)') trim(geomName)//'_',j
+            ncStatus = nf90_inq_dimid(self%ncid,trim(dimName),coordDimids(j))
+          enddo
+        else
+          write(dimName,'(A,I1)') trim(geomName)//'_',i
+          ncStatus = nf90_inq_dimid(self%ncid,trim(dimName),coordDimids(1))
+        end if
 
-      if (staggerLoc == ESMF_STAGGERLOC_CENTER &
-        .or. staggerLoc == ESMF_STAGGERLOC_CENTER_VFACE &
-        .or. staggerLoc == ESMF_STAGGERLOC_CENTER_VCENTER ) then
-
-        ncStatus = nf90_put_att(self%ncid,varid,'bounds',trim(varname)//'_bound')
-        call self%create_bounds_variable(trim(varname), rc=localrc)
+        call self%redef(owner=owner_, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-      end if
 
-    enddo
+        if (ncStatus /= NF90_NOERR) then
+          call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot enter definition mode',ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
+
+        ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_DOUBLE,coordDimids,varid)
+        if (ncStatus /= NF90_NOERR) then
+          call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot define variable '//trim(varname),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
+        !! Write default attributes into netCDF
+        ncStatus = nf90_put_att(self%ncid,varid,'standard_name',trim(standardNameList(i)))
+        ncStatus = nf90_put_att(self%ncid,varid,'long_name',trim(varName))
+        ncStatus = nf90_put_att(self%ncid,varid,'units',trim(coordUnits(i)))
+        !n cStatus = nf90_put_att(self%ncid,varid,'formula_terms','')
+
+        ncStatus = nf90_put_att(self%ncid,varid,'stagger_location', &
+          trim(staggerName(staggerLoc)))
+        !! axis attribute added only for 1-D coordinate variables
+        if (coordDimCount(i)==1) then
+          ncStatus = nf90_put_att(self%ncid,varid,'axis',axisNameList(i))
+        end if
+
+        !! Inquire array for attributes and create / overwrite attributes
+        call ESMF_GridGetCoord(grid, i, staggerLocs(s), &
+          array=array, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        call ESMF_AttributeGet(array, count=attributeCount, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        do j=1, attributeCount
+          call ESMF_AttributeGet(array, attributeIndex=j, name=attributeName, &
+            typekind=typekind, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+          if (typekind==ESMF_TYPEKIND_I4) then
+            call ESMF_AttributeGet(array, attributeName, int4, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+            ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),int4)
+          elseif (typekind==ESMF_TYPEKIND_I8) then
+            call ESMF_AttributeGet(array, attributeName, int8, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+            ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),int8)
+          elseif (typekind==ESMF_TYPEKIND_R4) then
+            call ESMF_AttributeGet(array, attributeName, real4, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+            ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),real4)
+          elseif (typekind==ESMF_TYPEKIND_R8) then
+            call ESMF_AttributeGet(array, attributeName, real8, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+            ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),real8)
+          elseif (typekind==ESMF_TYPEKIND_CHARACTER) then
+            call ESMF_AttributeGet(array, attributeName, string, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+            ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName), trim(string))
+          elseif (typekind==ESMF_TYPEKIND_LOGICAL) then
+            call ESMF_AttributeGet(array, attributeName, logvalue, rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+            if (logValue) then
+              ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),'.true.')
+            else
+              ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),'.false.')
+            endif
+          else
+            write(message, '(A,I2)') '  attribute '//trim(attributeName)//' has unknown typekind ',typeKind
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+          endif
+        enddo
+
+        if (allocated(coordDimids)) deallocate(coordDimids)
+
+        if (coordDimCount(i)==1) then
+          ncStatus = nf90_put_att(self%ncid,varid,'axis',axisNameList(i))
+        end if
+
+        if (mod(s,4) == 1) then ! all ESMF_STAGGERLOC_CENTER*
+          ncStatus = nf90_put_att(self%ncid,varid,'bounds',trim(varname)//'_bound')
+          call self%create_bounds_variable(trim(varname), rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+        end if
+      enddo ! Loop over dimcount
+
+    enddo ! loop over staggerlocs
     !! End definition phase of netcdf
     call self%enddef(owner=owner_, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
 #if 0
     if (rank == 2) then
-      field = ESMF_FieldCreate(grid, typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
+      field = ESMF_FieldCreate(grid, typekind=ESMF_TYPEKIND_R8, &
+        staggerloc=staggerLoc, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     elseif  (rank == 3) then
-      field = ESMF_FieldCreate(grid, typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER_VCENTER, rc=localrc)
+      field = ESMF_FieldCreate(grid, typekind=ESMF_TYPEKIND_R8, &
+        staggerloc=staggerLoc, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
 
@@ -3581,94 +3575,117 @@ module mossco_netcdf
     !call self%put_variable(field, .0D00, 'grid_area')
     if (rank>1 .and. rank < 4) then
       call ESMF_FieldDestroy(field, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
     endif
 #endif
 
-    do i=1, dimCount
+    do s=s0, s1
 
-      if (allocated(lbnd)) deallocate(lbnd)
-      if (allocated(ubnd)) deallocate(ubnd)
+      staggerLoc = staggerLocs(s)
+      call ESMF_GridGetCoord(grid, staggerloc=staggerLoc, &
+        isPresent=isPresent, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      if (.not.isPresent) cycle
 
-      allocate(lbnd(coordDimCount(i)))
-      allocate(ubnd(coordDimCount(i)))
+      dimids => self%grid_dimensions(grid, staggerLoc=staggerLoc, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-      write(varName,'(A)') trim(geomName)//'_'//trim(coordNames(i))
-      ncStatus=nf90_inq_varid(self%ncid, trim(varName), varid)
-      if (ncStatus /= NF90_NOERR) then
-        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot find coordinate variable '//trim(varname),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
+      do i=1, dimCount
 
-      select case (coordDimCount(i))
+        !if (coordDimCount(i) < 1) cycle
+
+        if (allocated(lbnd)) deallocate(lbnd)
+        if (allocated(ubnd)) deallocate(ubnd)
+
+        allocate(lbnd(coordDimCount(i)))
+        allocate(ubnd(coordDimCount(i)))
+
+        write(varName,'(A)') trim(geomName)//'_'//trim(coordNames(i))
+        if (staggerLocCount > 1) then
+          write(varName,'(A)') trim(varName)//'_'//trim(staggerNames(s))
+        endif
+
+        ncStatus=nf90_inq_varid(self%ncid, trim(varName), varid)
+        if (ncStatus /= NF90_NOERR) then
+          call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot find coordinate variable '//trim(varname),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
+
+        select case (coordDimCount(i))
         case (1)
-          call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr1, exclusiveLBound=lbnd, exclusiveUBound=ubnd, rc=localrc)
+          call ESMF_GridGetCoord(grid, i, staggerLoc=staggerLoc, &
+            farrayPtr=farrayPtr1, exclusiveLBound=lbnd, &
+            exclusiveUBound=ubnd, rc=localrc)
           ncStatus = nf90_put_var(self%ncid, varid, farrayPtr1(RANGE1D))
           geoMin = minval(farrayPtr1(RANGE1D))
           geoMax = maxval(farrayPtr1(RANGE1D))
         case (2)
-          call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr2, exclusiveLBound=lbnd, exclusiveUBound=ubnd, rc=localrc)
+          call ESMF_GridGetCoord(grid, i, staggerLoc=staggerLoc, &
+            farrayPtr=farrayPtr2, exclusiveLBound=lbnd, &
+            exclusiveUBound=ubnd, rc=localrc)
           ncStatus = nf90_put_var(self%ncid, varid, farrayPtr2(RANGE2D))
           geoMin = minval(farrayPtr2(RANGE2D))
           geoMax = maxval(farrayPtr2(RANGE2D))
         case (3)
-          call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr3, exclusiveLBound=lbnd, exclusiveUBound=ubnd, rc=localrc)
+          call ESMF_GridGetCoord(grid, i, staggerLoc=staggerLoc, &
+            farrayPtr=farrayPtr3, exclusiveLBound=lbnd, &
+            exclusiveUBound=ubnd, rc=localrc)
           ncStatus = nf90_put_var(self%ncid, varid, farrayPtr3(RANGE3D))
           geoMin = minval(farrayPtr3(RANGE3D))
           geoMax = maxval(farrayPtr3(RANGE3D))
+          write(0,*) 'DEBUG',__LINE__, 'wrote ', trim(varname), geoMin, geoMax
         case default
           write(message,'(A)')  '  cannot deal with less than 1 or more than 3 coordinate dimensions'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      end select
+        end select
 
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
-        write(message,'(A)')  '  this error will be fixed in the future, disregard for now'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        write(message,'(A)')  '  did not write coordinate variable '//trim(varname)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
+          write(message,'(A)')  '  this error will be fixed in the future, disregard for now'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          write(message,'(A)')  '  did not write coordinate variable '//trim(varname)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        cycle
-      endif
-
-      if ((coordSys == ESMF_COORDSYS_SPH_DEG) .and. (i<3)) then
-        if (i==1) then
-          ncStatus = nf90_get_att(self%ncid,NF90_GLOBAL,'geospatial_lon_min',real8)
-          if (geoMin < real8) then
-            ncStatus = nf90_redef(self%ncid)
-            ncStatus = nf90_put_att(self%ncid,NF90_GLOBAL,'geospatial_lon_min',geoMin)
-            ncStatus = nf90_enddef(self%ncid)
-          endif
-
-          ncStatus = nf90_get_att(self%ncid,NF90_GLOBAL,'geospatial_lon_max',real8)
-          if (geoMax > real8) then
-            ncStatus = nf90_redef(self%ncid)
-            ncStatus = nf90_put_att(self%ncid,NF90_GLOBAL,'geospatial_lon_max',geoMax)
-            ncStatus = nf90_enddef(self%ncid)
-          endif
-        else
-          ncStatus = nf90_get_att(self%ncid,NF90_GLOBAL,'geospatial_lat_min',real8)
-          if (geoMin < real8) then
-            ncStatus = nf90_redef(self%ncid)
-            ncStatus = nf90_put_att(self%ncid,NF90_GLOBAL,'geospatial_lat_min',geoMin)
-            ncStatus = nf90_enddef(self%ncid)
-          endif
-
-          ncStatus = nf90_get_att(self%ncid,NF90_GLOBAL,'geospatial_lat_max',real8)
-          if (geoMax > real8) then
-            ncStatus = nf90_redef(self%ncid)
-            ncStatus = nf90_put_att(self%ncid,NF90_GLOBAL,'geospatial_lat_max',geoMax)
-            ncStatus = nf90_enddef(self%ncid)
-          endif
-
+          cycle
         endif
-      endif
 
-      if (allocated(lbnd)) deallocate(lbnd)
-      if (allocated(ubnd)) deallocate(ubnd)
+        if ((coordSys == ESMF_COORDSYS_SPH_DEG) .and. (i<3)) then
+          if (i==1) then
+            ncStatus = nf90_get_att(self%ncid,NF90_GLOBAL,'geospatial_lon_min',real8)
+            if (geoMin < real8) then
+              ncStatus = nf90_redef(self%ncid)
+              ncStatus = nf90_put_att(self%ncid,NF90_GLOBAL,'geospatial_lon_min',geoMin)
+              ncStatus = nf90_enddef(self%ncid)
+            endif
 
-    enddo ! cycle over dimensions lon/lat/depth
+            ncStatus = nf90_get_att(self%ncid,NF90_GLOBAL,'geospatial_lon_max',real8)
+            if (geoMax > real8) then
+              ncStatus = nf90_redef(self%ncid)
+              ncStatus = nf90_put_att(self%ncid,NF90_GLOBAL,'geospatial_lon_max',geoMax)
+              ncStatus = nf90_enddef(self%ncid)
+            endif
+          else
+            ncStatus = nf90_get_att(self%ncid,NF90_GLOBAL,'geospatial_lat_min',real8)
+            if (geoMin < real8) then
+              ncStatus = nf90_redef(self%ncid)
+              ncStatus = nf90_put_att(self%ncid,NF90_GLOBAL,'geospatial_lat_min',geoMin)
+              ncStatus = nf90_enddef(self%ncid)
+            endif
+
+            ncStatus = nf90_get_att(self%ncid,NF90_GLOBAL,'geospatial_lat_max',real8)
+            if (geoMax > real8) then
+              ncStatus = nf90_redef(self%ncid)
+              ncStatus = nf90_put_att(self%ncid,NF90_GLOBAL,'geospatial_lat_max',geoMax)
+              ncStatus = nf90_enddef(self%ncid)
+            endif
+
+          endif
+        endif
+
+        if (allocated(lbnd)) deallocate(lbnd)
+        if (allocated(ubnd)) deallocate(ubnd)
+      enddo ! cycle over dimensions lon/lat/depth
+    end do ! loop over staggerLocs
     if (allocated(coordDimCount)) deallocate(coordDimCount)
 
     call self%update_variables()
@@ -3678,6 +3695,45 @@ module mossco_netcdf
 
   end subroutine mossco_netcdf_grid_coordinate_create
 
+#undef ESMF_METHOD
+#define ESMF_METHOD "staggerName"
+  function staggerName(staggerLoc)
+
+    implicit none
+
+    type(ESMF_StaggerLoc), intent(in) :: staggerLoc
+    character(len=ESMF_MAXSTR)        :: staggerName
+    integer(ESMF_KIND_I4)             :: localrc
+
+    if (staggerLoc == ESMF_STAGGERLOC_CENTER) then
+      staggerName = 'staggerloc_center'
+    elseif (staggerLoc == ESMF_STAGGERLOC_CORNER) then
+      staggerName = 'staggerloc_corner'
+    elseif (staggerLoc == ESMF_STAGGERLOC_EDGE1) then
+      staggerName = 'staggerloc_edge1'
+    elseif (staggerLoc == ESMF_STAGGERLOC_EDGE2) then
+      staggerName = 'staggerloc_edge2'
+    elseif (staggerLoc == ESMF_STAGGERLOC_CENTER_VFACE) then
+      staggerName = 'staggerloc_center_vface'
+    elseif (staggerLoc == ESMF_STAGGERLOC_CORNER_VFACE) then
+      staggerName = 'staggerloc_corner_vface'
+    elseif (staggerLoc == ESMF_STAGGERLOC_EDGE1_VFACE) then
+      staggerName = 'staggerloc_edge1_vface'
+    elseif (staggerLoc == ESMF_STAGGERLOC_EDGE2_VFACE) then
+      staggerName = 'staggerloc_edge2_vface'
+    elseif (staggerLoc == ESMF_STAGGERLOC_CENTER_VCENTER) then
+      staggerName = 'staggerloc_center_vcenter'
+    elseif (staggerLoc == ESMF_STAGGERLOC_CORNER_VCENTER) then
+      staggerName = 'staggerloc_corner_vcenter'
+    elseif (staggerLoc == ESMF_STAGGERLOC_EDGE1_VCENTER) then
+      staggerName = 'staggerloc_edge1_vcenter'
+    elseif (staggerLoc == ESMF_STAGGERLOC_EDGE2_VCENTER) then
+      staggerName = 'staggerloc_edge2_vcenter'
+    else
+      localrc = ESMF_RC_NOT_FOUND
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    endif
+  end function staggerName
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_coordinate_create_from_field"
