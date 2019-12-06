@@ -2885,14 +2885,14 @@ module mossco_netcdf
     character(len=*), intent(in), optional           :: owner
     integer(ESMF_KIND_I4), intent(out), optional     :: rc
 
-    type(ESMF_StaggerLoc)          :: staggerloc_
+    type(ESMF_StaggerLoc)         :: staggerloc_
     integer                       :: ncStatus, rc_, esmfrc, dimcheck
     character(len=ESMF_MAXSTR)    :: geomName, name, owner_
     integer,allocatable           :: ubounds(:),lbounds(:)
     integer,pointer,dimension(:)  :: dimids
 
     integer(ESMF_KIND_I4)         :: dimCount, dimid, rank, i, localrc
-    character(len=ESMF_MAXSTR)    :: message,staggerlocsuffix
+    character(len=ESMF_MAXSTR)    :: message
 
     rc_ = ESMF_SUCCESS
     owner_ = '--'
@@ -2919,15 +2919,10 @@ module mossco_netcdf
     call ESMF_GridGet(grid, staggerloc_, 0, exclusiveCount=ubounds, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    if (staggerloc_ .eq. ESMF_STAGGERLOC_CENTER) then
-      staggerlocsuffix=''
-    else
-      write(staggerlocsuffix,'(A,I0)') '_',staggerloc
-    end if
-
     ! get grid dimension-ids
     do i=1,rank
-      write(name,'(A,I1,A)') trim(geomName)//'_',i,trim(staggerlocsuffix)
+      write(name,'(A,I1,A)') trim(geomName)//'_', &
+        i,'_'//trim(staggerLocsuffix(staggerloc_))
       ncStatus = nf90_inq_dimid(self%ncid,trim(name),dimids(i))
       if (ncStatus /= NF90_NOERR) then
         dimcheck=-1
@@ -2941,7 +2936,8 @@ module mossco_netcdf
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       do i=1,rank
-        write(name,'(A,I1,A)') trim(geomName)//'_',i,trim(staggerlocsuffix)
+        write(name,'(A,I1,A)') trim(geomName)//'_',i, &
+          '_'//trim(staggerLocSuffix(staggerloc_))
         ncStatus = nf90_def_dim(self%ncid, trim(name), &
           ubounds(i)-lbounds(i)+1,dimids(i))
         if (ncStatus==NF90_ENAMEINUSE) then
@@ -3303,9 +3299,6 @@ module mossco_netcdf
       ESMF_STAGGERLOC_EDGE1_VCENTER, ESMF_STAGGERLOC_EDGE2_VCENTER, &
       ESMF_STAGGERLOC_CENTER_VFACE, ESMF_STAGGERLOC_CORNER_VFACE, &
       ESMF_STAGGERLOC_EDGE1_VFACE, ESMF_STAGGERLOC_EDGE2_VFACE/)
-    character(len=2), parameter :: staggerNames(12) = (/ &
-      'O ','C ','X ','Y ','OO','CO','XO','YO','OF','CF','XF','YF' /)
-    integer(ESMF_KIND_I4), allocatable  :: computationalCount(:)
 
     type(ESMF_TypeKind_Flag)         :: typekind
     real(ESMF_KIND_R8)               :: real8
@@ -3375,20 +3368,17 @@ module mossco_netcdf
       ! These are 1-dimensional irrespective of the actual coordinates
       do i=1, dimCount
 
-        write(varName,'(A)') trim(geomName)//'_'//trim(axisNameList(i))
-        if (staggerLocCount > 1) then
-          write(varName,'(A)') trim(varName)//'_'//trim(staggerNames(s))
-        endif
+        write(varName,'(A,A)') trim(geomName)//'_'//trim(axisNameList(i)), &
+          '_'//trim(staggerLocSuffix(staggerLoc))
 
         if (self%variable_present(varName)) then
-          !write(message,'(A)') 'A variable with the name "'//trim(varName)//'" already exists'
-          !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
           cycle
         endif
 
         if (.not.allocated(coordDimids)) allocate(coordDimids(1))
 
-        write(dimName,'(A,I1)') trim(geomName)//'_',i
+        write(dimName,'(A,I1,A)') trim(geomName)//'_',i, &
+          '_'//trim(staggerLocSuffix(staggerLoc))
         ncStatus = nf90_inq_dimid(self%ncid,trim(dimName),coordDimids(1))
 
         call self%getAxis(grid, coordDim=i, intPtr1=intPtr1, rc=localrc)
@@ -3439,10 +3429,9 @@ module mossco_netcdf
 
       do i=1,dimCount
 
-        write(varName,'(A)') trim(geomName)//'_'//trim(coordNames(i))
-        if (staggerLocCount > 1) then
-          write(varName,'(A)') trim(varName)//'_'//trim(staggerNames(s))
-        endif
+        write(varName,'(A,A)') trim(geomName)//'_'//trim(coordNames(i)), &
+          '_'//trim(staggerLocSuffix(staggerLoc))
+
         if (self%variable_present(varName)) cycle
 
         if (allocated(coordDimids)) deallocate(coordDimids)
@@ -3452,15 +3441,11 @@ module mossco_netcdf
 
 !       TODO: The following is a really dirty hack for non-rectilinear coordinates.
 !           Correct would be use of coordDimMap.
-        if (coordDimCount(i) .gt. 1) then
-          do j=1,coordDimCount(i)
-            write(dimName,'(A,I1)') trim(geomName)//'_',j
-            ncStatus = nf90_inq_dimid(self%ncid,trim(dimName),coordDimids(j))
-          enddo
-        else
-          write(dimName,'(A,I1)') trim(geomName)//'_',i
-          ncStatus = nf90_inq_dimid(self%ncid,trim(dimName),coordDimids(1))
-        end if
+        do j=1,coordDimCount(i)
+          write(dimName,'(A,I1,A)') trim(geomName)//'_', j, &
+            '_'//trim(staggerLocSuffix(staggerLoc))
+          ncStatus = nf90_inq_dimid(self%ncid,trim(dimName),coordDimids(j))
+        enddo
 
         call self%redef(owner=owner_, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -3592,18 +3577,14 @@ module mossco_netcdf
 
       do i=1, dimCount
 
-        !if (coordDimCount(i) < 1) cycle
-
         if (allocated(lbnd)) deallocate(lbnd)
         if (allocated(ubnd)) deallocate(ubnd)
 
         allocate(lbnd(coordDimCount(i)))
         allocate(ubnd(coordDimCount(i)))
 
-        write(varName,'(A)') trim(geomName)//'_'//trim(coordNames(i))
-        if (staggerLocCount > 1) then
-          write(varName,'(A)') trim(varName)//'_'//trim(staggerNames(s))
-        endif
+        write(varName,'(A,A)') trim(geomName)//'_'//trim(coordNames(i)), &
+          '_'//trim(staggerLocSuffix(staggerLoc))
 
         ncStatus=nf90_inq_varid(self%ncid, trim(varName), varid)
         if (ncStatus /= NF90_NOERR) then
