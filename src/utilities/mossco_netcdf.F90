@@ -3614,7 +3614,7 @@ module mossco_netcdf
           ncStatus = nf90_put_var(self%ncid, varid, farrayPtr3(RANGE3D))
           geoMin = minval(farrayPtr3(RANGE3D))
           geoMax = maxval(farrayPtr3(RANGE3D))
-          write(0,*) 'DEBUG',__LINE__, 'wrote ', trim(varname), geoMin, geoMax
+          !write(0,*) 'DEBUG',__LINE__, 'wrote ', trim(varname), geoMin, geoMax
         case default
           write(message,'(A)')  '  cannot deal with less than 1 or more than 3 coordinate dimensions'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
