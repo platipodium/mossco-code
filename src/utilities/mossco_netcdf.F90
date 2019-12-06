@@ -3482,7 +3482,7 @@ module mossco_netcdf
         !n cStatus = nf90_put_att(self%ncid,varid,'formula_terms','')
 
         ncStatus = nf90_put_att(self%ncid,varid,'stagger_location', &
-          trim(staggerName(staggerLoc)))
+          trim(staggerLocString(staggerLoc)))
         !! axis attribute added only for 1-D coordinate variables
         if (coordDimCount(i)==1) then
           ncStatus = nf90_put_att(self%ncid,varid,'axis',axisNameList(i))
@@ -3696,44 +3696,85 @@ module mossco_netcdf
   end subroutine mossco_netcdf_grid_coordinate_create
 
 #undef ESMF_METHOD
-#define ESMF_METHOD "staggerName"
-  function staggerName(staggerLoc)
+#define ESMF_METHOD "staggerLocString"
+  function staggerLocString(staggerLoc)
 
     implicit none
 
     type(ESMF_StaggerLoc), intent(in) :: staggerLoc
-    character(len=ESMF_MAXSTR)        :: staggerName
+    character(len=ESMF_MAXSTR)        :: staggerLocString
     integer(ESMF_KIND_I4)             :: localrc
 
     if (staggerLoc == ESMF_STAGGERLOC_CENTER) then
-      staggerName = 'staggerloc_center'
+      staggerLocString = 'staggerloc_center'
     elseif (staggerLoc == ESMF_STAGGERLOC_CORNER) then
-      staggerName = 'staggerloc_corner'
+      staggerLocString = 'staggerloc_corner'
     elseif (staggerLoc == ESMF_STAGGERLOC_EDGE1) then
-      staggerName = 'staggerloc_edge1'
+      staggerLocString = 'staggerloc_edge1'
     elseif (staggerLoc == ESMF_STAGGERLOC_EDGE2) then
-      staggerName = 'staggerloc_edge2'
+      staggerLocString = 'staggerloc_edge2'
     elseif (staggerLoc == ESMF_STAGGERLOC_CENTER_VFACE) then
-      staggerName = 'staggerloc_center_vface'
+      staggerLocString = 'staggerloc_center_vface'
     elseif (staggerLoc == ESMF_STAGGERLOC_CORNER_VFACE) then
-      staggerName = 'staggerloc_corner_vface'
+      staggerLocString = 'staggerloc_corner_vface'
     elseif (staggerLoc == ESMF_STAGGERLOC_EDGE1_VFACE) then
-      staggerName = 'staggerloc_edge1_vface'
+      staggerLocString = 'staggerloc_edge1_vface'
     elseif (staggerLoc == ESMF_STAGGERLOC_EDGE2_VFACE) then
-      staggerName = 'staggerloc_edge2_vface'
+      staggerLocString = 'staggerloc_edge2_vface'
     elseif (staggerLoc == ESMF_STAGGERLOC_CENTER_VCENTER) then
-      staggerName = 'staggerloc_center_vcenter'
+      staggerLocString = 'staggerloc_center_vcenter'
     elseif (staggerLoc == ESMF_STAGGERLOC_CORNER_VCENTER) then
-      staggerName = 'staggerloc_corner_vcenter'
+      staggerLocString = 'staggerloc_corner_vcenter'
     elseif (staggerLoc == ESMF_STAGGERLOC_EDGE1_VCENTER) then
-      staggerName = 'staggerloc_edge1_vcenter'
+      staggerLocString = 'staggerloc_edge1_vcenter'
     elseif (staggerLoc == ESMF_STAGGERLOC_EDGE2_VCENTER) then
-      staggerName = 'staggerloc_edge2_vcenter'
+      staggerLocString = 'staggerloc_edge2_vcenter'
     else
       localrc = ESMF_RC_NOT_FOUND
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
     endif
-  end function staggerName
+  end function staggerLocString
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "staggerLocSuffix"
+  function staggerLocSuffix(staggerLoc, rc)
+
+    implicit none
+
+    type(ESMF_StaggerLoc), intent(in) :: staggerLoc
+    character(len=2)                  :: staggerLocSuffix
+    integer(ESMF_KIND_I4)             :: localrc
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    if (staggerLoc == ESMF_STAGGERLOC_CENTER) then
+      staggerLocSuffix = 'O '
+    elseif (staggerLoc == ESMF_STAGGERLOC_CORNER) then
+      staggerLocSuffix = 'C '
+    elseif (staggerLoc == ESMF_STAGGERLOC_EDGE1) then
+      staggerLocSuffix = 'X '
+    elseif (staggerLoc == ESMF_STAGGERLOC_EDGE2) then
+      staggerLocSuffix = 'Y '
+    elseif (staggerLoc == ESMF_STAGGERLOC_CENTER_VFACE) then
+      staggerLocSuffix = 'OF'
+    elseif (staggerLoc == ESMF_STAGGERLOC_CORNER_VFACE) then
+      staggerLocSuffix = 'CF'
+    elseif (staggerLoc == ESMF_STAGGERLOC_EDGE1_VFACE) then
+      staggerLocSuffix = 'XF'
+    elseif (staggerLoc == ESMF_STAGGERLOC_EDGE2_VFACE) then
+      staggerLocSuffix = 'YF'
+    elseif (staggerLoc == ESMF_STAGGERLOC_CENTER_VCENTER) then
+      staggerLocSuffix = 'OO'
+    elseif (staggerLoc == ESMF_STAGGERLOC_CORNER_VCENTER) then
+      staggerLocSuffix = 'CO'
+    elseif (staggerLoc == ESMF_STAGGERLOC_EDGE1_VCENTER) then
+      staggerLocSuffix = 'XO'
+    elseif (staggerLoc == ESMF_STAGGERLOC_EDGE2_VCENTER) then
+      staggerLocSuffix = 'YO'
+    else
+      localrc = ESMF_RC_NOT_FOUND
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    endif
+  end function staggerLocSuffix
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_coordinate_create_from_field"
