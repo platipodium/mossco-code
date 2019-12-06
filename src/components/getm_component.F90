@@ -60,6 +60,7 @@ module getm_component
 ! The following objects are treated differently, depending on whether
 ! the kinds of GETM's internal REALTYPE matches ESMF_KIND_R8
   logical                    :: noKindMatch
+  real(ESMF_KIND_R8),pointer :: bathy(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: depth(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: h3D (:,:,:)=>NULL(),hbot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: U2D (:,:)  =>NULL(),V2D (:,:)  =>NULL()
@@ -327,6 +328,9 @@ module getm_component
 
     !> Add some variables also to import state to allow initialization/restart
     !> from the coupled system.  Currently, these are U,V,T,S,tke,eps,nuh, and num
+    if (associated(bathy)) then
+      call getmCmp_StateAddPtr("sea_floor_depth_below_geoid",bathy,exportState,"m",name)
+    end if
     if (associated(depth)) then
       call getmCmp_StateAddPtr("water_depth_at_soil_surface",depth,exportState,"m",name)
     end if
@@ -1187,7 +1191,7 @@ end subroutine ReadRestart
    use domain         ,only: imin,jmin,imax,jmax,kmax
    use domain         ,only: grid_type
    use initialise     ,only: runtype
-   use variables_2d   ,only: D
+   use variables_2d   ,only: H,D
 #ifndef NO_3D
    use variables_3d   ,only: hn,SS,num,nuh,tke,eps
 #ifndef NO_BAROCLINIC
@@ -1233,6 +1237,8 @@ end subroutine ReadRestart
    end if
 
    if (noKindMatch) then
+      allocate(bathy(E2DFIELD))
+      bathy = H
       allocate(depth(E2DFIELD))
       if (runtype .eq. 1) then
       else
@@ -1277,6 +1283,7 @@ end subroutine ReadRestart
          waveK = 0.0d0
       end if
    else
+      bathy => H
       depth => D
       if (runtype .eq. 1) then
       else
