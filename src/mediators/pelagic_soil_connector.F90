@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF soil to pelagic mediation
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2014-2019 Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister <richard.hofmeister@hzg.de>
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !
@@ -106,7 +106,8 @@ module pelagic_soil_connector
 
     rc = ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, &
+      rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
@@ -115,7 +116,8 @@ module pelagic_soil_connector
       attrList=(/"InitializePhaseMap"/), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(cplComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
+    call ESMF_AttributeSet(cplComp, name="InitializePhaseMap", &
+      valueList=InitializePhaseMap, &
       convention="NUOPC", purpose="General", rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -141,13 +143,14 @@ module pelagic_soil_connector
     integer                     :: nmlunit=127
     logical                     :: isPresent
 
-    namelist /pelagic_soil_connector/ sinking_factor,sinking_factor_min,NC_ldet,NC_sdet, &
-                                      half_sedimentation_depth,critical_detritus, &
-                                      half_sedimentation_tke,convertN,convertP
+    namelist /pelagic_soil_connector/ sinking_factor,sinking_factor_min, &
+      NC_ldet,NC_sdet, half_sedimentation_depth,critical_detritus, &
+      half_sedimentation_tke,convertN,convertP
 
     rc = ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, &
+      rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !read namelist,
@@ -253,7 +256,8 @@ module pelagic_soil_connector
     lbnd(:) = 1
     ubnd(:) = 1
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, &
+      rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_ClockGet(parentClock, startTime=startTime, rc=localrc)
@@ -613,7 +617,8 @@ module pelagic_soil_connector
 
     call MOSSCO_Map3D2D(importState, (/'practical_salinity_in_water', &
                                              'salinity_in_water          '/), &
-        exportState, (/'practical_salinity_at_soil_surface'/), verbose=verbose, rc=localrc)
+        exportState, (/'practical_salinity_at_soil_surface'/),  &
+        verbose=verbose, rc=localrc)
     if (localrc /= ESMF_RC_NOT_FOUND) then
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
@@ -860,9 +865,9 @@ module pelagic_soil_connector
       fieldCount=fieldCount, verbose=verbose, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    if (fieldCount > 0) then
+    do while (fieldCount > 0)
 
-      call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
+      call ESMF_FieldGet(fieldList(1), rank=rank, name=fieldName, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (rank==1) then
@@ -881,19 +886,30 @@ module pelagic_soil_connector
           exclusiveUBound=ubnd(1:3), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       else
-        localrc = ESMF_RC_NOT_IMPL
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        write(message,'(A,A,I)') trim(name)//' '//trim(fieldName), &
+          ' cannot have rank ',rank
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        exit
       endif
 
-      call ESMF_FieldGet(fieldList(1), name=fieldName, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      write(message,'(A,I)') trim(name)//' with field '//trim(fieldName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      i = index('_in_water', fieldName)
+      i = index(fieldName, '_in_water')
       if (i>0) then
         fieldName = fieldName(1:i)//'z_velocity_in_water'
       else
-        i = index('_at_soil_surface', fieldName)
-        fieldName = fieldName(1:i)//'z_velocity_at_soil_surface'
+        i = index(fieldName,'_at_soil_surface',)
+        if (i>0) then
+          fieldName = fieldName(1:i)//'z_velocity_at_soil_surface'
+        endif
+      endif
+
+      if (i<1) then
+        write(message,'(A,I)') trim(name)//' misinterpreted '//trim(fieldName)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        localrc = ESMF_RC_NOT_IMPL
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
 
       call MOSSCO_StateGet(importState, fieldList, fieldCount=fieldCount, &
@@ -920,9 +936,14 @@ module pelagic_soil_connector
           localrc = ESMF_RC_NOT_IMPL
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         endif
+      else
+        write(message,'(A,I)') trim(name)//' could not find '//trim(fieldName)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        localrc = ESMF_RC_NOT_IMPL
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
-
-    endif
+      exit
+    enddo ! detritus fieldCount
 
     ! Allocate CN ratios depending on exportRank
     if (exportRank == 1) then
@@ -933,6 +954,8 @@ module pelagic_soil_connector
       allocate(CN_det2(RANGE2D))
       CN_det2(RANGE2D) = 106.0d0/16.0d0
     else
+      write(message,'(A,I)') trim(name)//' cannot have rank ',exportRank
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       localrc = ESMF_RC_NOT_IMPL
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
