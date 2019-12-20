@@ -654,7 +654,7 @@ subroutine get_rhs(rhs_driver, rhs)
   rhs=0.0_rk
   do k=1,rhs_driver%knum
     do j=1,rhs_driver%jnum
-      write(0,*) 'FABM ',shape(rhs), j,k,rhs_driver%inum, rhs
+      !write(0,*) 'FABM ',shape(rhs), j,k,rhs_driver%inum, rhs
       call fabm_do(rhs_driver%model,1,rhs_driver%inum,j,k,rhs(:,j,k,:))
 
       do i=1,rhs_driver%inum
