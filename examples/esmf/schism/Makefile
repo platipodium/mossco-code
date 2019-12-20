@@ -8,10 +8,12 @@
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the
 # hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
-# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
+# $MOSSCO_DIR/doc/license/LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for
+# the full license terms.
 #
-# In addition to the main part of MOSSCO, the coupling to  SCHISM is dual-licensed
-# under the Apache 2.0 license, consult the file
+# In addition to the main part of MOSSCO, the coupling to  SCHISM is
+# dual-licensed under the Apache 2.0 license, consult the file
+# $MOSSCO_DIR/doc/license/LICENSE.APACHE for the full license terms
 
 ifndef MOSSCO_DIR
 export MOSSCO_DIR=$(subst /examples/esmf/schism$,,$(CURDIR))
@@ -19,13 +21,10 @@ endif
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-# add SCHISM, PARMETIS
+# add SCHISM
 ifndef SCHISM_BUILD_DIR
 $(error SCHISM_BUILD_DIR has to be set in environment)
 endif
-#ifndef PARMETIS_DIR
-#$(error PARMETIS_DIR has to be set in environment)
-#endif
 
 ifeq ($(wildcard $(SCHISM_BUILD_DIR)/lib/libhydro.a),)
 $(error You need to compile schism externally.)
@@ -49,9 +48,22 @@ ifeq ($(wildcard $(SCHISM_ESMF_DIR)/schism_esmf_component.F90),)
 $(error Cannot find schism_esmf_component.)
 endif
 
-LIBS+= -L$(SCHISM_BUILD_DIR)/lib -lhydro -lcore -lfabm_schism -lfabm
-LIBS+= -L$(PARMETIS_DIR) -lparmetis -lmetis $(PARMETIS_DIR)/libmetis.a
+# Build library dependencies for core SCHISM, then metis and optionally fabm,
+# then add MOSSCO libs depending on installation directory
+LIBS+= -L$(SCHISM_BUILD_DIR)/lib -lhydro -lcore
+LIBS+= -lparmetis -lmetis
+
+ifneq ($(wildcard $(SCHISM_BUILD_DIR)/lib/libfabm.a),)
+LIBS+= -lfabm_schism -lfabm
+$(info Using SCHISM compiled with FABM library)
+endif
+
+ifneq ($(wildcard $(MOSSCO_INSTALL_PREFIX)/lib/libmossco.a),)
+LIBS+= -L$(MOSSCO_INSTALL_PREFIX)/lib -lmossco -lmossco_fabm
+else
 LIBS+= -L$(MOSSCO_DIR)/lib -lmossco -lmossco_fabm
+endif
+
 F90FLAGS+= -DUSE_FABM
 F90FLAGS+= -I$(SCHISM_BUILD_DIR)/include
 F90FLAGS+= -I$(MOSSCO_DIR)/include
