@@ -4,8 +4,7 @@
 !! MOSSCO sediment component.
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018
-!>  Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2013-2019 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !> @author Richard Hofmeister <richard.hofmeister@hzg.de>
 !
@@ -223,6 +222,7 @@ module fabm_sediment_component
     integer(ESMF_KIND_I4)              :: lbnd(3), ubnd(3)
     character(len=ESMF_MAXSTR)         :: creatorName
     type(ESMF_Field), allocatable      :: fieldList(:)
+    integer                            :: unit
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
       importState=importState, exportState=exportState, rc=localrc)
@@ -233,8 +233,11 @@ module fabm_sediment_component
 
     !! read namelist input for control of timestepping
     !> @todo this could also come from the .cfg
-    open(33,file='run_sed.nml',action='read',status='old')
-    read(33,nml=run_nml)
+    call ESMF_UtilIOUnitGet(unit, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    open(unit,file='run_sed.nml',action='read',status='old')
+    read(unit,nml=run_nml)
 
     !> Convert from deprecated namelist items detP, fDet, sDet
     if (pflux_sDet /= pflux_sDetC) pflux_sDetC = pflux_sDet
@@ -277,14 +280,11 @@ module fabm_sediment_component
 
     if (sed%grid%type==UGRID) then
       surface_mesh = ESMF_MeshCreate(filename=ugrid_name, &
-#if ESMF_VERSION_MAJOR > 6
           fileformat=ESMF_FILEFORMAT_UGRID, rc=localrc)
-#else
-          filetypeflag=ESMF_FILEFORMAT_UGRID, rc=localrc)
-#endif
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_MeshGet(surface_mesh,numOwnedElements=numElements,numOwnedNodes=numNodes)
+      call ESMF_MeshGet(surface_mesh,numOwnedElements=numElements, &
+        numOwnedNodes=numNodes)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       ubnd(1)=numElements
@@ -465,23 +465,21 @@ module fabm_sediment_component
     sed%mask = .false.
     isPresent = .true.
 
-#if ESMF_VERSION_MAJOR > 6
     if (sed%grid%type==FOREIGN_GRID .and. geomType==ESMF_GEOMTYPE_GRID) then
       call ESMF_GridGetItem(flux_grid, ESMF_GRIDITEM_MASK, isPresent=isPresent, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
-#endif
 
-    if (sed%grid%type==FOREIGN_GRID .and. isPresent .and. geomType==ESMF_GEOMTYPE_GRID) then
+    if (sed%grid%type==FOREIGN_GRID .and. isPresent &
+      .and. geomType==ESMF_GEOMTYPE_GRID) then
 
-      call ESMF_GridGetItem(flux_grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-#if ESMF_VERSION_MAJOR > 6
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-#else
-        call ESMF_LogWrite('  ignore error above', ESMF_LOGMSG_ERROR)
-#endif
-      call ESMF_GridGetItemBounds(flux_grid, ESMF_GRIDITEM_MASK, exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
+      call ESMF_GridGetItem(flux_grid, ESMF_GRIDITEM_MASK, &
+        farrayPtr=gridmask, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_GridGetItemBounds(flux_grid, ESMF_GRIDITEM_MASK, &
+        exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       do i=lbnd(1),ubnd(1)
         do j=lbnd(2),ubnd(2)
@@ -496,8 +494,9 @@ module fabm_sediment_component
     endif
 
     call sed%grid%init_grid()
-    call sed%initialize()
-    close(33)
+    call sed%initialize(unit)
+    close(unit)
+
     !! Allocate all arrays conc, bdys, fluxes
     allocate(conc(RANGE3D,sed%nvar))
     ! link conc to fabm_sediment_driver
@@ -518,7 +517,9 @@ module fabm_sediment_component
     call sed%get_all_export_states()
 
     !> run for some years into quasi-steady-state
-    open(33,file='run_sed.nml',action='read',status='old')
+    call ESMF_UtilIOUnitGet(unit, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    open(unit,file='run_sed.nml',action='read',status='old')
 
     !> Convert from deprecated namelist items detP, fDet, sDet
     if (pflux_sDet /= pflux_sDetC) pflux_sDetC = pflux_sDet
@@ -526,8 +527,9 @@ module fabm_sediment_component
     if (pflux_detP /= pflux_lDetP) pflux_lDetP = pflux_detP
 
     call sed1d%grid%init_grid()
-    call sed1d%initialize()
-    close(33)
+    call sed1d%initialize(unit)
+    close(unit)
+
     allocate(sed1d%conc(1,1,_KNUM_,1:sed%nvar))
     !> check for valid grid and porosity
     call sed1d%check_domain()

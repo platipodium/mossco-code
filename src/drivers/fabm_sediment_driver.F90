@@ -182,10 +182,12 @@ end subroutine init_grid
 !!   1 - linear decrease over bioturbation_depth towards bioturbation_min
 !!   2 - exponential descrease bioturbation*exp(-depth/bioturbation_depth)
 
-subroutine initialize(sed)
+subroutine initialize(sed, unit)
 implicit none
 
 class(type_sed),intent(inout) :: sed
+integer, intent(in)           :: unit
+
 integer :: i,j,k,n
 integer :: bioturbation_profile
 logical :: distributed_pom_flux=.false.
@@ -216,7 +218,7 @@ bioturb_beta=0.22
 bioturb_b=1.334
 bioturb_dry_density=1000. !kg/m3
 
-read(33,nml=sed_nml)
+read(unit,nml=sed_nml)
 
 sed%bioturbation = bioturbation
 sed%bioturbation_profile = bioturbation_profile
