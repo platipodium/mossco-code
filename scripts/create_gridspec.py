@@ -21,11 +21,11 @@ import time
 if True:
 
   ll_lon = -180.0
-  ll_lat = -60.0
+  ll_lat = -90.0
   ur_lon = 180.0
   ur_lat = 90.0
-  delta_lon = 5		#delta lon in dezimalgrad
-  delta_lat = 5		#delta lon in dezimalgrad
+  delta_lon = 0.5		#delta lon in dezimalgrad
+  delta_lat = 0.5		#delta lon in dezimalgrad
 if False:
 
   ll_lon = 7.8		#lower left of cell corner 4°W
