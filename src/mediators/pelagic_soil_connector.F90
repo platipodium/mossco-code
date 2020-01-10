@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF soil to pelagic mediation
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014-2019 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2014-2020 Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister <richard.hofmeister@hzg.de>
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !
@@ -886,27 +886,27 @@ module pelagic_soil_connector
           exclusiveUBound=ubnd(1:3), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       else
-        write(message,'(A,A,I)') trim(name)//' '//trim(fieldName), &
+        write(message,'(A,A,I1)') trim(name)//' '//trim(fieldName), &
           ' cannot have rank ',rank
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         exit
       endif
 
-      write(message,'(A,I)') trim(name)//' with field '//trim(fieldName)
+      write(message,'(A)') trim(name)//' with field '//trim(fieldName)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       i = index(fieldName, '_in_water')
       if (i>0) then
         fieldName = fieldName(1:i)//'z_velocity_in_water'
       else
-        i = index(fieldName,'_at_soil_surface',)
+        i = index(fieldName,'_at_soil_surface')
         if (i>0) then
           fieldName = fieldName(1:i)//'z_velocity_at_soil_surface'
         endif
       endif
 
       if (i<1) then
-        write(message,'(A,I)') trim(name)//' misinterpreted '//trim(fieldName)
+        write(message,'(A)') trim(name)//' misinterpreted '//trim(fieldName)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         localrc = ESMF_RC_NOT_IMPL
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -937,7 +937,7 @@ module pelagic_soil_connector
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         endif
       else
-        write(message,'(A,I)') trim(name)//' could not find '//trim(fieldName)
+        write(message,'(A)') trim(name)//' could not find '//trim(fieldName)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         localrc = ESMF_RC_NOT_IMPL
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -954,7 +954,7 @@ module pelagic_soil_connector
       allocate(CN_det2(RANGE2D))
       CN_det2(RANGE2D) = 106.0d0/16.0d0
     else
-      write(message,'(A,I)') trim(name)//' cannot have rank ',exportRank
+      write(message,'(A,I1)') trim(name)//' cannot have rank ',exportRank
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       localrc = ESMF_RC_NOT_IMPL
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
