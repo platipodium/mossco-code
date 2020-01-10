@@ -3,7 +3,7 @@
 # This script is is part of MOSSCO. It creates from basic grid parameters
 # a GRIDSPEC compliant NetCDF file.
 #
-# @copyright (C) 2014, 2015, 2016 ,2017, 2018 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2014-2020 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -19,6 +19,14 @@ import numpy as np
 import time
 
 if True:
+
+  ll_lon = -180.0
+  ll_lat = -60.0
+  ur_lon = 180.0
+  ur_lat = 90.0
+  delta_lon = 5		#delta lon in dezimalgrad
+  delta_lat = 5		#delta lon in dezimalgrad
+if False:
 
   ll_lon = 7.8		#lower left of cell corner 4°W
   ll_lat = 54.49
@@ -110,7 +118,7 @@ if __name__ == '__main__':
   lat_bnds[:,0]=lat[:]-0.5*delta_lat
   lat_bnds[:,1]=lat[:]+0.5*delta_lat
 
-  print lon_bnds[0,:], lat_bnds[-1,:]
+  print(lon_bnds[0,:], lat_bnds[-1,:])
 
   # add a dummy variable
   if True:
