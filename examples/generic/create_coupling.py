@@ -4,7 +4,7 @@
 # This script is is part of MOSSCO. It creates from YAML descriptions of
 # couplings a toplevel_component.F90 source file
 #
-# @copyright (C) 2014, 2015, 2016, 2017, 2018, 2019 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2014-2020 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -518,7 +518,6 @@ fid.write('''
     integer(ESMF_KIND_I4), dimension(:), allocatable :: gridCompPhaseCountList,CplCompPhaseCountList
     logical, allocatable   :: GridCompHasPhaseZeroList(:)
     logical                :: hasPhaseZero
-    integer(ESMF_KIND_I4), parameter :: maxPhaseCount=9
 
     integer(ESMF_KIND_I4), allocatable      :: intValueList(:)
     character(len=ESMF_MAXSTR), allocatable :: charValueList(:)
@@ -1481,7 +1480,6 @@ fid.write('''
     integer(ESMF_KIND_I4), dimension(:), allocatable :: gridCompPhaseCountList,CplCompPhaseCountList
     logical, allocatable   :: GridCompHasPhaseZeroList(:)
     logical                :: hasPhaseZero
-    integer(ESMF_KIND_I4), parameter :: maxPhaseCount=9
 
     rc=ESMF_SUCCESS
 
@@ -2146,7 +2144,6 @@ fid.write('''
     integer(ESMF_KIND_I4), dimension(:), allocatable :: gridCompPhaseCountList,CplCompPhaseCountList
     logical, allocatable   :: GridCompHasPhaseZeroList(:)
     logical                :: hasPhaseZero, isPresent
-    integer(ESMF_KIND_I4), parameter :: maxPhaseCount=9
 
     rc=ESMF_SUCCESS
 
