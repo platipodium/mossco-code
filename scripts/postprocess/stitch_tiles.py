@@ -38,6 +38,7 @@ val=''
 excl_variables=[]
 outfile=prefix + '_stitched.nc'
 incl_variables=[]
+time_range=[0,-1]
 
 for i in range(1,len(sys.argv)):
     arg=sys.argv[i]
@@ -67,6 +68,9 @@ for i in range(1,len(sys.argv)):
 
     if key=='--level':
         levellist=val.split(',')
+
+    if key=='--trange':
+        time_range=val.split(',')
 
 files=glob.glob(pattern)
 if len(petlist) > 0 and len(files) > 0:
@@ -101,15 +105,37 @@ except:
     print(files)
     sys.exit(1)
 
+lat_keys=['lat','X','x']
+lon_keys=['lon','y','Y']
+loc_keys=['C','O','X','Y','XO','YO','OO','CO','XF','YF','OF','CF']
+
 for key, value in nc.variables.items():
     dim=value.dimensions
     if len(value.dimensions) != 1 : continue
-    if key.endswith('_lat'): alat[key]=[]
-    elif key.endswith('_lon'): alon[key]=[]
-    elif key.endswith('_X'): alon[key]=[]
-    elif key.endswith('_Y'): alat[key]=[]
-    elif key.endswith('_x'): alon[key]=[]
-    elif key.endswith('_y'): alat[key]=[]
+
+    for end in list('_' + x +'_' + y for x in lat_keys for y in loc_keys):
+        if key.endswith(end):  alat[key]=[] 
+        continue
+    for end in list('_' + x +'_' + y for x in lon_keys for y in loc_keys):
+        if key.endswith(end):  alon[key]=[] 
+        continue
+    for end in list('_' + x for x in lat_keys):
+        if key.endswith(end):  alat[key]=[] 
+        continue
+    for end in list('_' + x for x in lon_keys):
+        if key.endswith(end):  alon[key]=[] 
+        continue
+
+if 'time' in nc.dimensions:
+
+     if time_range[1] < 0:
+         time_range[1] = nc.dimensions['time'].size
+     else: 
+         time_range[1]=np.min([time_range[1],nc.dimensions['time'].size])
+     print(nc.dimensions['time'])
+     if time_range[0] >=  time_range[1]:
+         print('Invalid lower time range specified {}--{}'.format(time_range[0],time_range[1]))
+         quit()
 
 nc.close()
 
