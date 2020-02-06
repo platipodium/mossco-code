@@ -180,7 +180,7 @@ module pelagic_soil_connector
     integer, intent(out) :: rc
 
     logical                     :: hasAmmonium, hasNitrate, hasDIN, hasDIP
-    integer                     :: rank, exportRank
+    integer                     :: rank=-1, exportRank=-1
     integer                     :: i,j,inum,jnum
     integer(ESMF_KIND_I4)       :: lbnd(3), ubnd(3)
     integer(ESMF_KIND_I4), allocatable :: exportLbnd(:), exportUbnd(:)
@@ -716,6 +716,7 @@ module pelagic_soil_connector
         call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr1, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       else
+
         localrc = ESMF_RC_NOT_IMPL
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
@@ -740,6 +741,9 @@ module pelagic_soil_connector
         call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr12, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       else
+        write(message,'(A,A,I)') trim(name)//' '//trim(includeList(1)), &
+          ' cannot have rank ',rank
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         localrc = ESMF_RC_NOT_IMPL
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
