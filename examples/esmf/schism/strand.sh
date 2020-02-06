@@ -11,8 +11,11 @@
 #SBATCH --output=log.stderr    # File name for standard output
 #SBATCH --error=log.stdout     # File name for standard error output
 
-
-srun -l --propagate=STACK ${MOSSCO_DIR}/examples/esmf/schism/schism_mossco
+#mpirun -np 4 /gpfs/home/lemmen/devel/schism/build/bin/pschism_FABM_TVD-SB
+#mpirun -np 4 /gpfs/home/lemmen/devel/schism/schism-esmf/schism_esmf_test
+mpirun -np 2 /gpfs/home/lemmen/devel/schism/schism-esmf/concurrent_esmf_test
+#mpirun -np 4 ${MOSSCO_DIR}/examples/esmf/schism/schism_mossco
+#srun -l --propagate=STACK ${MOSSCO_DIR}/examples/esmf/schism/schism_mossco
 
 # wait until all nodes/file-actions are settled
 wait
