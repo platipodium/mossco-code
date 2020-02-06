@@ -145,7 +145,8 @@ module calculator
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, &
+      rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     configfilename=trim(name)//'.cfg'
@@ -171,7 +172,9 @@ module calculator
 
       call MOSSCO_ConfigGet(config, 'alias', aliasList, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
+    else
+      write(message,'(A)')  trim(name)//' did not find configuration '//trim(configFileName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     endif
 
     if (allocated(aliasList)) then
