@@ -741,7 +741,7 @@ module pelagic_soil_connector
         call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr12, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       else
-        write(message,'(A,A,I)') trim(name)//' '//trim(includeList(1)), &
+        write(message,'(A,A,I1)') trim(name)//' '//trim(includeList(1)), &
           ' cannot have rank ',rank
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         localrc = ESMF_RC_NOT_IMPL
