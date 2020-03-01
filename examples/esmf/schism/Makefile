@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2018, 2019 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2018, 2019, 2020 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 # @author Richard Hofmeister <richard.hofmeister@hzg.de>
 # @license Dual licensed under GPL v3+ and Apache 2.0
@@ -21,7 +21,7 @@ endif
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-# add SCHISM
+# add SCHISM binary di
 ifndef SCHISM_BUILD_DIR
 $(error SCHISM_BUILD_DIR has to be set in environment)
 endif
@@ -30,22 +30,13 @@ ifeq ($(wildcard $(SCHISM_BUILD_DIR)/lib/libhydro.a),)
 $(error You need to compile schism externally.)
 endif
 
-#ifndef SCHISM_ESMF_DIR
-ifneq ($(wildcard $(SCHISM_BUILD_DIR)/../esmf/schism_esmf_component.F90),)
-export SCHISM_ESMF_DIR=$(SCHISM_BUILD_DIR)/../esmf
-else
-ifneq ($(wildcard $(SCHISM_BUILD_DIR)/../schism-esmf/schism_esmf_component.F90),)
-export SCHISM_ESMF_DIR=$(SCHISM_BUILD_DIR)/../schism-esmf
-else
-$(error Cannot find schism ESMF directory)
+# add SCHISM ESMF src dir
+ifndef SCHISM_ESMF_DIR
+$(error SCHISM_ESMF_DIR has to be set in environment)
 endif
-endif
-#endif
 
-$(info Use as SCHISM ESMF directory $(SCHISM_ESMF_DIR))
-
-ifeq ($(wildcard $(SCHISM_ESMF_DIR)/schism_esmf_component.F90),)
-$(error Cannot find schism_esmf_component.)
+ifeq ($(wildcard $(SCHISM_ESMF_DIR)/src/schism/schism_cmi_esmf.F90),)
+$(error Cannot find schism_cmi_esmf)
 endif
 
 # Build library dependencies for core SCHISM, then metis and optionally fabm,
@@ -55,6 +46,7 @@ LIBS+= -lparmetis -lmetis
 
 ifneq ($(wildcard $(SCHISM_BUILD_DIR)/lib/libfabm.a),)
 LIBS+= -lfabm_schism -lfabm
+F90FLAGS+= -DUSE_FABM
 $(info Using SCHISM compiled with FABM library)
 endif
 
@@ -64,23 +56,21 @@ else
 LIBS+= -L$(MOSSCO_DIR)/lib -lmossco -lmossco_fabm
 endif
 
-F90FLAGS+= -DUSE_FABM
 F90FLAGS+= -I$(SCHISM_BUILD_DIR)/include
 F90FLAGS+= -I$(MOSSCO_DIR)/include
 MOSSCO_LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
-
 
 .PHONY: all clean distclean config
 
 all:  schism_mossco config outputs
 
-schism_mossco: schism_esmf_component.o toplevel_component.o main.o
+schism_mossco: schism_cmi_esmf.o toplevel_component.o main.o
 	echo objcopy --redefine-sym xerbla_=schism_lap_xerbla_ $SCHISM_BUILD_DIR/lib/libhydro.a
 	$(F90) $(CPPFLAGS) $^ -o $@ $(MOSSCO_LDFLAGS) $(LDFLAGS) $(LIBS)
 
-toplevel_component.o: schism_esmf_component.o toplevel_component.F90
+toplevel_component.o: schism_cmi_esmf.o toplevel_component.F90
 
-schism_esmf_component.o: schism_driver_interfaces.o schism_esmf_component.F90
+schism_cmi_esmf.o: schism_bmi.o schism_esmf_util.o schism_cmi_esmf.F90
 
 outputs:
 	mkdir -p outputs
@@ -101,18 +91,21 @@ clean:
 config:  grid_input.cfg wind_input.cfg wind.nc schism_ugrid.nc
 
 extraclean: clean
-	@$(RM) schism_mossco schism_driver_interfaces.F90 schism_esmf_component.F90 main.F90 wind.nc
+	@$(RM) schism_mossco schism_bmi.F90 schism_esmf_util.F90 schism_cmi_esmf.F90 main.F90 wind.nc
 
 # Copy/link files from schism_esmf and mossco systems
 
 main.F90:
 	test -l main.F90 | ln -sf $(MOSSCO_DIR)/examples/common/main.F90 .
 
-schism_driver_interfaces.F90:
-	test -l schism_driver_interfaces.F90 | ln -sf $(SCHISM_ESMF_DIR)/schism_driver_interfaces.F90 .
+schism_esmf_util.F90:
+	test -l schism_esmf_util.F90 | ln -sf $(SCHISM_ESMF_DIR)/src/schism/schism_esmf_util.F90 .
 
-schism_esmf_component.F90:
-	test -l schim_esmf_component.F90 | ln -sf $(SCHISM_ESMF_DIR)/schism_esmf_component.F90 .
+schism_cmi_esmf.F90:
+	test -l schism_cmi_esmf.F90 | ln -sf $(SCHISM_ESMF_DIR)/src/schism/schism_cmi_esmf.F90 .
+
+schism_bmi.F90:
+	test -l schism_bmi.F90 | ln -sf $(SCHISM_ESMF_DIR)/src/schism/schism_bmi.F90 .
 
 schism_ugrid.nc: schism_ugrid.cdl
 	ncgen -o $@ $<
