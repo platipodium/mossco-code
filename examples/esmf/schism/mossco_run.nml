@@ -30,6 +30,6 @@
    stop = '2009-03-01 01:00:00',
    loglevel = 'error',
    loglevelzero = 'all',
-   logflush = .false.,
+   logflush = .true.,
 /
 
