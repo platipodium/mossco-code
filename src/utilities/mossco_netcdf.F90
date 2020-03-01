@@ -1,7 +1,7 @@
 !> @brief Implementation ESMF/NetCDF utility functions
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2014--2019 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2014--2020 Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister <richard.hofmeister@hzg.de>
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
@@ -5286,8 +5286,8 @@ module mossco_netcdf
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (ncStatus /= NF90_NOERR) then
-      call ESMF_LogWrite('  could not write attribute '//trim(attributeName), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_LogWrite('  could not write attribute '//trim(attributeName), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+      !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
     if (present(rc)) rc=rc_
