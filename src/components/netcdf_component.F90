@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF netcdf output component
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2014, 2015, 2016, 2017, 2018, 2019 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2014-2020 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
 !
@@ -133,7 +133,7 @@ module netcdf_component
     checkInf = .true.
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
-      importState=importState, exportState=exportState, rc=localrc)
+      rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !! The default filename to read is the name of the component with a .nc
@@ -321,7 +321,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
-      importState=importState, exportState=exportState, rc=localrc)
+      rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
@@ -700,7 +700,7 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
-      importState=importState, exportState=exportState, rc=localrc)
+      rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !call nc%close(rc=localrc)

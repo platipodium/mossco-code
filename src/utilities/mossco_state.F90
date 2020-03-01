@@ -1,7 +1,7 @@
 !> @brief Implementation of ESMF State utilities
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014, 2015, 2016, 2017, 2018, 2019 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2014--2020 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !> @author Richard Hofmeister <richard.hofmeister@hzg.de>
 !> @author Knut Klingbeil <knut.klingbeil@uni-hamburg.de>
@@ -77,6 +77,12 @@ contains
     verbose_=.false.
     rc_=ESMF_SUCCESS
     if (present(verbose)) verbose_=verbose
+
+    if (.not.ESMF_StateIsCreated(state)) then
+      write(message, '(A)') '-- attempted to add to non-existent state'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      return
+    endif
 
     call ESMF_StateGet(state, name=name, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -167,6 +173,12 @@ contains
     lbnd_(:)=0
     nullify(farrayPtr)
     if (present(verbose)) verbose_=verbose
+
+    if (.not.ESMF_StateIsCreated(state)) then
+      write(message, '(A)') '-- attempted get info from non-existent state'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      return
+    endif
 
     call ESMF_StateGet(state, name=name, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -273,6 +285,12 @@ contains
     nullify(farrayPtr)
     if (present(verbose)) verbose_=verbose
 
+    if (.not.ESMF_StateIsCreated(state)) then
+      write(message, '(A)') '-- attempted get info from non-existent state'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      return
+    endif
+
     call ESMF_StateGet(state, name=name, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
@@ -377,6 +395,12 @@ contains
     nullify(farrayPtr)
     if (present(verbose)) verbose_=verbose
 
+    if (.not.ESMF_StateIsCreated(state)) then
+      write(message, '(A)') '-- attempted get info from non-existent state'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      return
+    endif
+
     call ESMF_StateGet(state, name=name, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
@@ -465,6 +489,13 @@ contains
 
     integer                    :: localrc, rc_
     character(len=ESMF_MAXSTR) :: attname
+    character(len=ESMF_MAXSTR) :: message
+
+    if (.not.ESMF_StateIsCreated(state)) then
+      write(message, '(A)') '-- attempted to set info in non-existent state'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      return
+    endif
 
     if (present(requiredFlag)) then
       attname=trim(name)//':required'
@@ -495,7 +526,14 @@ contains
   integer                           :: n, rc_, idx, attCount
   logical                           :: required
   character(len=ESMF_MAXPATHLEN)    :: attName,fieldName
+  character(len=ESMF_MAXSTR    )    :: message
   integer                           :: localrc
+
+  if (.not.ESMF_StateIsCreated(state)) then
+    write(message, '(A)') '-- attempted to access non-existent state'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+    return
+  endif
 
   !> get Attribute list
   call ESMF_AttributeGet(state, attCount, rc=localrc)
@@ -554,6 +592,13 @@ contains
   logical                           :: optional
   character(len=ESMF_MAXPATHLEN)            :: attName,potentialFieldName
   integer                           :: localrc, rc_
+  character(len=ESMF_MAXSTR)        :: message
+
+  if (.not.ESMF_StateIsCreated(state)) then
+    write(message, '(A)') '-- attempted to access non-existent state'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+    return
+  endif
 
   !> get Attribute list
   call ESMF_AttributeGet(state,attCount,rc=localrc)
@@ -642,6 +687,12 @@ contains
     if (present(kwe)) localrc = ESMF_SUCCESS
     deep_ = .false.
     if (present(deep)) deep_ = deep
+
+    if (.not.ESMF_StateIsCreated(state)) then
+      write(message, '(A)') '-- attempted to access non-existent state'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      return
+    endif
 
     call ESMF_StateGet(state, name=name, rc=localRc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -1066,10 +1117,16 @@ contains
     type(ESMF_FieldBundle)                  :: fieldBundle
     type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
     character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
-    character(len=ESMF_MAXSTR)              :: name, fieldName
+    character(len=ESMF_MAXSTR)              :: name, fieldName, message
 
     rc_=ESMF_SUCCESS
     status_=ESMF_FIELDSTATUS_COMPLETE
+
+    if (.not.ESMF_StateIsCreated(state)) then
+      write(message, '(A)') '-- attempted to access non-existent state'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      return
+    endif
 
     call ESMF_StateGet(state, name=name, itemCount=itemCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1156,6 +1213,12 @@ contains
     owner_ = '--'
     if (present(kwe)) rc_ = ESMF_SUCCESS
     if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+
+    if (.not.ESMF_StateIsCreated(state)) then
+      write(message, '(A)') '-- attempted to access non-existent state'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      return
+    endif
 
     attributeName_ = 'foreign_grid_field_name'
     if (present(attributeName)) attributeName_ = trim(attributeName)
@@ -1306,6 +1369,12 @@ contains
     rc_ = ESMF_SUCCESS
     creator = 'none'
 
+    if (.not.ESMF_StateIsCreated(state)) then
+      write(message, '(A)') '-- attempted to accesss non-existent state'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      return
+    endif
+
     call ESMF_AttributeGet(state, 'creator', isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1435,6 +1504,12 @@ contains
     rc_ = ESMF_SUCCESS
     creator = 'none'
 
+    if (.not.ESMF_FieldBundleIsCreated(fieldBundle)) then
+      write(message, '(A)') '-- attempted to access non-existent fieldBundle'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      return
+    endif
+
     call ESMF_AttributeGet(fieldBundle, 'creator', isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1523,6 +1598,12 @@ contains
     creator = 'none'
     name = 'none'
 
+    if (.not.ESMF_ArrayBundleIsCreated(arrayBundle)) then
+      write(message, '(A)') '-- attempted to destroy in non-existent state'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      return
+    endif
+
     call ESMF_AttributeGet(arrayBundle, 'creator', isPresent=isPresent, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
@@ -1587,6 +1668,12 @@ contains
     creator = 'none'
     name = 'none'
 
+    if (.not.ESMF_ArrayIsCreated(array)) then
+      write(message, '(A)') '-- attempted to destroy non-existent array'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      return
+    endif
+
     call ESMF_ArrayGet(array, name=name, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
@@ -1625,6 +1712,12 @@ contains
     rc_ = ESMF_SUCCESS
     creator = 'none'
     name = 'none'
+
+    if (.not.ESMF_FieldIsCreated(field)) then
+      write(message, '(A)') '-- attempted to access non-existent field'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      return
+    endif
 
     call ESMF_FieldGet(field, name=name, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -1666,6 +1759,12 @@ contains
     rc_ = ESMF_SUCCESS
     creator = 'none'
     name = 'none'
+
+    if (.not.ESMF_RouteHandleIsCreated(routeHandle)) then
+      write(message, '(A)') '-- attempted to access non-existent routeHandle'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      return
+    endif
 
     !> @todo
     isPresent = .false.
@@ -1709,6 +1808,12 @@ contains
 
     rc_ = ESMF_SUCCESS
     if (present(rc)) rc = rc_
+
+    if (.not.ESMF_StateIsCreated(state)) then
+      write(message, '(A)') '-- attempted to access non-existent state'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      return
+    endif
 
     call ESMF_StateGet(state, name=name, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -1759,7 +1864,7 @@ contains
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)               :: rc_, localrc, i, itemCount
-    character(len=ESMF_MAXSTR)              :: name
+    character(len=ESMF_MAXSTR)              :: name, message
     character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
     type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
 
@@ -1767,6 +1872,12 @@ contains
     type(ESMF_Field)                    :: field
 
     rc_ = ESMF_SUCCESS
+
+    if (.not.ESMF_StateIsCreated(state)) then
+      write(message, '(A)') '-- attempted to access non-existent state'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      return
+    endif
 
     call ESMF_StateGet(state, name=name, itemCount=itemCount, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -1807,9 +1918,16 @@ contains
 
       integer(ESMF_KIND_I4)               :: rc_, localrc
       logical                             :: isPresent
-      character(len=ESMF_MAXPATHLEN)          :: string
+      character(len=ESMF_MAXPATHLEN)      :: string
+      character(len=ESMF_MAXSTR)          :: message
 
       rc_ = ESMF_SUCCESS
+
+      if (.not.ESMF_StateIsCreated(state)) then
+        write(message, '(A)') '-- attempted to access non-existent state'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        return
+      endif
 
       !call ESMF_AttributeSet(state, 'mossco_sha_key',MOSSCO_GIT_SHA_KEY, rc=localrc)
       !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -1897,6 +2015,12 @@ contains
     type(ESMF_FieldBundle)                  :: fieldBundle
 
     rc_ = ESMF_SUCCESS
+
+    if (.not.ESMF_StateIsCreated(state)) then
+      write(message, '(A)') '-- attempted to access non-existent state'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      return
+    endif
 
     call ESMF_StateGet(state, itemCount=itemCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -2011,6 +2135,12 @@ contains
     if (present(rc))  rc = rc_
     if (present(kwe)) rc_ = rc_
 
+    if (.not.ESMF_StateIsCreated(state)) then
+      write(message, '(A)') '-- attempted to access non-existent state'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      return
+    endif
+
     call ESMF_StateGet(state, itemCount=itemCount, rc=localrc)
     if (itemCount < 1) return
 
@@ -2035,7 +2165,8 @@ contains
       j=index(itemName,'_',back=.true.)
       if (j<1) cycle
 
-      suffix=itemName(j+1:len_trim(itemName))
+      suffix=''
+      suffix(1:len_trim(itemName)-j)=itemName(j+1:len_trim(itemName))
 
       ! Make sure the suffix is all numeric
       do k=1,len_trim(suffix)
@@ -2157,6 +2288,12 @@ contains
     if (present(include)) includePattern=trim(include)
     if (present(rc)) rc = rc_
 
+    if (.not.ESMF_StateIsCreated(state)) then
+      write(message, '(A)') '-- attempted to access non-existent state'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      return
+    endif
+
     call ESMF_StateGet(state, itemCount=itemCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -2263,6 +2400,12 @@ contains
     if (present(verbose)) verbose_ = verbose
     if (present(owner)) owner_ = trim(owner)
 
+    if (.not.ESMF_StateIsCreated(state)) then
+      write(message, '(A)') '-- attempted to access non-existent state'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      return
+    endif
+
     fieldCount_ = 0
     call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -2337,6 +2480,12 @@ contains
     if (present(rc)) rc = ESMF_SUCCESS
     if (present(kwe)) rc_ = rc_
     if (present(owner)) owner_ = trim(adjustl(owner))
+
+    if (.not.ESMF_StateIsCreated(state)) then
+      write(message, '(A)') '-- attempted to access non-existent state'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      return
+    endif
 
     fieldCount_ = 0
     itemCount = 0
@@ -2604,11 +2753,18 @@ contains
     type(ESMF_Field)                   :: field
     type(ESMF_Grid)                    :: grid
     logical                            :: isPresent
+    character(len=ESMF_MAXSTR)         :: message
 
     rc_ = ESMF_SUCCESS
     if (present(kwe)) rc = ESMF_SUCCESS
     if (present(rc)) rc = rc_
     nullify(velocity)
+
+    if (.not.ESMF_StateIsCreated(state)) then
+      write(message, '(A)') '-- attempted to access non-existent state'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      return
+    endif
 
     call ESMF_StateGet(state, 'x_velocity_in_water', field, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
