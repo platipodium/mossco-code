@@ -6,5 +6,5 @@
 
 coupling:
   - components:
-    - schism_esmf
+    - schism_cmi_esmf
     - empty

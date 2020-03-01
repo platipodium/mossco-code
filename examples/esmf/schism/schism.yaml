@@ -7,7 +7,7 @@
 # ...
 instances:
   - schism_mesh_output: netcdf
-  - schism: schism_esmf
+  - schism: schism_cmi_esmf
 
 coupling:
   - components:

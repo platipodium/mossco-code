@@ -387,7 +387,7 @@ fid.write('''
 
 for jtem in instanceList:
 
-    if jtem.find('_mediator')>0 or jtem.find('_connector')>0 or jtem == 'vertical_reduction' or jtem == 'calculator' or jtem.find('_coupler')>0:
+    if jtem.find('_mediator')>0 or jtem.find('_connector')>0 or jtem == 'vertical_reduction' or jtem == 'calculator' or jtem.find('_coupler')>0 or jtem.find('_cmi')>0:
       fid.write('  use ' + jtem + ', only : ' + jtem + '_SetServices => SetServices \n')
     else: fid.write('  use ' + jtem + '_component, only : ' + jtem + '_SetServices => SetServices \n')
 

@@ -29,7 +29,7 @@ module toplevel_component
   use regrid_coupler, only : regrid_coupler_SetServices => SetServices 
   use netcdf_input_component, only : netcdf_input_SetServices => SetServices 
   use grid_component, only : grid_SetServices => SetServices 
-  use schism_esmf_component, only : schism_esmf_SetServices => SetServices 
+  use schism_cmi_esmf, only : schism_esmf_SetServices => SetServices 
   use netcdf_component, only : netcdf_SetServices => SetServices 
 
   implicit none

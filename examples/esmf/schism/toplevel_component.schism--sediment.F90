@@ -34,7 +34,7 @@ module toplevel_component
   use fabm_sediment_component, only : fabm_sediment_SetServices => SetServices 
   use netcdf_component, only : netcdf_SetServices => SetServices 
   use soil_pelagic_connector, only : soil_pelagic_connector_SetServices => SetServices 
-  use schism_esmf_component, only : schism_esmf_SetServices => SetServices 
+  use schism_cmi_esmf, only : schism_esmf_SetServices => SetServices 
   use pelagic_soil_connector, only : pelagic_soil_connector_SetServices => SetServices 
 
   implicit none

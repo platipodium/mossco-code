@@ -25,7 +25,7 @@ module toplevel_component
   use mossco_state
   use mossco_component
 
-  use schism_esmf_component, only : schism_esmf_SetServices => SetServices 
+  use schism_cmi_esmf, only : schism_esmf_SetServices => SetServices 
   use empty_component, only : empty_SetServices => SetServices 
   use link_connector, only : link_connector_SetServices => SetServices 
 

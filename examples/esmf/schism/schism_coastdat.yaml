@@ -13,7 +13,7 @@ instances:
   - schism_grid_output: netcdf
   - regrid_tomesh: regrid_coupler
   - regrid_togrid: regrid_coupler
-  - schism: schism_esmf
+  - schism: schism_cmi_esmf
   - atmos_default: default
 
 dependencies:

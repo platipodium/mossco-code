@@ -13,7 +13,7 @@
 # are derived from
 instances:
   - schism_mesh_output: netcdf
-  - schism: schism_esmf
+  - schism: schism_cmi_esmf
   - restart_sediment: netcdf_input
 
 # Define the dependencies of
