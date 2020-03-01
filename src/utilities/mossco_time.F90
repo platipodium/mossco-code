@@ -165,11 +165,11 @@ subroutine MOSSCO_TimeSet(time, datetimestring, rc)
   character(len=10)     :: timeString=''
   character(len=ESMF_MAXSTR) :: message=''
 
-  rc_=ESMF_SUCCESS
+  rc_ = ESMF_SUCCESS
 
   ! If 'T' or ' ' are found within string, it consists of a date part and a time
   ! part, which can be separately handled
-  i=index(datetimestring, 'T')
+  i = index(datetimestring, 'T')
   if (i<1) i=index(datetimestring(1:len_trim(datetimestring)), ' ')
   if (i>1 .and. i<11) then
     write(datestring,'(A)') trim(adjustl(datetimestring(1:i-1)))
@@ -179,6 +179,7 @@ subroutine MOSSCO_TimeSet(time, datetimestring, rc)
     write(datestring,'(A)') trim(adjustl(datetimestring(&
       1:min(len_trim(datetimestring),10))))
   endif
+  write(timestring,'(A)') trim(adjustl(datetimestring(i+1:len_trim(datetimestring))))
 
   i=index(datestring, 'W')
   if (i>0) then
@@ -235,7 +236,7 @@ subroutine MOSSCO_TimeSet(time, datetimestring, rc)
   if (mm == 0) mm=1
   if (dd == 0) dd=1
 
-  call ESMF_TimeSet(time,yy=yy,mm=mm,dd=dd,h=h,m=m,s=s, rc=localrc)
+  call ESMF_TimeSet(time, yy=yy, mm=mm, dd=dd, h=h,m =m, s=s, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   if (present(rc)) rc=rc_
