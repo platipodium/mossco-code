@@ -2,7 +2,7 @@
 !> @file main.F90
 !!
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2013--2020 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !> @author Knut Klingbeil <knut.klingbeil@io-warnemuende.de>
 !> @author Richard Hofmeister <richard.hofmeister@hzg.de>
@@ -316,6 +316,21 @@ program main
 
   call MOSSCO_TimeSet(stopTime, stop, localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  if (startTime >= stopTime) then
+    call ESMF_TimeGet(startTime, timeStringISOFrac=timestring, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    write(message,'(A)') trim(timestring)//' cannot be greater/equal to '
+
+    call ESMF_TimeGet(stopTime, timeStringISOFrac=timestring, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    write(message,'(A)') trim(message)//' '//trim(timestring)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+    localrc = ESMF_RC_ARG_BAD
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+  endif
 
   runDuration = stopTime - startTime
 
