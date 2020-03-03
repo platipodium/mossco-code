@@ -1,6 +1,7 @@
-# Recipe #30: MOSSCO on STRAND
+# Recipe #30: MOSSCO and SCHISM on STRAND
 
-STRAND is the local cluster at HZG. It offers recent Intel and GNU compilers and parallelism via openmpi and intelmpi.  STRAND is currently being customized for users, expect this document to change frequently.  This page gives instructions for building **MOSSCO** and **SCHISM** on STRAND in the intel/intelmpi toolchain.
+STRAND is the local cluster at HZG. It offers recent Intel and GNU compilers and
+parallelism via `openmpi` and `intelmpi`.
 
 ## Preparing your environment
 
@@ -44,18 +45,17 @@ make -C ${MOSSCO_DIR} install
 
 ### SCHISM
 
-The installation of SCHISM is independent of MOSSCO, but both can be coupled together using ESMF and an installed MOSSCO library
+The installation of SCHISM is independent of MOSSCO, but both can be coupled
+together using ESMF and an installed MOSSCO library
 
 ```bash
 export SCHISM_BUILD_DIR=/your/path/to/schism/build
 export SCHISM_DIR=/your/path/to/schism/src
-export PARMETIS_DIR=$SCHISM_DIR/ParMetis-3.1-Sep2010
 
-svn checkout http://columbia.vims.edu/schism/trunk ${SCHISM_DIR}
-(cd $PARMETIS_DIR; make)
+git clone https://github.com/schism-dev/schism.git ${SCHISM_DIR}
 
-mkdir -p $SCHISM_BUILD_DIR
-cd $SCHISM_BUILD_DIR
+mkdir -p $SCHISM_BUILD_DIR && cd $SCHISM_BUILD_DIR
+
 cmake $SCHISM_SRC_DIR -DCMAKE_Fortran_COMPILER=mpiifort \
   -DCMAKE_CXX_COMPILER=mpicc -DCMAKE_BUILD_TYPE=RelWithDebInfo \
   -DDNetCDF_FORTRAN_DIR=`nf-config --prefix` \
@@ -63,14 +63,15 @@ cmake $SCHISM_SRC_DIR -DCMAKE_Fortran_COMPILER=mpiifort \
   -DTVD_LIM=SB -DCMAKE_Fortran_FLAGS="-xCORE-AVX2"
 
 make pschism
-cp bin/pschism bin/pschism_hydro
 ```
+
+### SCHISM/FABM
 
 You can add an independent FABM installation to SCHISM
 
 ```bash
 export FABM_DIR=/your/path/to/fabm
-git clone https://coastgit.hzg.de/hofmeist/fabm.git $FABM_DIR # HZG internal only, otherwise get public fabm repo
+git clone https://coastgit.hzg.de/gcoast/fabm.git $FABM_DIR # HZG internal only, otherwise get public fabm repo
 
 cd $SCHISM_BUILD_DIR
 cmake $SCHISM_SRC_DIR  -DCMAKE_Fortran_COMPILER=mpiifort   \
@@ -81,5 +82,19 @@ cmake $SCHISM_SRC_DIR  -DCMAKE_Fortran_COMPILER=mpiifort   \
   -DUSE_FABM=ON -DFABM_BASE=$FABM_DIR
 
 make pschism
-cp bin/pschism bin/pschism_fabm
 ```
+
+### SCHISM/ESMF
+
+The ESMF interface to SCHISM is currently available in a separate repository.
+
+```bash
+export SCHISM_ESMF_DIR=/your/path/to/schism/esmf
+git clone https://github.com/schism-dev/schism-esmf.git
+```
+
+## Batch script
+
+Submit your job with `srun` if using the intelmpi toolchain.
+
+    srun --mpi=pmi2 <your-exe> 
