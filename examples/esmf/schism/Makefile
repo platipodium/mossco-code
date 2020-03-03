@@ -21,7 +21,6 @@ endif
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-# add SCHISM binary di
 ifndef SCHISM_BUILD_DIR
 $(error SCHISM_BUILD_DIR has to be set in environment)
 endif
@@ -30,7 +29,6 @@ ifeq ($(wildcard $(SCHISM_BUILD_DIR)/lib/libhydro.a),)
 $(error You need to compile schism externally.)
 endif
 
-# add SCHISM ESMF src dir
 ifndef SCHISM_ESMF_DIR
 $(error SCHISM_ESMF_DIR has to be set in environment)
 endif
@@ -48,6 +46,17 @@ ifneq ($(wildcard $(SCHISM_BUILD_DIR)/lib/libfabm.a),)
 LIBS+= -lfabm_schism -lfabm
 F90FLAGS+= -DUSE_FABM
 $(info Using SCHISM compiled with FABM library)
+endif
+
+# Build library dependencies for core SCHISM, then metis and optionally fabm,
+# then add MOSSCO libs depending on installation directory
+LIBS+= -L$(SCHISM_BUILD_DIR)/lib -lhydro -lcore
+LIBS+= -lparmetis -lmetis
+
+ifneq ($(wildcard $(SCHISM_BUILD_DIR)/lib/libfabm.a),)
+LIBS+= -lfabm_schism -lfabm
+$(info Using SCHISM compiled with FABM library)
+F90FLAGS+= -DUSE_FABM
 endif
 
 ifneq ($(wildcard $(MOSSCO_INSTALL_PREFIX)/lib/libmossco.a),)

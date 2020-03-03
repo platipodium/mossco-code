@@ -3427,7 +3427,7 @@ module mossco_netcdf
         endif
       enddo
 
-      do i=1,dimCount
+      do i=1, dimCount
 
         write(varName,'(A,A)') trim(geomName)//'_'//trim(coordNames(i)), &
           '_'//trim(staggerLocSuffix(staggerLoc))
