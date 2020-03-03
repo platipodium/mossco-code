@@ -4,7 +4,7 @@
 #        You may want to link this script into directory within your $PATH
 #
 # This computer program is part of MOSSCO.
-# @copyright Copyright (C) 2014, 2015, 2016, 2017, 2018, 2019 Helmholtz-Zentrum Geesthacht
+# @copyright Copyright (C) 2014--2020 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -56,7 +56,7 @@ function usage {
   echo "      [-s P]: PBS system, writes pbs.sh"
   echo "      [-s M]: MOAB system, writes moab.sh"
   echo "      [-s S]: SGE system, e.g. ocean.hzg.de, writes sge.sh"
-  echo "      [-s J]: Slurm system, e.g. Juwels, Mistral, writes slurm.sh"
+  echo "      [-s J]: Slurm system, e.g. Juwels, Mistral, Strand, writes slurm.sh"
   echo "      [-s F]: Command line interactive, running in foreground"
   echo "      [-s B]: Command line interactive, running in background"
   echo
@@ -117,10 +117,8 @@ function predict_time() {
   case ${2} in
     PBS)  S=1000;;
     SGE)  S=300;;
-    SLURM) S=1000;;
+    SLURM) S=1000;; # estimated speedup on slurm
   esac
-
-  S=1500
 
   START=$(cat ${NML} | grep -v --regexp ' *!'| grep start | awk -F"'" '{print $2}' | awk -F" " '{print $1}')
   STOP=$(cat ${NML} | grep -v --regexp ' *!'| grep stop | awk -F"'" '{print $2}' | awk -F" " '{print $1}')
@@ -311,7 +309,7 @@ case ${SYSTEM} in
                 ;;
   SGE)    MPI_PREFIX="mpirun"
                 ;;
-  SLURM)  MPI_PREFIX="srun --propagate=STACK"
+  SLURM)  MPI_PREFIX="srun --propagate=STACK --mpi=pmi2"
                 ;;
   *)  MPI_PREFIX="mpirun"
                 ;;
