@@ -344,7 +344,7 @@ end function MOSSCO_GridCreateRegional2D
 
       if (trim(nameB) == trim(nameA)) nameB = trim(nameA)//'_2d'
 
-      !> @todo This currently fails with coordDimCount > 2 on the first two 
+      !> @todo This currently fails with coordDimCount > 2 on the first two
       !> coordinates, obviously.
       gridb = ESMF_GridCreate(distGridB, name=trim(nameB), gridAlign=(/1,1/), &
         coordSys=coordSys, coordDimCount=int(coordDimCount3(1:2)),      &
@@ -840,14 +840,15 @@ end subroutine MOSSCO_DistGridPrintBlockList
 #define ESMF_METHOD "MOSSCO_DeLayoutPrintBlockList"
 subroutine MOSSCO_DeLayoutPrintBlockList(deLayout, rc)
 
-  type(ESMF_DeLayout), intent(in)                    :: deLayout
+  type(ESMF_DeLayout), intent(in)                :: deLayout
   integer(ESMF_KIND_I4), intent(out), optional   :: rc
 
-  integer(ESMF_KIND_I4)              :: localrc, deCount, rank, localDeCount, rc_
+  integer(ESMF_KIND_I4)              :: localrc, deCount, localDeCount, rc_
   integer(ESMF_KIND_I4), allocatable :: deBlockList(:,:,:)
   character(len=ESMF_MAXSTR)         :: message
 
-  call ESMF_DeLayoutGet(deLayout, deCount=deCount, localDeCount=localDeCount, rc=localrc)
+  call ESMF_DeLayoutGet(deLayout, deCount=deCount, localDeCount=localDeCount, &
+    rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   if (localDeCount /= 1 ) then
@@ -862,16 +863,16 @@ subroutine MOSSCO_DeLayoutPrintBlockList(deLayout, rc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
   endif
 
-  allocate(deBlockList(rank,2,deCount))
+  !allocate(deBlockList(rank, 2, deCount))
   !call MOSSCO_MatrixFilePrint(deBlocklist(:,1,:), filename, rc=localrc)
-  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   !call MOSSCO_MatrixFilePrint(deBlocklist(:,1,:), filename, rc=localrc)
-  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   call ESMF_DeLayoutPrint(deLayout, rc=localrc)
-
-  if (allocated(deBlockList)) deallocate(deBlockList)
+  
+  !if (allocated(deBlockList)) deallocate(deBlockList)
   if (present(rc)) rc = rc_
 
 end subroutine MOSSCO_DeLayoutPrintBlockList

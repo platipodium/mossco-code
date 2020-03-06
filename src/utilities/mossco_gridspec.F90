@@ -1,7 +1,7 @@
 !> @brief Implementation GRIDSPEC utility functions
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2015 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2015-2020 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
 !
@@ -15,6 +15,8 @@
 #define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "mossco_gridspec.F90"
+
+#define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 module mossco_gridspec
 
@@ -60,8 +62,7 @@ module mossco_gridspec
     if (present(rc)) rc=ESMF_SUCCESS
 
     call ESMF_GridGet(grid, status=status, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (status /= ESMF_GRIDSTATUS_COMPLETE) then
       write(message,'(A)')  'Grid '//trim(gridName)//' is not complete, cannot create GRIDSPEC.'
@@ -70,15 +71,13 @@ module mossco_gridspec
     endif
 
     call ESMF_GridGet(grid, dimCount=dimCount, name=gridName, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call replace_character(gridName, ' ', '_')
     if (dimCount<1) return
 
     call ESMF_GridGet(grid, coordSys=coordSys, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (coordSys /= ESMF_COORDSYS_SPH_DEG) then
       write(message,'(A)')  'Grid '//trim(gridName)//' is not spherical/degrees type, cannot create GRIDSPEC.'
@@ -220,8 +219,7 @@ module mossco_gridspec
     dimids(:)=-1
 
     call ESMF_GridGet(grid, staggerloc=ESMF_STAGGERLOC_CENTER, localDe=0, exclusiveCount=ubnd, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     dimCount=rank
     do i=1, dimCount
@@ -244,8 +242,7 @@ module mossco_gridspec
 
     allocate(coordDimCount(dimCount))
     call ESMF_GridGet(grid, coordDimCount=coordDimCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     do i=1, dimCount
 
@@ -279,13 +276,11 @@ module mossco_gridspec
 
     !call ESMF_GridGet(grid, coordTypeKind=coordTypeKind, dimCount=dimCount, staggerlocCount=staggerlocCount, &
     !  localDeCount=localDeCount, coordSys=coordSys, coordDimCount=coordDimCount, rank=rank, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
    ! call ESMF_GridGet(grid, coordTypeKind=coordTypeKind, dimCount=dimCount, staggerlocCount=staggerlocCount, &
    !   localDeCount=localDeCount, coordSys=coordSys, coordDimCount=coordDimCount, rank=rank, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     localrc = nf90_close(ncid)
 
@@ -312,12 +307,10 @@ module mossco_gridspec
     if (present(rc)) rc=ESMF_SUCCESS
 
     call ESMF_VMGetCurrent(vm=vm, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_VmGet(vm, petCount=petCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_VmGet(vm, petCount=petCount, localPet=localPet, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     !! nx and ny are the dimensions in lon/lat direction
     !! then try to find square root for cellsPerPet to get square domains
