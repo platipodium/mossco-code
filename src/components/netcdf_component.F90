@@ -301,6 +301,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     real(ESMF_KIND_R8)      :: seconds
     integer(ESMF_KIND_I4)   :: itemCount, timeSlice, localPet,  petCount
     integer(ESMF_KIND_I4)   :: localrc, fieldCount, itemFieldCount
+    integer(ESMF_KIND_I4)   :: alarmCount
     type(ESMF_StateItem_Flag) :: itemType
     type(ESMF_StateItem_Flag), allocatable, dimension(:)  :: itemTypeList
     character(len=ESMF_MAXSTR), allocatable, dimension(:) :: itemNameList
@@ -623,7 +624,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     enddo
 
-
     ! The removal creates problesm, it is disabled here for further testing.  Is
     ! it needed at all?
     ! if (itemcount>0) then
@@ -662,19 +662,22 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (associated(filterIncludeList)) deallocate(filterIncludeList)
     if (associated(filterExcludeList)) deallocate(filterExcludeList)
 
-    !! For this component, it does not make sense to advance its clock by a regular
-    !! timestep.  Thus, it is advanced to the next alarm time.
-
-    call MOSSCO_ClockGetTimeStepToNextAlarm(clock, timeStep, rc=localrc)
+    ! For this component, it does not make sense to advance its clock by a regular
+    ! timestep.  Thus, it is advanced to the next alarm time, if there is
+    ! such an alarmList
+    call ESMF_ClockGet(clock, alarmCount=alarmCount, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_ClockGet(clock, stopTime=stopTime, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    !if (timeStep>0) then
-      call ESMF_ClockAdvance(clock, timeStep=timeStep, rc=localrc)
+    if (alarmCount > 0) then
+      call MOSSCO_ClockGetTimeStepToNextAlarm(clock, timeStep, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-    !endif
+    else
+      call ESMF_ClockGet(clock, timeStep=timeStep, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    endif
+
+    call ESMF_ClockAdvance(clock, timeStep=timeStep, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
