@@ -2580,7 +2580,8 @@ contains
 
         ! Look for an exclusion pattern on this item name, check both the
         ! field and the bundle name
-        if (present(exclude) .and. associated(exclude)) then
+        if (present(exclude)) then
+         if (associated(exclude)) then
 
           do j = lbound(exclude,1),ubound(exclude,1)
             call MOSSCO_StringMatch(itemNameList(i), exclude(j), isMatch, localrc)
@@ -2613,9 +2614,11 @@ contains
             cycle
           endif
         endif
+        endif
 
         !! Look for an inclusion pattern on this field or fieldBundle name
-        if (present(include) .and. associated(include)) then
+        if (present(include)) then
+          if (associated(include)) then
 
           do j = lbound(include,1),ubound(include,1)
             call MOSSCO_StringMatch(itemNameList(i), include(j), isMatch, localrc)
@@ -2658,6 +2661,7 @@ contains
             endif
             cycle
           endif
+        endif
         endif !> presence of include/exclude
 
         fieldCount_ = fieldCount_ + 1
