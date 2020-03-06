@@ -416,11 +416,11 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       !! Check for monotonic time, if not, then set itemCount=0 to skip writing of
       !! variables.  Continue an error message
 
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       call nc%timeGet(minTime, searchIndex=1, stopTime=maxTime, rc=localrc)
-
       if (localrc == ESMF_RC_NOT_FOUND .or. maxTime < currTime) then
         call nc%add_timestep(seconds, rc=localrc)
-        !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       elseif (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)

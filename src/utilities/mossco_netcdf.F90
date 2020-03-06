@@ -2178,11 +2178,11 @@ module mossco_netcdf
       nc%timeUnit=trim(timeUnit)
       call nc%init_time(rc=localrc)
       write(message,'(A)') trim(owner_)//' file'
-      call MOSSCO_MessageAdd(message,trim(filename)//' has time unit '//trim(timeUnit))
+      call MOSSCO_MessageAdd(message,' '//trim(filename)//' has time unit '//trim(timeUnit))
     else
       nc%timeUnit=''
       write(message,'(A)') trim(owner_)//' file'
-      call MOSSCO_MessageAdd(message,trim(filename)//' has no time unit')
+      call MOSSCO_MessageAdd(message,' '//trim(filename)//' has no time unit')
     endif
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
@@ -2297,9 +2297,6 @@ module mossco_netcdf
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call nc%putattr4(NF90_GLOBAL,'geospatial_lon_max',-180.0, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-    call nc%putattstring(NF90_GLOBAL,'StopTime','', rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call nc%putattstring(NF90_GLOBAL,'licence','Creative Commons Attribution Share-Alike (CC-by-SA) 4.0 unported', rc=localrc)
@@ -4771,8 +4768,8 @@ module mossco_netcdf
     type(ESMF_KeyWordEnforcer), intent(in), optional :: kwe
     integer(ESMF_KIND_I4), intent(out), optional     :: rc
 
-    integer(ESMF_KIND_I4)                        :: i, rc_, itime_, localrc, varid
-    character(ESMF_MAXSTR)                       :: timeUnit, ISOString
+    integer(ESMF_KIND_I4)       :: i, rc_, itime_, localrc, varid
+    character(ESMF_MAXSTR)      :: timeUnit, ISOString, string
 
     rc_ = ESMF_SUCCESS
     if (present(rc)) rc=rc_
@@ -4799,19 +4796,20 @@ module mossco_netcdf
       return
     endif
 
-    call MOSSCO_StringCopy(timeunit, timeunit(i+6:len_trim(timeunit)), rc=localrc)
+    call MOSSCO_StringCopy(string, timeunit(i+6:len_trim(timeunit)), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     ! Remove: timeunit = timeunit(i+6:len_trim(timeunit))
     ! Make sure that this is in ISO format, i.e. YYYY-MM-DDThh:mm:ss
     ! Some implementations do not write 4 (or 2) digits single digit components.
-    call timeString2ISOTimeString(timeUnit, ISOString, rc=localrc)
+    call timeString2ISOTimeString(string, ISOString, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     !> @todo consider "climatological month" as possible unit, and have a look at
     !> CF conventions on their climatological time handling.
 
     call MOSSCO_TimeSet(refTime, ISOString, rc=localrc)
+
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   end subroutine mossco_netcdf_reftime
@@ -4861,7 +4859,7 @@ module mossco_netcdf
     call ESMF_TimeGet(refTime_, timeStringISOFrac=timeString, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    write(message,'(A)') 'mossco_netcdf ref time is '//trim(timeString)
+    !write(message,'(A)') 'mossco_netcdf ref time is '//trim(timeString)
     !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
 
     ! Default time is refTime
@@ -4899,9 +4897,13 @@ module mossco_netcdf
     localrc = nf90_get_var(self%ncid, varid, farray)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
+    ! If no time information has been written to the file, then exit here
+    ! but make sure that all optional arguments are also considered.
     if (size(farray) == 0) then
       currTime = refTime_
-      if (present(rc)) rc=ESMF_RC_NOT_FOUND
+      if (present(startTime)) startTime = refTime_
+      if (present(stopTime)) stopTime = refTime_
+      if (present(rc)) rc = ESMF_RC_NOT_FOUND
       return
     endif
 
@@ -4913,7 +4915,7 @@ module mossco_netcdf
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     write(message,'(A)') 'mossco_netcdf cur time is '//trim(timeString)
-    !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
 
     if (present(startTime)) then
       call MOSSCO_TimeIntervalFromTimeValue(timeInterval, timeUnit, farray(1), rc=localrc)
@@ -4925,7 +4927,7 @@ module mossco_netcdf
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       write(message,'(A)') 'mossco_netcdf start time is '//trim(timeString)
-      !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
     endif
 
     if (present(stopTime)) then
@@ -4937,7 +4939,7 @@ module mossco_netcdf
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       write(message,'(A)') 'mossco_netcdf stop time is '//trim(timeString)
-      !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
     endif
 
     if (allocated(farray)) deallocate(farray)
