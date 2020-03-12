@@ -1,7 +1,7 @@
-# This Makefile snippet is part of MOSSCO; definition of MOSSCO-wide
+j# This Makefile snippet is part of MOSSCO; definition of MOSSCO-wide
 # make rules
 #
-# @copyright (C) 2013--2019 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013-2020 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -29,6 +29,14 @@ AWK:=$(shell which awk 2> /dev/null)
 endif
 ifneq ($(strip $(AWK)),)
 export AWK:=$(basename $(AWK))
+endif
+
+CMAKE:=$(shell which cmake3 2> /dev/null)
+ifeq ($(strip $(CMAKE)),)
+CMAKE:=$(shell which cmake 2> /dev/null)
+endif
+ifneq ($(strip $(CMAKE)),)
+export CMAKE:=$(basename $(CMAKE))
 endif
 
 export MOSSCO_OBJC=false
