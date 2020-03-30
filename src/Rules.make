@@ -1,4 +1,4 @@
-j# This Makefile snippet is part of MOSSCO; definition of MOSSCO-wide
+# This Makefile snippet is part of MOSSCO; definition of MOSSCO-wide
 # make rules
 #
 # @copyright (C) 2013-2020 Helmholtz-Zentrum Geesthacht
