@@ -128,6 +128,19 @@ else
     endif
     ifeq ($(ESMF_COMM),mpich2)
       ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
+      ifeq ($(ESMF_FC),x86_64)
+        ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f4)
+      endif
+      ifeq ($(ESMF_FC),)
+        $(error $(ESMF_F90COMPILER) is *not* based on $(ESMF_COMM)!)
+      endif
+      ESMF_CC:=$(shell $(ESMF_CXXCOMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
+    endif
+		ifeq ($(ESMF_COMM),mpich3)
+      ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
+      ifeq ($(ESMF_FC),x86_64)
+        ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f4)
+      endif
       ifeq ($(ESMF_FC),)
         $(error $(ESMF_F90COMPILER) is *not* based on $(ESMF_COMM)!)
       endif
