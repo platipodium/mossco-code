@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 #> @brief Stitching script for multiprocessor tiled output of MOSSCO's
-#  netcdf components
+#  netcdf component
 
 #  This computer program is part of MOSSCO.
-#> @copyright (c) 2015, 2016, 2017, 2018, 2019 Helmholtz Zentrum Geesthacht
+#> @copyright (c) 2015-2020 Helmholtz Zentrum Geesthacht
 #> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -114,23 +114,23 @@ for key, value in nc.variables.items():
     if len(value.dimensions) != 1 : continue
 
     for end in list('_' + x +'_' + y for x in lat_keys for y in loc_keys):
-        if key.endswith(end):  alat[key]=[] 
+        if key.endswith(end):  alat[key]=[]
         continue
     for end in list('_' + x +'_' + y for x in lon_keys for y in loc_keys):
-        if key.endswith(end):  alon[key]=[] 
+        if key.endswith(end):  alon[key]=[]
         continue
     for end in list('_' + x for x in lat_keys):
-        if key.endswith(end):  alat[key]=[] 
+        if key.endswith(end):  alat[key]=[]
         continue
     for end in list('_' + x for x in lon_keys):
-        if key.endswith(end):  alon[key]=[] 
+        if key.endswith(end):  alon[key]=[]
         continue
 
 if 'time' in nc.dimensions:
 
      if time_range[1] < 0:
          time_range[1] = nc.dimensions['time'].size
-     else: 
+     else:
          time_range[1]=np.min([time_range[1],nc.dimensions['time'].size])
      print(nc.dimensions['time'])
      if time_range[0] >=  time_range[1]:
@@ -313,7 +313,7 @@ for f in files[:]:
 
     print(f, key, value.shape, n, dims, lbnd, ubnd)
     for i in range(n):
- 
+
       # find coordinate variable with axis attribute and same dimension
       for item in coords:
         if not ncout.variables[item].dimensions[0]==dims[i]:
@@ -332,7 +332,7 @@ for f in files[:]:
         try:
             if np.any(nc.variables[item][:].mask):
               inlbnd[i] = np.argmin(not nc.variables[item][:].mask)
-              inubnd[i] = np.argmax(not nc.variables[item][:].mask) + 1 
+              inubnd[i] = np.argmax(not nc.variables[item][:].mask) + 1
         except:
             pass
 
