@@ -3,7 +3,7 @@
 # This script is is part of MOSSCO. It creates from a getm bathymetry/topography
 # a GRIDSPEC compliant NetCDF file.
 #
-# @copyright (C) 2018 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2018-2020 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -20,8 +20,8 @@ import re
 
 if __name__ == '__main__':
 
-  #basename = os.path.join(os.environ['MOSSCO_SETUPDIR'],'sns','Topo','topo.nc') 
-  basename = os.path.join(os.environ['MOSSCO_SETUPDIR'],'NSBS6nm','Topo','NSBS6nm.v01.nc')
+  basename = os.path.join(os.environ['MOSSCO_SETUPDIR'],'sns','Topo','topo.nc') 
+  #basename = os.path.join(os.environ['MOSSCO_SETUPDIR'],'NSBS6nm','Topo','NSBS6nm.v01.nc')
   #basename = os.path.join(os.environ['MOSSCO_SETUPDIR'],'regrid','temp.nc')
 
 
@@ -80,13 +80,13 @@ if __name__ == '__main__':
   if nbound == 4:
       lat_var = nc.createVariable('lat','f8',('y','x'))
       lon_var = nc.createVariable('lon','f8',('y','x'))
-      lon_bounds_var = nc.createVariable('lon_bounds','f8',('bounds','y','x'))
-      lat_bounds_var = nc.createVariable('lat_bounds','f8',('bounds','y','x'))
+      lon_bounds_var = nc.createVariable('lon_bounds','f8',('y','x','bounds'))
+      lat_bounds_var = nc.createVariable('lat_bounds','f8',('y','x','bounds'))
   else:
       lat_var = nc.createVariable('lat','f8',('y'))
       lon_var = nc.createVariable('lon','f8',('x'))
-      lon_bounds_var = nc.createVariable('lon_bounds','f8',('bounds','x'))
-      lat_bounds_var = nc.createVariable('lat_bounds','f8',('bounds','y'))
+      lon_bounds_var = nc.createVariable('lon_bounds','f8',('x','bounds'))
+      lat_bounds_var = nc.createVariable('lat_bounds','f8',('y','bounds'))
 
   lat_var.units='degrees_north'
   lat_var.bounds='lat_bounds'
@@ -103,7 +103,7 @@ if __name__ == '__main__':
   mask_var.units=''
 
   # Add mask 
-  z_var = nc.createVariable('bathymetry','f4',('y','x'))
+  z_var = nc.createVariable('bathymetry','f8',('y','x'))
   z_var.missing_value=-1.0E30
   z_var.coordinates='lon lat'
   z_var.units='m'
@@ -119,19 +119,19 @@ if __name__ == '__main__':
   lon_var[:]=lon
   
   if nbound == 4: 
-      lat_bounds_var[0,:,:]=latx[:-1,:-1] # ll
-      lat_bounds_var[1,:,:]=latx[ 1:,:-1] # lr
-      lat_bounds_var[2,:,:]=latx[ 1:, 1:] # ur
-      lat_bounds_var[3,:,:]=latx[:-1, 1:] # ul
-      lon_bounds_var[0,:,:]=lonx[:-1,:-1] # ll
-      lon_bounds_var[1,:,:]=lonx[ 1:,:-1] # lr
-      lon_bounds_var[2,:,:]=lonx[ 1:, 1:] # ur
-      lon_bounds_var[3,:,:]=lonx[:-1, 1:] # ul
+      lat_bounds_var[:,:,0]=latx[:-1,:-1] # ll
+      lat_bounds_var[:,:,1]=latx[ 1:,:-1] # lr
+      lat_bounds_var[:,:,2]=latx[ 1:, 1:] # ur
+      lat_bounds_var[:,:,3]=latx[:-1, 1:] # ul
+      lon_bounds_var[:,:,0]=lonx[:-1,:-1] # ll
+      lon_bounds_var[:,:,1]=lonx[ 1:,:-1] # lr
+      lon_bounds_var[:,:,2]=lonx[ 1:, 1:] # ur
+      lon_bounds_var[:,:,3]=lonx[:-1, 1:] # ul
   else:
-      lat_bounds_var[0,:]=latx[:-1] # lower
-      lat_bounds_var[1,:]=latx[1:] # upper
-      lon_bounds_var[0,:]=lonx[:-1] # left
-      lon_bounds_var[1,:]=lonx[1:] # right
+      lat_bounds_var[:,0]=latx[:-1] # lower
+      lat_bounds_var[:,1]=latx[1:] # upper
+      lon_bounds_var[:,0]=lonx[:-1] # left
+      lon_bounds_var[:,1]=lonx[1:] # right
       
   mask_var[:]=mask
   z[z<0]=z_var.missing_value
