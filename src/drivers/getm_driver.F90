@@ -21,8 +21,8 @@
          integer,intent(in)            :: AH_method
          REALTYPE,intent(in)           :: AH_const,AH_Prt,AH_stirr_const
          REALTYPE,intent(inout)        :: f(I3DFIELD)
-         REALTYPE,dimension(:,:,:),pointer,intent(in),optional :: ffluxu,ffluxv
-         REALTYPE,dimension(:,:,:),pointer,intent(in),optional :: phymix
+         REALTYPE,dimension(:,:,:),pointer,contiguous,intent(in),optional :: ffluxu,ffluxv
+         REALTYPE,dimension(:,:,:),pointer,contiguous,intent(in),optional :: phymix
       end subroutine tracer_diffusion
    end interface
 
@@ -123,7 +123,7 @@
 !
 ! !INPUT/OUPUT PARAMETERS:
    REALTYPE,dimension(I3DFIELD),intent(inout) :: f
-   REALTYPE,dimension(:,:,:),pointer,intent(in),optional :: ffluxu,ffluxv
+   REALTYPE,dimension(:,:,:),pointer,contiguous,intent(in),optional :: ffluxu,ffluxv
 !
 ! !REVISION HISTORY:
 !  Original Author(s): Knut Klingbeil

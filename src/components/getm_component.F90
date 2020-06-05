@@ -1721,7 +1721,7 @@ subroutine getmCmp_update_importState()
    REALTYPE,dimension(:,:,:)   ,pointer :: p_conc,p_ws
 #ifndef NO_TRACER_FLUXES
    REALTYPE,dimension(I3DFIELD),target  :: t_xflux,t_yflux
-   REALTYPE,dimension(:,:,:)   ,pointer :: p_xflux,p_yflux
+   REALTYPE,dimension(:,:,:)   ,pointer,contiguous :: p_xflux,p_yflux
 #endif
    integer                              :: n
 
