@@ -1,7 +1,7 @@
 #!/bin/bash -x
 # This script is part of MOSSCO.  It helps in installing ESMF
 #
-# @copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013-2020 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -33,7 +33,7 @@ echo "  $0 uses ESMF sources in ${ESMF_DIR}"
 # Determine what git tags of the ESMF repo are used.  Prefer the most
 # recent one (we need >= 7_1_0_beta_snapshot_52 for regridding with extrapolation)
 if [ -z "${ESMF_TAGS}" ]; then
-  TAGS=ESMF_7_1_0r
+  TAGS=ESMF_8_0_0
 else
   TAGS=${ESMF_TAGS}
 fi
@@ -161,7 +161,7 @@ for C in $COMMS ; do
 
 
     for T in $TAGS; do
-       echo "  $0 iterates for Tag $T "
+       echo "  $0 iterates for tag $T "
        ESMF_SITE=$T
        ESMF_STRING=${ESMF_OS}.${ESMF_COMPILER}.${ESMF_ABI}.${ESMF_COMM}.${ESMF_SITE}
 
@@ -190,26 +190,46 @@ for C in $COMMS ; do
 
 cat << EOT > $CONFIG_DIR/.esmf_${ESMF_STRING}
 export ESMF_DIR=${ESMF_DIR}
-export ESMF_BOPT=g
+#export ESMF_MACHINE=x86_64
+export ESMF_OS=${ESMF_OS}
 export ESMF_ABI=${ESMF_ABI}
-export ESMF_MOAB=OFF
+export ESMF_PTHREADS=OFF
+export ESMF_OPENMP=OFF
+export ESMF_OPENACC=OFF
+export ESMF_MOAB=internal # off
+export ESMF_ARRAY_LITE=FALSE
+#export ESMF_NO_INTEGER_1_BYTE=TRUE
+#export ESMF_NO_INTEGER_2_BYTE=TRUE
+export ESMF_FORTRANSYMBOLS=default
+export ESMF_MAPPER_BUILD=OFF
+export ESMF_AUTO_LIB_BUILD=ON
+export ESMF_DEFER_LIB_BUILD=ON
+export ESMF_SHARED_LIB_BUILD=ON
+export ESMF_BOPT=g
 export ESMF_OPTLEVEL=2
 export ESMF_INSTALL_PREFIX=${ESMF_INSTALL_PREFIX}
 export ESMF_LAPACK=internal
 export ESMF_NETCDF=${ESMF_NETCDF}
 export ESMF_NETCDF_INCLUDE=${ESMF_NETCDF_INCLUDE}
 export ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_LIBPATH}
+#export ESMF_NETCDF_LIBS="-lnetcdff -lnetcdf"
 export ESMF_F90COMPILEOPTS=-DESMF_NO_SEQUENCE
-unset ESMF_PIO
 export ESMF_SITE=$T
 export ESMF_COMPILER=$G
 export ESMF_COMM=$C
 export ESMFMKFILE=$ESMF_INSTALL_PREFIX/lib/libg/${ESMF_STRING}/esmf.mk
-EOT
+export ESMF_LAPACK=system
+export ESMF_LAPACK_LIBS=-lvecLibFort
 
-      echo "export ESMF_XERCES=standard" >> $CONFIG_DIR/.esmf_${ESMF_STRING}
-      echo "# Comment the following line if you have libxerces"
-      echo "unset ESMF_XERCES" >> $CONFIG_DIR/.esmf_${ESMF_STRING}
+export ESMF_ACC_SOFTWARE_STACK=none
+export ESMF_XERCES=standard
+# export ESMF_XERCES_INCLUDE=/opt/local/include
+# export ESMF_XERCES_LIBS=-lxerces-c
+# unset ESMF_XERCES # uncomment if not wanted
+export ESMF_YAMLCPP=internal
+export ESMF_PIO=internal
+# unset ESMF_PIO # uncomment if not wanted
+EOT
 
       source $CONFIG_DIR/.esmf_${ESMF_STRING}
       cat $CONFIG_DIR/.esmf_${ESMF_STRING}
