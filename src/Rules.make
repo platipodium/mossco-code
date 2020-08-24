@@ -193,7 +193,7 @@ else
     ifeq ($(FORTRAN_COMPILER), XLF)
       MOSSCO_F03VERSION=$(shell $(F90) -qversion | head -1)
     else
-      MOSSCO_F03VERSION=$(shell $(F90) --version | head -1)
+      MOSSCO_F03VERSION=$(shell $(F90) --version | head -1 | awk '{print $$NF}')
     endif
   endif
   ifdef ESMF_CXXCOMPILER
@@ -201,6 +201,7 @@ else
   endif
 endif
 export MOSSCO_ESMF
+export MOSSCO_F03VERSION
 
 ifeq ($(MOSSCO_ESMF),true)
   ifeq ($(ESMF_FC),)
@@ -681,6 +682,9 @@ ifeq ($(FORTRAN_COMPILER),GFORTRAN)
 F90FLAGS += -O3 -J$(MOSSCO_MODULE_PATH)
 #F90FLAGS += -ffast-math -march=native -fstack-arrays -fno-protect-parens
 # -flto crashes on darwin
+#ifeq ($(MOSSCO_F03COMPILER%%.*), 10)
+F90FLAGS += -fallow-argument-mismatch
+#endif
 EXTRA_CPP =
 #EXTRA_CPP += -ffpe-trap=invalid,zero,overflow
 #EXTRA_CPP += -ffpe-trap=invalid
