@@ -74,7 +74,7 @@ MOSSCO_LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 all:  schism_mossco config outputs
 
 schism_mossco: schism_cmi_esmf.o toplevel_component.o main.o
-	echo objcopy --redefine-sym xerbla_=schism_lap_xerbla_ $SCHISM_BUILD_DIR/lib/libhydro.a
+	echo objcopy --redefine-sym xerbla_=schism_lap_xerbla_ ${SCHISM_BUILD_DIR}/lib/libhydro.a
 	$(F90) $(CPPFLAGS) $^ -o $@ $(MOSSCO_LDFLAGS) $(LDFLAGS) $(LIBS)
 
 toplevel_component.o: schism_cmi_esmf.o toplevel_component.F90
