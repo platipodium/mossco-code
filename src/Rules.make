@@ -682,9 +682,9 @@ ifeq ($(FORTRAN_COMPILER),GFORTRAN)
 F90FLAGS += -O3 -J$(MOSSCO_MODULE_PATH)
 #F90FLAGS += -ffast-math -march=native -fstack-arrays -fno-protect-parens
 # -flto crashes on darwin
-#ifeq ($(MOSSCO_F03COMPILER%%.*), 10)
+ifeq ($(MOSSCO_F03VERSION%%.*), 10)
 F90FLAGS += -fallow-argument-mismatch
-#endif
+endif
 EXTRA_CPP =
 #EXTRA_CPP += -ffpe-trap=invalid,zero,overflow
 #EXTRA_CPP += -ffpe-trap=invalid
