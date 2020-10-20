@@ -67,7 +67,7 @@ if test -d ${ESMF_DIR} ; then
   echo "  $0 uses existing ESMF installation in $ESMF_DIR"
 else
   echo " $0 pulls new ESMF installation in $ESMF_DIR"
-  git clone --depth=1 git://esmf.git.sourceforge.net/gitroot/esmf/esmf ${ESMF_DIR}
+  git clone --depth=1 https://github.com/esmf-org/esmf.git  ${ESMF_DIR}
 fi
 
 export ESMF_OS=$(uname -s)
@@ -84,7 +84,7 @@ echo "  $0 uses  SED=${SED}"
 cd ${ESMF_DIR}
 
 git stash && git stash drop
-git pull origin master
+git pull
 
 for C in $COMMS ; do
   echo "  $0 iterates for communicator $C "
