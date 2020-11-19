@@ -3,7 +3,7 @@
 #  netcdf components
 
 #  This computer program is part of MOSSCO.
-#> @copyright Copyright (C) 2018 Helmholtz Zentrum Geesthacht
+#> @copyright Copyright (C) 2018--2020 Helmholtz Zentrum Geesthacht
 #> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -106,7 +106,7 @@ node_id  = np.arange(node_id_max,dtype='int32')
 node_lon = node_lon = np.zeros(node_id.shape,dtype='float')
 node_lat = node_lat = np.zeros(node_id.shape,dtype='float')
 
-elem_node_conn = np.zeros((3,len(elem_id)),dtype='int32')
+elem_node_conn = np.zeros((len(elem_id),3),dtype='int32')
 
 for f in files:
   nc=netcdf.Dataset(f,'r')
@@ -115,11 +115,11 @@ for f in files:
   if nc.variables['mesh_global_node_id'].dimensions[0] == 'time':
       node_id_global=list(nc.variables['mesh_global_node_id'][0,:]-1)
       elem_id_global=list(nc.variables['mesh_global_element_id'][0,:]-1)
-      elem_node_conn[:,elem_id_global]=nc.variables['mesh_element_node_connectivity'][0,0:3,:]
+      elem_node_conn[elem_id_global,:]=nc.variables['mesh_element_node_connectivity'][0,0:3,:].T
   else:
       node_id_global=list(nc.variables['mesh_global_node_id'][:]-1)
       elem_id_global=list(nc.variables['mesh_global_element_id'][:]-1)
-      elem_node_conn[:,elem_id_global]=nc.variables['mesh_element_node_connectivity'][0:3,:]
+      elem_node_conn[elem_id_global,:]=nc.variables['mesh_element_node_connectivity'][0:3,:].T
 
   node_lon[node_id_global]=nc.variables['mesh_node_lon'][:]
   node_lat[node_id_global]=nc.variables['mesh_node_lat'][:]
@@ -189,6 +189,7 @@ for key,value in nc.variables.items():
 
   if key == 'mesh_element_node_connectivity':
       if 'time' in value.dimensions: dims = list(value.dimensions[1:])
+      dims = dims[::-1]
 
   if (key in incl_variables):
     try:
@@ -199,6 +200,9 @@ for key,value in nc.variables.items():
     for att in value.ncattrs():
       if att == '_FillValue': continue
       var.setncattr(att,value.getncattr(att))
+
+    if np.any([dim.startswith('mesh_') for dim in dims]):
+        var.setncattr('mesh', 'mesh_topology')
     print ('Created for output variable ', key , tuple(dims))
 
 # Now add values to time and coordinate variables
@@ -213,9 +217,9 @@ if 'mesh_element_lat' in ncout.variables: ncout.variables['mesh_element_lat'][:]
 if 'mesh_element_lon' in ncout.variables: ncout.variables['mesh_element_lon'][:]=elem_lon
 
 if 'mesh_element_node_connectivity' in ncout.variables:
-    ncout.variables['mesh_element_node_connectivity'][:,:]=elem_node_conn[0:3,:]
+    ncout.variables['mesh_element_node_connectivity'][:,:]=elem_node_conn[:,0:3]
     ncout.variables['mesh_element_node_connectivity'].standard_name = "face_node_connectivity" ;
-    ncout.variables['mesh_element_node_connectivity'].start_index = 0 ;
+    ncout.variables['mesh_element_node_connectivity'].start_index = int(np.min(elem_node_conn[:,0:3]));
 
     var = ncout.createVariable('mesh_topology','int32',dimensions=())
     var.cf_role = "mesh_topology"
