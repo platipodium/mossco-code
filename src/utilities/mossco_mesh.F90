@@ -1,7 +1,7 @@
 !> @brief Implementation of mesh utilities
 !!
 !! This computer program is part of MOSSCO.
-!! @copyright Copyright 2018 Helmholtz-Zentrum Geesthacht
+!! @copyright Copyright 2018--2020 Helmholtz-Zentrum Geesthacht
 !! @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -49,12 +49,17 @@ subroutine MOSSCO_MeshString(mesh, message, kwe, length, rc)
   rc_ = ESMF_SUCCESS
   if (present(kwe)) rc_ = ESMF_SUCCESS
 
-  name = 'mesh'
   isPresent=.false.
-  !> @todo there is no name property in meshes yet, neither are there attributes
-  !> there is a ticket requested with ESMF
-  !call ESMF_MeshGet(mesh, name=name, rc=localrc)
-  !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+#if ESMF_VERSION_MAJOR < 8
+  ! Before ESMF 8, meshes did not have a name property
+  write(name,'(A)') 'mesh'
+#else
+  call ESMF_MeshGet(mesh, name=name, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+#endif
+
+  !> @todo there are no attributes, there is a ticket requested with ESMF
 
   !call ESMF_AttributeGet(mesh, name='creator', isPresent=isPresent, rc=localrc)
   !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)

@@ -1194,7 +1194,12 @@ module mossco_netcdf
       call ESMF_FieldGet(field, mesh=mesh, meshloc=meshloc, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
+#if ESMF_VERSION_MAJOR < 8
       write(geomname,'(A)') 'mesh'
+#else
+      call ESMF_MeshGet(mesh, name=geomName, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+#endif
       dimids => self%mesh_dimensions(mesh, meshLoc=meshloc, rc=localrc)
       call self%create_mesh_coordinate(mesh, owner=owner_, rc=rc)
 
@@ -1384,6 +1389,21 @@ module mossco_netcdf
 
       if (.not.isPresent) call ESMF_AttributeSet(field, '_FillValue', missingValueI8, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
+    !> Write UGRID metainformation, i.e. the mesh the variable refers to and
+    !> the mesh location
+    if (geomType==ESMF_GEOMTYPE_MESH) then
+      call ESMF_AttributeSet(field, 'mesh', geomName, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      if (meshLoc==ESMF_MESHLOC_NODE) then
+        call ESMF_AttributeSet(field, 'location', 'node', rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      else
+        call ESMF_AttributeSet(field, 'location', 'elem', rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      endif
     endif
 
     !call MOSSCO_FieldLog(field)
