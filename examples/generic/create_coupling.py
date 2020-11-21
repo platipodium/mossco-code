@@ -1018,6 +1018,14 @@ for item in gridCompList:
   elif not item == 'netcdf' : continue
   ito=gridCompList.index(item)
 
+  fid.write('    ! Changed Attribute interface from ESMF8.1\n')
+  fid.write('#if ESMF_VERSION_MAJOR > 7 && ESMF_VERSION_MINOR > 0\n')
+  fid.write('    !call ESMF_InfoGetFromHost(importState, info, rc=localrc)\n')
+  fid.write('    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)\n')
+  fid.write('    !call ESMF_InfoSet(info, "aKey", 15, rc=localrc)\n')
+  fid.write('    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)\n')
+  fid.write('#else\n')
+
   fid.write('    !> Link attributes of exportState of the topLevel component (which contains metadata)\n')
   fid.write('    !> to the netcdf component\'s import state\n')
   fid.write('    call ESMF_AttributeLink(importState, gridImportStateList(' + str(ito+1) + '), rc=localrc)\n')
@@ -1026,6 +1034,8 @@ for item in gridCompList:
   fid.write('    call ESMF_AttributeLink(gridComp, gridImportStateList(' + str(ito+1) + '), rc=localrc)\n')
   fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
   fid.write('      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
+  fid.write('#endif\n')
+
   fid.write('    call ESMF_CplCompInitialize(cplCompList(1), importState=importState, &\n')
   fid.write('      exportState=gridImportStateList(' + str(ito+1) + '), clock=clock, rc=localrc)\n')
   fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
@@ -1405,6 +1415,14 @@ fid.write('''
     !        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     !enddo
 
+    ! Changed Attribute interface from ESMF8.1
+#if ESMF_VERSION_MINOR > 0
+    !call ESMF_InfoGetFromHost(importState, info, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    !call ESMF_InfoSet(info, "aKey", 15, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+#else
+
     call ESMF_AttributeWrite(gridComp, convention='CIM 1.5', purpose='ModelComp', &
       attwriteflag=ESMF_ATTWRITE_JSON, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
@@ -1418,6 +1436,7 @@ fid.write('''
         if (rc .ne. ESMF_RC_LIB_NOT_PRESENT) call ESMF_Finalize(endflag=ESMF_END_ABORT)
       endif
     enddo
+#endif
 #endif
 
     !! Populate toplevel state with metadata on simulation
