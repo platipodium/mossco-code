@@ -51,7 +51,7 @@ subroutine MOSSCO_MeshString(mesh, message, kwe, length, rc)
 
   isPresent=.false.
 
-#if ESMF_VERSION_MAJOR < 8
+#if ESMF_VERSION_MAJOR < 8 || (ESMF_VERSION_MAJOR == 8 && ESMF_VERSION_MINOR == 0)
   ! Before ESMF 8, meshes did not have a name property
   write(name,'(A)') 'mesh'
 #else
