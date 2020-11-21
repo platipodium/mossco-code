@@ -44,7 +44,7 @@ LIBS+= -lparmetis -lmetis
 
 ifneq ($(wildcard $(SCHISM_BUILD_DIR)/lib/libfabm.a),)
 LIBS+= -lfabm_schism -lfabm
-F90FLAGS+= -DUSE_FABM
+F90FLAGS+= "-DUSE_FABM -fallow-argument-mismatch"
 $(info Using SCHISM compiled with FABM library)
 endif
 
