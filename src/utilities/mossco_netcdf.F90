@@ -1194,7 +1194,7 @@ module mossco_netcdf
       call ESMF_FieldGet(field, mesh=mesh, meshloc=meshloc, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-#if ESMF_VERSION_MAJOR < 8
+#if ESMF_VERSION_MAJOR < 8 || (ESMF_VERSION_MAJOR == 8 && ESMF_VERSION_MINOR == 0)
       write(geomname,'(A)') 'mesh'
 #else
       call ESMF_MeshGet(mesh, name=geomName, rc=localrc)
@@ -2846,11 +2846,12 @@ module mossco_netcdf
     if (present(rc)) rc = rc_
     if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
 
-    !!@todo get the name by ESMF_MeshGet once this is implemented by ESMF
-    !call ESMF_MeshGet(mesh, name=geomName, rc=localrc)
-    localrc = ESMF_SUCCESS
-    write(geomname,'(A)') 'mesh'
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+#if ESMF_VERSION_MAJOR < 8 || (ESMF_VERSION_MAJOR == 8 && ESMF_VERSION_MINOR == 0)
+      write(geomname,'(A)') 'mesh'
+#else
+      call ESMF_MeshGet(mesh, name=geomName, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+#endif
 
     allocate(dimids(2))
     dimids(2)=self%timeDimId
