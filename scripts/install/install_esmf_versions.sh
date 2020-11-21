@@ -1,7 +1,7 @@
 #!/bin/bash -x
 # This script is part of MOSSCO.  It helps in installing ESMF
 #
-# @copyright (C) 2013-2020 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013--2020 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -33,7 +33,7 @@ echo "  $0 uses ESMF sources in ${ESMF_DIR}"
 # Determine what git tags of the ESMF repo are used.  Prefer the most
 # recent one (we need >= 7_1_0_beta_snapshot_52 for regridding with extrapolation)
 if [ -z "${ESMF_TAGS}" ]; then
-  TAGS=ESMF_8_0_0
+  TAGS=ESMF_8_1_0_beta_snapshot_38
 else
   TAGS=${ESMF_TAGS}
 fi
@@ -137,29 +137,6 @@ for C in $COMMS ; do
       continue
     fi
 
-    if [ $(hostname) = ocean-fe.fzg.local ]; then
-      ESMF_NETCDF_INCLUDE=/opt/netcdf/3.6.2/${G}/include
-      ESMF_NETCDF=standard
-      ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_INCLUDE%%include}lib
-
-#     elif [ $G = intel ]; then
-#       source /opt/intel/bin/ifortvars.sh intel64
-#       source /opt/intel/bin/iccvars.sh intel64
-#
-#       export MPI_PATH=/opt/intel/mpich3
-#       export PATH=$MPI_PATH/bin:$PATH
-#       NETCDF_PATH=/opt/intel/netcdf4
-#       ESMF_NETCDF_INCLUDE=${NETCDF_PATH}/include
-    fi
-
-#    echo y  | module clear
-#    module load ${ESMF_COMPILER} || continue
-#    module load openmpi_ib || continue
-#    module load netcdf/3.6.2 || continue
-#    module list
-
-
-
     for T in $TAGS; do
        echo "  $0 iterates for tag $T "
        ESMF_SITE=$T
@@ -194,10 +171,10 @@ export ESMF_DIR=${ESMF_DIR}
 export ESMF_OS=${ESMF_OS}
 export ESMF_ABI=${ESMF_ABI}
 export ESMF_PTHREADS=OFF
-export ESMF_OPENMP=OFF
+export ESMF_OPENMP=ON
 export ESMF_OPENACC=OFF
 export ESMF_MOAB=internal # off
-export ESMF_ARRAY_LITE=FALSE
+export ESMF_ARRAY_LITE=TRUE # exclude 5D, 6D, 7D interfaces
 #export ESMF_NO_INTEGER_1_BYTE=TRUE
 #export ESMF_NO_INTEGER_2_BYTE=TRUE
 export ESMF_FORTRANSYMBOLS=default
@@ -206,22 +183,22 @@ export ESMF_AUTO_LIB_BUILD=ON
 export ESMF_DEFER_LIB_BUILD=ON
 export ESMF_SHARED_LIB_BUILD=ON
 export ESMF_BOPT=g
-export ESMF_OPTLEVEL=2
+export ESMF_OPTLEVEL=4 # works only if BOPT=O
 export ESMF_INSTALL_PREFIX=${ESMF_INSTALL_PREFIX}
 export ESMF_LAPACK=internal
 export ESMF_NETCDF=${ESMF_NETCDF}
 export ESMF_NETCDF_INCLUDE=${ESMF_NETCDF_INCLUDE}
 export ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_LIBPATH}
 #export ESMF_NETCDF_LIBS="-lnetcdff -lnetcdf"
-export ESMF_F90COMPILEOPTS=-DESMF_NO_SEQUENCE
+#export ESMF_NETCDF=nc-config # only supported from ESMF8
+export ESMF_F90COMPILEOPTS="${ESMF_F90COMPILEOPTS} -DESMF_NO_SEQUENCE"
 export ESMF_SITE=$T
 export ESMF_COMPILER=$G
 export ESMF_COMM=$C
 export ESMFMKFILE=$ESMF_INSTALL_PREFIX/lib/libg/${ESMF_STRING}/esmf.mk
 export ESMF_LAPACK=system
 export ESMF_LAPACK_LIBS=-lvecLibFort
-
-export ESMF_ACC_SOFTWARE_STACK=none
+export ESMF_ACC_SOFTWARE_STACK=openmp4
 export ESMF_XERCES=standard
 # export ESMF_XERCES_INCLUDE=/opt/local/include
 # export ESMF_XERCES_LIBS=-lxerces-c
