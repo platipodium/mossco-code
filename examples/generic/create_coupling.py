@@ -77,7 +77,7 @@ if not os.path.exists(filename):
 
 with open(filename,'rU') as fid:
     print ('Using ' + filename + ' ...')
-    config = yaml.load(fid)
+    config = yaml.load(fid, Loader=Loader)
 
 # Search for the key with name "coupling".  If part of the filename is the word "coupling" then assume that the first item on the list read is the name of the coupling
 coupling_name = os.path.splitext(os.path.basename(filename))[0]
@@ -1280,6 +1280,11 @@ for i in range(0,len(couplingList)):
     else:
         print ('Unknown interval specification "' + intervals[i] + '"')
         sys.exit(1)
+
+    if unit == 'y': unit='yy'
+    elif unit == 'hh': unit='h'
+    elif unit == 'dd': unit='d'
+    elif unit == 'ss': unit='s'
 
       # Special case infinity
     if (number == 'inf') or (number == 'none') or (number == '0'):
