@@ -39,7 +39,14 @@ module mossco_gridspec
 #define ESMF_METHOD "MOSSCO_GridWriteGridSpec"
   subroutine MOSSCO_GridWriteGridSpec(grid, name, rc)
 
-    use iso_fortran_env
+
+#ifndef NO_ISO_FORTRAN_ENV
+    use, intrinsic :: ISO_FORTRAN_ENV
+#if ESMF_COMM == ESMF_INTELMPI
+    use ifport, only : getgid, getpid, getuid
+#endif
+#endif
+
     implicit none
 
     type(ESMF_Grid), intent(in)                  :: grid

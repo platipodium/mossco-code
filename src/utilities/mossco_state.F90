@@ -1909,6 +1909,9 @@ contains
 
 #ifndef NO_ISO_FORTRAN_ENV
       use, intrinsic :: ISO_FORTRAN_ENV
+#if ESMF_COMM == ESMF_INTELMPI
+      use ifport, only : getgid, getpid, getuid
+#endif
 #endif
 
       type(ESMF_State), intent(inout)              :: state
@@ -1916,9 +1919,10 @@ contains
       logical, intent(in), optional                :: kwe !keyword-enforcer
       integer(ESMF_KIND_I4), intent(out), optional :: rc
 
-      integer(ESMF_KIND_I4)               :: rc_, localrc
-      logical                             :: isPresent
-      character(len=ESMF_MAXPATHLEN)      :: string
+      integer(ESMF_KIND_I4)                   :: rc_, localrc
+      logical                                 :: isPresent
+      character(len=ESMF_MAXPATHLEN)          :: string
+      character(len=:), allocatable           :: allocatableString
       character(len=ESMF_MAXSTR)          :: message
 
       rc_ = ESMF_SUCCESS
