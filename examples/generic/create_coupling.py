@@ -4,7 +4,7 @@
 # This script is is part of MOSSCO. It creates from YAML descriptions of
 # couplings a toplevel_component.F90 source file
 #
-# @copyright (C) 2014-2020 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2014--2020 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -1424,14 +1424,14 @@ fid.write('''
 #else
 
     call ESMF_AttributeWrite(gridComp, convention='CIM 1.5', purpose='ModelComp', &
-      attwriteflag=ESMF_ATTWRITE_JSON, rc=localrc)
+      rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
       if (rc .ne. ESMF_RC_LIB_NOT_PRESENT) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     endif
 
     do i=1,numGridComp
       call ESMF_AttributeWrite(gridCompList(i), 'CIM 1.5', 'ModelComp', &
-        attwriteflag=ESMF_ATTWRITE_JSON, rc=localrc)
+         rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
         if (rc .ne. ESMF_RC_LIB_NOT_PRESENT) call ESMF_Finalize(endflag=ESMF_END_ABORT)
       endif
