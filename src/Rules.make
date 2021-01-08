@@ -1,7 +1,7 @@
 # This Makefile snippet is part of MOSSCO; definition of MOSSCO-wide
 # make rules
 #
-# @copyright (C) 2013-2020 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013-2021 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -433,17 +433,18 @@ endif
 
 ifeq ($(MOSSCO_GETM),true)
   export GETM_LIBRARY_PATH=$(GETMDIR)/lib/$(FORTRAN_COMPILER)
-  GETM_LINKDIRS = -L$(GETM_LIBRARY_PATH) -L$(GOTM_LIBRARY_PATH)
-  GETM_LIBS := -lgetm_esmf_prod -lgetm_prod  -loutput_prod -lmeteo_prod
-  ifneq ($(GETM_NO_3D),true)
-    GETM_LIBS += -l3d_prod
-  endif
-  GETM_LIBS += -l2d_prod -lwaves_prod -lles_prod -lpool_prod -ldomain_prod -linput_prod -lncdfio_prod -lfutils_prod
-  ifeq ($(MOSSCO_GETM_FABM),true)
-    GETM_LINKDIRS += -L$(FABM_LIBRARY_PATH)
-    GETM_LIBS += -lgotm_fabm_prod $(FABM_LIBS)
-  endif
-  GETM_LIBS += -lturbulence -lutil -loutput_manager -lfield_manager -lyaml
+  GETM_LINKDIRS = -L$(GETM_LIBRARY_PATH) #-L$(GOTM_LIBRARY_PATH)
+  #GETM_LIBS := -lgetm_esmf_prod -lgetm_prod  -loutput_prod -lmeteo_prod
+  #ifneq ($(GETM_NO_3D),true)
+  #  GETM_LIBS += -l3d_prod
+  #endif
+  #GETM_LIBS += -l2d_prod -lwaves_prod -lles_prod -lpool_prod -ldomain_prod -linput_prod -lncdfio_prod -lfutils_prod
+  #ifeq ($(MOSSCO_GETM_FABM),true)
+  #  GETM_LINKDIRS += -L$(FABM_LIBRARY_PATH)
+  #  GETM_LIBS += -lgotm_fabm_prod $(FABM_LIBS)
+  #endif
+  #GETM_LIBS += -lturbulence -lutil -loutput_manager -lfield_manager -lyaml
+  GETM_LIBS += -lgetm_all
 
   ifeq ($(FORTRAN_COMPILER), XLF)
     export STATIC += -WF,$(GETM_STATIC_DEFINES)
@@ -904,7 +905,8 @@ endif
 
 libgetm_external: libgotm_external
 ifdef MOSSCO_GETMDIR
-	( unset FABM ; $(MAKE) -C $(GETMDIR)/src GIT FORTRAN ../VERSION makedirs subdirs )
+	#( unset FABM ; $(MAKE) -C $(GETMDIR)/src GIT FORTRAN ../VERSION makedirs subdirs )
+	( unset FABM ; export GETM_NUOPC=true;  $(MAKE) -C $(GETMDIR)/src nuopc )
 endif
 
 #libtracer_external: prefix
