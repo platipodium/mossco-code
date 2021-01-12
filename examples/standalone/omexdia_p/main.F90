@@ -68,7 +68,7 @@ call sed%grid%init_grid()
 
 
 write(0,*) '  Initialise sediment module'
-call sed%initialize()
+call sed%initialize(33)
 close(33)
 
 ! allocate concentration array
