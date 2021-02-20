@@ -140,6 +140,7 @@ subdirs:
 clean: extraclean
 
 extraclean:
+	@rm -f *.o
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libxgridcoupler.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libinoutcoupler.a

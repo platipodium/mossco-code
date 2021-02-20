@@ -110,5 +110,5 @@ clean: extraclean
 
 extraclean:
 	@- rm -f $(TESTS) PET*
-	@- rm -rf *.dSYM test_netcdf.nc
+	@- rm -rf *.dSYM test_netcdf.nc *.o
 
