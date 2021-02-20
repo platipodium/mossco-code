@@ -1909,9 +1909,10 @@ contains
 
 #ifndef NO_ISO_FORTRAN_ENV
       use, intrinsic :: ISO_FORTRAN_ENV
-#if ESMF_COMM == ESMF_INTELMPI
-      use ifport, only : getgid, getpid, getuid
-#endif
+! string comparison does not work with preprocessor
+!#if ESMF_COMM == ESMF_INTELMPI
+!      use ifport, only : getgid, getpid, getuid
+!#endif
 #endif
 
       type(ESMF_State), intent(inout)              :: state
