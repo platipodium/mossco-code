@@ -1,7 +1,7 @@
 #!/bin/bash -x
 # This script is part of MOSSCO.  It helps in installing ESMF
 #
-# @copyright (C) 2013--2020 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013--2021 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -33,7 +33,7 @@ echo "  $0 uses ESMF sources in ${ESMF_DIR}"
 # Determine what git tags of the ESMF repo are used.  Prefer the most
 # recent one (we need >= 7_1_0_beta_snapshot_52 for regridding with extrapolation)
 if [ -z "${ESMF_TAGS}" ]; then
-  TAGS=ESMF_8_1_0_beta_snapshot_38
+  TAGS=ESMF_8_1_0_beta_snapshot_46
 else
   TAGS=${ESMF_TAGS}
 fi
@@ -50,7 +50,7 @@ echo "  $0 installs ESMF for compilers ${COMPS}"
 
 # Determine what communicators  are used.  We often test openmpi and intelmpi
 if [ -z "${ESMF_COMMUNICATORS}" ]; then
-  COMMS=openmpi # openmpi mpiuni mpich2 intelmpi
+  COMMS=mpich2 # openmpi mpiuni mpich2 intelmpi
 else
   COMMS="${ESMF_COMMUNICATORS}"
 fi
