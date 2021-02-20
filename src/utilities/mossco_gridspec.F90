@@ -42,10 +42,10 @@ module mossco_gridspec
 
 #ifndef NO_ISO_FORTRAN_ENV
     use, intrinsic :: ISO_FORTRAN_ENV
-! string comparison does not work with preprocessor
-!#if ESMF_COMM == ESMF_INTELMPI
-!    use ifport, only : getgid, getpid, getuid
-!#endif
+#ifdef __INTEL_COMPILER
+! This macro may be affected by compiler options, such as -no-icc.
+    use ifport, only : getgid, getpid, getuid
+#endif
 #endif
 
     implicit none

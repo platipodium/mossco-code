@@ -1,9 +1,9 @@
 !> @brief Implementation of ESMF State utilities
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014--2020 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2014--2021 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
-!> @author Richard Hofmeister <richard.hofmeister@hzg.de>
+!> @author Richard Hofmeister
 !> @author Knut Klingbeil <knut.klingbeil@uni-hamburg.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -1909,10 +1909,10 @@ contains
 
 #ifndef NO_ISO_FORTRAN_ENV
       use, intrinsic :: ISO_FORTRAN_ENV
-! string comparison does not work with preprocessor
-!#if ESMF_COMM == ESMF_INTELMPI
-!      use ifport, only : getgid, getpid, getuid
-!#endif
+#ifdef __INTEL_COMPILER
+! This macro may be affected by compiler options, such as -no-icc.
+      use ifport, only : getgid, getpid, getuid
+#endif
 #endif
 
       type(ESMF_State), intent(inout)              :: state
