@@ -1,7 +1,7 @@
 # This Makefile snippet is part of MOSSCO; definition of MOSSCO-wide
 # make rules
 #
-# @copyright (C) 2013-2021 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013--2021 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
