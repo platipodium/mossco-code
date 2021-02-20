@@ -1,7 +1,7 @@
 !> @brief Implementation of string utilities
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2014--2021 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
 !
@@ -181,7 +181,7 @@ contains
      integer(kind=4), intent(in)  :: i
      integer(kind=4)              :: order
 
-     if ( i .eq. 0 ) then
+     if ( i == 0 ) then
        order = 1
      else
        order = int(log10(abs(real(i)))) + 1
@@ -196,13 +196,15 @@ contains
    function order_r8(r) result(order)
      real(kind=8), intent(in)  :: r
      integer(kind=4)           :: order
-     if (r .eq. 0) then
-       order = 1
-     elseif ( abs(r) < 1 ) then
+
+     if (abs(r) > 1) then
+       order=int(log10(abs(r))) + 1
+     elseif (abs(r) > 0) then
        order=-int(log10(abs(r))) + 1
      else
-       order=int(log10(abs(r))) + 1
+       order = 1
      endif
+
    end function order_r8
 
 #undef  ESMF_METHOD
@@ -210,13 +212,15 @@ contains
    function order_r4(r) result(order)
      real(kind=4), intent(in)  :: r
      integer(kind=4)           :: order
-     if (r .eq. 0) then
-       order = 1
-     elseif ( abs(r) < 1 ) then
+
+     if (abs(r) > 1) then
+       order=int(log10(abs(r))) + 1
+     elseif (abs(r) > 0) then
        order=-int(log10(abs(r))) + 1
      else
-       order=int(log10(abs(r))) + 1
+       order = 1
      endif
+
    end function order_r4
 
 #undef  ESMF_METHOD
