@@ -1,8 +1,8 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2018, 2019, 2020 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
-# @author Richard Hofmeister <richard.hofmeister@hzg.de>
+# @copyright (C) 2018--2021 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hzg.de>
+# @author Richard Hofmeister
 # @license Dual licensed under GPL v3+ and Apache 2.0
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -11,8 +11,9 @@
 # $MOSSCO_DIR/doc/license/LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for
 # the full license terms.
 #
-# In addition to the main part of MOSSCO, the coupling to  SCHISM is
-# dual-licensed under the Apache 2.0 license, consult the file
+# In addition to the main part of MOSSCO licensed exclusively under GPL, 
+# the coupling to SCHISM is dual-licensed and also available 
+# under the Apache 2.0 license, consult the file
 # $MOSSCO_DIR/doc/license/LICENSE.APACHE for the full license terms
 
 ifndef MOSSCO_DIR
@@ -34,7 +35,7 @@ $(error SCHISM_ESMF_DIR has to be set in environment)
 endif
 
 ifeq ($(wildcard $(SCHISM_ESMF_DIR)/src/schism/schism_cmi_esmf.F90),)
-$(error Cannot find schism_cmi_esmf)
+$(error Cannot find $(SCHISM_ESMF_DIR)/src/schism/schism_cmi_esmf.F90)
 endif
 
 # Build library dependencies for core SCHISM, then metis and optionally fabm,
