@@ -265,7 +265,7 @@ module toplevel_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     purpose='Platform'
-    call ESMF_AttributeGetAttPack(gridComp, convention, purpose, attpack=attpack, rc=localrc)
+    !call ESMF_AttributeGetAttPack(gridComp, convention, purpose, attpack=attpack, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 

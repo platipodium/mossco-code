@@ -2,8 +2,9 @@
 !> @file flux_connector.F90
 !!
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
-!> @author Carsten Lemmen <carsten.lemmen@hzg.de>
+!> @copyright 2021 Helmholtz-Zentrum Hereon
+!> @copyright 2013-2021 Helmholtz-Zentrum Geesthacht
+!> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -15,6 +16,8 @@
 #define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "flux_connector.F90"
+
+#define _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(X) if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=X)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
 
 module flux_connector
 
@@ -42,21 +45,17 @@ module flux_connector
 
     call ESMF_cplCompSetEntryPoint(cplComp, ESMF_METHOD_INITIALIZE, phase=0, &
       userRoutine=InitializeP0, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_cplCompSetEntryPoint(cplComp, ESMF_METHOD_INITIALIZE, phase=1, &
       userRoutine=InitializeP1, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_cplCompSetEntryPoint(cplComp, ESMF_METHOD_RUN, Run, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_cplCompSetEntryPoint(cplComp, ESMF_METHOD_FINALIZE, Finalize, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine SetServices
 
@@ -76,24 +75,30 @@ module flux_connector
     character(len=ESMF_MAXSTR)  :: name, message
     type(ESMF_Time)             :: currTime
     integer(ESMF_KIND_I4)       :: localrc
+    type(ESMF_Info)             :: info
 
     call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
 
+    call ESMF_InfoGetFromHost(cplComp, info, rc=localrc) 
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
     call ESMF_AttributeAdd(cplComp, convention="NUOPC", purpose="General", &
       attrList=(/"InitializePhaseMap"/), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_AttributeSet(cplComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
       convention="NUOPC", purpose="General", rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_CompExit(cplComp, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -114,10 +119,12 @@ module flux_connector
     integer(ESMF_KIND_I4) :: localrc
 
     call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_CompExit(cplComp, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -141,29 +148,35 @@ module flux_connector
     rc=ESMF_SUCCESS
 
     call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_CplCompGet(cplComp, clock=clock, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_ClockGet(clock, stopTime=stopTime, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     timeStep=stopTime - currTime
 
     call MOSSCO_AddImportFluxToExportState(importState, exportState, timeStep)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_ClockAdvance(clock, timeStep=timeStep, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Finally, log the successful completion of this function
     call MOSSCO_CompExit(cplComp, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -184,16 +197,20 @@ module flux_connector
     integer(ESMF_KIND_I4)   :: localrc
 
     call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     call ESMF_cplCompGet(cplComp, clock=clock, rc=rc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     call ESMF_ClockDestroy(clock, rc=rc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     !! Finally, log the successful completion of this function
     call MOSSCO_CompExit(cplComp, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
   end subroutine Finalize
@@ -224,16 +241,19 @@ module flux_connector
     integer(ESMF_KIND_I4)                  :: localrc, rc_
 
     call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     allocate(itemNameList(itemCount))
     allocate(itemTypeList(itemCount))
     call ESMF_StateGet(importState, itemNameList=itemNameList, itemTypeList=itemTypeList, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_TimeIntervalGet(timeStep, s_r8=dt, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -244,6 +264,7 @@ module flux_connector
 
       itemName=itemNameList(i)
       call ESMF_StateGet(exportState, itemName(1:j)//'in_water', itemType=itemType, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
