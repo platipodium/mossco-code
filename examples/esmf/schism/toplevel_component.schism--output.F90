@@ -166,7 +166,7 @@ module toplevel_component
     integer(ESMF_KIND_I4), allocatable      :: intValueList(:)
     character(len=ESMF_MAXSTR), allocatable :: charValueList(:)
     character(len=ESMF_MAXSTR)              :: stringList(6,2)
-    type(ESMF_AttPack)     :: attPack
+    !type(ESMF_AttPack)     :: attPack
     character(len=ESMF_MAXSTR) :: convention, purpose
 
     rc = ESMF_SUCCESS
@@ -266,7 +266,7 @@ module toplevel_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     purpose='Platform'
-    call ESMF_AttributeGetAttPack(gridComp, convention, purpose, attpack=attpack, rc=localrc)
+    !call ESMF_AttributeGetAttPack(gridComp, convention, purpose, attpack=attpack, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
