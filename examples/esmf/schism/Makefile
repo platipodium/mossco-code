@@ -35,20 +35,49 @@ ifndef SCHISM_ESMF_DIR
 $(error SCHISM_ESMF_DIR has to be set in environment)
 endif
 
+<<<<<<< HEAD
 ifeq ($(wildcard $(SCHISM_ESMF_DIR)/src/schism/schism_esmf_cap.F90),)
 $(error Cannot find $(SCHISM_ESMF_DIR)/src/schism/schism_esmf_cap.F90)
+=======
+ifeq ($(wildcard $(SCHISM_ESMF_DIR)/src/schism/schism_cmi_esmf.F90),)
+$(error Cannot find $(SCHISM_ESMF_DIR)/src/schism/schism_cmi_esmf.F90)
 endif
+
+ifdef USE_SED
+ifeq ( $(USE_SED),"ON")
+DEFINES+= -DUSE_SED
+endif
+endif
+
+ifdef USE_FABM
+ifeq ( $(USE_FABM),"ON")
+DEFINES+= -DUSE_FABM
+endif
+endif
+
 
 # Build library dependencies for core SCHISM, then metis and optionally fabm,
 # then add MOSSCO libs depending on installation directory
 LIBS+= -L$(SCHISM_BUILD_DIR)/lib -lhydro -lcore
 LIBS+= -lparmetis -lmetis
 
-ifneq ($(wildcard $(SCHISM_BUILD_DIR)/lib/libfabm.a),)
+ifeq ($(USE_FABM),"ON")
+#ifneq ($(wildcard $(SCHISM_BUILD_DIR)/lib/libfabm.a),)
 LIBS+= -lfabm_schism -lfabm
+F90FLAGS+= "-DUSE_FABM -fallow-argument-mismatch"
 $(info Using SCHISM compiled with FABM library)
-F90FLAGS+= -DUSE_FABM
+else
+$(info Using SCHISM compiled without FABM library)
+>>>>>>> 725ba684... Added USE_SED and USE_FABM to schism coupling example
 endif
+
+
+
+
+# Build library dependencies for core SCHISM, then metis and optionally fabm,
+# then add MOSSCO libs depending on installation directory
+LIBS+= -L$(SCHISM_BUILD_DIR)/lib -lhydro -lcore
+LIBS+= -lparmetis -lmetis
 
 ifneq ($(wildcard $(MOSSCO_INSTALL_PREFIX)/lib/libmossco.a),)
 LIBS+= -L$(MOSSCO_INSTALL_PREFIX)/lib -lmossco 
@@ -66,6 +95,7 @@ endif
 
 F90FLAGS+= -I$(SCHISM_BUILD_DIR)/include
 F90FLAGS+= -I$(MOSSCO_DIR)/include
+F90FLAGS+= $(DEFINES)
 MOSSCO_LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 
 .PHONY: all clean distclean config
