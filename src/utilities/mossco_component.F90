@@ -1233,8 +1233,7 @@ contains
 
     do i=1, count
        call ESMF_AttributeGet(gridComp, attributeIndex=i , name=attributeName, rc=localrc)
-       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+       if (localrc /= ESMF_SUCCESS) cycle
 
        write(message,'(A)')  trim(name)//':'
        call MOSSCO_MessageAdd(message,trim(attributeName)//' =')
