@@ -34,7 +34,7 @@ module toplevel_component
   use netcdf_input_component, only : netcdf_input_SetServices => SetServices 
   use fabm_sediment_component, only : fabm_sediment_SetServices => SetServices 
   use netcdf_component, only : netcdf_SetServices => SetServices 
-  use schism_cmi_esmf, only : schism_esmf_SetServices => SetServices 
+  use schism_esmf_cap, only : schism_esmf_SetServices => SetServices 
 
   implicit none
 

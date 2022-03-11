@@ -28,7 +28,7 @@ module toplevel_component
   use mossco_state
   use mossco_component
 
-  use schism_cmi_esmf, only : schism_cmi_esmf_SetServices => SetServices 
+  use schism_esmf_cap, only : schism_esmf_cap_SetServices => SetServices 
   use netcdf_component, only : netcdf_SetServices => SetServices 
   use link_connector, only : link_connector_SetServices => SetServices 
   use regrid_coupler, only : regrid_coupler_SetServices => SetServices 
@@ -348,7 +348,7 @@ module toplevel_component
     call ESMF_GridCompSetServices(gridCompList(1), netcdf_SetServices, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_GridCompSetServices(gridCompList(2), schism_cmi_esmf_SetServices, rc=localrc)
+    call ESMF_GridCompSetServices(gridCompList(2), schism_esmf_cap_SetServices, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
