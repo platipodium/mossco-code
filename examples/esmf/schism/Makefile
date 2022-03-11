@@ -46,25 +46,22 @@ LIBS+= -lparmetis -lmetis
 
 ifneq ($(wildcard $(SCHISM_BUILD_DIR)/lib/libfabm.a),)
 LIBS+= -lfabm_schism -lfabm
-F90FLAGS+= "-DUSE_FABM -fallow-argument-mismatch"
-$(info Using SCHISM compiled with FABM library)
-endif
-
-# Build library dependencies for core SCHISM, then metis and optionally fabm,
-# then add MOSSCO libs depending on installation directory
-LIBS+= -L$(SCHISM_BUILD_DIR)/lib -lhydro -lcore
-LIBS+= -lparmetis -lmetis
-
-ifneq ($(wildcard $(SCHISM_BUILD_DIR)/lib/libfabm.a),)
-LIBS+= -lfabm_schism -lfabm
 $(info Using SCHISM compiled with FABM library)
 F90FLAGS+= -DUSE_FABM
 endif
 
 ifneq ($(wildcard $(MOSSCO_INSTALL_PREFIX)/lib/libmossco.a),)
-LIBS+= -L$(MOSSCO_INSTALL_PREFIX)/lib -lmossco -lmossco_fabm
+LIBS+= -L$(MOSSCO_INSTALL_PREFIX)/lib -lmossco 
 else
-LIBS+= -L$(MOSSCO_DIR)/lib -lmossco -lmossco_fabm
+LIBS+= -L$(MOSSCO_DIR)/lib -lmossco 
+endif
+
+ifneq ($(wildcard $(MOSSCO_INSTALL_PREFIX)/lib/libmossco_fabm.a),)
+LIBS+= -lmossco_fabm
+else
+ifneq ($(wildcard $(MOSSCO_DIR)/lib/libmossco_fabm.a),)
+LIBS+= -lmossco_fabm
+endif
 endif
 
 F90FLAGS+= -I$(SCHISM_BUILD_DIR)/include
