@@ -1,7 +1,8 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2018--2021 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen <carsten.lemmen@hzg.de>
+# @copyright (C) 2021-2022 Helmholtz-Zentrum Hereon
+# @copyright (C) 2018-2021 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hereon.de>
 # @author Richard Hofmeister
 # @license Dual licensed under GPL v3+ and Apache 2.0
 #
@@ -34,8 +35,8 @@ ifndef SCHISM_ESMF_DIR
 $(error SCHISM_ESMF_DIR has to be set in environment)
 endif
 
-ifeq ($(wildcard $(SCHISM_ESMF_DIR)/src/schism/schism_cmi_esmf.F90),)
-$(error Cannot find $(SCHISM_ESMF_DIR)/src/schism/schism_cmi_esmf.F90)
+ifeq ($(wildcard $(SCHISM_ESMF_DIR)/src/schism/schism_esmf_cap.F90),)
+$(error Cannot find $(SCHISM_ESMF_DIR)/src/schism/schism_esmf_cap.F90)
 endif
 
 # Build library dependencies for core SCHISM, then metis and optionally fabm,
@@ -74,13 +75,13 @@ MOSSCO_LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 
 all:  schism_mossco config outputs
 
-schism_mossco: schism_cmi_esmf.o toplevel_component.o main.o
+schism_mossco: schism_esmf_cap.o toplevel_component.o main.o
 	echo objcopy --redefine-sym xerbla_=schism_lap_xerbla_ ${SCHISM_BUILD_DIR}/lib/libhydro.a
 	$(F90) $(CPPFLAGS) $^ -o $@ $(MOSSCO_LDFLAGS) $(LDFLAGS) $(LIBS)
 
-toplevel_component.o: schism_cmi_esmf.o toplevel_component.F90
+toplevel_component.o: schism_esmf_cap.o toplevel_component.F90
 
-schism_cmi_esmf.o: schism_bmi.o schism_esmf_util.o schism_cmi_esmf.F90
+schism_esmf_cap.o: schism_bmi.o schism_esmf_util.o schism_esmf_cap.F90
 
 outputs:
 	mkdir -p outputs
@@ -101,21 +102,21 @@ clean:
 config:  grid_input.cfg wind_input.cfg wind.nc schism_ugrid.nc
 
 extraclean: clean
-	@$(RM) schism_mossco schism_bmi.F90 schism_esmf_util.F90 schism_cmi_esmf.F90 main.F90 wind.nc
+	@$(RM) schism_mossco schism_bmi.F90 schism_esmf_util.F90 schism_esmf_cap.F90 main.F90 wind.nc
 
 # Copy/link files from schism_esmf and mossco systems
 
 main.F90:
-	test -l main.F90 | ln -sf $(MOSSCO_DIR)/examples/common/main.F90 .
+	test -f main.F90 | ln -sf $(MOSSCO_DIR)/examples/common/main.F90 .
 
 schism_esmf_util.F90:
-	test -l schism_esmf_util.F90 | ln -sf $(SCHISM_ESMF_DIR)/src/schism/schism_esmf_util.F90 .
+	test -f schism_esmf_util.F90 | ln -sf $(SCHISM_ESMF_DIR)/src/schism/schism_esmf_util.F90 .
 
-schism_cmi_esmf.F90:
-	test -l schism_cmi_esmf.F90 | ln -sf $(SCHISM_ESMF_DIR)/src/schism/schism_cmi_esmf.F90 .
+schism_esmf_cap.F90:
+	test -f schism_esmf_cap.F90 | ln -sf $(SCHISM_ESMF_DIR)/src/schism/schism_esmf_cap.F90 .
 
 schism_bmi.F90:
-	test -l schism_bmi.F90 | ln -sf $(SCHISM_ESMF_DIR)/src/schism/schism_bmi.F90 .
+	test -f schism_bmi.F90 | ln -sf $(SCHISM_ESMF_DIR)/src/schism/schism_bmi.F90 .
 
 schism_ugrid.nc: schism_ugrid.cdl
 	ncgen -o $@ $<
