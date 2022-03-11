@@ -1,8 +1,9 @@
 # This Makefile snippet is part of MOSSCO; definition of MOSSCO-wide
 # make rules
 #
-# @copyright (C) 2013--2021 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen <carsten.lemmen@hzg.de>
+# @copyright (C) 2021-2022 Helmholtz-Zentrum Hereon
+# @copyright (C) 2013-2021 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hereon.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -29,6 +30,7 @@ AWK:=$(shell which awk 2> /dev/null)
 endif
 ifneq ($(strip $(AWK)),)
 export AWK:=$(basename $(AWK))
+$(info Using awk ... $(AWK))
 endif
 
 CMAKE:=$(shell which cmake3 2> /dev/null)
@@ -37,6 +39,7 @@ CMAKE:=$(shell which cmake 2> /dev/null)
 endif
 ifneq ($(strip $(CMAKE)),)
 export CMAKE:=$(basename $(CMAKE))
+$(info Using cmake ... $(CMAKE))
 endif
 
 export MOSSCO_OBJC=false
@@ -49,7 +52,11 @@ OBJC=$(shell which objcopy 2> /dev/null)
 endif
 ifneq ($(strip $(OBJC)),)
 MOSSCO_OBJC=$(shell basename $(OBJC))
+$(info Using objcopy ... $(MOSSCO_OBJC))
+else
+$(info Using objcopy ... no)
 endif
+
 
 export MOSSCO_GIT=false
 ifneq ($(wildcard $(shell which git)),)
@@ -62,6 +69,7 @@ endif
 else
   $(warning Consider installing git)
 endif
+$(info Using git ... $(shell which git) ($(MOSSCO_GIT_VERSION)))
 
 # System-dependent flags
 ifeq ($(shell hostname),rznp0023)
@@ -75,6 +83,7 @@ ifeq ($(shell hostname),KSEZ8002)
   export AR=ar
   $(warning use changed ARFLAGS=rvU)
 endif
+$(info Using ar ... $(AR) -$(ARFLAGS))
 
 export MOSSCO_INSTALL_PREFIX?=$(MOSSCO_DIR)
 
@@ -101,9 +110,14 @@ else
   include $(ESMFMKFILE)
   MOSSCO_ESMF=true
 
+$(info Using ESMFMKFILE ... $(ESMFMKFILE))
+
 	# Find the communicator and determine whether this is parallel device, this
 	# is still buggy with mpiifort and needs improvement
   ESMF_COMM = $(strip $(shell grep "\# ESMF_COMM:" $(ESMFMKFILE) | cut -d':' -f2-))
+$(info Using ESMF_COMM ... $(ESMF_COMM))
+$(info Using ESMF_F90COMPILER ... $(ESMF_F90COMPILER))
+
   ifeq ("$(ESMF_COMM)","mpiuni")
     export MOSSCO_MPI ?= false
   else
@@ -232,7 +246,7 @@ endif
 
 export MOSSCO_CCOMPILER
 
-# 3. Checking for the either FABM, GOTM, or GETM.  Set the MOSSCO_XXXX variables
+# 3. Checking for the either FABM, GOTM, GETM, SCHISM.  Set the MOSSCO_XXXX variables
 #    of these three components to process them later
 MOSSCO_FABM=false
 
@@ -321,6 +335,22 @@ ifneq ($(GOTM_PREFIX),)
 endif
 export MOSSCO_GOTM
 
+# 3bb SCHISM
+export MOSSCO_SCHISM=false
+
+ifdef SCHISM_ESMF_DIR
+  ifdef SCHISM_DIR
+    MOSSCO_SCHISM=true
+  endif
+endif
+
+# ifeq($(MOSSCO_SCHISM),true)
+# 	export MOSSCO_SCHISM_CMAKE="-DOLDIO=ON"
+# 	ifeq($(MOSSCO_FABM),true)
+# 		MOSSCO_SCHISM_CMAKE="$(MOSSCO_SCHISM_CMAKE) -DUSE_FABM=ON"
+# 		MOSSCO_SCHISM_CMAKE="$(MOSSCO_SCHISM_CMAKE) -DFABM_BASE=$(MOSSCO_FABMDIR)"
+# 	endif
+# endif
 
 # 3c. GETM
 MOSSCO_GETM=false
@@ -365,7 +395,6 @@ ifdef GETMDIR
     endif
   endif
 endif
-
 
 export MOSSCO_GETM
 
