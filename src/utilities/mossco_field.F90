@@ -652,11 +652,11 @@ end function MOSSCO_FieldUnitStringFcn
 #define ESMF_METHOD "MOSSCO_FieldCopyAttributes"
 subroutine MOSSCO_FieldCopyAttributes(to, from, kwe, overwrite, rc)
 
-  type(ESMF_Field), intent(inout)                :: to
-  type(ESMF_Field), intent(in)                   :: from
+  type(ESMF_Field), intent(inout)                  :: to
+  type(ESMF_Field), intent(in)                     :: from
   type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
-  logical, intent(in), optional                  :: overwrite
-  integer(ESMF_KIND_I4), intent(out), optional   :: rc
+  logical, intent(in), optional                    :: overwrite
+  integer(ESMF_KIND_I4), intent(out), optional     :: rc
 
   integer(ESMF_KIND_I4)        :: localrc, rc_, i, attributeCount
   character(len=ESMF_MAXSTR)   :: attributeName
@@ -690,23 +690,24 @@ end subroutine MOSSCO_FieldCopyAttributes
 #define ESMF_METHOD "MOSSCO_FieldCopy"
 subroutine MOSSCO_FieldCopy(to, from, kwe, owner, rc)
 
-  type(ESMF_Field), intent(inout)                :: to
-  type(ESMF_Field), intent(in)                   :: from
+  type(ESMF_Field), intent(inout)                  :: to
+  type(ESMF_Field), intent(in)                     :: from
   type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
-  integer(ESMF_KIND_I4), intent(out), optional   :: rc
-  character(len=*), intent(in), optional         :: owner
+  integer(ESMF_KIND_I4), intent(out), optional     :: rc
+  character(len=*), intent(in), optional           :: owner
 
   character(len=ESMF_MAXSTR)               :: message, owner_
   integer(ESMF_KIND_I4)                    :: rc_, localrc, ungriddedCount
   integer(ESMF_KIND_I4)                    :: fromRank, toRank, meshDim, gridRank
 
   type(ESMF_FieldStatus_Flag) :: fromStatus, toStatus
-  type(ESMF_XGrid)             :: fromXGrid, toXGrid
+  type(ESMF_XGrid)            :: fromXGrid, toXGrid
   type(ESMF_Grid)             :: fromGrid, toGrid
   type(ESMF_Mesh)             :: fromMesh, toMesh
   type(ESMF_GeomType_Flag)    :: fromGeomType, toGeomType
   type(ESMF_LocStream)        :: fromLocStream, toLocSTream
-  type(ESMF_ArraySpec)        :: fromArraySpec, toArraySpec
+  type(ESMF_ArraySpec)        :: fromArraySpec
+  type(ESMF_TypeKind_Flag)    :: fromTypeKind
   type(ESMF_StaggerLoc)       :: fromStaggerloc, toStaggerLoc
   type(ESMF_MeshLoc)          :: fromMeshloc, toMeshLoc
   integer(ESMF_KIND_I4), allocatable  :: uLbnd(:), uUbnd(:)
@@ -767,7 +768,7 @@ subroutine MOSSCO_FieldCopy(to, from, kwe, owner, rc)
   endif
 
   !> At this point from and to are in status GRIDSET, so we can compare
-  call ESMF_FieldGet(to, geomType=toGeomType, rc=localrc)
+  call ESMF_FieldGet(to, geomType=toGeomType, status=toStatus, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   if (fromGeomType /= toGeomType) then
@@ -827,6 +828,7 @@ subroutine MOSSCO_FieldCopy(to, from, kwe, owner, rc)
   elseif (fromGeomType == ESMF_GEOMTYPE_LOCSTREAM) then
     call ESMF_FieldGet(from, locstream=fromlocstream, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
     call ESMF_FieldGet(to, locstream=tolocstream, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     if (fromLocStream /= toLocStream) then
@@ -842,9 +844,12 @@ subroutine MOSSCO_FieldCopy(to, from, kwe, owner, rc)
   call ESMF_FieldGet(from, rank=fromRank, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
+  call ESMF_FieldGet(to,  status=toStatus, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
   ungriddedCount=0
 
-  if (toStatus /= ESMF_FIELDSTATUS_COMPLETE) then
+  if (toStatus == ESMF_FIELDSTATUS_GRIDSET) then
 
     if (fromGeomType == ESMF_GEOMTYPE_GRID) then
       call ESMF_FieldGet(from, grid=fromGrid, rc=localrc)
@@ -871,32 +876,74 @@ subroutine MOSSCO_FieldCopy(to, from, kwe, owner, rc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
 
-    !> @todo 2nd dimension is localDeCount, assumed 1 here
-    allocate(fromLWidth(fromRank-ungriddedCount,1))
-    allocate(fromUWidth(fromRank-ungriddedCount,1))
-    allocate(toLWidth(fromRank-ungriddedCount))
-    allocate(toUWidth(fromRank-ungriddedCount))
+    write(message,'(A)') trim(owner_)//' wants to copy content from '
+    call MOSSCO_FieldString(from , message)
+    write(message,'(A)') trim(message)//' to '
+    call MOSSCO_FieldString(to , message)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)  
 
-    call ESMF_FieldGet(from, arraySpec=fromArraySpec, totalLWidth=fromLWidth, &
-      totalUWidth=fromUWidth, rc=localrc)
+    call ESMF_FieldGet(from, arraySpec=fromArraySpec,  rank=fromRank, &
+      typeKind=fromTypeKind, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    toLWidth=fromLWidth(:,1)
-    toUWidth=fromUWidth(:,1)
+    if (fromGeomType == ESMF_GEOMTYPE_GRID) then
+ 
+      !> @todo 2nd dimension is localDeCount, assumed 1 here
+      allocate(fromLWidth(fromRank-ungriddedCount,1))
+      allocate(fromUWidth(fromRank-ungriddedCount,1))
+      allocate(toLWidth(fromRank-ungriddedCount))
+      allocate(toUWidth(fromRank-ungriddedCount))
 
-    if (ungriddedCount > 0) then
-      call ESMF_FieldEmptyComplete(to, arraySpec=fromArraySpec, &
-        totalLWidth=toLWidth, totalUWidth=toUWidth, &
-        ungriddedLBound=uLbnd, ungriddedUBound=uUbnd, rc=localrc)
+      call ESMF_FieldGet(from, totalLWidth=fromLWidth, &
+        totalUWidth=fromUWidth, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-    else
 
-      call ESMF_FieldEmptyComplete(to, arraySpec=fromArraySpec, &
-        totalLWidth=toLWidth, totalUWidth=toUWidth, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      toLWidth=fromLWidth(:,1)
+      toUWidth=fromUWidth(:,1)
+
+      if (ungriddedCount > 0) then
+        call ESMF_FieldEmptyComplete(to, arraySpec=fromArraySpec, &
+          totalLWidth=toLWidth, totalUWidth=toUWidth, &
+          ungriddedLBound=uLbnd, ungriddedUBound=uUbnd, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      else
+        call ESMF_FieldEmptyComplete(to, arraySpec=fromArraySpec, &
+          totalLWidth=toLWidth, totalUWidth=toUWidth, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      endif
+
+    elseif (fromGeomType == ESMF_GEOMTYPE_MESH) then
+
+      !> @todo this does not work for SCHISM mesh_ meta information
+      if (ungriddedCount > 0) then
+
+        call ESMF_FieldEmptyComplete(to, arraySpec=fromArraySpec, &
+          ungriddedLBound=uLbnd, ungriddedUBound=uUbnd, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      else
+        call ESMF_FieldEmptyComplete(to, arraySpec=fromArraySpec, &
+          rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      endif
+
     endif
-
   endif
+
+  call ESMF_FieldGet(to, status=toStatus, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  if (toStatus /= ESMF_FIELDSTATUS_COMPLETE) then
+    write(message,'(A)') trim(owner_)//' failed to complete'
+    call MOSSCO_FieldString(to, message)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  endif
+
+  write(message,'(A)') trim(owner_)//' wants to copy content from '
+  call MOSSCO_FieldString(from , message)
+  write(message,'(A)') trim(message)//' to '
+  call MOSSCO_FieldString(to , message)
+  call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
   call MOSSCO_FieldCopyContent(to, from, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -930,10 +977,10 @@ subroutine MOSSCO_FieldCopyContent(to, from, rc)
 
   rc_ = ESMF_SUCCESS
 
-  call ESMF_FieldGet(from, status=fromStatus, rank=fromRank, rc=localrc)
+  call ESMF_FieldGet(from, status=fromStatus, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-  call ESMF_FieldGet(to, status=toStatus, rank=toRank, rc=localrc)
+  call ESMF_FieldGet(to, status=toStatus, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   if (fromStatus /= ESMF_FIELDSTATUS_COMPLETE &
@@ -946,6 +993,12 @@ subroutine MOSSCO_FieldCopyContent(to, from, rc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif
   endif
+
+  call ESMF_FieldGet(from, rank=fromRank, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  call ESMF_FieldGet(to, rank=toRank, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   if (toRank /= fromRank) then
     write(message,'(A)') 'Cannot copy fields with incompatible rank, field'
@@ -1283,7 +1336,7 @@ end subroutine MOSSCO_FieldCopyContent
     integer(ESMF_KIND_I4), pointer           :: mask3(:,:,:) => null()
     integer(ESMF_KIND_I4), pointer           :: mask4(:,:,:,:) => null()
 
-    real(ESMF_KIND_R8), pointer  :: farrayPtr1(:), farrayPtr2(:,:)
+    real(ESMF_KIND_R8), pointer  :: farrayPtr1(:) => null(), farrayPtr2(:,:)
     real(ESMF_KIND_R8), pointer  :: farrayPtr3(:,:,:), farrayPtr4(:,:,:,:)
     !real(ESMF_KIND_R8), pointer  :: farrayPtr5(:,:,:,:,:), farrayPtr6(:,:,:,:,:,:)
     !real(ESMF_KIND_R8), pointer  :: farrayPtr7(:,:,:,:,:,:,:)
@@ -1355,12 +1408,22 @@ end subroutine MOSSCO_FieldCopyContent
     endif
     !> @todo: handle different typekinds
 
+    write(message,'(A)') trim(owner_)//' wants to initialize '
+    call MOSSCO_FieldString(field , message)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)  
+
+
+
+
+
     if (rank == 1) then
+
       call ESMF_FieldGet(field, localDe=0,  farrayPtr=farrayPtr1, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       where(mask1(RANGE1D)>0)
         farrayPtr1(RANGE1D) = value_
       endwhere
+
     elseif (rank == 2) then
       call ESMF_FieldGet(field, localDe=0,  farrayPtr=farrayPtr2, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -1500,6 +1563,18 @@ end subroutine MOSSCO_FieldCopyContent
             farrayPtr=mask, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       endif
+    elseif (geomType == ESMF_GEOMTYPE_MESH) then
+
+      allocate(mask(RANGE1D), stat=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      mask(RANGE1D) = 1
+    
+    else 
+      write(message,'(A)') trim(owner_)//' not implemented for '
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
     if (present(rank)) rank = geomRank
 

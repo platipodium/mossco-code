@@ -495,9 +495,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
           call ESMF_AttributeSet(exportField, 'creator', trim(name), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+ 
 
-          call MOSSCO_FieldInitialize(exportField, value=0.0d0, &
-            owner=trim(name), rc=localrc)
+          !call MOSSCO_FieldInitialize(exportField, value=0.0d0, &
+          !  owner=trim(name), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           write(message,'(A)') trim(name)//' created '
