@@ -463,6 +463,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       call ESMF_FieldGet(fieldList(i), name=fieldName, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+      ! Skip the face-node connectivity as this is provided by mesh
+      if (trim(fieldName) == 'mesh_element_node_connectivity') return
+
       !> We need to know whether this field occurs multiple times
       itemSearch(1)=trim(fieldName)
       call MOSSCO_StateGet(importState, itemfieldList, &
