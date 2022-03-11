@@ -3,8 +3,9 @@
 #> MOSSCO/ESMF component
 
 #  This computer program is part of MOSSCO.
-#> @copyright Copyright (C) 2014, 2015, 2016, 2017, 2018 Helmholtz Zentrum Geesthacht
-#> @author Carsten Lemmen <carsten.lemmen@hzg.de>
+#> @copyright 2021-2022 Helmholtz-Zentrum Hereon
+#> @copyright 2014-2021 Helmholtz-Zentrum Geesthacht
+#> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -49,7 +50,7 @@ else:
 if 'copyright' in config:
     copyright = config.pop('copyright')
 else:
-    copyright = 'Copyright (C) 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht'
+    copyright = 'Copyright (C) 2015-2021 Helmholtz-Zentrum Geesthacht, 2021-2022 Helmholtz-Zentrum Hereon'
 
 if 'component' in config:
   component = config.pop('component')
