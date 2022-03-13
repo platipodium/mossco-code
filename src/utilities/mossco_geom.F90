@@ -1,8 +1,9 @@
 !> @brief Implementation of geom utilities that deal with grid/mesh/locstream equally
 !
 ! This computer program is part of MOSSCO.
-! @copyright Copyright 2018, 2019 Helmholtz-Zentrum Geesthacht
-! @author Carsten Lemmen <carsten.lemmen@hzg.de>
+!> @copyright 2021-2022 Helmholtz-Zentrum Hereon
+!> @copyright 2018-2021 Helmholtz-Zentrum Geesthacht
+!> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the

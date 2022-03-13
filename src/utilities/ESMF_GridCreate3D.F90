@@ -1,7 +1,8 @@
 !> @brief ESMF_GridCreate3D utility routines
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2017, 2018 Helmholtz-Zentrum Geesthacht
+!> @copyright 2021-2022 Helmholtz-Zentrum Hereon
+!> @copyright 2017-2021 Helmholtz-Zentrum Geesthacht
 !> @author Ryan O'Kuinghttons
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the

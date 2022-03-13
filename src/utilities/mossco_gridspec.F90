@@ -1,8 +1,9 @@
 !> @brief Implementation GRIDSPEC utility functions
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2015-2020 Helmholtz-Zentrum Geesthacht
-!> @author Carsten Lemmen <carsten.lemmen@hzg.de>
+!> @copyright 2021-2022 Helmholtz-Zentrum Hereon
+!> @copyright 2015-2021 Helmholtz-Zentrum Geesthacht
+!> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the

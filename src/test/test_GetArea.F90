@@ -2,8 +2,8 @@
 !
 !  This computer program is part of MOSSCO.
 !> @copyright Copyright (C) 2015 Helmholtz-Zentrum Geesthacht
-!> @author Richard Hofmeister <richard.hofmeister@hzg.de>
-!> @author Carsten Lemmen <carsten.lemmen@hzg.de>
+!> @author Richard Hofmeister <richard.hofmeister@hereon.de>
+!> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the

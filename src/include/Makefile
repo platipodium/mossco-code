@@ -1,7 +1,7 @@
 # This Makefile is part of MOSSCO
 #
 # @copyright (C) 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen <carsten.lemmen@hzg.de>
+# @author Carsten Lemmen <carsten.lemmen@hereon.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the

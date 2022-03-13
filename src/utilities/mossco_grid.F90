@@ -1,9 +1,10 @@
 !> @brief Implementation of grid utilities
 !!
 !! This computer program is part of MOSSCO.
-!! @copyright Copyright 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
-!! @author Carsten Lemmen <carsten.lemmen@hzg.de>
-!! @author Hartmut Kapitza <hartmut.kapitza@hzg.de>
+!> @copyright 2021-2022 Helmholtz-Zentrum Hereon
+!> @copyright 2014-2021 Helmholtz-Zentrum Geesthacht
+!> @author Carsten Lemmen <carsten.lemmen@hereon.de>
+!! @author Hartmut Kapitza <hartmut.kapitza@hereon.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -871,7 +872,7 @@ subroutine MOSSCO_DeLayoutPrintBlockList(deLayout, rc)
   !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   call ESMF_DeLayoutPrint(deLayout, rc=localrc)
-  
+
   !if (allocated(deBlockList)) deallocate(deBlockList)
   if (present(rc)) rc = rc_
 

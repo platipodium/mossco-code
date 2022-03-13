@@ -1,8 +1,9 @@
 !> @brief Implementation of ESMF database utilities
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014, 2015 Helmholtz-Zentrum Geesthacht
-!> @author Nils Weiher <stu95021@uni-kiel.de>
+!> @copyright 2021-2022 Helmholtz-Zentrum Hereon
+!> @copyright 2015-2021 Helmholtz-Zentrum Geesthacht
+!> @author Nils Weiher
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -274,7 +275,7 @@ subroutine get_substance_appendices_list(name, dbaout)
     sql = "SELECT DISTINCT tblAppendix.ID &
             FROM (tblAppendix &
             JOIN tblSubstances ON tblSubstances.ID=tblAppendix.Substance_ID) t &
-            WHERE tblSubstances.SubstanceName='~name';"   
+            WHERE tblSubstances.SubstanceName='~name';"
 
     search_list = [character(len=ESMF_MAXSTR) :: "~name"]
     replace_list = [character(len=ESMF_MAXSTR) :: name]
@@ -329,7 +330,7 @@ subroutine get_substance_appendix_aliases_list_1(SubstanceName, apdxID, rulesets
             JOIN tblEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID) t &
             WHERE tblRulesets.RulesetName IN(~rulesets) &
             AND tblSubstances.SubstanceName='~name' &
-            AND tblAppendix.ID=~apdxID; "   
+            AND tblAppendix.ID=~apdxID; "
 
     search_list = [character(len=ESMF_MAXSTR) :: "~rulesets", "~name", "~apdxID"]
     replace_list = [character(len=ESMF_MAXSTR) :: rulesets, SubstanceName, apdxID]
@@ -374,7 +375,7 @@ subroutine get_substance_appendix_aliases_list_2(SubstanceAppendix, rulesets, db
     character(1000)                                  :: sql
 
     !------------------------------------------------------------------
-    sql = "SELECT DISTINCT t.EquivalentName || coalesce(t.Condition,'') || coalesce(t.Location,''), & 
+    sql = "SELECT DISTINCT t.EquivalentName || coalesce(t.Condition,'') || coalesce(t.Location,''), &
     t.Unit &
     FROM (tblAppendix &
     JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Substance_ID=tblAppendix.Substance_ID &
@@ -382,7 +383,7 @@ subroutine get_substance_appendix_aliases_list_2(SubstanceAppendix, rulesets, db
     JOIN tblRulesets ON tblRulesets.ID=tblSubstancesEquivalents.Ruleset_ID &
     JOIN tblEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID) t &
     WHERE tblRulesets.RulesetName IN(~rulesets) &
-    AND tblSubstances.SubstanceName || coalesce(tblAppendix.Condition,'') || coalesce(tblAppendix.Location,'') == '~SubstanceAppendix';" 
+    AND tblSubstances.SubstanceName || coalesce(tblAppendix.Condition,'') || coalesce(tblAppendix.Location,'') == '~SubstanceAppendix';"
 
     search_list = [character(len=ESMF_MAXSTR) :: "~rulesets", "~SubstanceAppendix"]
     replace_list = [character(len=ESMF_MAXSTR) :: rulesets, SubstanceAppendix]

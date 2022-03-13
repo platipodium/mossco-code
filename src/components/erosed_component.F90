@@ -3,7 +3,7 @@
 !  This computer program is part of MOSSCO.
 !> @copyright Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018, 2019 Helmholtz-Zentrum Geesthacht
 !> @author M. Hassan Nasermoaddeli, Bundesanstalt für Wasserbau
-!> @author Carsten Lemmen <carsten.lemmen@hzg.de>
+!> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the

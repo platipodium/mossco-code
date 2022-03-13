@@ -1,10 +1,12 @@
 !> @brief Implementation of ESMF State utilities
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014--2021 Helmholtz-Zentrum Geesthacht
-!> @author Carsten Lemmen <carsten.lemmen@hzg.de>
+!> @copyright 2021-2022 Helmholtz-Zentrum Hereon
+!> @copyright 2014-2021 Helmholtz-Zentrum Geesthacht
+!> @copyright 2014-2019 Institut für Ostseeforschung Warnemünde
+!> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 !> @author Richard Hofmeister
-!> @author Knut Klingbeil <knut.klingbeil@uni-hamburg.de>
+!> @author Knut Klingbeil
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the

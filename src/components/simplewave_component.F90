@@ -3,7 +3,7 @@
 !! This computer program is part of MOSSCO.
 !! @copyright 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
 !! @author Knut Klingbeil <knut.klingbeil@uni-hamburg.de>
-!! @author Carsten Lemmen <carsten.lemmen@hzg.de>
+!! @author Carsten Lemmen <carsten.lemmen@hereon.de>
 
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the

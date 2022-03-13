@@ -1,8 +1,9 @@
 !> @brief Implementation of time utilities
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2014-2020 Helmholtz-Zentrum Geesthacht
-!> @author Carsten Lemmen <carsten.lemmen@hzg.de>
+!> @copyright 2021-2022 Helmholtz-Zentrum Hereon
+!> @copyright 2014-2021 Helmholtz-Zentrum Geesthacht
+!> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the

@@ -3,7 +3,7 @@
 !>
 !> This computer program is part of MOSSCO.
 !> @copyright Copyright 2016 Helmholtz-Zentrum Geesthacht
-!> @author Richard Hofmeister <richard.hofmeister@hzg.de>
+!> @author Richard Hofmeister <richard.hofmeister@hereon.de>
 !> @author Carsten Lemmen
 
 !

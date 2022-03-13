@@ -5,8 +5,8 @@
 !
 !  This computer program is part of MOSSCO.
 !> @copyright Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018, 2019 Helmholtz-Zentrum Geesthacht
-!> @author Carsten Lemmen <carsten.lemmen@hzg.de>
-!> @author Richard Hofmeister <richard.hofmeister@hzg.de>
+!> @author Carsten Lemmen <carsten.lemmen@hereon.de>
+!> @author Richard Hofmeister <richard.hofmeister@hereon.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -196,7 +196,7 @@ module fabm_pelagic_component
       stringList(1,1)='Name';               stringList(1,2)='Richard Hofmeister'
       stringList(2,1)='Abbreviation';       stringList(2,2)='rh'
       stringList(3,1)='PhysicalAddress';    stringList(3,2)='Helmholtz-Zentrum Geesthacht'
-      stringList(4,1)='EmailAddress';       stringList(4,2)='richard.hofmeister@hzg.de'
+      stringList(4,1)='EmailAddress';       stringList(4,2)='richard.hofmeister@hereon.de'
       stringList(5,1)='ResponsiblePartyRole';   stringList(6,2)='http://www.hzg.de'
       stringList(6,1)='URL';                stringList(5,2)='Contact'
 

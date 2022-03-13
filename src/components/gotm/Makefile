@@ -1,7 +1,7 @@
 # This Makefile is part of MOSSCO
 #
 # @copyright (C) 2013, 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen <carsten.lemmen@hzg.de
+# @author Carsten Lemmen <carsten.lemmen@hereon.de
 # @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
 # @author Knut Klingbeil, Institut für Ostseeforschung Warnemünde
 #

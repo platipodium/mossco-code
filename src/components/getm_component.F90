@@ -4,8 +4,8 @@
 !> @copyright 2013, 2014, 2015, 2016, 2017, 2018, 2019
 !             Institut für Ostseeforschung Warnemünde und Helmholtz-Zentrum Geesthacht
 !> @author Knut Klingbeil <klingbeil@io-warnemuende.de>
-!> @author Carsten Lemmen <carsten.lemmen@hzg.de>
-!> @author Richard Hofmeister <richard.hofmeister@hzg.de>
+!> @author Carsten Lemmen <carsten.lemmen@hereon.de>
+!> @author Richard Hofmeister <richard.hofmeister@hereon.de>
 
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the

@@ -3,7 +3,7 @@
 !> This computer program is part of MOSSCO.
 !> @copyright Copyright 2017, 2018 Helmholtz-Zentrum Geesthacht, Bundesanstalt für
 !> Wasserbau
-!> @author Carsten Lemmen <carsten.lemmen@hzg.de>
+!> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 !> @author Markus Kreus <markus.kreus@baw.de>
 
 !

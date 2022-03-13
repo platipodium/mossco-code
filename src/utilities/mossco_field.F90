@@ -1,9 +1,10 @@
 !> @brief Implementation of additional ESMF Field utilities
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
-!> @author Carsten Lemmen <carsten.lemmen@hzg.de>
-!> @author Richard Hofmeister <richard.hofmeister@hzg.de>
+!> @copyright 2021-2022 Helmholtz-Zentrum Hereon
+!> @copyright 2015-2021 Helmholtz-Zentrum Geesthacht
+!> @author Carsten Lemmen <carsten.lemmen@hereon.de>
+!> @author Richard Hofmeister
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -880,14 +881,14 @@ subroutine MOSSCO_FieldCopy(to, from, kwe, owner, rc)
     call MOSSCO_FieldString(from , message)
     write(message,'(A)') trim(message)//' to '
     call MOSSCO_FieldString(to , message)
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)  
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     call ESMF_FieldGet(from, arraySpec=fromArraySpec,  rank=fromRank, &
       typeKind=fromTypeKind, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (fromGeomType == ESMF_GEOMTYPE_GRID) then
- 
+
       !> @todo 2nd dimension is localDeCount, assumed 1 here
       allocate(fromLWidth(fromRank-ungriddedCount,1))
       allocate(fromUWidth(fromRank-ungriddedCount,1))
@@ -1410,7 +1411,7 @@ end subroutine MOSSCO_FieldCopyContent
 
     write(message,'(A)') trim(owner_)//' wants to initialize '
     call MOSSCO_FieldString(field , message)
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)  
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
 
 
@@ -1569,8 +1570,8 @@ end subroutine MOSSCO_FieldCopyContent
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       mask(RANGE1D) = 1
-    
-    else 
+
+    else
       write(message,'(A)') trim(owner_)//' not implemented for '
       call MOSSCO_FieldString(field, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)

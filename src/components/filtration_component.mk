@@ -5,7 +5,7 @@
 # the call python @todo @todo
 #
 # @copyright Copyright (C) 2014, 2015 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen, <carsten.lemmen@hzg.de>
+# @author Carsten Lemmen, <carsten.lemmen@hereon.de>
 
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the

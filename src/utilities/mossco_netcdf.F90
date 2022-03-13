@@ -2304,7 +2304,7 @@ module mossco_netcdf
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
 #ifndef MOSSCO_USER_EMAIL
-    call nc%putattstring(NF90_GLOBAL,'originator','carsten.lemmen@hzg.de', rc=localrc)
+    call nc%putattstring(NF90_GLOBAL,'originator','carsten.lemmen@hereon.de', rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 #else
     call nc%putattstring(NF90_GLOBAL,'originator',"'"//MOSSCO_USER_EMAIL//"'", rc=localrc)
@@ -5781,7 +5781,7 @@ module mossco_netcdf
 !     call self%putattstring(NF90_GLOBAL,'documentation','http://www.mossco.de/doc', rc=localrc)
 !     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 !
-!     call self%putattstring(NF90_GLOBAL,'contact','carsten.lemmen@hzg.de', rc=localrc)
+!     call self%putattstring(NF90_GLOBAL,'contact','carsten.lemmen@hereon.de', rc=localrc)
 !     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 !
 !     call self%putattstring(NF90_GLOBAL,'crs','EPSG:4326', rc=localrc)
