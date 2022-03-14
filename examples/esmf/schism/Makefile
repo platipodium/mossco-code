@@ -35,12 +35,8 @@ ifndef SCHISM_ESMF_DIR
 $(error SCHISM_ESMF_DIR has to be set in environment)
 endif
 
-<<<<<<< HEAD
 ifeq ($(wildcard $(SCHISM_ESMF_DIR)/src/schism/schism_esmf_cap.F90),)
 $(error Cannot find $(SCHISM_ESMF_DIR)/src/schism/schism_esmf_cap.F90)
-=======
-ifeq ($(wildcard $(SCHISM_ESMF_DIR)/src/schism/schism_cmi_esmf.F90),)
-$(error Cannot find $(SCHISM_ESMF_DIR)/src/schism/schism_cmi_esmf.F90)
 endif
 
 ifdef USE_SED
@@ -55,24 +51,20 @@ DEFINES+= -DUSE_FABM
 endif
 endif
 
-
 # Build library dependencies for core SCHISM, then metis and optionally fabm,
 # then add MOSSCO libs depending on installation directory
 LIBS+= -L$(SCHISM_BUILD_DIR)/lib -lhydro -lcore
 LIBS+= -lparmetis -lmetis
 
 ifeq ($(USE_FABM),"ON")
-#ifneq ($(wildcard $(SCHISM_BUILD_DIR)/lib/libfabm.a),)
+ifneq ($(wildcard $(SCHISM_BUILD_DIR)/lib/libfabm.a),)
 LIBS+= -lfabm_schism -lfabm
 F90FLAGS+= "-DUSE_FABM -fallow-argument-mismatch"
 $(info Using SCHISM compiled with FABM library)
 else
 $(info Using SCHISM compiled without FABM library)
->>>>>>> 725ba684... Added USE_SED and USE_FABM to schism coupling example
 endif
-
-
-
+endif
 
 # Build library dependencies for core SCHISM, then metis and optionally fabm,
 # then add MOSSCO libs depending on installation directory
@@ -100,7 +92,7 @@ MOSSCO_LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 
 .PHONY: all clean distclean config
 
-all:  schism_mossco config outputs
+all:  schism_mossco config
 
 schism_mossco: schism_esmf_cap.o toplevel_component.o main.o
 	echo objcopy --redefine-sym xerbla_=schism_lap_xerbla_ ${SCHISM_BUILD_DIR}/lib/libhydro.a
@@ -109,9 +101,6 @@ schism_mossco: schism_esmf_cap.o toplevel_component.o main.o
 toplevel_component.o: schism_esmf_cap.o toplevel_component.F90
 
 schism_esmf_cap.o: schism_bmi.o schism_esmf_util.o schism_esmf_cap.F90
-
-outputs:
-	mkdir -p outputs
 
 # Generic and cleanup rules
 
