@@ -87,20 +87,25 @@ endif
 
 F90FLAGS+= -I$(SCHISM_BUILD_DIR)/include
 F90FLAGS+= -I$(MOSSCO_DIR)/include
+F90FLAGS+= -I$(SCHISM_ESMF_DIR)/src/schism
 F90FLAGS+= $(DEFINES)
 MOSSCO_LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 
-.PHONY: all clean distclean config
+OBJ = $(addprefix $(SCHISM_ESMF_DIR)/src/schism/schism,_esmf_cap.o _esmf_util.o _bmi.o)
+
+.PHONY: all clean distclean config cap
 
 all:  schism_mossco config
 
-schism_mossco: schism_esmf_cap.o toplevel_component.o main.o
+schism_mossco:  toplevel_component.o main.o $(OBJ)
 	echo objcopy --redefine-sym xerbla_=schism_lap_xerbla_ ${SCHISM_BUILD_DIR}/lib/libhydro.a
 	$(F90) $(CPPFLAGS) $^ -o $@ $(MOSSCO_LDFLAGS) $(LDFLAGS) $(LIBS)
 
-toplevel_component.o: schism_esmf_cap.o toplevel_component.F90
+toplevel_component.o: cap toplevel_component.F90
+	$(F90) $(CPPFLAGS) toplevel_component.F90 -c -o $@ $(MOSSCO_LDFLAGS) $(LDFLAGS) $(LIBS)
 
-schism_esmf_cap.o: schism_bmi.o schism_esmf_util.o schism_esmf_cap.F90
+cap:
+	make -C $(SCHISM_ESMF_DIR)/src esmf
 
 # Generic and cleanup rules
 
@@ -124,15 +129,6 @@ extraclean: clean
 
 main.F90:
 	test -f main.F90 | ln -sf $(MOSSCO_DIR)/examples/common/main.F90 .
-
-schism_esmf_util.F90:
-	test -f schism_esmf_util.F90 | ln -sf $(SCHISM_ESMF_DIR)/src/schism/schism_esmf_util.F90 .
-
-schism_esmf_cap.F90:
-	test -f schism_esmf_cap.F90 | ln -sf $(SCHISM_ESMF_DIR)/src/schism/schism_esmf_cap.F90 .
-
-schism_bmi.F90:
-	test -f schism_bmi.F90 | ln -sf $(SCHISM_ESMF_DIR)/src/schism/schism_bmi.F90 .
 
 schism_ugrid.nc: schism_ugrid.cdl
 	ncgen -o $@ $<
