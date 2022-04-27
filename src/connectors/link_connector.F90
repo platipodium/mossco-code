@@ -1,7 +1,8 @@
 !> @brief Implementation of an ESMF link coupling
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014--2020 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2021-2022 Helmholtz-Zentrum Hereon
+!> @copyright Copyright (C) 2014-2021 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, <carsten.lemmen@hereon.de>
 
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -1096,16 +1097,16 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
       call ESMF_FieldGet(field, localDE=0, farrayPtr=farrayPtr4, rc=localrc)
       farrayPtr4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)) = value_
 #ifndef ESMF_NO_GREATER_THAN_4D
-    elseif (rank==5) then
-      call ESMF_FieldGet(field, localDE=0, farrayPtr=farrayPtr5, rc=localrc)
-      farrayPtr5(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4),lbnd(5):ubnd(5)) = value_
-    elseif (rank==6) then
-      call ESMF_FieldGet(field, localDE=0, farrayPtr=farrayPtr6, rc=localrc)
-      farrayPtr6(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4),lbnd(5):ubnd(5),lbnd(6):ubnd(6)) = value_
-    elseif (rank==7) then
-      call ESMF_FieldGet(field, localDE=0, farrayPtr=farrayPtr7, rc=localrc)
-      farrayPtr7(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4), &
-        lbnd(5):ubnd(5),lbnd(6):ubnd(6),lbnd(7):ubnd(7)) = value_
+!    elseif (rank==5) then
+!      call ESMF_FieldGet(field, localDE=0, farrayPtr=farrayPtr5, rc=localrc)
+!      farrayPtr5(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4),lbnd(5):ubnd(5)) = value_
+!    elseif (rank==6) then
+!      call ESMF_FieldGet(field, localDE=0, farrayPtr=farrayPtr6, rc=localrc)
+!      farrayPtr6(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4),lbnd(5):ubnd(5),lbnd(6):ubnd(6)) = value_
+!    elseif (rank==7) then
+!      call ESMF_FieldGet(field, localDE=0, farrayPtr=farrayPtr7, rc=localrc)
+!      farrayPtr7(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4), &
+!        lbnd(5):ubnd(5),lbnd(6):ubnd(6),lbnd(7):ubnd(7)) = value_
 #endif
     endif
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
