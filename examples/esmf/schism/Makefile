@@ -39,11 +39,11 @@ ifeq ($(wildcard $(SCHISM_ESMF_DIR)/src/schism/schism_esmf_cap.F90),)
 $(error Cannot find $(SCHISM_ESMF_DIR)/src/schism/schism_esmf_cap.F90)
 endif
 
-ifdef USE_SED
-ifeq ( $(USE_SED),"ON")
+#ifdef USE_SED
+#ifeq ( $(USE_SED),"ON")
 DEFINES+= -DUSE_SED
-endif
-endif
+#endif
+#endif
 
 ifdef USE_FABM
 ifeq ( $(USE_FABM),"ON")
@@ -70,6 +70,9 @@ endif
 # then add MOSSCO libs depending on installation directory
 LIBS+= -L$(SCHISM_BUILD_DIR)/lib -lhydro -lcore
 LIBS+= -lparmetis -lmetis
+ifdef USE_SED
+LIBS+= -lsediment
+endif
 
 ifneq ($(wildcard $(MOSSCO_INSTALL_PREFIX)/lib/libmossco.a),)
 LIBS+= -L$(MOSSCO_INSTALL_PREFIX)/lib -lmossco 
