@@ -41,13 +41,13 @@ endif
 
 #ifdef USE_SED
 #ifeq ( $(USE_SED),"ON")
-DEFINES+= -DUSE_SED
+#DEFINES+= -DUSE_SED
 #endif
 #endif
 
 ifdef USE_FABM
 ifeq ( $(USE_FABM),"ON")
-DEFINES+= -DUSE_FABM
+#DEFINES+= -DUSE_FABM
 endif
 endif
 
