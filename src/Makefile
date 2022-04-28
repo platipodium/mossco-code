@@ -1,6 +1,7 @@
 # This Makefile is part of MOSSCO
 # 
-# @copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
+# @copyright 2021-2022, 2018 Helmholtz-Zentrum Hereon
+# @copyright 2013-2021, 2018 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hereon.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -19,7 +20,7 @@ EXTRA_DIST=README Rules.make
 SUBDIRS=include utilities drivers patch
 
 ifeq ($(MOSSCO_ESMF),true)
-SUBDIRS += components mediators connectors
+SUBDIRS += components mediators connectors nuopc
 endif
 
 .PHONY: subdirs $(SUBDIRS)
