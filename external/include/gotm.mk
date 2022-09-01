@@ -1,7 +1,8 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2017 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen <carsten.lemmen@hzg.de>
+# @copyright (C) 2021-2022 Helmholtz-Zentrum Hereon
+# @copyright (C) 2017-2021 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hereon.de>
 # @author Knut Klingbeil, Institut für Ostseeforschung Warnemünde
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -15,10 +16,10 @@
 gotm:
 ifeq ($(wildcard $(external_GOTMDIR)/src/gotm/gotm.F90),)
 	@$(GIT) clone -b master --depth 1 https://github.com/gotm-model/code.git $(external_GOTMDIR) || $(GIT) clone -b master --depth 1 git://github.com/gotm-model/code.git $(external_GOTMDIR)
-	@( cd $(external_GOTMDIR) && $(GIT) submodule update --init --recursive extern/flexout )
+	@( cd $(external_GOTMDIR) && $(GIT) submodule update --init --recursive extern/flexout extern/gsw)
 else
 ifeq ($(wildcard $(external_GOTMDIR)/extern/flexout/src/output_manager.F90),)
-	@( cd $(external_GOTMDIR) && $(GIT) submodule update --init --recursive extern/flexout )
+	@( cd $(external_GOTMDIR) && $(GIT) submodule update --init --recursive extern/flexout extern/gsw)
 endif
 #	@$(GIT) -C $(external_GOTMDIR) pull --ff-only && $(GIT) submodule update --recursive
 #for old git
