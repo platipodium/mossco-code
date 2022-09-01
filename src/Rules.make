@@ -40,6 +40,8 @@ endif
 ifneq ($(strip $(CMAKE)),)
 export CMAKE:=$(basename $(CMAKE))
 $(info Using cmake ... $(CMAKE))
+else
+$(error Cannot find cmake)
 endif
 
 export MOSSCO_OBJC=false
@@ -857,7 +859,7 @@ fabm_build:
 ifeq ($(MOSSCO_FABM),true)
 ifndef MOSSCO_FABM_BINARY_DIR
 	@mkdir -p $(FABM_BINARY_DIR)
-	(cd $(FABM_BINARY_DIR) && cmake $(FABMDIR)/src -DCMAKE_INSTALL_PREFIX=$(FABM_PREFIX) -DFABM_HOST=$(FABMHOST) -DCMAKE_Fortran_FLAGS="$(FABM_FFLAGS)")
+	(cd $(FABM_BINARY_DIR) && $(CMAKE) $(FABMDIR)/src -DCMAKE_INSTALL_PREFIX=$(FABM_PREFIX) -DFABM_HOST=$(FABMHOST) -DCMAKE_Fortran_FLAGS="$(FABM_FFLAGS)")
 endif
 endif
 
@@ -875,7 +877,7 @@ json_build:
 ifeq ($(MOSSCO_JSON),true)
 ifndef MOSSCO_JSON_BINARY_DIR
 	@mkdir -p $(JSON_BINARY_DIR)
-	(cd $(JSON_BINARY_DIR) && cmake $(JSONDIR)/src -DCMAKE_INSTALL_PREFIX=$(JSON_PREFIX)
+	(cd $(JSON_BINARY_DIR) && $(CMAKE) $(JSONDIR)/src -DCMAKE_INSTALL_PREFIX=$(JSON_PREFIX)
 endif
 endif
 
@@ -910,7 +912,7 @@ gotm_build:
 ifeq ($(MOSSCO_GOTM),true)
 ifndef MOSSCO_GOTM_BINARY_DIR
 	@mkdir -p $(GOTM_BINARY_DIR)
-	(cd $(GOTM_BINARY_DIR) && cmake $(GOTMDIR) -DCMAKE_INSTALL_PREFIX=$(GOTM_PREFIX) -DGOTM_USE_FABM=OFF -DCMAKE_Fortran_FLAGS="$(GOTM_FFLAGS)")
+	(cd $(GOTM_BINARY_DIR) && $(CMAKE) $(GOTMDIR) -DCMAKE_INSTALL_PREFIX=$(GOTM_PREFIX) -DGOTM_USE_FABM=OFF -DCMAKE_Fortran_FLAGS="$(GOTM_FFLAGS)")
 endif
 endif
 
