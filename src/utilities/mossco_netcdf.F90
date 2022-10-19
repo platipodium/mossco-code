@@ -1240,9 +1240,6 @@ module mossco_netcdf
       coordnames=(/'x','y','z'/)
     endif
 
-    call self%redef(owner=owner_, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
     !! add ungridded dimension
     ! ask field for ungridded dimension
     dimrank=ubound(dimids,1)
@@ -1285,6 +1282,9 @@ module mossco_netcdf
     endif
 
     call ESMF_FieldGet(field, typeKind=typeKind, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call self%redef(owner=owner_, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (typekind==ESMF_TYPEKIND_I4) then
