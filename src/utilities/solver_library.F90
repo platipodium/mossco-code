@@ -125,6 +125,7 @@ case(ADAPTIVE_EULER)
 #endif
               .and. (dt_red> rhs_driver%dt_min)) then
          dt_red = dt_red*0.25_rk
+         write(0,*) 'Warning: solver subcycles with dt = ', dt_red
       else
          if (rhs_driver%adaptive_solver_diagnostics) then
            if (dt_red < rhs_driver%last_min_dt) then
