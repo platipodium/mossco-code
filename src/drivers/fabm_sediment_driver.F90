@@ -548,6 +548,7 @@ subroutine get_rhs(rhs_driver, rhs)
   real(rk),dimension(1:rhs_driver%inum,1:rhs_driver%jnum,1:rhs_driver%knum)   :: weighted_toc
   real(rk),dimension(1:rhs_driver%inum,1:rhs_driver%jnum,1:rhs_driver%knum+1) :: intFLux
   real(rk),dimension(1:rhs_driver%inum,1:rhs_driver%jnum)                     :: cumdepth, averaged_weighted_toc
+  real(rk),dimension(1:rhs_driver%inum,1:rhs_driver%jnum,1:rhs_driver%knum)   :: volumeFraction
 
   integer :: n,i,j,k,bcup=1,bcdown=3
 
@@ -625,10 +626,12 @@ subroutine get_rhs(rhs_driver, rhs)
       conc_insitu = rhs_driver%conc(:,:,:,n)*rhs_driver%porosity!/ &
 ! differing from original code: bioturbation mixes bulk concentrations
 !              (rhs_driver%ones3d - rhs_driver%porosity)
+
+      volumeFraction = rhs_driver%ones3d - rhs_driver%porosity
       call diff3d(rhs_driver%grid,conc_insitu,rhs_driver%bdys(:,:,n+1), &
               rhs_driver%zeros2d, rhs_driver%fluxes(:,:,n), rhs_driver%zeros2d, &
               bcup, bcdown, rhs_driver%diff, &
-              rhs_driver%ones3d - rhs_driver%porosity, intFlux, &
+              volumeFraction, intFlux, &
               rhs_driver%transport(:,:,:,n),flux_cap=rhs_driver%flux_cap)
 ! do k=1,2
 !       print*,'fabm_sediment_driver#616 ',   conc_insitu(1,1,k), rhs_driver%transport(1,1,k,n), &
@@ -656,7 +659,7 @@ subroutine get_rhs(rhs_driver, rhs)
   rhs=0.0_rk
   do k=1,rhs_driver%knum
     do j=1,rhs_driver%jnum
-      !write(0,*) 'FABM ',shape(rhs), j,k,rhs_driver%inum, rhs
+      !write(0,*) 'FABM ',shape(rhs), j,k,rhs_driver%inum!, rhs
       call fabm_do(rhs_driver%model,1,rhs_driver%inum,j,k,rhs(:,j,k,:))
 
       do i=1,rhs_driver%inum
