@@ -1,11 +1,12 @@
 !> @brief Implementation of a GETM ocean component
 !
 !  This computer program is part of MOSSCO.
-!> @copyright 2013, 2014, 2015, 2016, 2017, 2018, 2019
-!             Institut für Ostseeforschung Warnemünde und Helmholtz-Zentrum Geesthacht
+!> @copyright 2013-2022 Institut für Ostseeforschung Warnemünde
+!> @copyright 2021-2022 Helmholtz-Zentrum Hereon
+!> @copyright 2013-2021 Helmholtz-Zentrum Geesthacht
 !> @author Knut Klingbeil <klingbeil@io-warnemuende.de>
 !> @author Carsten Lemmen <carsten.lemmen@hereon.de>
-!> @author Richard Hofmeister <richard.hofmeister@hereon.de>
+!> @author Richard Hofmeister
 
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the

@@ -135,6 +135,7 @@
    REALTYPE                   :: AH_const=1.4d-7
    REALTYPE                   :: AH_Prt=_TWO_
    REALTYPE                   :: AH_stirr_const=_ONE_
+   REALTYPE, dimension(1:kmax) :: f_, nuh_, hn_ ! temporary arrays to hold f(i,j,:), nuh(,j,:), hn(i,j,:)
 !
 !EOP
 !-----------------------------------------------------------------------
@@ -172,14 +173,25 @@
 #endif
       do i=imin,imax
          if (az(i,j) .eq. 1) then
-!           Do advection step due to settling or rising
+            f_ = f(i,j,1:kmax)
+            nuh_ = nuh(i,j,1:kmax)
+            hn_ = hn(i,j,1:kmax)
+            !           Do advection step due to settling or rising
             ws1d(1:kmax-1) = _HALF_ * ( ws(i,j,1:kmax-1) + ws(i,j,2:kmax) )
-            call adv_center(kmax,dt,hn(i,j,:),hn(i,j,:),ws1d,FLUX,FLUX, &
-                            _ZERO_,_ZERO_,P2_PDM,1,f(i,j,:))
-            call diff_center(kmax,dt,cnpar,1,hn(i,j,:),NEUMANN,NEUMANN, &
-                             _ZERO_,_ZERO_,nuh(i,j,:),sour,sour,Taur,   &
-                             f(i,j,:),f(i,j,:))
-         end if
+            ! call adv_center(kmax,dt,hn(i,j,:),hn(i,j,:),ws1d,FLUX,FLUX, &
+            !                 _ZERO_,_ZERO_,P2_PDM,1,f(i,j,:))
+            ! call diff_center(kmax,dt,cnpar,1,hn(i,j,:),NEUMANN,NEUMANN, &
+            !                  _ZERO_,_ZERO_,nuh(i,j,:),sour,sour,Taur,   &
+            !                  f(i,j,:),f(i,j,:))
+            call adv_center(kmax,dt,hn_,hn_,ws1d,FLUX,FLUX, &
+                             _ZERO_,_ZERO_,P2_PDM,1,f_)
+            call diff_center(kmax,dt,cnpar,1,hn_,NEUMANN,NEUMANN, &
+                              _ZERO_,_ZERO_,nuh_,sour,sour,Taur,   &
+                              f_,f_)
+            f(i,j,1:kmax) = f_
+            nuh(i,j,1:kmax) = nuh_
+            hn(i,j,1:kmax) = hn_
+          end if
       end do
 #ifndef GETM_SLICE_MODEL
    end do
