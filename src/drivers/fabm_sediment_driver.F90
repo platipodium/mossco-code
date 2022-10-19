@@ -15,7 +15,9 @@
 module fabm_sediment_driver
 
 use fabm
-use fabm_types, only: rk
+use fabm_types !, only: rk
+use fabm_config
+
 use solver_library, only: type_rhs_driver
 use mossco_variable_types
 use mossco_strings
@@ -188,6 +190,12 @@ implicit none
 class(type_sed),intent(inout) :: sed
 integer, intent(in)           :: unit
 
+!> @todo make this an argument
+character(len=255) :: fabm_nml = 'fabm_sed.nml' ! name of the sediment fabm namelist
+logical :: fileIsPresent
+!> @todo make this an argument
+integer :: rc
+
 integer :: i,j,k,n
 integer :: bioturbation_profile
 logical :: distributed_pom_flux=.false.
@@ -303,7 +311,32 @@ call sed%update_porosity(from_surface=.false.)
 sed%temp = 5_rk
 
 ! build model tree
-sed%model => fabm_create_model_from_file(nml_unit,'fabm_sed.nml')
+
+!> @todo infrastrucutre for later optional arugment fabm_nml
+if (.false.) then !(present(fabm_nml)) then
+  ! if (index(fabm_nml,'.nml') > 2) then
+  !   sed%model => fabm_create_model_from_file(nml_unit,trim(fabm_nml))
+  ! else
+  !   allocate(sed%model)
+  !   call fabm_create_model_from_yaml_file(sed%model,path=trim(fabm_nml))
+  ! endif
+else
+  inquire(file='fabm_sed.nml',exist=fileIsPresent)
+  if (fileIsPresent) then
+    sed%model => fabm_create_model_from_file(nml_unit,'fabm.nml')
+  else
+    inquire(file='fabm_sed.yaml',exist=fileIsPresent)
+    if (fileIsPresent) then
+      allocate(sed%model)
+      call fabm_create_model_from_yaml_file(sed%model,path='fabm_sed.yaml')
+    else
+      !> @todo return argument
+      !if (present(rc)) rc=1
+      write(0,*) 'No fabm_sed configuration file could be found'
+      return
+    endif
+  endif
+endif
 
 ! set fabm domain
 call fabm_set_domain(sed%model,_INUM_,_JNUM_,_KNUM_)
