@@ -494,7 +494,14 @@ module fabm_sediment_component
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
     endif
 
+    write(message,'(A)') trim(name)//' initializes grid'
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
     call sed%grid%init_grid()
+
+    write(message,'(A)') trim(name)//' initializes itself'
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
     call sed%initialize(unit)
     close(unit)
 
@@ -503,9 +510,17 @@ module fabm_sediment_component
     ! link conc to fabm_sediment_driver
     sed%conc => conc
     ! check for valid grid and porosity
+
+    write(message,'(A)') trim(name)//' checks domain'
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
     call sed%check_domain()
     ! initialise values
     conc = 0.0_rk
+
+    write(message,'(A)') trim(name)//' initializes concentrations'
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
     call sed%init_concentrations()
     !> Allocate boundary conditions and initialize with zero
     allocate(bdys(RANGE2D,sed%nvar+1))
@@ -598,17 +613,22 @@ module fabm_sediment_component
 
     endif
 
-
     do i=lbnd(1),ubnd(1)
       do j=lbnd(2),ubnd(2)
         if (.not.sed%mask(i,j,1)) sed%conc(i,j,:,:) = sed1d%conc(1,1,:,:)
       enddo
     enddo
 
+    write(message,'(A)') trim(name)//' applied 1D profile to 3D concentrations'
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
     !> call the model equations in order to fill the diagnostic variables
     allocate(rhs(sed%inum,sed%jnum,sed%knum,sed%nvar))
     call sed%get_rhs(rhs)
     deallocate(rhs)
+
+    write(message,'(A)') trim(name)//' calculated initial diagnostics'
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
     !> it is possible to use flux-boundary condition for dissolved variables
     !> as calculated in get_boundary_conditions after presimulation,
@@ -616,8 +636,11 @@ module fabm_sediment_component
     sed%bcup_dissolved_variables = bcup_dissolved_variables
 
     !! define an output unit for tsv output
+    !> @todo restrict to first PET only
     if (sed%do_output) then
-      funit=2
+      call ESMF_UtilIOUnitGet(funit, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      
       open(funit,file='output.dat')
       write(funit,fmt='(A,A,A,A)',advance='no') 'time(s) ','depth(m) ','layer-height(m) ','porosity() '
       do n=1,sed%nvar
@@ -627,6 +650,10 @@ module fabm_sediment_component
         write(funit,fmt='(A,A)',advance='no') ' ',trim(sed%model%diagnostic_variables(n)%name)
       enddo
       write(funit,*)
+
+      write(message,'(A)') trim(name)//' wrote header for "output.dat"'
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+  
     endif
 
     if (sed%grid%use_ugrid) then
