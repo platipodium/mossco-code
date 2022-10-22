@@ -4,8 +4,9 @@
 # This script is is part of MOSSCO. It creates from YAML descriptions of
 # couplings a toplevel_component.F90 source file
 #
-# @copyright (C) 2014--2020 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen <carsten.lemmen@hzg.de>
+# @copyright (C) 2021-2022 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2014-2021 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hereon.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -97,12 +98,12 @@ if not type(config) is dict:
 if 'author' in config.keys():
     author = config.pop('author')
 else:
-    author = 'Carsten Lemmen <carsten.lemmen@hzg.de>'
+    author = 'Carsten Lemmen <carsten.lemmen@hereon.de>'
 
 if 'copyright' in config.keys():
     copyright = config.pop('copyright')
 else:
-    copyright = 'Copyright (C) 2014--2020 Helmholtz-Zentrum Geesthacht'
+    copyright = 'Copyright (C) 2022 Helmholtz-Zentrum Hereon'
 
 if 'dependencies' in config.keys():
   dependencies = config.pop('dependencies')
@@ -1009,7 +1010,12 @@ if (True):
       fid.write('      endif\n')
       fid.write('      endif\n')
 
-  fid.write('    enddo  ! of loop over Initialize phases\n\n')
+  fid.write('''
+      enddo  ! of loop over Initialize phases')
+
+      call ESMF_VMBarrier(vm, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+''')
 
 # Go through all output components and link toplevel metadata to it
 for item in gridCompList:
@@ -1050,7 +1056,9 @@ fid.write('''
 
     call ESMF_GridCompGet(gridComp, localPet=localPet, rc=localrc)
 
-    if (localPet==0) then
+    !> @todo re-enable state logging
+    if (.false.) then
+    !if (localPet==0) then
       call ESMF_AttributeGet(importState, name='simulation_title', value=message, defaultvalue='Untitled', rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
