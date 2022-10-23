@@ -140,8 +140,7 @@ module pelagic_soil_connector
     character(len=ESMF_MAXSTR)  :: name, message
     type(ESMF_Time)             :: currTime
     integer                     :: localrc
-    !> @todo dynamically find free unit
-    integer                     :: nmlunit=127
+    integer                     :: nmlunit
     logical                     :: isPresent
 
     namelist /pelagic_soil_connector/ sinking_factor,sinking_factor_min, &
@@ -158,6 +157,8 @@ module pelagic_soil_connector
     !@>todo Read from .cfg file and write attributes to component's attributes
     inquire(file=trim(name)//'.nml', exist=isPresent)
     if (isPresent) then
+      call ESMF_UtilIOUnitGet(nmlunit, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       open(nmlunit,file='pelagic_soil_connector.nml',action='read',status='old')
       read(nmlunit,pelagic_soil_connector)
       close(nmlunit)
