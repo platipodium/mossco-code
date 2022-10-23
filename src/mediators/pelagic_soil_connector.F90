@@ -254,12 +254,17 @@ module pelagic_soil_connector
     type(psVariable) :: soilOxygen, waterOxygen
     logical          :: isEqual, isPresent
 
+    type(ESMF_VM)    :: vm
+
     rc = ESMF_SUCCESS
     lbnd(:) = 1
     ubnd(:) = 1
 
     call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, &
       rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_CplCompGet(cplComp,vm=vm, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_ClockGet(parentClock, startTime=startTime, rc=localrc)
@@ -607,24 +612,39 @@ module pelagic_soil_connector
         'downwelling_photosynthetic_radiative_flux_in_water'/), &
         exportState, (/'photosynthetically_active_radiation_at_soil_surface'/), &
         verbose=verbose, rc=localrc)
-    if (localrc /= ESMF_RC_NOT_FOUND) then
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (localrc == ESMF_RC_NOT_FOUND) then
+      write(message,'(A)') trim(name)//' did not transfer PAR'
+      localrc = ESMF_SUCCESS
+    elseif (localrc == ESMF_SUCCESS) then
+      write(message,'(A)') trim(name)//' transferred PAR'
     endif
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     call MOSSCO_Map3D2D(importState, (/'temperature_in_water'/), &
       exportState, (/'temperature_at_soil_surface'/), verbose=verbose, rc=localrc)
-    if (localrc /= ESMF_RC_NOT_FOUND) then
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (localrc == ESMF_RC_NOT_FOUND) then
+      write(message,'(A)') trim(name)//' did not transfer temperature'
+      localrc = ESMF_SUCCESS
+    elseif (localrc == ESMF_SUCCESS) then
+      write(message,'(A)') trim(name)//' transferred temperature'
     endif
-
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+  
     call MOSSCO_Map3D2D(importState, (/'practical_salinity_in_water', &
                                              'salinity_in_water          '/), &
         exportState, (/'practical_salinity_at_soil_surface'/),  &
         verbose=verbose, rc=localrc)
-    if (localrc /= ESMF_RC_NOT_FOUND) then
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    if (localrc == ESMF_RC_NOT_FOUND) then
+      write(message,'(A)') trim(name)//' did not transfer salinity'
+      localrc = ESMF_SUCCESS
+    elseif (localrc == ESMF_SUCCESS) then
+      write(message,'(A)') trim(name)//' transferred salinity'
     endif
-
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    
     !> Get oxygen, both positive and negative (odu), and transfer it to the
     !> soil surface (optional)
     if (associated(includeList)) deallocate(includeList)
