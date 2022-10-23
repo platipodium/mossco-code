@@ -224,9 +224,13 @@ module fabm_sediment_component
     character(len=ESMF_MAXSTR)         :: creatorName
     type(ESMF_Field), allocatable      :: fieldList(:)
     integer                            :: unit
+    type(ESMF_VM)                      :: vm
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
       importState=importState, exportState=exportState, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_GridCompGet(gridComp, vm=vm, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     lbnd(:)=1
@@ -623,9 +627,30 @@ module fabm_sediment_component
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
     !> call the model equations in order to fill the diagnostic variables
-    allocate(rhs(sed%inum,sed%jnum,sed%knum,sed%nvar))
+    allocate(rhs(sed%inum,sed%jnum,sed%knum,sed%nvar), stat=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+
+    write(message,'(4(A,I4))') trim(name)//' allocated right-hand sides as ', &
+      sed%inum,' x ',sed%jnum,' x ',sed%knum,' x ', sed%nvar
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
     call sed%get_rhs(rhs)
-    deallocate(rhs)
+    
+    call ESMF_VMBarrier(vm, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    write(message,'(A)') trim(name)//' calulated right-hand sides'
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+    !> @todo for mysterious reasons, the pointer cannot be deallocated, 
+    ! throws a segfault mem not mapped
+    ! thus for now just nullified (with small mem leaking)
+    !if (associated(rhs)) deallocate(rhs, stat=localrc)
+    !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(localrc)
+    if (associated(rhs)) nullify(rhs)
+
+    call ESMF_VMBarrier(vm, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     write(message,'(A)') trim(name)//' calculated initial diagnostics'
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)

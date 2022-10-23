@@ -1,8 +1,9 @@
 !> @brief Implementation of an ESMF soil to pelagic mediation
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014-2020 Helmholtz-Zentrum Geesthacht
-!> @author Richard Hofmeister <richard.hofmeister@hereon.de>
+!> @copyright Copyright (C) 2021-2022 Helmholtz-Zentrum Hereon
+!> @copyright Copyright (C) 2014-2021 Helmholtz-Zentrum Geesthacht
+!> @author Richard Hofmeister
 !> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -697,6 +698,11 @@ module pelagic_soil_connector
         localrc = ESMF_RC_NOT_IMPL
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
+
+      write(message, '(A)') trim(name)//' imports oxygen deficit from '
+      call MOSSCO_FieldString(fieldList(1), message, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     endif
 
     call MOSSCO_StateGet(exportState, fieldList, fieldCount=fieldCount, &
@@ -720,6 +726,11 @@ module pelagic_soil_connector
         localrc = ESMF_RC_NOT_IMPL
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
+
+      write(message, '(A)') trim(name)//' exports oxygen as '
+      call MOSSCO_FieldString(fieldList(1), message, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     endif
 
     allocate(includeList(1))
@@ -747,6 +758,11 @@ module pelagic_soil_connector
         localrc = ESMF_RC_NOT_IMPL
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
+
+      write(message, '(A)') trim(name)//' exports oxygen deficit as '
+      call MOSSCO_FieldString(fieldList(1), message, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     endif
 
     if (odurc == ESMF_SUCCESS .and. oxyrc == ESMF_SUCCESS) then
@@ -766,6 +782,11 @@ module pelagic_soil_connector
         localrc = ESMF_RC_NOT_IMPL
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
+
+      write(message, '(A)') trim(name)//' splits oxygen with oxygen deficit '
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
     elseif (odurc == ESMF_SUCCESS) then
       ! importState provides only odu, split negative part to oxy
 
@@ -783,6 +804,11 @@ module pelagic_soil_connector
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
 
+      write(message, '(A)') trim(name)//' exports oxygen as deficit only'
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+
     elseif (oxyrc == ESMF_SUCCESS) then
       ! importState provides only oxy, split negative part to odu
 
@@ -799,6 +825,11 @@ module pelagic_soil_connector
         localrc = ESMF_RC_NOT_IMPL
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
+
+      write(message, '(A)') trim(name)//' exports oxygen only, no deficit'
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
 
     else ! no vertical information found
       allocate(includeList(1))
@@ -844,6 +875,7 @@ module pelagic_soil_connector
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         endif
       enddo
+      
     endif
 
     !> Clean up oxygen-related fields
@@ -946,6 +978,12 @@ module pelagic_soil_connector
         localrc = ESMF_RC_NOT_IMPL
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
+
+      write(message, '(A)') trim(name)//' imports detritus nitrogen from '
+      call MOSSCO_FieldString(fieldList(1), message, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
       exit
     enddo ! detritus fieldCount
 
@@ -958,7 +996,7 @@ module pelagic_soil_connector
       allocate(CN_det2(RANGE2D))
       CN_det2(RANGE2D) = 106.0d0/16.0d0
     else
-      write(message,'(A,I1)') trim(name)//' cannot have rank ',exportRank
+      write(message,*) trim(name)//' cannot have rank ',exportRank
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       localrc = ESMF_RC_NOT_IMPL
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)

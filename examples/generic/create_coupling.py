@@ -805,6 +805,9 @@ fid.write('''
       !! contains information on the phases defined in the component.
     enddo
 
+    call ESMF_VMBarrier(vm, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
     allocate(CplCompPhaseCountList(numCplComp), stat=localrc)
     cplCompPhaseCountList(:)=1
 
@@ -919,6 +922,10 @@ if (True):
     fid.write('        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
     fid.write('          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
     fid.write('      endif\n\n')
+    fid.write('''
+      call ESMF_VMBarrier(vm, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    ''')
 
   fid.write('      !! Linking\n')
   for i,item in enumerate(gridCompList):
@@ -967,6 +974,12 @@ if (True):
             fid.write('        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
             fid.write('          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
         fid.write('      endif\n\n')
+
+  fid.write('''
+      call ESMF_VMBarrier(vm, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+''')
+  
 
   for i,item in enumerate(cplCompList):
 # @todo  dirty hack for now: skip link_connector and rename_connector
