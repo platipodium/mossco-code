@@ -25,8 +25,7 @@
 module mossco_info
 
 use esmf
-use mossco_memory
-use mossco_strings, only : MOSSCO_StringCopy
+use mossco_strings, only : MOSSCO_StringCopy, intformat
 
 implicit none
 
@@ -54,19 +53,22 @@ contains
     integer(ESMF_KIND_I4)            :: localrc, rc_, infoSize, i, int4
     type(ESMF_Log)                   :: log_
     character(len=ESMF_MAXSTR)       :: key, prefix_, message, string
+    character(len=ESMF_MAXSTR)       :: format
     type(ESMF_TypeKind_Flag)         :: typeKind
     integer(ESMF_KIND_I8)            :: int8
     logical                          :: bool
     real(ESMF_KIND_R8)               :: real8
     real(ESMF_KIND_R4)               :: real4
     
-    if (present(prefix)) call MOSSCO_StringCopy(prefix, prefix_, rc=localrc)
+    prefix_ = '--'
+    if (present(prefix)) call MOSSCO_StringCopy(prefix_, prefix, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_InfoGet(info, size=infoSize, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    write(message, '(A,I3,A)') trim(prefix)//' has ',infoSize,' attributes'
+    write(format,'(A)') '(A,'//intformat(infoSize)//',A)'
+    write(message, trim(format)) trim(prefix_)//' has ',infoSize,' attributes'
     if (present(log)) then 
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
     else 
@@ -77,7 +79,8 @@ contains
         call ESMF_InfoGet(info, idx=i, ikey=key, typekind=typeKind, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-        write(message, '(A,I3,A,A,A)') trim(prefix)//':(',i,')',key,'='
+        write(format,'(A)') '(A,'//intformat(i)//',A)'
+        write(message, trim(format)) trim(prefix_)//':(',i,')'//trim(key)//'='
         if (typeKind==ESMF_TYPEKIND_CHARACTER) then 
             call ESMF_InfoGet(info, key=key, value=string, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -85,11 +88,16 @@ contains
         elseif (typeKind==ESMF_TYPEKIND_I4) then 
             call ESMF_InfoGet(info, key=key, value=int4, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-            write(message,'(A,I3)') trim(message), int4
+
+            write(format,'(A)') '(A,'//intformat(int4)//')'
+            write(message,trim(format)) trim(message), int4
         elseif (typeKind==ESMF_TYPEKIND_I8) then 
             call ESMF_InfoGet(info, key=key, value=int8, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-            write(message,'(A,I3)') trim(message), int8
+
+            write(format,'(A)') '(A,'//intformat(int8)//')'
+            !write(message,trim(format)) trim(message), int8
+            write(message,*) trim(message), int8
         elseif (typeKind==ESMF_TYPEKIND_R4) then 
             call ESMF_InfoGet(info, key=key, value=real4, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -97,7 +105,8 @@ contains
         elseif (typeKind==ESMF_TYPEKIND_R8) then 
             call ESMF_InfoGet(info, key=key, value=real8, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-            write(message,'(A,F3.2)') trim(message), real8
+            !write(message,'(A,F3.2)') trim(message), real8
+            write(message,*) trim(message), real8
         elseif (typeKind==ESMF_TYPEKIND_LOGICAL) then 
             call ESMF_InfoGet(info, key=key, value=bool, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
