@@ -744,7 +744,6 @@ module pelagic_soil_connector
       write(message,'(A)') trim(name)//' does not export oxygen'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     else    
-      ! this is always true for OMexDia
       call ESMF_FieldGet(fieldList(1), rank=exportRank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -1012,29 +1011,16 @@ module pelagic_soil_connector
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
 
-      write(message, '(A)') trim(name)//' imports detritus nitrogen from '
-      call MOSSCO_FieldString(fieldList(1), message, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
       exit
     enddo ! detritus fieldCount
 
-    ! Allocate CN ratios depending on exportRank
-    if (exportRank == 1) then
-      allocate(CN_det1(RANGE1D))
-      CN_det1(RANGE1D) = 106.0d0/16.0d0
-    elseif (exportRank == 2) then
-      !write(0,*) lbnd, ubnd
-      allocate(CN_det2(RANGE2D))
-      CN_det2(RANGE2D) = 106.0d0/16.0d0
-    else
-      write(message,*) trim(name)//' cannot have rank ',exportRank
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      localrc = ESMF_RC_NOT_IMPL
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-    endif
-
+    ! Allocate CN ratios for 1D and 2D
+    allocate(CN_det1(RANGE1D))
+    CN_det1(RANGE1D) = 106.0d0/16.0d0
+    
+    allocate(CN_det2(RANGE2D))
+    CN_det2(RANGE2D) = 106.0d0/16.0d0
+    
     !> search for Detritus-C, if present, use Detritus C-to-N ratio and apply flux
     deallocate(includeList)
     allocate(includeList(2))
@@ -1073,13 +1059,12 @@ module pelagic_soil_connector
 
     ! Determine detritus C:N ratio (default is Redfield)
     write(message,'(A)') trim(name)//' uses variable C:N ratio'
-    if (associated(detN3) .and. associated(detC3) .and. exportRank == 2) then
+    if (associated(detN3) .and. associated(detC3)) then
       CN_det2(RANGE2D) = detC3(RANGE2D,lbnd(3)) / (1E-5 + detN3(RANGE2D,lbnd(3)))
-    elseif (associated(detN2) .and. associated(detC2) .and. exportRank == 2) then
+    elseif (associated(detN2) .and. associated(detC2)) then
       CN_det2(RANGE2D) = detC2(RANGE2D) / (1E-5 + detN2(RANGE2D))
-    elseif (associated(detN2) .and. associated(detC2) .and. exportRank == 1) then
       CN_det1(RANGE1D) = detC2(RANGE1D,lbnd(2)) / (1E-5 + detN2(RANGE1D,lbnd(2)))
-    elseif (associated(detN1) .and. associated(detC1) .and. exportRank == 1) then
+    elseif (associated(detN1) .and. associated(detC1)) then
       CN_det1(RANGE1D) = detC1(RANGE1D) / (1E-5 + detN1(RANGE1D))
     else
       write(message,'(A)') trim(name)//' uses constant Redfield C:N ratio 106:16'
