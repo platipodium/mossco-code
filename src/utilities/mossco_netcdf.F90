@@ -5138,8 +5138,8 @@ module mossco_netcdf
     call ESMF_TimeGet(currTime, timeStringISOFrac=timeString, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    write(message,'(A)') 'mossco_netcdf cur time is '//trim(timeString)
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+    write(message,'(A)') 'mossco_netcdf curent time is '//trim(timeString)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, ESMF_CONTEXT)
 
     if (present(startTime)) then
       call MOSSCO_TimeIntervalFromTimeValue(timeInterval, timeUnit, farray(1), rc=localrc)
@@ -5151,7 +5151,7 @@ module mossco_netcdf
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       write(message,'(A)') 'mossco_netcdf start time is '//trim(timeString)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, ESMF_CONTEXT)
     endif
 
     if (present(stopTime)) then
@@ -5163,7 +5163,7 @@ module mossco_netcdf
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       write(message,'(A)') 'mossco_netcdf stop time is '//trim(timeString)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, ESMF_CONTEXT)
     endif
 
     if (allocated(farray)) deallocate(farray)
