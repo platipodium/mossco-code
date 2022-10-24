@@ -327,7 +327,7 @@ if (.false.) then !(present(fabm_nml)) then
 else
   inquire(file='fabm_sed.nml',exist=fileIsPresent)
   if (fileIsPresent) then
-    sed%model => fabm_create_model_from_file(nml_unit,'fabm.nml')
+    sed%model => fabm_create_model_from_file(nml_unit,'fabm_sed.nml')
   else
     inquire(file='fabm_sed.yaml',exist=fileIsPresent)
     if (fileIsPresent) then
