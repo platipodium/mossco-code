@@ -30,6 +30,7 @@ LIBMOSSCO_UTIL_OBJS+= 							\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_state.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_field.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_attribute.o)		\
+	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_info.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_memory.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_logging.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_parameter.o)		\
@@ -72,11 +73,11 @@ libmossco_util:  prefix sha $(LIBMOSSCO_UTIL_OBJS)
 libmossco_db: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_db.a(mossco_db.o)
 
 # Depends on multiple
-mossco_component.o : mossco_component.F90 mossco_state.o
+mossco_component.o : mossco_component.F90 mossco_state.o mossco_info.o
 mossco_netcdf.o : mossco_netcdf.F90 mossco_state.o mossco_time.o \
   mossco_variable_types.o mossco_gridspec.o #versions
 mossco_field.o : mossco_field.F90 mossco_strings.o mossco_attribute.o \
-  mossco_geom.o mossco_loc.o
+  mossco_geom.o mossco_loc.o mossco_info.o
 
 mossco_state.o : mossco_state.F90 mossco_field.o
 mossco_logging.o : mossco_logging.F90 mossco_state.o
@@ -113,6 +114,7 @@ $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_routehandle.o) : mossco_routehand
 mossco_strings.o : mossco_strings.F90 mossco_memory.o
 
 # Libraries that are independent of others
+mossco_info.o : mossco_info.F90
 mossco_attribute.o : mossco_attribute.F90
 ESMF_GridCreate3D.o : ESMF_GridCreate3D.F90
 mossco_dictionary.o : mossco_dictionary.F90
@@ -127,6 +129,7 @@ $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_memory.o) : mossco_memory.o
 $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_config.o) : mossco_config.o
 $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_parameter.o) : mossco_parameter.o
 $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_attribute.o) : mossco_attribute.o
+$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_info.o) : mossco_info.o
 $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_dictionary.o) : mossco_dictionary.o
 $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_time.o) : mossco_time.o
 $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_variable_types.o) : mossco_variable_types.o
@@ -163,6 +166,7 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_state.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_field.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_attribute.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_info.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_time.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_memory.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_strings.mod

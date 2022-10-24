@@ -28,6 +28,7 @@ use esmf
 use mossco_strings
 use mossco_state
 use mossco_field
+use mossco_info
 
 implicit none
 
@@ -1346,6 +1347,14 @@ contains
      enddo
 #else ! ESMF version >= 8
 
+  if (present(log)) then
+    call MOSSCO_InfoLogObject(gridComp, log=log, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  else
+    call MOSSCO_InfoLogObject(gridComp, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  endif
+
   call ESMF_InfoGetFromHost(gridComp, info, rc=localrc)
   call ESMF_InfoPrint(info, unit=message, rc=localrc )
   if (present(log)) then
@@ -1364,23 +1373,23 @@ contains
     type(ESMF_CplComp)             :: cplComp
     type(ESMF_KeywordEnforcer), intent(in ), optional :: kwe
     type(ESMF_Log), optional        :: log
-     integer(ESMF_KIND_I4), optional :: rc
+    integer(ESMF_KIND_I4), optional :: rc
 
-     integer(ESMF_KIND_I4)           :: localrc, itemCount, i, j, rc_
-     character(len=ESMF_MAXPATHLEN)  :: string, message
-     character(len=ESMF_MAXSTR)      :: name, attributeName
-     logical                         :: isPresent
-     type(ESMF_TypeKind_Flag)        :: typeKind
-     logical, allocatable            :: logicalValueList(:)
-     real(kind=ESMF_KIND_R4), allocatable    :: real4ValueList(:)
-     real(kind=ESMF_KIND_R8), allocatable    :: real8ValueList(:)
-     integer(kind=ESMF_KIND_I4), allocatable :: integer4ValueList(:)
-     integer(kind=ESMF_KIND_I8), allocatable :: integer8ValueList(:)
-     character(len=4096)       , allocatable :: characterValueList(:)
+    integer(ESMF_KIND_I4)           :: localrc, itemCount, i, j, rc_
+    character(len=ESMF_MAXPATHLEN)  :: string, message
+    character(len=ESMF_MAXSTR)      :: name, attributeName
+    logical                         :: isPresent
+    type(ESMF_TypeKind_Flag)        :: typeKind
+    logical, allocatable            :: logicalValueList(:)
+    real(kind=ESMF_KIND_R4), allocatable    :: real4ValueList(:)
+    real(kind=ESMF_KIND_R8), allocatable    :: real8ValueList(:)
+    integer(kind=ESMF_KIND_I4), allocatable :: integer4ValueList(:)
+    integer(kind=ESMF_KIND_I8), allocatable :: integer8ValueList(:)
+    character(len=4096)       , allocatable :: characterValueList(:)
 
-     type(ESMF_Config)               :: config
-     type(ESMF_Vm)                   :: vm
-     type(ESMF_Clock)                :: clock
+    type(ESMF_Config)               :: config
+    type(ESMF_Vm)                   :: vm
+    type(ESMF_Clock)                :: clock
 
     integer(ESMF_KIND_I4)           :: petCount, count
     type(ESMF_Context_Flag)         :: contextFlag
@@ -1394,8 +1403,7 @@ contains
 
     call ESMF_CplCompGet(cplComp, name=name, contextFlag=contextFlag, &
       currentMethod=methodFlag, currentPhase=phase, vmIsPresent=isPresent, rc=localRc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (methodFlag == ESMF_METHOD_INITIALIZE) then
       write(message,'(A,I1)') trim(name)//' in method INITIALIZE phase ',phase
@@ -1413,21 +1421,18 @@ contains
 
     if (isPresent) then
       call ESMF_CplCompGet(cplComp, vm=vm, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       !!@ todo utilize VM info
       !call ESMF_CplCompGet(cplComp, localPet, petCount, contextflag, &
       !comptype)
     endif
 
     call ESMF_CplCompGet(cplComp, configIsPresent=isPresent, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (isPresent) then
       call ESMF_CplCompGet(cplComp, config=config, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       write(message, '(A)') trim(name)//' has config'
       if (present(log)) then
@@ -1438,13 +1443,11 @@ contains
     endif
 
     call ESMF_CplCompGet(cplComp, configFileIsPresent=isPresent, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (isPresent) then
       call ESMF_CplCompGet(cplComp, configFile=string, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       write(message, '(A)') trim(name)//' has config file '//trim(string)
       if (present(log)) then
@@ -1455,17 +1458,14 @@ contains
     endif
 
     call ESMF_CplCompGet(cplComp, clockIsPresent=isPresent, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (isPresent) then
       call ESMF_CplCompGet(cplComp, clock=clock, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       call ESMF_ClockGet(clock, name=string, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       write(message, '(A)') trim(name)//' has clock '//trim(string)
       if (present(log)) then
@@ -1475,20 +1475,13 @@ contains
       endif
     endif
 
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
 #if ESMF_VERSION_MAJOR < 8
     call ESMF_AttributeGet(cplComp, count=count , attCountFlag=ESMF_ATTGETCOUNT_ATTLINK, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     write(message, '(A,I2,A)') trim(name)//' contains ', count, ' linked, '
-#else
-  call ESMF_AttributeGet(cplComp, count=count , attCountFlag=ESMF_ATTGETCOUNT_TOTAL, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    write(message, '(A,I2,A)') trim(name)//' contains ', count, ' total, '
-#endif
+  !call ESMF_AttributeGet(cplComp, count=count , attCountFlag=ESMF_ATTGETCOUNT_TOTAL, rc=localrc)
+  !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  ! write(message, '(A,I2,A)') trim(name)//' contains ', count, ' total, '
 
     call ESMF_AttributeGet(cplComp, count=count, attCountFlag=ESMF_ATTGETCOUNT_ATTPACK, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -1621,6 +1614,15 @@ contains
          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
        endif
      enddo
+#else
+  if (present(log)) then
+    call MOSSCO_InfoLogObject(cplComp, log=log, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  else
+    call MOSSCO_InfoLogObject(cplComp, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  endif
+#endif
 
    end subroutine MOSSCO_CplCompLog
 

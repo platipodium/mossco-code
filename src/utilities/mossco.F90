@@ -20,6 +20,7 @@ module mossco
 
 use esmf
 use mossco_attribute
+use mossco_info
 use mossco_component
 use mossco_config
 use mossco_field
