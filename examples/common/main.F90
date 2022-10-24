@@ -2,10 +2,11 @@
 !> @file main.F90
 !!
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013--2020 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2021-2022 Helmholtz-Zentrum Hereon
+!> @copyright Copyright (C) 2013-2021 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !> @author Knut Klingbeil <knut.klingbeil@io-warnemuende.de>
-!> @author Richard Hofmeister <richard.hofmeister@hzg.de>
+!> @author Richard Hofmeister
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -56,6 +57,8 @@ program main
   integer(ESMF_KIND_I8)      :: system_clock_start, system_clock_stop, system_clock_max
   integer(ESMF_KIND_I8)      :: system_clock_rate, system_clock_duration
   character(len=ESMF_MAXSTR), allocatable :: configFileNameList(:), argValueList(:)
+
+   type(ESMF_Info)           :: info
 
 !> Read the namelist `mossco_run.nml`and evaluate five parameters:
 !> 1. `start`: the start date of the simulation in YYYY-MM-DD hh:mm:ss format
@@ -405,13 +408,16 @@ program main
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   !> Add all configuration options as attributes to state
-  call ESMF_AttributeSet(topState, 'simulation_title', trim(title), rc=localrc)
+  call ESMF_InfoGetFromHost(topComp, info, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-  call ESMF_AttributeSet(topState, 'simulation_start', trim(start), rc=localrc)
+  call ESMF_InfoSet(info, 'simulation_title', trim(title), rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-  call ESMF_AttributeSet(topState, 'simulation_stop', trim(stop), rc=localrc)
+  call ESMF_InfoSet(info, 'simulation_start', trim(start), rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  call ESMF_InfoSet(info, 'simulation_stop', trim(stop), rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   call ESMF_GridCompGet(topComp,clockIsPresent=ClockIsPresent, rc=localrc)
