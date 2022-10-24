@@ -42,17 +42,19 @@ contains
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_InfoLog"
 !> This private subroutine is called through the MOSSCO_InfoLog Interface
-  subroutine MOSSCO_InfoLog(info, kwe, prefix, log, rc)
+  recursive subroutine MOSSCO_InfoLog(info, kwe, prefix, root, log, rc)
 
     type(ESMF_Info)                  :: info
     logical,intent(in ),optional     :: kwe
     character(len=*), optional       :: prefix
+    character(len=*), optional       :: root
     type(ESMF_Log), optional         :: log
-     integer(ESMF_KIND_I4), optional :: rc
+    integer(ESMF_KIND_I4), optional  :: rc
+
 
     integer(ESMF_KIND_I4)            :: localrc, rc_, infoSize, i, int4
     type(ESMF_Log)                   :: log_
-    character(len=ESMF_MAXSTR)       :: key, prefix_, message, string
+    character(len=ESMF_MAXSTR)       :: key, prefix_, message, string, root_
     character(len=ESMF_MAXSTR)       :: format
     type(ESMF_TypeKind_Flag)         :: typeKind
     integer(ESMF_KIND_I8)            :: int8
@@ -64,7 +66,11 @@ contains
     if (present(prefix)) call MOSSCO_StringCopy(prefix_, prefix, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_InfoGet(info, size=infoSize, rc=localrc)
+    root_ = '/'
+    if (present(root)) call MOSSCO_StringCopy(root_, root, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_InfoGet(info, size=infoSize, key=trim(root), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     write(format,'(A)') '(A,'//intformat(infoSize)//',A)'
@@ -80,44 +86,53 @@ contains
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
         write(format,'(A)') '(A,'//intformat(i)//',A)'
-        write(message, trim(format)) trim(prefix_)//':(',i,')'//trim(key)//'='
+        write(message, trim(format)) trim(prefix_)//'(',i,'):'//trim(key)
         if (typeKind==ESMF_TYPEKIND_CHARACTER) then 
             call ESMF_InfoGet(info, key=key, value=string, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-            write(message,'(A,A)') trim(message), trim(string)
+            write(message,'(A,A)') trim(message)//' (C) = '//trim(string)
         elseif (typeKind==ESMF_TYPEKIND_I4) then 
             call ESMF_InfoGet(info, key=key, value=int4, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
             write(format,'(A)') '(A,'//intformat(int4)//')'
-            write(message,trim(format)) trim(message), int4
+            write(message,trim(format)) trim(message)//' (I4) = ', int4
         elseif (typeKind==ESMF_TYPEKIND_I8) then 
             call ESMF_InfoGet(info, key=key, value=int8, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
             write(format,'(A)') '(A,'//intformat(int8)//')'
-            !write(message,trim(format)) trim(message), int8
+            !write(message,trim(format)) trim(message)//' (I8) = ', int8
             write(message,*) trim(message), int8
         elseif (typeKind==ESMF_TYPEKIND_R4) then 
             call ESMF_InfoGet(info, key=key, value=real4, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-            write(message,'(A,F3.2)') trim(message), real4
+            write(message,'(A,F3.2)') trim(message)//' (R4) = ', real4
         elseif (typeKind==ESMF_TYPEKIND_R8) then 
             call ESMF_InfoGet(info, key=key, value=real8, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-            !write(message,'(A,F3.2)') trim(message), real8
+            !write(message,'(A,F3.2)') trim(message)//' (R8) = ', real8
             write(message,*) trim(message), real8
         elseif (typeKind==ESMF_TYPEKIND_LOGICAL) then 
             call ESMF_InfoGet(info, key=key, value=bool, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
             if (bool) then 
-                write(message,'(A,A)') trim(message), '.true.'
+                write(message,'(A)') trim(message)//' (L) = .true.'
             else
-                write(message,'(A,A)') trim(message), '.false.'
+                write(message,'(A)') trim(message)//' (L) = .false.'
             endif
         else 
-            write(message,'(A,A,I2)') trim(message), &
-              ' retrieval not implemented for typeKind ', typeKind
+            write(message,'(A,A)') trim(message)//' (nested)'
+            !> @todo recursivion needs to be fixed
+            !if (present(log)) then 
+            !  call MOSSCO_InfoLog(info, root=trim(root_)//trim(key), log=log,  &
+            !    prefix=trim(prefix_)//':'//trim(key), rc=localrc)
+            !  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+            !else 
+            !  call MOSSCO_InfoLog(info, root=trim(root_)//trim(key), &
+            !    prefix=trim(prefix_)//':'//trim(key), rc=localrc)
+            !  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+            !endif 
         endif 
 
         if (present(log)) then 

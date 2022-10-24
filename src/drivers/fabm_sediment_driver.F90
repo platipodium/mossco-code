@@ -2,7 +2,11 @@
 !! @brief FABM sediment driver
 !!
 !! The driver contains the sediment driver module
-!! @author Richard Hofmeister
+!  This computer program is part of MOSSCO.
+!> @copyright Copyright (C) 2021-2022 Helmholtz-Zentrum Hereon
+!> @copyright Copyright (C) 2013-2021 Helmholtz-Zentrum Geesthacht
+!> @author Carsten Lemmen <carsten.lemmen@hereon.de>
+!> @author Richard Hofmeister
 
 !> The FABM sediment driver module provides infrastructure for the
 !! MOSSCO sediment component.
@@ -709,7 +713,7 @@ subroutine get_rhs(rhs_driver, rhs)
 
   ! return fabm-rhs + diff-tendencies
   rhs = rhs + rhs_driver%transport
-
+ 
   end subroutine get_rhs
 
 

@@ -81,6 +81,7 @@ mossco_field.o : mossco_field.F90 mossco_strings.o mossco_attribute.o \
 
 mossco_state.o : mossco_state.F90 mossco_field.o
 mossco_logging.o : mossco_logging.F90 mossco_state.o
+mossco_info.o : mossco_strings.o 
 
 $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_logging.o) : mossco_logging.o
 $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_state.o): mossco_state.o

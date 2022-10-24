@@ -658,8 +658,11 @@ module pelagic_soil_connector
       include=includeList, verbose=verbose, owner=trim(name), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    oxyrc = ESMF_RC_NOT_FOUND
-    if (fieldCount > 0) then
+    if (fieldCount == 0) then
+      oxyrc = ESMF_RC_NOT_FOUND
+      write(message,'(A)') trim(name)//' could not find pelagic oxygen'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    else
       oxyrc = ESMF_SUCCESS
       call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -682,6 +685,10 @@ module pelagic_soil_connector
         localrc = ESMF_RC_NOT_IMPL
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
+      write(message, '(A)') trim(name)//' imports oxygen from '
+      call MOSSCO_FieldString(fieldList(1), message, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     endif
 
     ! dissolved_reduced_substances:
@@ -693,8 +700,11 @@ module pelagic_soil_connector
       include=includeList, verbose=verbose, owner=trim(name), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    odurc = ESMF_RC_NOT_FOUND
-    if (fieldCount > 0) then
+    if (fieldCount == 0) then
+      odurc = ESMF_RC_NOT_FOUND
+      write(message,'(A)') trim(name)//' could not find pelagic oxygen deficit'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    else
       call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -730,9 +740,11 @@ module pelagic_soil_connector
       itemSearch='dissolved_oxygen_at_soil_surface', verbose=verbose, owner=trim(name), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    if (fieldCount > 0) then
+    if (fieldCount == 0) then
+      write(message,'(A)') trim(name)//' does not export oxygen'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    else    
       ! this is always true for OMexDia
-
       call ESMF_FieldGet(fieldList(1), rank=exportRank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -743,7 +755,6 @@ module pelagic_soil_connector
         call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr1, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       else
-
         localrc = ESMF_RC_NOT_IMPL
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
@@ -760,9 +771,11 @@ module pelagic_soil_connector
       include=includeList, verbose=verbose, owner=trim(name), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    if (fieldCount > 0) then
+    if (fieldCount == 0) then
+      write(message,'(A)') trim(name)//' does not export oxygen deficit'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    else    
       ! this is always true for OMexDia
-
       call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -773,7 +786,7 @@ module pelagic_soil_connector
         call ESMF_FieldGet(fieldList(1), farrayPtr=farrayPtr12, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       else
-        write(message,'(A,A,I1)') trim(name)//' '//trim(includeList(1)), &
+        write(message,'(A,A,I2)') trim(name)//' '//trim(includeList(1)), &
           ' cannot have rank ',rank
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         localrc = ESMF_RC_NOT_IMPL
@@ -850,7 +863,6 @@ module pelagic_soil_connector
       write(message, '(A)') trim(name)//' exports oxygen only, no deficit'
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
 
     else ! no vertical information found
       allocate(includeList(1))
@@ -943,7 +955,7 @@ module pelagic_soil_connector
           exclusiveUBound=ubnd(1:3), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       else
-        write(message,'(A,A,I1)') trim(name)//' '//trim(fieldName), &
+        write(message,'(A,A,I2)') trim(name)//' '//trim(fieldName), &
           ' cannot have rank ',rank
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         exit
