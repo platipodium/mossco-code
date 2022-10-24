@@ -473,11 +473,11 @@ fid.write('''
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_StateValidate(importState, rc=localrc)
+    !call ESMF_StateValidate(importState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_StateValidate(exportState, rc=localrc)
+    !call ESMF_StateValidate(exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1067,19 +1067,17 @@ for item in gridCompList:
 fid.write('''
     !> Go through all components and log their import and export states
 
-    call ESMF_GridCompGet(gridComp, localPet=localPet, rc=localrc)
+    call ESMF_GridCompGet(gridComp, localPet=localPet, importState=importState, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    !> @todo re-enable state logging
-    if (.false.) then
-    !if (localPet==0) then
-      call ESMF_AttributeGet(importState, name='simulation_title', value=message, defaultvalue='Untitled', rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (localPet==0) then
+      call ESMF_AttributeGet(importState, name='simulation_title', value=message, &
+        defaultvalue='Untitled', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_LogOpen(stateLog,'PET.states_'//trim(message), appendFlag=.false., &
         logkindFlag=ESMF_LOGKIND_SINGLE, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_LogWrite('====== Status at end of child initialization ======', ESMF_LOGMSG_INFO, log=stateLog)
 
@@ -1087,29 +1085,24 @@ fid.write('''
         call ESMF_LogWrite('====== '//trim(gridCompNameList(i))//' ======', ESMF_LOGMSG_INFO, log=stateLog)
 
         call MOSSCO_CompLog(gridCompList(i), log=stateLog, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call MOSSCO_StateLog(gridImportStateList(i), log=stateLog, deep=.true., rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call MOSSCO_StateLog(gridExportStateList(i), log=stateLog, deep=.true., rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       enddo
 
       do i=1,numCplComp
         call ESMF_LogWrite('====== '//trim(cplCompNameList(i))//' ======', ESMF_LOGMSG_INFO, log=stateLog)
 
         call MOSSCO_CompLog(cplCompList(i), log=stateLog, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       enddo
 
-      call ESMF_LogClose(stateLog)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_LogClose(stateLog, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
 
     !! Establish number of phases for all components
@@ -1177,20 +1170,31 @@ fid.write('''
 # Go through all components and log their import and export states
 fid.write('''
     !> Go through all components and log their import and export states
-    call ESMF_LogOpen(stateLog,'PET.states_'//trim(message), appendFlag=.false., &
-      logkindFlag=ESMF_LOGKIND_SINGLE, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_LogWrite('====== Status at end of child readrestarting ======', ESMF_LOGMSG_INFO, log=stateLog)
+    call ESMF_GridCompGet(gridComp, importState=importState, localPet=localPet, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    !do i=1,numGridComp
-    !  call ESMF_LogWrite('====== States of '//trim(gridCompNameList(i))//' ======', ESMF_LOGMSG_INFO, log=stateLog)
-    !  call MOSSCO_StateLog(gridImportStateList(i))
-    !  call MOSSCO_StateLog(gridExportStateList(i))
-    !enddo
+    if (localPet == 0) then 
+      call ESMF_AttributeGet(importState, name='simulation_title', value=message, &
+        defaultvalue='Untitled', rc=localrc)
+     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_LogClose(stateLog, rc=localrc)
+      call ESMF_LogOpen(stateLog,'PET.states_'//trim(message), appendFlag=.true., &
+        logkindFlag=ESMF_LOGKIND_SINGLE, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_LogWrite('====== Status at end of child readrestarting ======', ESMF_LOGMSG_INFO, log=stateLog)
+
+      do i=1,numGridComp
+        call ESMF_LogWrite('====== States of '//trim(gridCompNameList(i))//' ======', ESMF_LOGMSG_INFO, log=stateLog)
+        call MOSSCO_StateLog(gridImportStateList(i), log=stateLog, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+        call MOSSCO_StateLog(gridExportStateList(i), log=stateLog, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+      enddo
+
+      call ESMF_LogClose(stateLog, rc=localrc)
+    endif
 ''')
 
 #fid.write('''
@@ -1474,11 +1478,11 @@ fid.write('''
 
 fid.write('''
 
-    call ESMF_StateValidate(importState, rc=localrc)
+    !call ESMF_StateValidate(importState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_StateValidate(exportState, rc=localrc)
+    !call ESMF_StateValidate(exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -2059,16 +2063,18 @@ fid.write('''
       write(message,'(A)') trim(message)//' '//trim(timeString)
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=localrc)
 
+      !> If advanceCount==1 then go through all components and log their import and export states
+
       call ESMF_ClockGet(myClock, advanceCount=advanceCount, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_GridCompGet(gridComp, localPet=localPet, rc=localrc)
+      call ESMF_GridCompGet(gridComp, localPet=localPet, importState=importState, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      !> If advanceCount==1 then go through all components and log their import and export states
-
-      if (localPet==0 .and. advanceCount==0) then
-        call ESMF_AttributeGet(importState, name='simulation_title', value=message, defaultvalue='Untitled', rc=localrc)
+      !> @todo reenable
+      if (localPet==0 .and. advanceCount==1) then
+        call ESMF_AttributeGet(importState, name='simulation_title', value=message, &
+          defaultvalue='Untitled', rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call ESMF_LogOpen(stateLog,'PET.states_'//trim(message), appendFlag=.true., &
@@ -2157,10 +2163,10 @@ for coupling in couplingList:
 ''')
 
 fid.write('''
-    call ESMF_StateValidate(importState, rc=localrc)
+    !call ESMF_StateValidate(importState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_StateValidate(exportState, rc=localrc)
+    !call ESMF_StateValidate(exportState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (allocated(wallTimeStart)) deallocate(wallTimeStart)
