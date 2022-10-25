@@ -48,9 +48,9 @@ SHA_FILE=git-sha.h
 TARGETS = mossco-sha
 
 ifdef MOSSCO_SETUPDIR
-ifneq ($(wildcard $(MOSSCO_SETUPDIR)),)
+ifneq ($(wildcard $(MOSSCO_SETUPDIR)/.git),)
 ifneq ($(GIT),)
-  MOSSCO_SETUP_SHA=$(shell (cd $(MOSSCO_SETUPDIR) ; git log -n1) | head -1 | awk '{print $$2}')
+  MOSSCO_SETUP_SHA=$(shell (cd $(MOSSCO_SETUPDIR) ; git log -n1 ) | head -1 | awk '{print $$2}')
 endif
   MOSSCO_SETUP_SHA?=none
   TARGETS += mossco-setup-sha
