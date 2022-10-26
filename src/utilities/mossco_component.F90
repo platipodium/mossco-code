@@ -404,19 +404,19 @@ contains
     call ESMF_InfoGetFromHost(cplComp, info, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_InfoGet(info, key='system_clock_start_'//trim(phaseString), 
+    call ESMF_InfoGet(info, key='system_clock_start_'//trim(phaseString), &
       value=systemClockStart, default=systemClockStop, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_InfoGet(info, key='cpu_time_start_'//trim(phaseString), 
+    call ESMF_InfoGet(info, key='cpu_time_start_'//trim(phaseString), &
       value=cpuTimeStart, default=cpuTimeStop, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_InfoGet(info, key='system_clock_duration'//trim(phaseString), 
+    call ESMF_InfoGet(info, key='system_clock_duration'//trim(phaseString), &
       value=systemClockTotalDuration, default=0.0d0, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_InfoGet(info, key='cpu_time_duration_'//trim(phaseString), 
+    call ESMF_InfoGet(info, key='cpu_time_duration_'//trim(phaseString), &
       value=cpuTimeTotalDuration, default=0.0d0, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
@@ -429,7 +429,7 @@ contains
       value=cpuTimeTotalDuration, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_InfoSet(cplComp, key='system_clock_duration_'//trim(phaseString), &
+    call ESMF_InfoSet(info, key='system_clock_duration_'//trim(phaseString), &
       value=systemClockTotalDuration, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
@@ -450,7 +450,7 @@ contains
           value=systemClockTotalDuration, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-        call ESMF_AttributeGet(info, key='cpu_time_duration_'//trim(phaseString), &
+        call ESMF_InfoGet(info, key='cpu_time_duration_'//trim(phaseString), &
           value=cpuTimeTotalDuration, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
@@ -660,19 +660,19 @@ contains
     call ESMF_InfoGetFromHost(gridcomp, info, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_InfoGet(info, key='system_clock_start_'//trim(phaseString), 
+    call ESMF_InfoGet(info, key='system_clock_start_'//trim(phaseString), &
       value=systemClockStart, default=systemClockStop, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_InfoGet(info, key='cpu_time_start_'//trim(phaseString), 
+    call ESMF_InfoGet(info, key='cpu_time_start_'//trim(phaseString), &
       value=cpuTimeStart, default=cpuTimeStop, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_InfoGet(info, key='system_clock_duration'//trim(phaseString), 
+    call ESMF_InfoGet(info, key='system_clock_duration'//trim(phaseString), &
       value=systemClockTotalDuration, default=0.0d0, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_InfoGet(info, key='cpu_time_duration_'//trim(phaseString), 
+    call ESMF_InfoGet(info, key='cpu_time_duration_'//trim(phaseString), &
       value=cpuTimeTotalDuration, default=0.0d0, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
