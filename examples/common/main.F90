@@ -147,7 +147,7 @@ program main
 
   ! Initialize ESMF, get resources, and log this to a file beginning with PET
   call ESMF_Initialize(defaultLogFileName=trim(title), rc=localrc, &
-    defaultCalKind=ESMF_CALKIND_GREGORIAN, vm=vm)
+    defaultCalKind=ESMF_CALKIND_GREGORIAN )
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   config = ESMF_ConfigCreate(rc=localrc)
@@ -250,6 +250,9 @@ program main
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   deallocate(configFileNameList, stat=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  call ESMF_VMGetGlobal(vm, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   call ESMF_VMGet(vm, petCount=petCount, localPet=localPet, rc=localrc)
