@@ -47,7 +47,7 @@ module gotm_component
   use time, only: gotm_time_timefmt => timefmt
   use time, only: gotm_time_init_time => init_time
   use time, only: timestepkind,update_time
-  use gotm, only: init_gotm, read_nml, gotm_time_loop => time_loop, clean_up
+  use gotm, only: initialize_gotm, read_nml, finalize_gotm
 
   use mossco_variable_types
   use mossco_component
@@ -165,8 +165,8 @@ module gotm_component
     use meanflow, only : gotm_v => v
     use meanflow, only: h
     use turbulence, only : gotm_tknu => num
-    use airsea_driver, only : gotm_u10 => u10
-    use airsea_driver, only : gotm_v10 => v10
+    use airsea_driver, only : gotm_u10 => u10_input
+    use airsea_driver, only : gotm_v10 => v10_input
 
     implicit none
 
@@ -249,7 +249,7 @@ module gotm_component
       endif
     endif
 
-    call init_gotm()
+    call initialize_gotm()
     !call init_gotm(t1='1998-02-01 00:00:00',t2='1998-07-01 00:00:00')
 
 
@@ -708,8 +708,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     use meanflow, only : gotm_u => u
     use meanflow, only : gotm_v => v
     use turbulence, only : gotm_tknu => num
-    use airsea_driver, only : gotm_u10 => u10
-    use airsea_driver, only : gotm_v10 => v10
+    use airsea_driver, only : gotm_u10 => u10_input
+    use airsea_driver, only : gotm_v10 => v10_input
 
 
     type(ESMF_GridComp)  :: gridComp
@@ -894,7 +894,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call clean_up()
+    call finalize_gotm()
     rc = ESMF_SUCCESS
 
     call MOSSCO_CompExit(gridComp, rc=localrc)
@@ -931,18 +931,24 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
   use meanflow
   use input
   use observations
+  use stokes_drift
   use airsea_driver
   use turbulence
   use kpp
 
   GOTM_REALTYPE             :: tFlux,btFlux,sFlux,bsFlux
   GOTM_REALTYPE             :: tRad(0:nlev),bRad(0:nlev)
+  GOTM_REALTYPE :: swf=_ZERO_ ! surface water flux
+  GOTM_REALTYPE :: shf=_ZERO_ ! surface heat flux
+  GOTM_REALTYPE :: ssf=_ZERO_ ! surface salinity flux
   logical  :: calc_fluxes
 
   calc_fluxes = (fluxes_method > 0)
 !     all observations/data
   call do_input(julianday,secondsofday,nlev,z)
   call get_all_obs(julianday,secondsofday,nlev,z)
+!KB need some check to find out if this should be done:  zeta = zeta_input%value
+  call do_stokes_drift(nlev,z,zi,gravity,u10_input%value,v10_input%value)
 
 !     external forcing
   if( calc_fluxes ) then
@@ -951,12 +957,19 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
   end if
   call do_airsea(julianday,secondsofday)
 
+  I_0%value = I_0%value*(_ONE_-albedo-bio_albedo)
+
 !     reset some quantities
+  swf=precip_input%value+evap
+  shf=-heat_input%value !KB must be updated in next release version where fluxes will follow positive -z-coordinate
   tx = tx/rho_0
   ty = ty/rho_0
 
+  call integrated_fluxes(timestep)
+
 !     meanflow integration starts
   call updategrid(nlev,timestep,zeta)
+  call wequation(nlev,timestep)
   call coriolis(nlev,timestep)
 
 !     update velocity
@@ -964,15 +977,15 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
   call vequation(nlev,timestep,cnpar,ty,num,gamv,ext_press_mode)
   call extpressure(ext_press_mode,nlev)
   call intpressure(nlev)
-  call friction(kappa,avmolu,tx,ty)
+  call friction(nlev,kappa,avmolu,tx,ty,plume_type)
 
 !     update temperature and salinity
-  if (sprof%method .ne. 0) then
+  if (sprof_input%method .ne. 0) then
     call salinity(nlev,timestep,cnpar,nus,gams)
   endif
 
-  if (tprof%method .ne. 0) then
-    call temperature(nlev,timestep,cnpar,I_0,heat,nuh,gamh,rad)
+  if (tprof_input%method .ne. 0) then
+    call temperature(nlev,timestep,cnpar,I_0,swf,shf,nuh,gamh,rad)
   endif
 
 !     update shear and stratification
@@ -987,7 +1000,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
                                    buoy_method,gravity,rho_0)
   case (99)
 !        update KPP model
-    call convert_fluxes(nlev,gravity,cp,rho_0,heat%value,precip%value+evap, &
+    call convert_fluxes(nlev,gravity,cp,rho_0,heat_input%value,precip_input%value+evap, &
                              rad,T,S,tFlux,sFlux,btFlux,bsFlux,tRad,bRad)
 
 
