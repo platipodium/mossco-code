@@ -981,7 +981,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
 !     update temperature and salinity
   if (sprof_input%method .ne. 0) then
-    call salinity(nlev,timestep,cnpar,nus,gams)
+    call salinity(nlev,timestep,cnpar,swf,ssf,nus,gams)
   endif
 
   if (tprof_input%method .ne. 0) then
@@ -1011,7 +1011,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
   case default
 !        update one-point models
     call do_turbulence(nlev,timestep,depth,u_taus,u_taub,z0s,z0b,h,      &
-                            NN,SS)
+                            NN,SS, SSCSTK=SSCSTK)
   end select
 
   end subroutine gotm_time_step
