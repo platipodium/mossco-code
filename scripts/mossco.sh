@@ -4,8 +4,9 @@
 #        You may want to link this script into directory within your $PATH
 #
 # This computer program is part of MOSSCO.
-# @copyright Copyright (C) 2014--2020 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen, <carsten.lemmen@hzg.de>
+# @copyright Copyright (C) 2021-2022 Helmholtz-Zentrum Hereon
+# @copyright Copyright (C) 2014-2021 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen, <carsten.lemmen@hereon>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -510,6 +511,7 @@ EOT
       # Tested on strand.hzg.de
       if [ ${QUEUE} == undefined ]; then QUEUE=pCluster; fi
       echo \#SBATCH --partition=${QUEUE} >> slurm.sh
+      echo \#SBATCH --exclusive >> slurm.sh
       echo \#export OMP_NUM_THREADS=48 >> slurm.sh
       echo "" >> slurm.sh
       echo "module load compilers/intel intelmpi" >> slurm.sh
