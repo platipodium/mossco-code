@@ -1,8 +1,9 @@
 !> @brief Implementation of an ESMF soil-pelagic coupling
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
-!> @author Richard Hofmeister <richard.hofmeister@hereon.de>
+!> @copyright Copyright (C) 2021-2022 Helmholtz-Zentrum Hereon
+!> @copyright Copyright (C) 2014-2021 Helmholtz-Zentrum Geesthacht
+!> @author Richard Hofmeister
 !> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 
 !
