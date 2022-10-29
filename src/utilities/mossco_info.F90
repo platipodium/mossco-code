@@ -35,6 +35,7 @@ public MOSSCO_InfoLog, MOSSCO_InfoLogObject, MOSSCO_InfoCopy
 interface MOSSCO_InfoLogObject
   module procedure MOSSCO_InfoLogGridComp
   module procedure MOSSCO_InfoLogCplComp
+  module procedure MOSSCO_InfoLogField
 end interface MOSSCO_InfoLogObject
 
 interface MOSSCO_InfoCopy
@@ -317,5 +318,32 @@ end subroutine MOSSCO_InfoCopyAll
       if (present(rc)) rc=localrc
   
     end subroutine MOSSCO_InfoLogGridComp
+
+#undef ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_InfoLogField"
+  !> This private subroutine is called through the MOSSCO_InfoLogObject Interface
+    subroutine MOSSCO_InfoLogField(field, kwe, log, rc)
+  
+      type(ESMF_Field)                 :: field
+      logical,intent(in ),optional     :: kwe
+      type(ESMF_Log), optional         :: log
+       integer(ESMF_KIND_I4), optional :: rc
+  
+      integer(ESMF_KIND_I4)            :: localrc, rc_
+      type(ESMF_Info)                  :: info
+      character(len=ESMF_MAXSTR)       :: name
+      
+      call ESMF_FieldGet(field, name=name, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      
+      call ESMF_InfoGetFromHost(field, info=info, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  
+      call MOSSCO_InfoLog(info, prefix=trim(name), log=log, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  
+      if (present(rc)) rc=localrc
+  
+    end subroutine MOSSCO_InfoLogField
 
 end module mossco_info
