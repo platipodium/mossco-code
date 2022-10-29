@@ -354,6 +354,7 @@ module fabm_pelagic_component
     real(ESMF_KIND_R8), dimension(:,:), pointer :: coord2d=>null()
     character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
     character(len=ESMF_MAXSTR)  :: fabm_nml='fabm.nml'
+    type(ESMF_Info)             :: info 
 
     namelist /fabm_pelagic/ dt,ode_method,dt_min,relative_change_min, &
                             background_extinction, albedo_const,fabm_nml
@@ -376,9 +377,12 @@ module fabm_pelagic_component
     call ESMF_UtilIOUnitGet(unit, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+    call ESMF_InfoGetFromHost(gridComp, info=info, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
     if (isPresent) then
       open(unit,file=trim(name)//'.nml', action='read', status='old')
-      call ESMF_AttributeSet(exportState, trim(name)//'::namelist', trim(name)//'.nml', rc=localrc)
+      call ESMF_InfoSet(info, key=trim(name)//'/namelist', value=trim(name)//'.nml', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     else
       inquire(file='fabm_pelagic.nml', exist = isPresent)
@@ -388,7 +392,7 @@ module fabm_pelagic_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
       open(unit,file='fabm_pelagic.nml', action='read', status='old')
-      call ESMF_AttributeSet(exportState, trim(name)//'::namelist', 'fabm_pelagic.nml', rc=localrc)
+      call ESMF_InfoSet(info, key=trim(name)//'/namelist', value='fabm_pelagic.nml', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
     
@@ -398,7 +402,7 @@ module fabm_pelagic_component
     call ESMF_TimeIntervalSet(timeInterval,s_r8=dt,rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(exportState, trim(name)//'::dt', dt, rc=localrc)
+    call ESMF_InfoSet(info, key=trim(name)//'/dt', value=dt, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_ClockSet(clock, timeStep=timeInterval, rc=localrc)
@@ -583,10 +587,10 @@ module fabm_pelagic_component
       ' on branch '//trim(pel%fabm_git_branch)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-    call ESMF_AttributeSet(exportState, 'fabm_git_sha', trim(pel%fabm_git_sha), rc=localrc)
+    call ESMF_InfoSet(info, key='fabm/git/sha', value=trim(pel%fabm_git_sha), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(exportState, 'fabm_git_branch', trim(pel%fabm_git_branch), rc=localrc)
+    call ESMF_InfoSet(info, key='fabm/git/branch', value=trim(pel%fabm_git_branch), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (allocated(pel%fabm_modules)) then
@@ -594,8 +598,8 @@ module fabm_pelagic_component
         write(message,'(A)') trim(name)//' uses module '//trim(pel%fabm_modules(i))
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-        write(message,'(A,I2.2)') 'fabm_module_',i
-        call ESMF_AttributeSet(exportState, trim(message), trim(pel%fabm_modules(i)), &
+        write(message,'(A,I2.2)') 'fabm/module_',i
+        call ESMF_InfoSet(exportState, key=trim(message), value=trim(pel%fabm_modules(i)), &
           rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       enddo
@@ -694,7 +698,10 @@ module fabm_pelagic_component
                        staggerloc=ESMF_STAGGERLOC_CENTER,rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_AttributeSet(concfield, 'creator', trim(name), rc=localrc)
+      call ESMF_InfoGetFromHost(concfield, info=info, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_InfoSet(info, key='creator', value=trim(name), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       !! when memory is allocated, set pel%export_states(n)%conc to the values?
 
@@ -703,16 +710,13 @@ module fabm_pelagic_component
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
       !> add fabm index in concentration array as "external_index" to be used by other components
-      call ESMF_AttributeSet(concfield, 'external_index', int(pel%export_states(n)%fabm_id,ESMF_KIND_I8))
+      call ESMF_InfoSet(info, key='external_index', value=int(pel%export_states(n)%fabm_id,ESMF_KIND_I8))
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_AttributeSet(concfield, 'units', trim(pel%export_states(n)%units))
+      call ESMF_InfoSet(info, key='units', value=trim(pel%export_states(n)%units))
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_AttributeGet(exportState, trim(name)//'::dt', dt, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-      call ESMF_AttributeSet(concfield, 'integration_timestep', dt, rc=localrc)
+      call ESMF_InfoSet(info, key='integration_timestep', value=dt, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       ! initialize with 0.0
@@ -723,10 +727,13 @@ module fabm_pelagic_component
       restartField = ESMF_FieldEmptyCreate(name=trim(varname),rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_AttributeSet(restartField, 'creator', trim(name), rc=localrc)
+      call ESMF_InfoGetFromHost(restartField, info=info, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_AttributeSet(restartField, 'units', trim(pel%export_states(n)%units))
+      call ESMF_InfoSet(restartField, 'creator', trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_InfoSet(restartField, 'units', trim(pel%export_states(n)%units), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_FieldEmptySet(restartField, state_grid, &
@@ -743,9 +750,12 @@ module fabm_pelagic_component
       call MOSSCO_Reallocate(itemNameList, itemCount, keep=.false., rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+      call ESMF_InfoGetFromHost(concField, info=info, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
       call pel%model%state_variables(n)%properties%keys(itemNameList)
       do i=1, itemCount
-        call ESMF_AttributeSet(concfield,trim(itemNameList(i)), pel%model%state_variables(n)%properties%get_string(itemNameList(i),''))
+        call ESMF_InfoSet(concfield,key=trim(itemNameList(i)), value=pel%model%state_variables(n)%properties%get_string(itemNameList(i),''))
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       enddo
 
@@ -898,7 +908,6 @@ module fabm_pelagic_component
 
         call ESMF_StateAddReplace(exportState,(/fieldBundle/),rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
 
         call ESMF_StateGet(exportState, trim(wsname), field, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
