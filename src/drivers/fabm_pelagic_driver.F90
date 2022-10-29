@@ -2,8 +2,9 @@
 !> @brief 3D generic driver for the Framework for Aquatic Biogeochemical Models (FABM)
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2013, 2014, 2015, 2016, 2017, 2018, 2019 Helmholtz-Zentrum Geesthacht
-!> @author Richard Hofmeister <richard.hofmeister@hereon.de>
+!> @copyright Copyright 2021-2022 Helmholtz-Zentrum Hereon
+!> @copyright Copyright 2013-2021 Helmholtz-Zentrum Geesthacht
+!> @author Richard Hofmeister
 !> @author Carsten Lemmen <carsten.lemmen@hereon.de
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -777,7 +778,6 @@
      real(rk) :: bioext(1:pf%inum,1:pf%knum)
      real(rk) :: localpar(1:pf%inum),localext(1:pf%inum)
 
-
      do j=1,pf%jnum
          localpar = pf%I_0(:,j) * (1.0d0-pf%albedo(:,j))
          bioext = 0.0_rk
@@ -812,7 +812,6 @@ if ( any(pf%par(i,j,:) /= pf%par(i,j,:)) ) write(0,*) 'ERROR: fabm_pelagic_drive
      end do
 
    end subroutine light
-
 
    subroutine check_expressions(pf)
      class(type_mossco_fabm_pelagic) :: pf

@@ -148,7 +148,7 @@ module fabm_pelagic_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
     type(ESMF_Field)     :: field
-    integer(ESMF_KIND_I4) :: localrc, i
+    integer(ESMF_KIND_I4) :: localrc, i, unit
     character(ESMF_MAXSTR), dimension(10,2) :: stringList
     character(ESMF_MAXSTR) :: convention, purpose
 
@@ -157,9 +157,11 @@ module fabm_pelagic_component
     namelist /fabm_pelagic/ dt,ode_method,dt_min,relative_change_min
 
     !! read namelist input for control of timestepping
-    open(33,file='fabm_pelagic.nml',action='read',status='old')
-    read(33,nml=fabm_pelagic)
-    close(33)
+    call ESMF_UtilIOUnitGet(unit, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    open(unit,file='fabm_pelagic.nml',action='read',status='old')
+    read(unit,nml=fabm_pelagic)
+    close(unit)
 
     call ESMF_AttributeSet(exportState, trim(name)//'::dt', dt, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -345,7 +347,7 @@ module fabm_pelagic_component
     integer,dimension(3,3)     :: coordDimMap
     integer,dimension(:,:)  ,allocatable,target :: minIndexPDe,maxIndexPDe
     integer,dimension(:,:,:),allocatable,target :: deBlockList
-    integer                    :: day_of_year, day, seconds_of_day
+    integer                    :: day_of_year, day, seconds_of_day, unit
     logical, dimension(:,:,:), pointer :: mask=>null()
     integer, dimension(:,:,:), pointer :: gridmask=>null()
     real(ESMF_KIND_R8), dimension(:)  , pointer :: coord1d=>null()
@@ -370,8 +372,12 @@ module fabm_pelagic_component
 
     !! read namelist input for control of timestepping
     inquire(file=trim(name)//'.nml', exist = isPresent)
+
+    call ESMF_UtilIOUnitGet(unit, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
     if (isPresent) then
-      open(33,file=trim(name)//'.nml', action='read', status='old')
+      open(unit,file=trim(name)//'.nml', action='read', status='old')
       call ESMF_AttributeSet(exportState, trim(name)//'::namelist', trim(name)//'.nml', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     else
@@ -381,12 +387,13 @@ module fabm_pelagic_component
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
-      open(33,file='fabm_pelagic.nml', action='read', status='old')
+      open(unit,file='fabm_pelagic.nml', action='read', status='old')
       call ESMF_AttributeSet(exportState, trim(name)//'::namelist', 'fabm_pelagic.nml', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
-    read(33,nml=fabm_pelagic)
-    close(33)
+    
+    read(unit,nml=fabm_pelagic)
+    close(unit)
 
     call ESMF_TimeIntervalSet(timeInterval,s_r8=dt,rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
