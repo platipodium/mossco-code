@@ -39,6 +39,7 @@ module mossco_netcdf
   use mossco_state
   use mossco_time
   use mossco_gridspec
+  use mossco_info 
   use esmf
   use netcdf
 
@@ -113,11 +114,19 @@ module mossco_netcdf
   integer, parameter :: MOSSCO_NC_NOERR=ESMF_SUCCESS
   integer, parameter :: MOSSCO_NC_EXISTING=1
 
+  !> This is a deprecated interface, to be removed
+  !> @todo deprecated
   interface MOSSCO_AttributeNetcdfWrite
     module procedure MOSSCO_AttributeNetcdfWriteField
     module procedure MOSSCO_AttributeNetcdfWriteState
     module procedure MOSSCO_AttributeNetcdfWriteArray
   end interface MOSSCO_AttributeNetcdfWrite
+
+  interface MOSSCO_InfoNetcdfWrite
+    module procedure MOSSCO_InfoNetcdfWriteField
+    module procedure MOSSCO_InfoNetcdfWriteState
+    module procedure MOSSCO_InfoNetcdfWriteArray
+  end interface MOSSCO_InfoNetcdfWrite
 
 #include "git-sha.h"
 
@@ -5321,6 +5330,74 @@ module mossco_netcdf
   end subroutine MOSSCO_AttributeNetcdfWriteArray
 
 #undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_InfoNetcdfWriteState"
+  subroutine MOSSCO_InfoNetcdfWriteState(state, ncid, kwe, varid, owner, rc)
+
+    type(ESMF_State), intent(in)     :: state
+    integer, intent(in)              :: ncid
+    integer, intent(in), optional    :: varid
+    type(ESMF_KeyWordEnforcer), intent(in), optional :: kwe
+    character(len=*), intent(in), optional           :: owner
+    integer(ESMF_KIND_I4), intent(out), optional     :: rc
+
+    integer(ESMF_KIND_I4)            :: rc_, localrc
+    integer(ESMF_KIND_I4)            :: varid_
+    character(len=ESMF_MAXSTR)       :: message, owner_
+    type(ESMF_Info)                  :: info 
+
+    rc_ = ESMF_SUCCESS
+    owner_ = '--'
+    varid_ = 0
+
+    if (present(varid)) varid_= varid
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    
+    call ESMF_InfoGetFromHost(state, info=info, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call MOSSCO_InfoNetcdfWriteInfo(info, ncid, varid=varid_, owner=owner_, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (present(rc)) rc=rc_
+
+  end subroutine MOSSCO_InfoNetcdfWriteState
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_InfoNetcdfWriteArray"
+  subroutine MOSSCO_InfoNetcdfWriteArray(array, ncid, kwe, varid, owner, rc)
+
+    type(ESMF_Array), intent(in)     :: array
+    integer, intent(in)              :: ncid
+    integer, intent(in), optional    :: varid
+    type(ESMF_KeyWordEnforcer), intent(in), optional :: kwe
+    character(len=*), intent(in), optional           :: owner
+    integer(ESMF_KIND_I4), intent(out), optional     :: rc
+
+    integer(ESMF_KIND_I4)            :: rc_, localrc
+    integer(ESMF_KIND_I4)            :: varid_
+    character(len=ESMF_MAXSTR)       :: message, owner_
+    type(ESMF_Info)                  :: info 
+
+    rc_ = ESMF_SUCCESS
+    owner_ = '--'
+    varid_ = 0
+
+    if (present(varid)) varid_= varid
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    
+    call ESMF_InfoGetFromHost(array, info=info, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call MOSSCO_InfoNetcdfWriteInfo(info, ncid, varid=varid_, owner=owner_, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (present(rc)) rc=rc_
+
+  end subroutine MOSSCO_InfoNetcdfWriteArray
+
+#undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_AttributeNetcdfWriteState"
   subroutine MOSSCO_AttributeNetcdfWriteState(state, ncid, kwe, varid, owner, rc)
 
@@ -5398,6 +5475,152 @@ module mossco_netcdf
     if (present(rc)) rc=rc_
 
   end subroutine MOSSCO_AttributeNetcdfWriteState
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_InfoNetcdfWriteInfo"
+  subroutine MOSSCO_InfoNetcdfWriteInfo(info, ncid, kwe, varid, owner, rc)
+
+    type(ESMF_Info), intent(in)      :: info
+    integer, intent(in)              :: ncid
+    integer, intent(in), optional    :: varid
+    type(ESMF_KeyWordEnforcer), intent(in), optional :: kwe
+    character(len=*), intent(in), optional           :: owner
+    integer(ESMF_KIND_I4), intent(out), optional     :: rc
+
+    integer(ESMF_KIND_I4)            :: infoSize, rc_, localrc, ncStatus
+    integer(ESMF_KIND_I4)            :: varid_, i, precision
+    integer(ESMF_KIND_I8)            :: int8
+    integer(ESMF_KIND_I4)            :: int4
+    real(ESMF_KIND_R8)               :: real8
+    real(ESMF_KIND_R4)               :: real4
+    character(len=ESMF_MAXSTR)       :: key, string, message
+    type(ESMF_Typekind_Flag)         :: typeKind
+    logical                          :: logValue
+
+    rc_ = ESMF_SUCCESS
+    ncStatus = NF90_NOERR
+
+    if (present(varid)) then
+      varid_=varid
+    else
+      varid_=0 !> @todo get_globals here!
+    endif
+
+    ncStatus = nf90_inquire_variable(ncid, varid_, xtype = precision)
+    if (ncStatus /= NF90_NOERR) then
+      write(message, '(A)') '  '//trim(nf90_strerror(ncStatus)//', could not get precision')
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    call ESMF_InfoGet(info, size=infoSize, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    
+    do i=1, infoSize
+
+      call ESMF_InfoGet(info, idx=i, ikey=key, typekind=typeKind, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      if (typekind==ESMF_TYPEKIND_I4) then
+        call ESMF_InfoGet(info, key=key, value=int4, rc=localrc)
+        if ((  trim(key) == 'missing_value' .or. trim(key) == '_FillValue')) then
+          if (precision == NF90_INT) ncStatus = nf90_put_att(ncid,varid_,trim(key),int(int4,kind=ESMF_KIND_I8))
+          if (precision == NF90_SHORT) ncStatus = nf90_put_att(ncid,varid_,trim(key),int(int4,kind=ESMF_KIND_I4))
+          if (precision == NF90_DOUBLE) ncStatus = nf90_put_att(ncid,varid_,trim(key),real(int4,kind=ESMF_KIND_R8))
+          if (precision == NF90_REAL) ncStatus = nf90_put_att(ncid,varid_,trim(key),real(int4,kind=ESMF_KIND_R4))
+        else
+          ncStatus = nf90_put_att(ncid,varid_,trim(key),int4)
+        endif
+      elseif (typekind==ESMF_TYPEKIND_I8) then
+        call ESMF_InfoGet(info, key=key, value=int8, rc=localrc)
+        if ((  trim(key) == 'missing_value' .or. trim(key) == '_FillValue')) then
+          if (precision == NF90_INT) ncStatus = nf90_put_att(ncid,varid_,trim(key),int(int8,kind=ESMF_KIND_I8))
+          if (precision == NF90_SHORT) ncStatus = nf90_put_att(ncid,varid_,trim(key),int(int8,kind=ESMF_KIND_I4))
+          if (precision == NF90_DOUBLE) ncStatus = nf90_put_att(ncid,varid_,trim(key),real(int8,kind=ESMF_KIND_R8))
+          if (precision == NF90_REAL) ncStatus = nf90_put_att(ncid,varid_,trim(key),real(int8,kind=ESMF_KIND_R4))
+        else
+          ncStatus = nf90_put_att(ncid,varid_,trim(key),int8)
+        endif
+      elseif (typekind==ESMF_TYPEKIND_R4) then
+        call ESMF_InfoGet(info, key, real4, rc=localrc)
+        if ((  trim(key) == 'missing_value' &
+          .or. trim(key) == '_FillValue')) then
+          if (precision == NF90_INT) ncStatus = nf90_put_att(ncid,varid_,trim(key),int(real4,kind=ESMF_KIND_I8))
+          if (precision == NF90_SHORT) ncStatus = nf90_put_att(ncid,varid_,trim(key),int(real4,kind=ESMF_KIND_I4))
+          if (precision == NF90_DOUBLE) ncStatus = nf90_put_att(ncid,varid_,trim(key),real(real4,kind=ESMF_KIND_R8))
+          if (precision == NF90_REAL) ncStatus = nf90_put_att(ncid,varid_,trim(key),real(real4,kind=ESMF_KIND_R4))
+        else
+          ncStatus = nf90_put_att(ncid,varid_,trim(key),real4)
+        endif
+      elseif (typekind==ESMF_TYPEKIND_R8) then
+        call ESMF_InfoGet(info, key, real8, rc=localrc)
+        if ((  trim(key) == 'missing_value' .or. trim(key) == '_FillValue'))  then
+          if (precision == NF90_INT) ncStatus = nf90_put_att(ncid,varid_,trim(key),int(real8,kind=ESMF_KIND_I8))
+          if (precision == NF90_SHORT) ncStatus = nf90_put_att(ncid,varid_,trim(key),int(real8,kind=ESMF_KIND_I4))
+          if (precision == NF90_DOUBLE) ncStatus = nf90_put_att(ncid,varid_,trim(key),real(real8,kind=ESMF_KIND_R8))
+          if (precision == NF90_REAL) ncStatus = nf90_put_att(ncid,varid_,trim(key),real(real8,kind=ESMF_KIND_R4))
+        else
+          ncStatus = nf90_put_att(ncid,varid_,trim(key),real8)
+        endif
+      elseif (typekind==ESMF_TYPEKIND_CHARACTER) then
+        call ESMF_InfoGet(info, key=key, value=string, rc=localrc)
+        ncStatus = nf90_put_att(ncid,varid,trim(key), trim(string))
+      elseif (typekind==ESMF_TYPEKIND_LOGICAL) then
+        call ESMF_InfoGet(info, key=key, value=logvalue, rc=localrc)
+        if (logValue) then
+          ncStatus = nf90_put_att(ncid,varid,trim(key),'.true.')
+       else
+           ncStatus = nf90_put_att(ncid,varid,trim(key),'.false.')
+       endif
+     else
+       write(message, '(A,I2)') '  key '//trim(key)//' has unknown typekind ',typeKind
+       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+     endif
+    enddo
+
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (ncStatus /= NF90_NOERR) then
+      call ESMF_LogWrite('  could not write key '//trim(key), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+    endif
+
+    if (present(rc)) rc=rc_
+
+  end subroutine MOSSCO_InfoNetcdfWriteInfo
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_InfoNetcdfWriteField"
+  subroutine MOSSCO_InfoNetcdfWriteField(field, ncid, kwe, varid, owner, rc)
+
+    type(ESMF_Field), intent(in)     :: field
+    integer, intent(in)              :: ncid
+    integer, intent(in), optional    :: varid
+    type(ESMF_KeyWordEnforcer), intent(in), optional :: kwe
+    character(len=*), intent(in), optional           :: owner
+    integer(ESMF_KIND_I4), intent(out), optional     :: rc
+
+    integer(ESMF_KIND_I4)            :: rc_, localrc
+    integer(ESMF_KIND_I4)            :: varid_
+    character(len=ESMF_MAXSTR)       :: message, owner_
+    type(ESMF_Info)                  :: info 
+
+    rc_ = ESMF_SUCCESS
+    owner_ = '--'
+    varid_ = 0
+
+    if (present(varid)) varid_ = varid
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    
+    call ESMF_InfoGetFromHost(field, info=info, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call MOSSCO_InfoNetcdfWriteInfo(info, ncid, varid=varid_, owner=owner_, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (present(rc)) rc=rc_
+
+  end subroutine MOSSCO_InfoNetcdfWriteField
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_AttributeNetcdfWriteField"
