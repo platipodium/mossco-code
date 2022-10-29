@@ -512,11 +512,12 @@ module getm_component
     character(len=*),parameter :: yflux_suffix="_y_flux_in_water"
     integer(ESMF_KIND_I4) :: localrc
 
-    type(ESMF_Info)       :: info 
-
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, clock, name=name, rc=localrc)
+    call MOSSCO_CompEntry(gridComp, clock, rc=localrc)
+    _LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_gridCompGet(gridComp, name=name, rc=localrc)
     _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_StateGet(importState,"concentrations_in_water",concFieldBundle, rc=localrc)
@@ -527,15 +528,12 @@ module getm_component
 
     if (concFieldCount .gt. 0) then
 
-      call ESMF_InfoGetFromHost(concFieldBundle, info=info, rc=localrc )
-      _LOG_AND_FINALIZE_ON_ERROR_(rc)
-
 #ifndef NO_TRACER_FLUXES
       fluxFieldBundle = ESMF_FieldBundleCreate(name="tracer_flux_in_water", &
         multiflag=.true., rc=localrc)
       _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_InfoSet(info, key="creator", value=trim(name), rc=localrc)
+      call ESMF_AttributeSet(fluxFieldBundle, "creator", trim(name), rc=localrc)
       _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_StateAddReplace(exportState, (/fluxFieldBundle/), rc=localrc)
@@ -637,29 +635,25 @@ module getm_component
           end if
 
           !> get information about boundary condition
-          call ESMF_InfoGetFromHost(concFieldList(i), info=info, rc=localrc)
+          call ESMF_AttributeGet(concFieldList(i), 'has_boundary_data', &
+            value=transport_conc(n)%has_boundary_data, defaultValue=.false., rc=localrc)
           _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          call ESMF_InfoGet(info, key='has_boundary_data', &
-            value=transport_conc(n)%has_boundary_data, default=.false., rc=localrc)
+          call ESMF_AttributeGet(concFieldList(i), 'hackmax', &
+            value=transport_conc(n)%hackmax, defaultValue=-1.d0, rc=localrc)
           _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          call ESMF_InfoGet(info, key='hackmax', &
-            value=transport_conc(n)%hackmax, default=-1.d0, rc=localrc)
+          call ESMF_AttributeGet(concFieldList(i), 'hackmaxmin', &
+            value=transport_conc(n)%hackmaxmin, defaultValue=-1.d0, rc=localrc)
           _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          call ESMF_InfoGet(info, key='hackmaxmin', &
-            value=transport_conc(n)%hackmaxmin, default=-1.d0, rc=localrc)
+          call ESMF_AttributeGet(concFieldList(i), 'external_index', &
+            value=conc_id, defaultValue=int(-1,ESMF_KIND_I8), rc=localrc)
           _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          call ESMF_InfoGet(info, key='external_index', &
-            value=conc_id, default=int(-1,ESMF_KIND_I8), rc=localrc)
-          _LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-          write(0,*) 'Conc ID=', conc_id
           write(external_index_string,'(I0.3)') conc_id
 
-          call ESMF_InfoGet(info, key='units', value=units, default='', rc=localrc)
+          call ESMF_AttributeGet(concFieldList(i), 'units', value=units, defaultValue='', rc=localrc)
           _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
 #ifndef NO_TRACER_FLUXES
