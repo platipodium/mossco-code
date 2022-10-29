@@ -599,7 +599,7 @@ module fabm_pelagic_component
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
         write(message,'(A,I2.2)') 'fabm/module_',i
-        call ESMF_InfoSet(exportState, key=trim(message), value=trim(pel%fabm_modules(i)), &
+        call ESMF_InfoSet(info, key=trim(message), value=trim(pel%fabm_modules(i)), &
           rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       enddo
@@ -730,10 +730,10 @@ module fabm_pelagic_component
       call ESMF_InfoGetFromHost(restartField, info=info, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_InfoSet(restartField, 'creator', trim(name), rc=localrc)
+      call ESMF_InfoSet(info, 'creator', trim(name), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_InfoSet(restartField, 'units', trim(pel%export_states(n)%units), rc=localrc)
+      call ESMF_InfoSet(info, 'units', trim(pel%export_states(n)%units), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_FieldEmptySet(restartField, state_grid, &
@@ -755,7 +755,7 @@ module fabm_pelagic_component
 
       call pel%model%state_variables(n)%properties%keys(itemNameList)
       do i=1, itemCount
-        call ESMF_InfoSet(concfield,key=trim(itemNameList(i)), value=pel%model%state_variables(n)%properties%get_string(itemNameList(i),''))
+        call ESMF_InfoSet(info,key=trim(itemNameList(i)), value=pel%model%state_variables(n)%properties%get_string(itemNameList(i),''))
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       enddo
 
