@@ -30,16 +30,134 @@ use mossco_strings, only : MOSSCO_StringCopy, intformat
 implicit none
 
 private
-public MOSSCO_InfoLog, MOSSCO_InfoLogObject
+public MOSSCO_InfoLog, MOSSCO_InfoLogObject, MOSSCO_InfoCopy
 
 interface MOSSCO_InfoLogObject
   module procedure MOSSCO_InfoLogGridComp
   module procedure MOSSCO_InfoLogCplComp
 end interface MOSSCO_InfoLogObject
 
+interface MOSSCO_InfoCopy
+    module procedure MOSSCO_InfoCopyAll
+    module procedure MOSSCO_InfoCopyKey
+end interface MOSSCO_InfoCopy
+
 contains
 
 #undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_InfoCopyKey"
+subroutine MOSSCO_InfoCopyKey(to, from, key, kwe, typeKind, rc)
+
+  type(ESMF_Info), intent(inout)                   :: to
+  type(ESMF_Info), intent(in)                      :: from
+  character(len=*), intent(in)                     :: key
+  type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+  type(ESMF_TypeKind_Flag), intent(in), optional    :: typeKind
+  integer(ESMF_KIND_I4), intent(out), optional     :: rc
+
+  integer(ESMF_KIND_I4)        :: localrc, rc_, i, int4
+  logical                      :: isPresent, bool
+  type(ESMF_TypeKind_Flag)     :: typeKind_
+  character(len=ESMF_MAXSTR)   :: string, message
+
+  integer(ESMF_KIND_I8) :: int8
+  real(ESMF_KIND_R4)    :: real4
+  real(ESMF_KIND_R8)    :: real8
+
+  rc_ = ESMF_SUCCESS
+  if (present(rc)) rc = rc_
+  if (present(kwe)) rc_ = ESMF_SUCCESS
+
+  if (present(typeKind)) then 
+    typeKind_ = typeKind
+  else
+    call ESMF_InfoGet(from, key=key, typeKind=typeKind_, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  endif 
+
+  if (typeKind_ == ESMF_TYPEKIND_I4) then
+    call ESMF_InfoGet(from, key=key, value=int4 , rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_InfoSet(to, key=key, value=int4, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  elseif (typeKind_ == ESMF_TYPEKIND_I8) then
+    call ESMF_InfoGet(from, key=key, value=int8 , rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_InfoSet(to, key=key, value=int8, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  elseif (typeKind_ == ESMF_TYPEKIND_R4) then
+    call ESMF_InfoGet(from, key=key, value=real4 , rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_InfoSet(to, key=key, value=real4, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  elseif (typeKind_ == ESMF_TYPEKIND_R8) then
+    call ESMF_InfoGet(from, key=key, value=real8 , rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_InfoSet(to, key=key, value=real8, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  elseif (typeKind_ == ESMF_TYPEKIND_CHARACTER) then
+    call ESMF_InfoGet(from, key=key, value=string , rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_InfoSet(to, key=key, value=trim(string), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    
+  elseif (typeKind_ == ESMF_TYPEKIND_LOGICAL) then
+    call ESMF_InfoGet(from, key=key, value=bool , rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_InfoSet(to, key=key, value=bool, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  else
+    write(message,'(A)') '-- not yet implemented deep copy of attribute '//trim(key)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+  endif
+
+end subroutine MOSSCO_InfoCopyKey
+
+#undef ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_InfoCopyAll"
+subroutine MOSSCO_InfoCopyAll(to, from, kwe, overwrite, rc)
+
+  type(ESMF_Info), intent(inout)                  :: to
+  type(ESMF_Info), intent(in)                     :: from
+  type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+  logical, intent(in), optional                    :: overwrite
+  integer(ESMF_KIND_I4), intent(out), optional     :: rc
+
+  integer(ESMF_KIND_I4)        :: localrc, rc_, i, infoSize
+  character(len=ESMF_MAXSTR)   :: key
+  logical                      :: overwrite_, isPresent
+  type(ESMF_TypeKind_Flag)     :: typeKind 
+
+  overwrite_ = .false.
+  rc_ = ESMF_SUCCESS
+  if (present(rc)) rc = rc_
+  if (present(kwe)) rc_ = ESMF_SUCCESS
+  if (present(overwrite)) overwrite_ = overwrite
+
+  call ESMF_InfoGet(from, size=infoSize, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  do i=1, infoSize
+    call ESMF_InfoGet(from, idx=i, ikey=key, typekind=typeKind, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_InfoGet(to, key=key, isPresent=isPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (isPresent .and. (.not.overwrite_)) cycle
+
+    call MOSSCO_InfoCopy(to, from, key, typekind=typeKind, rc=localrc)
+  enddo
+
+end subroutine MOSSCO_InfoCopyAll
+
+#undef ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_InfoLog"
 !> This private subroutine is called through the MOSSCO_InfoLog Interface
   recursive subroutine MOSSCO_InfoLog(info, kwe, prefix, root, log, rc)
