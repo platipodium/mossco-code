@@ -1941,8 +1941,14 @@ fid.write('''
           call ESMF_TimeIntervalGet(timeInterval, h=hours, m=minutes, s=seconds, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          write(message,'(A,A,I5.5,A,I2.2,A,I2.2,A)') trim(myName)//' '//trim(timeString)//' calling '//trim(compName), &
-            ' to run for ', hours, ':', minutes, ':', seconds, ' hours'
+          if (hours >= 0 .and. hours <=24 .and. minutes>=0 .and. minutes <=60 &
+            .and. seconds >=0 .and. seconds <=60) then 
+            write(message,'(A,A,I5.5,A,I2.2,A,I2.2,A)') trim(myName)//' '//trim(timeString)//' calling '//trim(compName), &
+              ' to run for ', hours, ':', minutes, ':', seconds, ' hours'
+          else
+            write(message,*) trim(myName)//' '//trim(timeString)//' calling '//trim(compName), &
+              ' to run for ', hours, ':', minutes, ':', seconds, ' hours'
+          endif
         else
           write(message,'(A,A,I5.5,A,I2.2,A,I2.2,A)') trim(myName)//' '//trim(timeString)//' calling '//trim(compName), &
             ' to run without stepping forward'
@@ -1988,13 +1994,12 @@ fid.write('''
 
           if (ms_r8>0.0d0 .and. realValue>0.0d0) then
             realValue = realValue / ms_r8
-            write(formatString,'(A)') '(A,X,'//intformat(int(realValue))//')'
-            write(message, formatString, iostat=localrc) trim(message)//' with speedup ', int(realValue)
-            if (localrc /= ESMF_SUCCESS) then
-              write(0,*,iostat=localrc) trim(formatString), realValue, int(realValue)
-              write(0,*,iostat=localrc) trim(message)
+            if (realValue < 1E7) then 
+              write(formatString,'(A)') '(A,X,'//intformat(int(realValue))//')'
+              write(message, formatString) trim(message)//' with speedup ', int(realValue)
+            else 
+              write(message, '(A,X,ES8.1)') trim(message)//' with speedup ', realValue
             endif
-
           endif
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
@@ -2128,8 +2133,12 @@ fid.write('''
 
       if (ms_r8>0.0d0 .and. realValue > 0.0d0) then
         realValue = realValue / ms_r8
-        write(formatString,'(A)') '(A,X,'//intformat(int(realValue))//')'
-        write(message, formatString) trim(message)//' with speedup ', int(realValue)
+        if (realValue < 1E7) then 
+          write(formatString,'(A)') '(A,X,'//intformat(int(realValue))//')'
+          write(message, formatString) trim(message)//' with speedup ', int(realValue)
+        else 
+          write(message, '(A,X,ES8.1)') trim(message)//' with speedup ', realValue
+        endif
       endif
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
