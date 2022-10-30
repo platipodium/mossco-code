@@ -153,8 +153,12 @@ module fabm_pelagic_component
     character(ESMF_MAXSTR) :: convention, purpose
 
     character(ESMF_MAXSTR) :: name, message
+    type(ESMF_Info)        :: info
 
     namelist /fabm_pelagic/ dt,ode_method,dt_min,relative_change_min
+
+    call MOSSCO_CompEntry(gridComp, parentClock, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !! read namelist input for control of timestepping
     call ESMF_UtilIOUnitGet(unit, rc=localrc)
@@ -163,67 +167,92 @@ module fabm_pelagic_component
     read(unit,nml=fabm_pelagic)
     close(unit)
 
-    call ESMF_AttributeSet(exportState, trim(name)//'::dt', dt, rc=localrc)
+    call ESMF_InfoGetFromHost(gridComp, info=info, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(exportState, trim(name)//'::ode_method', ode_method, rc=localrc)
+    call ESMF_InfoSet(info, key=trim(name)//'/dt', value=dt, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(exportState, trim(name)//'::dt_min', dt_min, rc=localrc)
+    call ESMF_InfoSet(info, key=trim(name)//'/ode_method', value=ode_method, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(exportState, trim(name)//'::relative_change_min', relative_change_min, rc=localrc)
+    call ESMF_InfoSet(info, key=trim(name)//'/dt_min', value=dt_min, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      !> Write CIM attributes
-      convention = 'CIM 1.5'
-      purpose = 'ModelComp'
-      stringList(1,1)='ShortName';     stringList(1,2)='FABMpel'
-      stringList(2,1)='LongName';      stringList(2,2)='Framework for Adaptive Biogeochemical Models, pelagic'
-      stringList(3,1)='Description';   stringList(3,2)='The pelagic implementation of FABM'
-      stringList(4,1)='ReleaseDate';   stringList(4,2)='unknown'
-      stringList(5,1)='ModelType';     stringList(4,2)='ocean'
+    call ESMF_InfoSet(info, key=trim(name)//'/relative_change_min', &
+      value=relative_change_min, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_AttributeAdd(gridComp, convention=convention, purpose=purpose, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    ! Write CIM 1.5 attributes
+    call ESMF_InfoSet(info, key=trim(name)//'/CIM 1.5/ModelComp/ShortName',  &
+      value='FABMpel', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      do i=1,5
-        call ESMF_AttributeSet(gridComp, trim(stringList(i,1)), trim(stringList(i,2)), &
-          convention=convention, purpose=purpose, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      enddo
+    call ESMF_InfoSet(info, key=trim(name)//'/CIM 1.5/ModelComp/LongName',  &
+      value='Framework for Adaptive Biogeochemical Models, pelagic', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      !> Write Responsible party ISO 19115 attributes
-      convention = 'ISO 19115'
-      purpose    = 'RespParty'
-      stringList(1,1)='Name';               stringList(1,2)='Richard Hofmeister'
-      stringList(2,1)='Abbreviation';       stringList(2,2)='rh'
-      stringList(3,1)='PhysicalAddress';    stringList(3,2)='Helmholtz-Zentrum Geesthacht'
-      stringList(4,1)='EmailAddress';       stringList(4,2)='richard.hofmeister@hereon.de'
-      stringList(5,1)='ResponsiblePartyRole';   stringList(6,2)='http://www.hzg.de'
-      stringList(6,1)='URL';                stringList(5,2)='Contact'
+    call ESMF_InfoSet(info, key=trim(name)//'/CIM 1.5/ModelComp/Description',  &
+      value='Pelagic implementation of FABM', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      do i=1,6
-        call ESMF_AttributeSet(gridComp, trim(stringList(i,1)), trim(stringList(i,2)), &
-          convention=convention, purpose=purpose, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      enddo
+    call ESMF_InfoSet(info, key=trim(name)//'/CIM 1.5/ModelComp/ReleaseDate',  &
+      value='(unknown)', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      !> Write Citation ISO 19115 attributes
-      convention = 'ISO 19115'
-      purpose    = 'Citation'
-      stringList(1,1)='ShortTitle';     stringList(1,2)='Hofmeister et al. (unpublished)'
-      stringList(2,1)='LongTitle';      stringList(2,2)='Hofmeister et al. (unpublished)'
-      stringList(3,1)='Date';           stringList(3,2)='unpublished'
-      stringList(4,1)='PresentationForm';   stringList(4,2)='source-code documented'
-      stringList(5,1)='DOI';            stringList(5,2)='not assigned'
-      stringList(6,1)='URL';            stringList(6,2)='not available'
+    call ESMF_InfoSet(info, key=trim(name)//'/CIM 1.5/ModelComp/ModelType',  &
+      value='ocean', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      do i=1,6
-        call ESMF_AttributeSet(gridComp, trim(stringList(i,1)), trim(stringList(i,2)), &
-          convention=convention, purpose=purpose, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      enddo
+    ! Write ISO 19115 attributes
+    call ESMF_InfoSet(info, key=trim(name)//'/ISO 19115/RespParty/Name',  &
+      value='Carsten Lemmen', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_InfoSet(info, key=trim(name)//'/ISO 19115/RespParty/Abbreviation',  &
+      value='cl', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_InfoSet(info, key=trim(name)//'/ISO 19115/RespParty/PhysicalAddress',  &
+      value='Helmholtz-Zentrum Hereon, 21502 Geesthacht, Germany', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_InfoSet(info, key=trim(name)//'/ISO 19115/RespParty/EmailAddress',  &
+      value='carsten.lemmen@hereon.de', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_InfoSet(info, key=trim(name)//'/ISO 19115/RespParty/ResponsiblePartyRole',  &
+      value='Contact', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_InfoSet(info, key=trim(name)//'/ISO 19115/RespParty/URL',  &
+      value='http://www.hereon.de', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    ! Write Citation ISO 19115 attributes
+    call ESMF_InfoSet(info, key=trim(name)//'/ISO 19115/Citation/ShortTitle',  &
+      value='Modular System for Shelves and Coasts (MOSSCO v1.0)', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_InfoSet(info, key=trim(name)//'/ISO 19115/Citation/LongTitle',  &
+      value='Modular System for Shelves and Coasts (MOSSCO v1.0) – a flexible and multi-component framework for coupled coastal ocean ecosystem modelling', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_InfoSet(info, key=trim(name)//'/ISO 19115/Citation/Date',  &
+      value='12 March 2018', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_InfoSet(info, key=trim(name)//'/ISO 19115/Citation/PresentationForm',  &
+      value='Journal publication', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_InfoSet(info, key=trim(name)//'/ISO 19115/Citation/DOI',  &
+      value='10.5194/gmd-11-915-2018', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_InfoSet(info, key=trim(name)//'/ISO 19115/Citation/URL',  &
+      value='https://doi.org/10.5194/gmd-11-915-2018', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !! Initialize FABM
     pel = mossco_create_fabm_pelagic()
@@ -231,13 +260,10 @@ module fabm_pelagic_component
       ' on branch '//trim(pel%fabm_git_branch)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-    call ESMF_AttributeSet(exportState, 'fabm_git_sha', trim(pel%fabm_git_sha), rc=localrc)
+    call ESMF_InfoSet(info, 'fabm_git_sha', trim(pel%fabm_git_sha), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(exportState, 'fabm_git_branch', trim(pel%fabm_git_branch), rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    call ESMF_GridCompGet(gridComp, name=name, rc=localrc)
+    call ESMF_InfoSet(info, 'fabm_git_branch', trim(pel%fabm_git_branch), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     ! put concentration array and vertical velocity into export state
@@ -276,6 +302,9 @@ module fabm_pelagic_component
     !! prepare upward_flux forcing
     do n=1,size(pel%model%state_variables)
     enddo
+
+    call MOSSCO_CompExit(gridComp, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Initialise_Advertise
 
