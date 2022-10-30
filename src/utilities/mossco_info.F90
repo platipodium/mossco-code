@@ -119,38 +119,43 @@ subroutine MOSSCO_InfoCopyKey(to, from, key, kwe, typeKind, rc)
 
     call ESMF_LogWrite(trim(ESMF_InfoDump(from, rc=localrc)), ESMF_LOGMSG_INFO)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-    !call ESMF_InfoGet(info, key=key, size=infoSize)
   endif
 
 end subroutine MOSSCO_InfoCopyKey
 
 #undef ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_InfoCopyAll"
-subroutine MOSSCO_InfoCopyAll(to, from, kwe, overwrite, rc)
+subroutine MOSSCO_InfoCopyAll(to, from, kwe, root, overwrite, rc)
 
   type(ESMF_Info), intent(inout)                  :: to
   type(ESMF_Info), intent(in)                     :: from
   type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
   logical, intent(in), optional                    :: overwrite
   integer(ESMF_KIND_I4), intent(out), optional     :: rc
+  character(len=*), optional, intent(in)           :: root
 
   integer(ESMF_KIND_I4)        :: localrc, rc_, i, infoSize
-  character(len=ESMF_MAXSTR)   :: key
+  character(len=ESMF_MAXSTR)   :: key, root_
   logical                      :: overwrite_, isPresent
   type(ESMF_TypeKind_Flag)     :: typeKind 
 
   overwrite_ = .false.
+  localrc = ESMF_SUCCESS
   rc_ = ESMF_SUCCESS
+  root_ = ''
   if (present(rc)) rc = rc_
   if (present(kwe)) rc_ = ESMF_SUCCESS
   if (present(overwrite)) overwrite_ = overwrite
+  if (present(root)) call MOSSCO_StringCopy(root_, root, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-  call ESMF_InfoGet(from, size=infoSize, rc=localrc)
+  call ESMF_InfoGet(from, size=infoSize, key=trim(root_), &
+    attnestflag=ESMF_ATTNEST_ON, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   do i=1, infoSize
-    call ESMF_InfoGet(from, idx=i, ikey=key, typekind=typeKind, rc=localrc)
+    call ESMF_InfoGet(from, key=trim(root_), idx=i, ikey=key, typekind=typeKind, &
+      attnestflag=ESMF_ATTNEST_ON, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_InfoGet(to, key=key, isPresent=isPresent, rc=localrc)
@@ -190,11 +195,12 @@ end subroutine MOSSCO_InfoCopyAll
     if (present(prefix)) call MOSSCO_StringCopy(prefix_, prefix, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    root_ = '/'
+    root_ = ''
     if (present(root)) call MOSSCO_StringCopy(root_, root, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_InfoGet(info, size=infoSize, key=trim(root), rc=localrc)
+    call ESMF_InfoGet(info, size=infoSize, key=trim(root_), &
+      attnestflag=ESMF_ATTNEST_ON, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     write(format,'(A)') '(A,'//intformat(infoSize)//',A)'
@@ -206,7 +212,8 @@ end subroutine MOSSCO_InfoCopyAll
     endif 
 
     do i=1, infoSize
-        call ESMF_InfoGet(info, idx=i, ikey=key, typekind=typeKind, rc=localrc)
+        call ESMF_InfoGet(info, idx=i, ikey=key, typekind=typeKind, &
+          attnestflag=ESMF_ATTNEST_ON, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
         write(format,'(A)') '(A,'//intformat(i)//',A)'
@@ -248,15 +255,17 @@ end subroutine MOSSCO_InfoCopyAll
         else 
             write(message,'(A,A)') trim(message)//' (nested)'
             !> @todo recursivion needs to be fixed
-            !if (present(log)) then 
-            !  call MOSSCO_InfoLog(info, root=trim(root_)//trim(key), log=log,  &
-            !    prefix=trim(prefix_)//':'//trim(key), rc=localrc)
-            !  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-            !else 
-            !  call MOSSCO_InfoLog(info, root=trim(root_)//trim(key), &
-            !    prefix=trim(prefix_)//':'//trim(key), rc=localrc)
-            !  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-            !endif 
+        !     write(0,*) 'root=', trim(root_)//'/'//trim(key)
+        !     write(0,*) 'prefix=', trim(prefix_)//':'//trim(key)
+        !     if (present(log)) then 
+        !       call MOSSCO_InfoLog(info, root=trim(root_)//'/'//trim(key), log=log,  &
+        !         prefix=trim(prefix_)//':'//trim(key), rc=localrc)
+        !       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+        !     else 
+        !       call MOSSCO_InfoLog(info, root=trim(root_)//'/'//trim(key), &
+        !         prefix=trim(prefix_)//':'//trim(key), rc=localrc)
+        !       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+        !     endif 
         endif 
 
         if (present(log)) then 
