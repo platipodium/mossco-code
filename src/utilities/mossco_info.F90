@@ -115,7 +115,12 @@ subroutine MOSSCO_InfoCopyKey(to, from, key, kwe, typeKind, rc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
   else
     write(message,'(A)') '-- not yet implemented deep copy of attribute '//trim(key)
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
+
+    call ESMF_LogWrite(trim(ESMF_InfoDump(from, rc=localrc)), ESMF_LOGMSG_INFO)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    !call ESMF_InfoGet(info, key=key, size=infoSize)
   endif
 
 end subroutine MOSSCO_InfoCopyKey
