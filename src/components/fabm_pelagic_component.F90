@@ -348,7 +348,7 @@ module fabm_pelagic_component
     integer,dimension(:,:)  ,allocatable,target :: minIndexPDe,maxIndexPDe
     integer,dimension(:,:,:),allocatable,target :: deBlockList
     integer                    :: day_of_year, day, seconds_of_day, unit
-    logical, dimension(:,:,:), pointer :: mask=>null()
+    logical, dimension(:,:,:), pointer :: mask=>null(), tightMask=>null()
     integer, dimension(:,:,:), pointer :: gridmask=>null()
     real(ESMF_KIND_R8), dimension(:)  , pointer :: coord1d=>null()
     real(ESMF_KIND_R8), dimension(:,:), pointer :: coord2d=>null()
@@ -667,7 +667,13 @@ module fabm_pelagic_component
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
     endif
 
-    call pel%initialize_domain(inum,jnum,numlayers,dt,mask=mask(1:inum,1:jnum,1:numlayers))
+    ! Temporarily create a tight mask without halo
+    allocate(tightMask(inum,jnum,numlayers))
+    tightMask = mask(1:inum,1:jnum,1:numlayers)
+
+    call pel%initialize_domain(inum,jnum,numlayers,dt,mask=tightMask)
+    if (associated(tightMask)) deallocate(tightMask)
+    
     !> set Albedo from namelist
     !!@todo: may come 2d from import State
     pel%albedo = albedo_const
