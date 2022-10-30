@@ -38,6 +38,7 @@ module getm_component
   use getm_driver
   use mossco_component
   use mossco_state
+  use mossco_field
 
   implicit none
   private
@@ -235,6 +236,8 @@ module getm_component
     integer(ESMF_KIND_I4) :: localrc
     character(ESMF_MAXSTR)  :: name
     character(ESMF_MAXSTR), allocatable  :: itemNameList(:)
+
+    type(ESMF_Info) :: info 
 
     rc = ESMF_SUCCESS
 
@@ -512,6 +515,8 @@ module getm_component
     character(len=*),parameter :: yflux_suffix="_y_flux_in_water"
     integer(ESMF_KIND_I4) :: localrc
 
+    type(ESMF_Info) :: info
+
     rc=ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, clock, rc=localrc)
@@ -635,25 +640,34 @@ module getm_component
           end if
 
           !> get information about boundary condition
-          call ESMF_AttributeGet(concFieldList(i), 'has_boundary_data', &
-            value=transport_conc(n)%has_boundary_data, defaultValue=.false., rc=localrc)
+          call ESMF_InfoGetFromHost(concFieldList(i), info=info, rc=localrc)
           _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          call ESMF_AttributeGet(concFieldList(i), 'hackmax', &
-            value=transport_conc(n)%hackmax, defaultValue=-1.d0, rc=localrc)
+          call ESMF_InfoGet(info, 'has_boundary_data', &
+            value=transport_conc(n)%has_boundary_data, default=.false., rc=localrc)
           _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          call ESMF_AttributeGet(concFieldList(i), 'hackmaxmin', &
-            value=transport_conc(n)%hackmaxmin, defaultValue=-1.d0, rc=localrc)
+          call ESMF_InfoGet(info, 'hackmax', &
+            value=transport_conc(n)%hackmax, default=-1.d0, rc=localrc)
           _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          call ESMF_AttributeGet(concFieldList(i), 'external_index', &
-            value=conc_id, defaultValue=int(-1,ESMF_KIND_I8), rc=localrc)
+          call ESMF_InfoGet(info, 'hackmaxmin', &
+            value=transport_conc(n)%hackmaxmin, default=-1.d0, rc=localrc)
           _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          write(external_index_string,'(I0.3)') conc_id
+          call ESMF_InfoGet(info, 'external_index', &
+            value=conc_id, default=int(-1,ESMF_KIND_I8), rc=localrc)
+          _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          call ESMF_AttributeGet(concFieldList(i), 'units', value=units, defaultValue='', rc=localrc)
+         if (conc_id < 0 ) then 
+            write(message,'(A)') trim(name)//' obtained invalid external index for field '//&
+            trim(itemNameList(i))
+            localrc = ESMF_RC_VAL_WRONG
+            _LOG_AND_FINALIZE_ON_ERROR_(rc)
+         endif
+         write(external_index_string,'(I0.3)') conc_id
+
+          call ESMF_InfoGet(info, 'units', value=units, default='', rc=localrc)
           _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
 #ifndef NO_TRACER_FLUXES
@@ -670,7 +684,7 @@ module getm_component
                                         rc=localrc)
           _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          call MOSSCO_FieldCopyAttributes(field, concFieldList(i), rc=localrc)
+          !call MOSSCO_FieldCopyAttributes(field, concFieldList(i), rc=localrc)
           _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           call ESMF_AttributeSet(field,'units','m3 s-1 '//trim(units), rc=localrc)
@@ -701,7 +715,10 @@ module getm_component
                                         rc=localrc)
           _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          call MOSSCO_FieldCopyAttributes(field, concFieldList(i), rc=localrc)
+          call MOSSCO_FieldCopyInfo(field, concFieldList(i), rc=localrc)
+          _LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+          !call MOSSCO_FieldCopyAttributes(field, concFieldList(i), rc=localrc)
           _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           call ESMF_AttributeSet(field,'units','m3 s-1 '//trim(units), rc=localrc)
