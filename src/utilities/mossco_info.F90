@@ -125,7 +125,7 @@ end subroutine MOSSCO_InfoCopyKey
 
 #undef ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_InfoCopyAll"
-subroutine MOSSCO_InfoCopyAll(to, from, kwe, root, overwrite, rc)
+recursive subroutine MOSSCO_InfoCopyAll(to, from, kwe, root, overwrite, rc)
 
   type(ESMF_Info), intent(inout)                  :: to
   type(ESMF_Info), intent(in)                     :: from
@@ -153,17 +153,39 @@ subroutine MOSSCO_InfoCopyAll(to, from, kwe, root, overwrite, rc)
     attnestflag=ESMF_ATTNEST_ON, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
+  !write(0,*) 'At root=',trim(root_), ' there are ',infoSize, ' attributes'
+
   do i=1, infoSize
+
     call ESMF_InfoGet(from, key=trim(root_), idx=i, ikey=key, typekind=typeKind, &
-      attnestflag=ESMF_ATTNEST_ON, rc=localrc)
+      rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_InfoGet(to, key=key, isPresent=isPresent, rc=localrc)
+    !write(0,*) 'At root=',trim(root_), ' the',i, 'th attribute has key', key
+
+    !call ESMF_InfoGet(from, key=trim(root_)//'/'//trim(key), isPresent=isPresent, rc=localrc)
+    !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    !if (.not.isPresent) cycle
+
+    call ESMF_InfoGet(to, key=trim(root_)//'/'//trim(key), isPresent=isPresent, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (isPresent .and. (.not.overwrite_)) cycle
 
-    call MOSSCO_InfoCopy(to, from, key, typekind=typeKind, rc=localrc)
+    if ( & !typeKind == ESMF_TYPEKIND_I1 .or. typeKind == ESMF_TYPEKIND_I2 .or. &
+        typeKind == ESMF_TYPEKIND_I4 .or. typeKind == ESMF_TYPEKIND_I8 .or. &
+        typeKind == ESMF_TYPEKIND_R4 .or. typeKind == ESMF_TYPEKIND_R8 .or. &
+        typeKind == ESMF_TYPEKIND_LOGICAL .or. typeKind == ESMF_TYPEKIND_CHARACTER &
+      ) then ! all regular typekinds
+      !write(0,*) 'Copying regular attribute ',trim(root_)//'/'//trim(key),' of kind', typeKind
+      call MOSSCO_InfoCopy(to, from, key=trim(root_)//'/'//trim(key), typekind=typeKind, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    else 
+      ! enter recursion on map
+      !write(0,*) 'Calling recursion on root ',trim(root_)//'/'//trim(key)
+      call MOSSCO_InfoCopy(to, from, root=trim(root_)//'/'//trim(key), overwrite=overwrite_, rc=localrc )
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif 
   enddo
 
 end subroutine MOSSCO_InfoCopyAll

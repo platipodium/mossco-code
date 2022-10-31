@@ -18,7 +18,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-.PHONY: libsolver libmossco_util libmossco_db $(LIBMOSSCO_UTIL_OBJS) libatt versions
+.PHONY: libsolver libmossco_util libmossco_db $(LIBMOSSCO_UTIL_OBJS) libatt versions test
 
 LIBMOSSCO_UTIL_OBJS=							\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_dictionary.o)	\
@@ -186,3 +186,9 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_db.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/ESMF_GridCreate3D.mod
 	$(RM) *.o nc_extract_variable_lasttime nc_extract_variable
+
+.PHONY: test test_mossco_info
+test: test_mossco_info
+test_mossco_info: mossco_info.o mossco_strings.o mossco_memory.o test_mossco_info.F90
+	$(MOSSCO_F03COMPILER) $(CPPFLAGS) $(F90FLAGS) -o $@ $(MOSSCO_F90LDFLAGS) -lesmf -L $(MOSSCO_NETCDF_LIBPATH) $(MOSSCO_NETCDF_LIBS) $^
+
