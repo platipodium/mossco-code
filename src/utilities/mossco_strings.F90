@@ -35,7 +35,7 @@ module mossco_strings
   public intformat, intString, order, MOSSCO_MessageAdd, MOSSCO_MessageAddListPtr, only_var_name, replace_character
   public split_string, MOSSCO_StringMatch, MOSSCO_StringClean, MOSSCO_StringFind
   public MOSSCO_CheckUnits, MOSSCO_CleanUnit, MOSSCO_StringCopy, MOSSCO_CleanGeomFormatString
-  public MOSSCO_StringLower, MOSSCO_StringUpper
+  public MOSSCO_StringLower, MOSSCO_StringUpper, MOSSCO_String
 
   !> @brief Returns the order of magnitude of its input argument
   !> @param <integer|real>(kind=4|8)
@@ -75,6 +75,15 @@ module mossco_strings
   interface MOSSCO_StringMatch
     module procedure MOSSCO_StringMatchPattern
     module procedure MOSSCO_StringMatchPatternList
+  end interface
+
+  interface MOSSCO_String
+    module procedure MOSSCO_StringListString
+    module procedure MOSSCO_logicalListString
+    module procedure MOSSCO_int4ListString
+    module procedure MOSSCO_int8ListString
+    module procedure MOSSCO_real4ListString
+    module procedure MOSSCO_real8ListString
   end interface
 
   interface MOSSCO_StringFind
@@ -603,6 +612,156 @@ contains
     enddo
 
   end subroutine MOSSCO_MessageAddList
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_int4ListString"
+  subroutine MOSSCO_int4ListString(list, string, rc)
+
+    integer(ESMF_KIND_I4), intent(in),  allocatable     :: list(:)
+    character(len=*), intent(inout)                  :: string
+    integer(ESMF_KIND_I4), intent(out), optional     :: rc
+
+    integer(ESMF_KIND_I4)   :: i
+    character(ESMF_MAXSTR)  :: format
+
+    if (present(rc)) rc=ESMF_SUCCESS
+    string=''
+
+    if (.not.allocated(list)) return
+    if (size(list) < 1) return
+
+    string='['
+    do i = 1, size(list) - 1
+      write(format,'(A)') '(A,'//intformat(list(i))//',A)'
+      write(string,format) trim(string),list(i),","
+    enddo
+    write(format,'(A)') '(A,'//intformat(list(size(list)))//',A)'
+    write(string,format) trim(string),list(size(list)),"]"
+
+  end subroutine MOSSCO_int4ListString
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_int8ListString"
+  subroutine MOSSCO_int8ListString(list, string, rc)
+
+    integer(ESMF_KIND_I8), intent(in),  allocatable     :: list(:)
+    character(len=*), intent(inout)                  :: string
+    integer(ESMF_KIND_I4), intent(out), optional     :: rc
+
+    integer(ESMF_KIND_I4)   :: i
+    character(ESMF_MAXSTR)  :: format
+
+    if (present(rc)) rc=ESMF_SUCCESS
+    string=''
+
+    if (.not.allocated(list)) return
+    if (size(list) < 1) return
+
+    string='['
+    do i = 1, size(list) - 1
+      write(format,'(A)') '(A,'//intformat(list(i))//',A)'
+      write(string,format) trim(string),list(i),","
+    enddo
+    write(format,'(A)') '(A,'//intformat(list(size(list)))//',A)'
+    write(string,format) trim(string),list(size(list)),"]"
+
+  end subroutine MOSSCO_int8ListString
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_real4ListString"
+  subroutine MOSSCO_real4ListString(list, string, rc)
+
+    real(ESMF_KIND_R4), intent(in),  allocatable     :: list(:)
+    character(len=*), intent(inout)                  :: string
+    integer(ESMF_KIND_I4), intent(out), optional     :: rc
+
+    integer(ESMF_KIND_I4)                  :: i
+
+    if (present(rc)) rc=ESMF_SUCCESS
+    string=''
+
+    if (.not.allocated(list)) return
+    if (size(list) < 1) return
+
+    string='['
+    do i = 1, size(list) - 1
+      write(string,'(A,ES10.3,A)') trim(string),list(i),","
+    enddo
+    write(string,'(A,ES10.3,A)') trim(string),list(size(list)),"]"
+
+  end subroutine MOSSCO_real4ListString
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_real8ListString"
+  subroutine MOSSCO_real8ListString(list, string, rc)
+
+    real(ESMF_KIND_R8), intent(in),  allocatable     :: list(:)
+    character(len=*), intent(inout)                  :: string
+    integer(ESMF_KIND_I4), intent(out), optional     :: rc
+
+    integer(ESMF_KIND_I4)                  :: i
+
+    if (present(rc)) rc=ESMF_SUCCESS
+    string=''
+
+    if (.not.allocated(list)) return
+    if (size(list) < 1) return
+
+    string='['
+    do i = 1, size(list) - 1
+      write(string,'(A,ES10.3,A)') trim(string),list(i),","
+    enddo
+    write(string,'(A,ES10.3,A)') trim(string),list(size(list)),"]"
+
+  end subroutine MOSSCO_real8ListString
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_LogicalListString"
+  subroutine MOSSCO_LogicalListString(list, string, rc)
+
+    logical,  intent(in),  allocatable :: list(:)
+    character(len=*), intent(inout)                  :: string
+    integer(ESMF_KIND_I4), intent(out), optional     :: rc
+
+    integer(ESMF_KIND_I4)                  :: i
+
+    if (present(rc)) rc=ESMF_SUCCESS
+    string=''
+
+    if (.not.allocated(list)) return
+    if (size(list) < 1) return
+
+    string='['
+    do i = 1, size(list) - 1
+      write(string,'(A,L,A)') trim(string),list(i),","
+    enddo
+    write(string,'(A,L,A)') trim(string),list(size(list)),"]"
+
+  end subroutine MOSSCO_logicalListString
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_StringListString"
+  subroutine MOSSCO_StringListString(list, string, rc)
+
+    character(len=VARLEN),  intent(in),  allocatable :: list(:)
+    character(len=*), intent(inout)                  :: string
+    integer(ESMF_KIND_I4), intent(out), optional     :: rc
+
+    integer(ESMF_KIND_I4)                  :: i
+
+    if (present(rc)) rc = ESMF_SUCCESS
+    string=''
+
+    if (.not.allocated(list)) return
+    if (size(list) < 1) return
+
+    string='['
+    do i = 1, size(list) - 1
+      write(string,'(A)') trim(string)//trim(list(i))//","
+    enddo
+    write(string,'(A)') trim(string)//trim(list(size(list)))//"]"
+
+  end subroutine MOSSCO_StringListString
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_CheckUnits"

@@ -64,17 +64,23 @@ subroutine MOSSCO_InfoCopyKey(to, from, key, kwe, typeKind, rc)
   type(ESMF_Info), intent(in)                      :: from
   character(len=*), intent(in)                     :: key
   type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
-  type(ESMF_TypeKind_Flag), intent(in), optional    :: typeKind
+  type(ESMF_TypeKind_Flag), intent(in), optional   :: typeKind
   integer(ESMF_KIND_I4), intent(out), optional     :: rc
 
-  integer(ESMF_KIND_I4)        :: localrc, rc_, i, int4
-  logical                      :: isPresent, bool
+  integer(ESMF_KIND_I4)        :: localrc, rc_, i, int4, arraySize
+  logical                      :: isPresent, bool, isArray
   type(ESMF_TypeKind_Flag)     :: typeKind_
-  character(len=ESMF_MAXSTR)   :: string, message
+  character(len=ESMF_MAXSTR)   :: string, message, format
 
   integer(ESMF_KIND_I8) :: int8
   real(ESMF_KIND_R4)    :: real4
   real(ESMF_KIND_R8)    :: real8
+  integer(ESMF_KIND_I4), allocatable  :: int4List(:)
+  integer(ESMF_KIND_I8), allocatable  :: int8List(:)
+  real(ESMF_KIND_R4), allocatable     :: real4List(:)
+  real(ESMF_KIND_R8), allocatable     :: real8List(:)
+  logical, allocatable                :: boolList(:)
+  character(len=ESMF_MAXSTR), allocatable :: stringList(:)
 
   rc_ = ESMF_SUCCESS
   if (present(rc)) rc = rc_
@@ -87,45 +93,107 @@ subroutine MOSSCO_InfoCopyKey(to, from, key, kwe, typeKind, rc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
   endif 
 
+  call ESMF_InfoGetArrayMeta(from, key=key, isArray=isArray, size=arraySize, rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
   if (typeKind_ == ESMF_TYPEKIND_I4) then
-    call ESMF_InfoGet(from, key=key, value=int4 , rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    if (isArray) then 
+      call ESMF_InfoGetAlloc(from, key=key, values=int4List , rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_InfoSet(to, key=key, value=int4, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      call ESMF_InfoSet(to, key=key, values=int4List, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      deallocate(int4List)
+    else
+      call ESMF_InfoGet(from, key=key, value=int4 , rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call ESMF_InfoSet(to, key=key, value=int4, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
   elseif (typeKind_ == ESMF_TYPEKIND_I8) then
-    call ESMF_InfoGet(from, key=key, value=int8 , rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    if (isArray) then 
+      call ESMF_InfoGetAlloc(from, key=key, values=int8List , rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_InfoSet(to, key=key, value=int8, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      call ESMF_InfoSet(to, key=key, values=int8List, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      deallocate(int8List)
+    else
+      call ESMF_InfoGet(from, key=key, value=int8 , rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call ESMF_InfoSet(to, key=key, value=int8, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
   elseif (typeKind_ == ESMF_TYPEKIND_R4) then
-    call ESMF_InfoGet(from, key=key, value=real4 , rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    if (isArray) then 
+      call ESMF_InfoGetAlloc(from, key=key, values=real4List , rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_InfoSet(to, key=key, value=real4, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      call ESMF_InfoSet(to, key=key, values=real4List, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      deallocate(real4List)
+    else
+      call ESMF_InfoGet(from, key=key, value=real4 , rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call ESMF_InfoSet(to, key=key, value=real4, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
   elseif (typeKind_ == ESMF_TYPEKIND_R8) then
-    call ESMF_InfoGet(from, key=key, value=real8 , rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    if (isArray) then 
+      call ESMF_InfoGetAlloc(from, key=key, values=real8List , rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_InfoSet(to, key=key, value=real8, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      call ESMF_InfoSet(to, key=key, values=real8List, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      deallocate(real8List)
+    else
+      call ESMF_InfoGet(from, key=key, value=real8 , rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call ESMF_InfoSet(to, key=key, value=real8, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
   elseif (typeKind_ == ESMF_TYPEKIND_CHARACTER) then
-    call ESMF_InfoGet(from, key=key, value=string , rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    if (isArray) then 
+      call ESMF_InfoGetAlloc(from, key=key, values=stringList , rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_InfoSet(to, key=key, value=trim(string), rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-    
+      call ESMF_InfoSet(to, key=key, values=stringList, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      deallocate(stringList)
+    else
+      call ESMF_InfoGet(from, key=key, value=string , rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call ESMF_InfoSet(to, key=key, value=trim(string), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif 
   elseif (typeKind_ == ESMF_TYPEKIND_LOGICAL) then
-    call ESMF_InfoGet(from, key=key, value=bool , rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    if (isArray) then 
+      call ESMF_InfoGetAlloc(from, key=key, values=boolList , rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_InfoSet(to, key=key, value=bool, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      call ESMF_InfoSet(to, key=key, values=boolList, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      deallocate(boolList)
+    else
+      call ESMF_InfoGet(from, key=key, value=bool , rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call ESMF_InfoSet(to, key=key, value=bool, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
   else
-    write(message,'(A)') '-- not yet implemented deep copy of attribute '//trim(key)
+    write(message,*) '-- not yet implemented deep copy of attribute '//trim(key)//' with typeKind ', typeKind_
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, ESMF_CONTEXT)
 
     call ESMF_LogWrite(trim(ESMF_InfoDump(from, rc=localrc)), ESMF_LOGMSG_INFO)
@@ -160,23 +228,14 @@ recursive subroutine MOSSCO_InfoCopyAll(to, from, kwe, root, overwrite, rc)
   if (present(root)) call MOSSCO_StringCopy(root_, root, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-  call ESMF_InfoGet(from, size=infoSize, key=trim(root_), &
-    attnestflag=ESMF_ATTNEST_ON, rc=localrc)
+  call ESMF_InfoGet(from, size=infoSize, key=trim(root_), rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-  !write(0,*) 'At root=',trim(root_), ' there are ',infoSize, ' attributes'
 
   do i=1, infoSize
 
     call ESMF_InfoGet(from, key=trim(root_), idx=i, ikey=key, typekind=typeKind, &
       rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-    !write(0,*) 'At root=',trim(root_), ' the',i, 'th attribute has key', key
-
-    !call ESMF_InfoGet(from, key=trim(root_)//'/'//trim(key), isPresent=isPresent, rc=localrc)
-    !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-    !if (.not.isPresent) cycle
 
     call ESMF_InfoGet(to, key=trim(root_)//'/'//trim(key), isPresent=isPresent, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -188,12 +247,11 @@ recursive subroutine MOSSCO_InfoCopyAll(to, from, kwe, root, overwrite, rc)
         typeKind == ESMF_TYPEKIND_R4 .or. typeKind == ESMF_TYPEKIND_R8 .or. &
         typeKind == ESMF_TYPEKIND_LOGICAL .or. typeKind == ESMF_TYPEKIND_CHARACTER &
       ) then ! all regular typekinds
-      !write(0,*) 'Copying regular attribute ',trim(root_)//'/'//trim(key),' of kind', typeKind
       call MOSSCO_InfoCopy(to, from, key=trim(root_)//'/'//trim(key), typekind=typeKind, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     else 
       ! enter recursion on map
-      !write(0,*) 'Calling recursion on root ',trim(root_)//'/'//trim(key)
+      write(0,*) 'Calling recursion on root ',trim(root_)//'/'//trim(key)
       call MOSSCO_InfoCopy(to, from, root=trim(root_)//'/'//trim(key), overwrite=overwrite_, rc=localrc )
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
     endif 
@@ -213,7 +271,6 @@ end subroutine MOSSCO_InfoCopyAll
     type(ESMF_Log), optional         :: log
     integer(ESMF_KIND_I4), optional  :: rc
 
-
     integer(ESMF_KIND_I4)            :: localrc, rc_, infoSize, i, int4
     type(ESMF_Log)                   :: log_
     character(len=ESMF_MAXSTR)       :: key, prefix_, message, string, root_
@@ -224,7 +281,9 @@ end subroutine MOSSCO_InfoCopyAll
     real(ESMF_KIND_R8)               :: real8
     real(ESMF_KIND_R4)               :: real4
     
+    localrc = ESMF_SUCCESS
     prefix_ = '--'
+    if (present(rc)) rc = ESMF_SUCCESS
     if (present(prefix)) call MOSSCO_StringCopy(prefix_, prefix, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
@@ -232,8 +291,7 @@ end subroutine MOSSCO_InfoCopyAll
     if (present(root)) call MOSSCO_StringCopy(root_, root, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_InfoGet(info, size=infoSize, key=trim(root_), &
-      attnestflag=ESMF_ATTNEST_ON, rc=localrc)
+    call ESMF_InfoGet(info, size=infoSize, key=trim(root_), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     write(format,'(A)') '(A,'//intformat(infoSize)//',A)'
@@ -245,60 +303,32 @@ end subroutine MOSSCO_InfoCopyAll
     endif 
 
     do i=1, infoSize
-        call ESMF_InfoGet(info, idx=i, ikey=key, typekind=typeKind, &
-          attnestflag=ESMF_ATTNEST_ON, rc=localrc)
+        call ESMF_InfoGet(info, idx=i, ikey=key, typekind=typeKind, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
         write(format,'(A)') '(A,'//intformat(i)//',A)'
-        write(message, trim(format)) trim(prefix_)//'(',i,'):'//trim(key)
-        if (typeKind==ESMF_TYPEKIND_CHARACTER) then 
-            call ESMF_InfoGet(info, key=key, value=string, rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-            write(message,'(A,A)') trim(message)//' (C) = '//trim(string)
-        elseif (typeKind==ESMF_TYPEKIND_I4) then 
-            call ESMF_InfoGet(info, key=key, value=int4, rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-            write(format,'(A)') '(A,'//intformat(int4)//')'
-            write(message,trim(format)) trim(message)//' (I4) = ', int4
-        elseif (typeKind==ESMF_TYPEKIND_I8) then 
-            call ESMF_InfoGet(info, key=key, value=int8, rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+        if ( & !typeKind == ESMF_TYPEKIND_I1 .or. typeKind == ESMF_TYPEKIND_I2 .or. &
+          typeKind == ESMF_TYPEKIND_I4 .or. typeKind == ESMF_TYPEKIND_I8 .or. &
+          typeKind == ESMF_TYPEKIND_R4 .or. typeKind == ESMF_TYPEKIND_R8 .or. &
+          typeKind == ESMF_TYPEKIND_LOGICAL .or. typeKind == ESMF_TYPEKIND_CHARACTER &
+          ) then ! all regular typekinds and lists thereof
+          call MOSSCO_InfoString(info, key, string, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-            write(format,'(A)') '(A,'//intformat(int8)//')'
-            !write(message,trim(format)) trim(message)//' (I8) = ', int8
-            write(message,*) trim(message), int8
-        elseif (typeKind==ESMF_TYPEKIND_R4) then 
-            call ESMF_InfoGet(info, key=key, value=real4, rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-            write(message,'(A,F3.2)') trim(message)//' (R4) = ', real4
-        elseif (typeKind==ESMF_TYPEKIND_R8) then 
-            call ESMF_InfoGet(info, key=key, value=real8, rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-            !write(message,'(A,F3.2)') trim(message)//' (R8) = ', real8
-            write(message,*) trim(message), real8
-        elseif (typeKind==ESMF_TYPEKIND_LOGICAL) then 
-            call ESMF_InfoGet(info, key=key, value=bool, rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-            if (bool) then 
-                write(message,'(A)') trim(message)//' (L) = .true.'
-            else
-                write(message,'(A)') trim(message)//' (L) = .false.'
-            endif
+          write(message, format) trim(prefix_)//'(',i,'):'//trim(key)//'='//trim(string)
+        
         else 
-            write(message,'(A,A)') trim(message)//' (nested)'
-            !> @todo recursivion needs to be fixed
-        !     write(0,*) 'root=', trim(root_)//'/'//trim(key)
-        !     write(0,*) 'prefix=', trim(prefix_)//':'//trim(key)
-        !     if (present(log)) then 
-        !       call MOSSCO_InfoLog(info, root=trim(root_)//'/'//trim(key), log=log,  &
-        !         prefix=trim(prefix_)//':'//trim(key), rc=localrc)
-        !       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-        !     else 
-        !       call MOSSCO_InfoLog(info, root=trim(root_)//'/'//trim(key), &
-        !         prefix=trim(prefix_)//':'//trim(key), rc=localrc)
-        !       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-        !     endif 
+            write(message,'(A,I2,A)') trim(prefix_)//'(',i,'):'//trim(key)//' is nested'
+                  ! enter recursion on map
+            !write(0,*) 'Calling recursion on root ',trim(root_)//'/'//trim(key)
+            !if (present(log)) then 
+            !  call MOSSCO_InfoLog(info, prefix=trim(root_)//'/'//trim(key), root=trim(root_)//'/'//trim(key), log=log, rc=localrc )
+            !  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+            !else
+            !  call MOSSCO_InfoLog(info, prefix=trim(root_)//'/'//trim(key), root=trim(root_)//'/'//trim(key), log=log, rc=localrc )
+            !  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+            !endif
         endif 
 
         if (present(log)) then 
@@ -476,14 +506,21 @@ end subroutine MOSSCO_InfoCopyAll
     type(ESMF_KeywordEnforcer), optional     :: kwe
     integer(ESMF_KIND_I4), optional, intent(out) :: rc
 
-    integer(ESMF_KIND_I4)                :: localrc, int4, rc_, i
-    logical                              :: isPresent
+    integer(ESMF_KIND_I4)                :: localrc, int4, rc_, i, arraySize
+    logical                              :: isPresent, isArray
     real(ESMF_KIND_R8)                   :: real8
     real(ESMF_KIND_R4)                   :: real4
     integer(ESMF_KIND_I8)                :: int8
     type(ESMF_TypeKind_Flag)             :: typeKind
     character(len=ESMF_MAXSTR)           :: message
     logical                              :: bool
+
+    real(ESMF_KIND_R4), allocatable      :: real4List(:)
+    real(ESMF_KIND_R8), allocatable      :: real8List(:)
+    integer(ESMF_KIND_I4), allocatable   :: int4List(:)
+    integer(ESMF_KIND_I8), allocatable   :: int8List(:)
+    logical, allocatable                 :: boolList(:)
+    character(len=ESMF_MAXSTR),allocatable  :: stringList(:)
 
     localrc = ESMF_SUCCESS
 
@@ -502,32 +539,95 @@ end subroutine MOSSCO_InfoCopyAll
     call ESMF_InfoGet(info, key=key, typeKind=typeKind, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
+    call ESMF_InfoGetArrayMeta(info, key=key, isArray=isArray, size=arraySize, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
     if (typeKind == ESMF_TYPEKIND_CHARACTER) then
-      call ESMF_InfoGet(info, key=key, value=string, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      if (isArray) then 
+        call ESMF_InfoGetAlloc(info, key=key, values=stringList, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        call MOSSCO_String(stringList, string, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        deallocate(stringList)
+      else
+        call ESMF_InfoGet(info, key=key, value=string, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      endif
     elseif (typeKind == ESMF_TYPEKIND_R8) then
-      call ESMF_InfoGet(info, key=key, value=real8, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-      write(string,*) real8
+      if (isArray) then 
+        call ESMF_InfoGetAlloc(info, key=key, values=real8List, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        call MOSSCO_String(real8List, string, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        deallocate(real8List)
+      else
+        call ESMF_InfoGet(info, key=key, value=real8, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+        write(string,*) real8
+      endif
     elseif (typeKind == ESMF_TYPEKIND_R4) then
-      call ESMF_InfoGet(info, key=key, value=real4, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-      write(string,*) real4
+      if (isArray) then 
+        call ESMF_InfoGetAlloc(info, key=key, values=real4List, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        call MOSSCO_String(real4List, string, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        deallocate(real4List)
+      else
+        call ESMF_InfoGet(info, key=key, value=real4, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+        write(string,*) real4
+      endif
     elseif (typeKind == ESMF_TYPEKIND_I8) then
-      call ESMF_InfoGet(info, key=key, value=int8, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-      write(string,*) int8
+      if (isArray) then 
+        call ESMF_InfoGetAlloc(info, key=key, values=int8List, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        call MOSSCO_String(int8List, string, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        deallocate(int8list)
+      else
+        call ESMF_InfoGet(info, key=key, value=int8, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+        write(string,*) int8
+      endif
     elseif (typeKind == ESMF_TYPEKIND_I4) then
-      call ESMF_InfoGet(info, key=key, value=int4, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-      write(string,*) int4
+      if (isArray) then 
+        call ESMF_InfoGetAlloc(info, key=key, values=int4List, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        call MOSSCO_String(int4List, string, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        deallocate(int4List)
+      else
+        call ESMF_InfoGet(info, key=key, value=int4, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+        write(string,*) int4
+      endif
     elseif (typeKind == ESMF_TYPEKIND_LOGICAL) then
-      call ESMF_InfoGet(info, key=key, value=bool, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-      string = '.false.'
-      if (bool) string = '.true.'
+      if (isArray) then 
+        call ESMF_InfoGetAlloc(info, key=key, values=boolList, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        call MOSSCO_String(boolList, string, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+        deallocate(boolList)
+      else
+        call ESMF_InfoGet(info, key=key, value=bool, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+        string = '.false.'
+        if (bool) string = '.true.'
+      endif
     else 
-      write(message,'(A)')  'key of non-implemented type '
+      write(message,'(A)')  'key '//trim(key)//' is of non-implemented type ', typeKind
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
     endif
 
@@ -609,10 +709,10 @@ end subroutine MOSSCO_InfoCopyAll
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       if (.not.isPresent) cycle
 
-      call MOSSCO_InfoSTring(from, key=key, string=fromString, rc=localrc)
+      call MOSSCO_InfoString(from, key=key, string=fromString, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       
-      call MOSSCO_InfoSTring(to, key=key, string=tostring, rc=localrc)
+      call MOSSCO_InfoString(to, key=key, string=tostring, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
       
       if (trim(fromString) == trim(toString)) cycle
