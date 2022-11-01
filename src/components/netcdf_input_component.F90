@@ -492,6 +492,17 @@ module netcdf_input_component
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (trim(foreignGridFieldName) /= 'none') then
+
+        call ESMF_StateGet(importState,  trim(foreignGridFieldName), itemType=itemType, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        if (itemType == ESMF_STATEITEM_NOTFOUND) then
+          write(message, '(A)') trim(name)//' cannot find importField '//trim(foreignGridFieldName)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+          rc = ESMF_RC_NOT_FOUND
+          return
+        endif
+
         call ESMF_StateGet(importState,  trim(foreignGridFieldName), field, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 

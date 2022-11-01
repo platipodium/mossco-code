@@ -134,14 +134,6 @@ module fabm_pelagic_component
       values=InitializePhaseMap, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    !call ESMF_AttributeAdd(gridComp, convention="NUOPC", purpose="General", &
-    !  attrList=(/"InitializePhaseMap"/), rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    !call ESMF_AttributeSet(gridComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
-    !  convention="NUOPC", purpose="General", rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
     call MOSSCO_CompExit(gridComp, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -460,8 +452,6 @@ module fabm_pelagic_component
 
     call ESMF_InfoGet(info, key='foreign_grid_field_name', &
       value=foreignGridFieldName, default='none', rc=localrc)
-    !call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
-    !       value=foreignGridFieldName, defaultValue='none',rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (trim(foreignGridFieldName)=='none') then
@@ -851,6 +841,7 @@ module fabm_pelagic_component
 
       call pel%model%state_variables(n)%properties%keys(itemNameList)
       do i=1, itemCount
+        !> @todo set according to typekind
         call ESMF_InfoSet(info,key=trim(itemNameList(i)), value=pel%model%state_variables(n)%properties%get_string(itemNameList(i),''))
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       enddo
@@ -1059,7 +1050,7 @@ module fabm_pelagic_component
         call ESMF_FieldBundleAdd(fieldBundle,(/concfield/),multiflag=.true.,rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        write(message,'(A)') '  added '//trim(varname)//' to fieldBundle '
+        write(message,'(A)') ' added '//trim(varname)//' to fieldBundle '
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
         call ESMF_StateGet(exportState,trim(wsname),fieldBundle,rc=localrc)
@@ -1068,7 +1059,7 @@ module fabm_pelagic_component
         call ESMF_FieldBundleAdd(fieldBundle,(/wsfield/),multiflag=.true.,rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        write(message,'(A)') '  added '//trim(wsname)//' to fieldBundle '
+        write(message,'(A)') ' added '//trim(wsname)//' to fieldBundle '
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
       endif

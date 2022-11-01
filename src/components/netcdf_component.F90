@@ -1,7 +1,8 @@
 !> @brief Implementation of an ESMF netcdf output component
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2014-2020 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2021-2022 Helmholtz-Zentrum Hereon
+!> @copyright Copyright 2014-2021 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 
 !
@@ -408,7 +409,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         verbose = .false.
       end if
 
-      nc = mossco_netcdfOpen(fileName, timeUnit=timeUnit, state=importState, rc=localrc)
+      nc = mossco_netcdfOpen(fileName, timeUnit=timeUnit, state=importState, owner=trim(name), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call nc%update()
