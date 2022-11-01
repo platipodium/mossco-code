@@ -1,7 +1,8 @@
 !> @brief Implementation of an ESMF netcdf output component
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright 2014-2019 Helmholtz-Zentrum Geesthacht
+!> @copyright 2021-2022 Helmholtz-Zentrum Hereon
+!> @copyright 2014-2021 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 
 !
@@ -32,6 +33,7 @@ module netcdf_input_component
   use mossco_mesh
   use mossco_attribute
   use mossco_config
+  use mossco_info
 
   implicit none
   private
@@ -89,6 +91,7 @@ module netcdf_input_component
     character(len=ESMF_MAXSTR)  :: name
     type(ESMF_Time)             :: currTime
     integer                     :: localrc
+    type(ESMF_Info)             :: info 
 
     rc=ESMF_SUCCESS
 
@@ -99,12 +102,13 @@ module netcdf_input_component
     InitializePhaseMap(1) = "IPDv00p1=1"
     InitializePhaseMap(2) = "IPDv00p2=2"
 
-    call ESMF_AttributeAdd(gridComp, convention="NUOPC", purpose="General", &
-      attrList=(/"InitializePhaseMap"/), rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    call ESMF_InfoGetFromHost(gridComp, info=info, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(gridComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
-      convention="NUOPC", purpose="General", rc=localrc)
+    InitializePhaseMap(1) = "IPDv00p1=1"
+
+    call ESMF_InfoSet(info, key="NUOPC/General/InititalizePhaseMap", &
+      values=InitializePhaseMap, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_CompExit(gridComp, rc=localrc)
@@ -156,6 +160,7 @@ module netcdf_input_component
     type(ESMF_FieldStatus_Flag):: fieldStatus
     type(ESMF_FieldBundle)     :: fieldBundle
     type(ESMF_StateItem_Flag)  :: itemtype
+    type(ESMF_Info)            :: info
 
     rc = ESMF_SUCCESS
 
@@ -226,14 +231,17 @@ module netcdf_input_component
         interpolationMethod='linear'
       endif
 
-      call ESMF_AttributeGet(importState, 'interpolation_method', isPresent=isPresent, rc=localrc)
+      call ESMF_InfoGetFromHost(importState, info=info, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_InfoGet(info, key='interpolation_method', isPresent=isPresent, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (isPresent) then
-        call ESMF_AttributeGet(importState, 'interpolation_method', value=interpolationMethod, rc=localrc)
+        call ESMF_InfoGet(info, 'interpolation_method', value=interpolationMethod, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       elseif (labelIsPresent) then
-        call ESMF_AttributeSet(importState, 'interpolation_method', trim(interpolationMethod), rc=localrc)
+        call ESMF_InfoSet(info, 'interpolation_method', trim(interpolationMethod), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
 
@@ -248,15 +256,18 @@ module netcdf_input_component
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
-      call ESMF_AttributeGet(gridComp, 'grid_file_name', isPresent=isPresent, rc=localrc)
+      call ESMF_InfoGetFromHost(gridComp, info=info, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_InfoGet(info, key='grid_file_name', isPresent=isPresent, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (isPresent) then
-        call ESMF_AttributeGet(gridComp, 'grid_file_name', value=geomFileName, rc=localrc)
+        call ESMF_InfoGet(info, 'grid_file_name', value=geomFileName, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       elseif (labelIsPresent) then
-        call ESMF_AttributeSet(gridComp, 'grid_file_name', trim(geomFileName), rc=localrc)
+        call ESMF_InfoSet(info, 'grid_file_name', trim(geomFileName), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
 
@@ -271,7 +282,7 @@ module netcdf_input_component
         write(message,'(A)')  trim(name)//' found in file '//trim(configFileName)//' climatology: '//trim(timeString)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-        call ESMF_AttributeSet(gridComp, 'climatology_period', trim(timeString), rc=localrc)
+        call ESMF_InfoSet(info, 'climatology_period', trim(timeString), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call MOSSCO_Reallocate(climatologyList, 0, rc=localrc)
@@ -282,13 +293,18 @@ module netcdf_input_component
       call MOSSCO_ConfigGet(config, 'exclude', filterExcludeList, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+      call ESMF_InfoGetFromHost(importState, info=info, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      !> @todo convert Attrib->info from here
       if (associated(filterExcludeList)) then
-        call MOSSCO_AttributeSet(importState, 'filter_pattern_exclude', filterExcludeList, localrc)
+        call MOSSCO_InfoSet(info, 'filter_pattern_exclude', filterExcludeList, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         deallocate(filterExcludeList)
 
-        call MOSSCO_AttributeGet(importState, 'filter_pattern_exclude', filterExcludeList, localrc)
+        call MOSSCO_InfoGet(info, 'filter_pattern_exclude', filterExcludeList, rc=localrc)
+        !call MOSSCO_AttributeGet(importState, 'filter_pattern_exclude', filterExcludeList, localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         write(message,'(A)') trim(name)//' uses exclude patterns:'
@@ -302,6 +318,7 @@ module netcdf_input_component
       call MOSSCO_ConfigGet(config, 'include', filterIncludeList, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+      !> @todo convert Attrib->info from here
       if (associated(filterIncludeList)) then
         call MOSSCO_AttributeSet(importState, 'filter_pattern_include', filterIncludeList, localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -357,10 +374,13 @@ module netcdf_input_component
         defaultValue=1.0D0, isPresent=labelIsPresent, rc = localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+      call ESMF_InfoGetFromHost(gridComp, info=info, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
       if (labelIsPresent) then
         write(message,'(A,ES10.3)') trim(name)//' found scale = ',scale_factor
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        call ESMF_AttributeSet(gridComp, 'scale_factor', scale_factor, rc=localrc)
+        call ESMF_InfoSet(info, 'scale_factor', scale_factor, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
 
@@ -371,7 +391,7 @@ module netcdf_input_component
       if (labelIsPresent) then
         write(message,'(A,ES10.3)') trim(name)//' found offset = ',add_offset
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        call ESMF_AttributeSet(gridComp, 'add_offset', add_offset, rc=localrc)
+        call ESMF_InfoSet(info, 'add_offset', add_offset, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
 
@@ -396,10 +416,10 @@ module netcdf_input_component
       if (isPresent) fileName=trim(petFileName)
     endif
 
-    call ESMF_AttributeSet(gridComp, 'filename', trim(fileName), rc=localrc)
+    call ESMF_InfoSet(info, 'filename', trim(fileName), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(gridComp, 'check_file', checkFile, rc=localrc)
+    call ESMF_InfoSet(info, 'check_file', checkFile, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     inquire(file=trim(fileName), exist=isPresent)
@@ -421,18 +441,18 @@ module netcdf_input_component
     write(message,'(A)')  trim(name)//' uses file '//trim(fileName)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-    call ESMF_AttributeGet(gridComp, name='grid_file_name', &
+    call ESMF_InfoGet(info, key='grid_file_name', &
       isPresent=isPresent, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (isPresent) then
-      call ESMF_AttributeGet(gridComp, name='grid_file_name', &
+      call ESMF_InfoGet(info, key='grid_file_name', &
         value=geomFileName, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (trim(geomFileName) /= 'none') then
 
-        grid = ESMF_GridCreate(filename=trim(geomFileName),fileFormat=ESMF_FILEFORMAT_SCRIP, &
+        grid = ESMF_GridCreate(filename=trim(geomFileName), fileFormat=ESMF_FILEFORMAT_SCRIP, &
           regDecomp=(/1,1/), isSphere=.false., rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -459,12 +479,15 @@ module netcdf_input_component
       hasGrid=.true.
     endif
 
-    call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
+    call ESMF_InfoGetFromHost(importState, info=info, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_InfoGet(info, key='foreign_grid_field_name', &
       isPresent=isPresent, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (.not.hasGrid .and. isPresent) then
-      call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
+      call ESMF_InfoGet(info, key='foreign_grid_field_name', &
         value=foreignGridFieldName, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -610,11 +633,14 @@ module netcdf_input_component
       ! use integer except when value comes from s_r8
       if (ticks < 0.0) ticks=dble(int4)
 
-      call ESMF_AttributeGet(gridComp, 'climatology_period', isPresent=isPresent, rc=localrc)
+      call ESMF_InfoGetFromHost(gridComp, info=info, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_InfoGet(info, key='climatology_period', isPresent=isPresent, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (isPresent) then
-        call ESMF_AttributeGet(gridComp, 'climatology_period', timeString, rc=localrc)
+        call ESMF_InfoGet(info, 'climatology_period', timeString, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call MOSSCO_TimeIntervalSet(climatologyTimeStep, trim(timeString), rc=localrc)
@@ -634,7 +660,7 @@ module netcdf_input_component
         write(message,'(A)') trim(message)//' starting '//trim(timeString)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-        call ESMF_AttributeSet(gridComp, 'climatology_start', trim(timeString), rc=localrc)
+        call ESMF_InfoSet(info, 'climatology_start', trim(timeString), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         write(message,'(A)') trim(name)//' uses climatology from '//trim(timeString)
@@ -648,7 +674,7 @@ module netcdf_input_component
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         write(message,'(A)') trim(message)//' to '//trim(timeString)
-        call ESMF_AttributeSet(gridComp, 'climatology_stop', trim(timeString), rc=localrc)
+        call ESMF_InfoSet(info, 'climatology_stop', trim(timeString), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         climatologyTime = currTime
@@ -811,30 +837,33 @@ module netcdf_input_component
       call nc%getvar(fieldList(i), nc%variables(i), owner=trim(name), itime=itime, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_AttributeGet(fieldList(i), 'creator', isPresent=isPresent, rc=localrc)
+      call ESMF_InfoGetFromHost(fieldList(i), info=info, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_InfoGet(info, key='creator', isPresent=isPresent, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (.not.isPresent) then
-        call ESMF_AttributeSet(fieldList(i), 'creator', trim(name), rc=localrc)
+        call ESMF_InfoSet(info, 'creator', trim(name), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
 
-      call ESMF_AttributeSet(fieldList(i), 'netcdf_filename', trim(nc%name), rc=localrc)
+      call ESMF_InfoSet(info, 'netcdf_filename', trim(nc%name), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_AttributeSet(fieldList(i), 'netcdf_varname', trim(nc%variables(i)%name), rc=localrc)
+      call ESMF_InfoSet(info, 'netcdf_varname', trim(nc%variables(i)%name), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_AttributeGet(gridComp, 'add_offset', isPresent=isPresent, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (isPresent) call ESMF_AttributeSet(fieldList(i), 'add_offset', add_offset, rc=localrc)
+      if (isPresent) call ESMF_InfoSet(info, 'add_offset', add_offset, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_AttributeGet(gridComp, 'scale_factor', isPresent=isPresent, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      if (isPresent) call ESMF_AttributeSet(fieldList(i), 'scale_factor', scale_factor, rc=localrc)
+      if (isPresent) call ESMF_InfoSet(info, 'scale_factor', scale_factor, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       write(message, '(A)') trim(name)//' created field'
@@ -901,6 +930,7 @@ module netcdf_input_component
     type(ESMF_TypeKind_Flag)   :: typeKind
     type(ESMF_Grid)            :: grid
     character(len=ESMF_MAXSTR), allocatable :: options(:)
+    type(ESMF_Info)            :: info, gridInfo
 
     rc = ESMF_SUCCESS
     allocate(options(3))
@@ -920,13 +950,16 @@ module netcdf_input_component
     call ESMF_ClockGet(clock, advanceCount=advanceCount, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+    call ESMF_InfoGetFromHost(gridComp, info=gridInfo, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
     !> We can safely assume that the filename is present
-    call ESMF_AttributeGet(gridComp, 'filename', value=fileName, rc=localrc)
+    call ESMF_InfoGet(gridInfo, 'filename', value=fileName, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     inquire(file=trim(fileName), exist=isPresent)
     if (.not.isPresent) then
-      call ESMF_AttributeGet(gridComp, 'check_file', value=checkFile, rc=localrc)
+      call ESMF_InfoGet(gridInfo, 'check_file', value=checkFile, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       write(message,'(A)') trim(name)//' file '//trim(fileName)//' does not exist'
@@ -954,21 +987,24 @@ module netcdf_input_component
       return
     endif
 
-    call ESMF_AttributeGet(importState, 'interpolation_method', value=interpolationMethod, &
-      defaultValue='recent', rc=localrc)
+    call ESMF_InfoGetFromHost(importState, info=info, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeGet(gridComp, 'climatology_period', isPresent=isPresent, rc=localrc)
+    call ESMF_InfoGet(info, 'interpolation_method', value=interpolationMethod, &
+      default='recent', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_InfoGet(gridInfo, key='climatology_period', isPresent=isPresent, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (isPresent) then
-      call ESMF_AttributeGet(gridComp, 'climatology_period', timeString, rc=localrc)
+      call ESMF_InfoGet(gridInfo, 'climatology_period', timeString, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call MOSSCO_TimeIntervalSet(climatologyTimeStep, trim(timeString), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_AttributeGet(gridComp, 'climatology_start', timeString, rc=localrc)
+      call ESMF_InfoGet(gridInfo, 'climatology_start', timeString, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call MOSSCO_TimeSet(climatologyStartTime, timeString, rc=localrc)
@@ -1128,8 +1164,11 @@ module netcdf_input_component
       !! Instead of asking the aliasList, try to obtain the netcdf varname
       !! from the netcdf_varname attribute in the field
 
-      call ESMF_AttributeGet(field, 'netcdf_varname', value=itemName, &
-        defaultValue=trim(itemName), rc=localrc)
+      call ESMF_InfoGetFromHost(field, info=info, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_InfoGet(info, key='netcdf_varname', value=itemName, &
+        default=trim(itemName), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       var => nc%getvarvar(trim(itemName))
@@ -1143,7 +1182,7 @@ module netcdf_input_component
         return
       endif
 
-      call ESMF_AttributeGet(gridComp, 'climatology_period', isPresent=isPresent, rc=localrc)
+      call ESMF_InfoGet(gridInfo, key='climatology_period', isPresent=isPresent, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       !> read the field into the variable for most constellations
@@ -1196,11 +1235,11 @@ module netcdf_input_component
       endif ! type of climatology
       endif ! reading from climatology
 
-      call ESMF_AttributeGet(gridComp, 'scale_factor',  isPresent=isPresent, rc=localrc)
+      call ESMF_InfoGet(gridInfo, key='scale_factor',  isPresent=isPresent, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (isPresent) then
-        call ESMF_AttributeGet(gridComp, 'scale_factor', value=scale_factor, rc=localrc)
+        call ESMF_InfoGet(gridInfo, 'scale_factor', value=scale_factor, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
 
@@ -1211,11 +1250,11 @@ module netcdf_input_component
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
 
-      call ESMF_AttributeGet(gridComp, 'add_offset',  isPresent=isPresent, rc=localrc)
+      call ESMF_InfoGet(gridInfo, key='add_offset', isPresent=isPresent, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (isPresent) then
-        call ESMF_AttributeGet(gridComp, 'add_offset', value=add_offset, rc=localrc)
+        call ESMF_InfoGet(gridInfo, 'add_offset', value=add_offset, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call MOSSCO_FieldAdd(field, add_offset, owner=name, rc=localrc)
@@ -1267,6 +1306,7 @@ module netcdf_input_component
     type(ESMF_TypeKind_Flag)   :: typeKind
     type(ESMF_Grid)            :: grid
     character(len=ESMF_MAXSTR), allocatable :: options(:)
+    type(ESMF_Info)            :: info, gridInfo
 
     rc = ESMF_SUCCESS
     allocate(options(3))
@@ -1286,13 +1326,16 @@ module netcdf_input_component
     call ESMF_ClockGet(clock, advanceCount=advanceCount, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+    call ESMF_InfoGetFromHost(gridComp, info=gridInfo, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
     !> We can safely assume that the filename is present
-    call ESMF_AttributeGet(gridComp, 'filename', value=fileName, rc=localrc)
+    call ESMF_InfoGet(gridInfo, 'filename', value=fileName, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     inquire(file=trim(fileName), exist=isPresent)
     if (.not.isPresent) then
-      call ESMF_AttributeGet(gridComp, 'check_file', value=checkFile, rc=localrc)
+      call ESMF_InfoGet(gridInfo, 'check_file', value=checkFile, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       write(message,'(A)') trim(name)//' file '//trim(fileName)//' does not exist'
@@ -1320,21 +1363,24 @@ module netcdf_input_component
       return
     endif
 
-    call ESMF_AttributeGet(importState, 'interpolation_method', value=interpolationMethod, &
-      defaultValue='recent', rc=localrc)
+    call ESMF_InfoGetFromHost(importState, info=info, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeGet(gridComp, 'climatology_period', isPresent=isPresent, rc=localrc)
+    call ESMF_InfoGet(info, 'interpolation_method', value=interpolationMethod, &
+      default='recent', rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_InfoGet(gridInfo, key='climatology_period', isPresent=isPresent, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (isPresent) then
-      call ESMF_AttributeGet(gridComp, 'climatology_period', timeString, rc=localrc)
+      call ESMF_InfoGet(gridInfo, 'climatology_period', timeString, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call MOSSCO_TimeIntervalSet(climatologyTimeStep, trim(timeString), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_AttributeGet(gridComp, 'climatology_start', timeString, rc=localrc)
+      call ESMF_InfoGet(gridInfo, 'climatology_start', timeString, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call MOSSCO_TimeSet(climatologyStartTime, timeString, rc=localrc)
@@ -1494,8 +1540,11 @@ module netcdf_input_component
       !! Instead of asking the aliasList, try to obtain the netcdf varname
       !! from the netcdf_varname attribute in the field
 
-      call ESMF_AttributeGet(field, 'netcdf_varname', value=itemName, &
-        defaultValue=trim(itemName), rc=localrc)
+      call ESMF_InfoGetFromHost(field, info=info, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_InfoGet(info, 'netcdf_varname', value=itemName, &
+        default=trim(itemName), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       var => nc%getvarvar(trim(itemName))
@@ -1509,7 +1558,7 @@ module netcdf_input_component
         return
       endif
 
-      call ESMF_AttributeGet(gridComp, 'climatology_period', &
+      call ESMF_InfoGet(gridInfo, key='climatology_period', &
         isPresent=isPresent, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -1563,11 +1612,11 @@ module netcdf_input_component
 
       endif ! reading from climatology
 
-      call ESMF_AttributeGet(gridComp, 'scale_factor',  isPresent=isPresent, rc=localrc)
+      call ESMF_InfoGet(gridInfo, key='scale_factor',  isPresent=isPresent, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (isPresent) then
-        call ESMF_AttributeGet(gridComp, 'scale_factor', value=scale_factor, rc=localrc)
+        call ESMF_InfoGet(gridInfo, 'scale_factor', value=scale_factor, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
 
@@ -1578,11 +1627,11 @@ module netcdf_input_component
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       endif
 
-      call ESMF_AttributeGet(gridComp, 'add_offset',  isPresent=isPresent, rc=localrc)
+      call ESMF_InfoGet(gridInfo, key='add_offset',  isPresent=isPresent, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       if (isPresent) then
-        call ESMF_AttributeGet(gridComp, 'add_offset', value=add_offset, rc=localrc)
+        call ESMF_InfoGet(gridInfo, 'add_offset', value=add_offset, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call MOSSCO_FieldAdd(field, add_offset, owner=name, rc=localrc)
