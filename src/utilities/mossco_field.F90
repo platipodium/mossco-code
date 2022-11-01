@@ -182,7 +182,7 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, options, rc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   if (fieldStatus == ESMF_FIELDSTATUS_EMPTY .and. isPresent) then
-    call MOSSCO_MessageAdd(message,' (empty)')
+    call MOSSCO_MessageAdd(message,' '//trim(name)//' (empty)')
   elseif (isPresent) then
     call ESMF_FieldGet(field, geomtype=geomtype, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)

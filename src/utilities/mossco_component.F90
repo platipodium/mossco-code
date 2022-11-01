@@ -111,7 +111,9 @@ contains
     if (clockIsPresent) then
       call ESMF_CplCompGet(cplComp, clock=clock, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-    else
+    elseif (ESMF_ClockIsCreated (parentClock, rc=localrc)) then 
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       clock = ESMF_ClockCreate(parentClock, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
@@ -139,7 +141,7 @@ contains
     endif
 
     !! Synchronize clock with parent clock if local clock is present
-    call ESMF_ClockGet(parentClock, currTime=currTime_, rc=localrc)
+    if (ESMF_ClockIsCreated(parentClock)) call ESMF_ClockGet(parentClock, currTime=currTime_, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (clockIsPresent) then
