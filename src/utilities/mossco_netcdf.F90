@@ -2228,6 +2228,7 @@ module mossco_netcdf
 
       write(message,'(A)') trim(owner_)//' '//trim(nf90_strerror(ncStatus))
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      
       write(message,'(A)') trim(owner_)//' cannot create file '//trim(filename)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
 
