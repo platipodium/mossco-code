@@ -43,6 +43,7 @@ module link_connector
   use mossco_component, Finalize => MOSSCO_CplCompFinalize
   use mossco_strings
   use mossco_grid
+  use mossco_info
 
   implicit none
 
@@ -97,6 +98,7 @@ module link_connector
     character(len=10)           :: InitializePhaseMap(1)
     character(len=ESMF_MAXSTR)  :: name, message
     type(ESMF_Time)             :: currTime
+    type(ESMF_Info)             :: info 
 
     rc = ESMF_SUCCESS
 
@@ -106,12 +108,11 @@ module link_connector
 
     InitializePhaseMap(1) = "IPDv00p1=1"
 
-    call ESMF_AttributeAdd(cplComp, convention="NUOPC", purpose="General", &
-      attrList=(/"InitializePhaseMap"/), rc=localrc)
+    call ESMF_InfoGetFromHost(cplComp, info=info, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(cplComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
-      convention="NUOPC", purpose="General", rc=localrc)
+    call ESMF_InfoSet(info, key="NUOPC/General/InitializePhaseMap", &
+      values=InitializePhaseMap, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_CompExit(cplComp, rc=localrc)
@@ -242,6 +243,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     type(ESMF_Grid)             :: importGrid, exportGrid
     type(ESMF_GeomType_Flag)    :: importgeomType, exportGeomType
     character(len=ESMF_MAXSTR)  :: name
+    type(ESMF_Info)             :: info 
 
     rc_ = ESMF_SUCCESS
     if (present(rc)) rc = rc_
@@ -323,9 +325,11 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
             !> Only log the message at start time of simulation
             if (currTime == startTime) then
-              differCount = MOSSCO_FieldAttributesIdentical(importField, &
+              !differCount = MOSSCO_FieldAttributesIdentical(importField, &
+              !  exportField, differList=differList, rc=localrc)
+              differCount = MOSSCO_FieldInfoIdentical(importField, &
                 exportField, differList=differList, rc=localrc)
-                _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+              _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
               if (differCount > 0) then
                 write(message,'(A)') '  some field attributes not identical for item '//trim(itemNameList(i))
@@ -393,7 +397,8 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
               endif
 
               !> @todo make sure that the attributes of the old field are retained
-              call MOSSCO_FieldCopyAttributes(importField, exportField, rc=localrc)
+              call MOSSCO_FieldCopyInfo(importField, exportField, rc=localrc)
+              !call MOSSCO_FieldCopyAttributes(importField, exportField, rc=localrc)
               _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
               call ESMF_StateAddReplace(exportState,(/importField/), rc=localrc)
@@ -430,9 +435,16 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
       if (exportItemCount==0) then
           write(message,'(A)') trim(name)//' added fieldBundle '//trim(itemNameList(i))
-          call ESMF_AttributeGet(importFieldBundle, 'creator', value=creatorName, &
-            defaultvalue='none', isPresent=isPresent, rc=localrc)
-            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+          call ESMF_InfoGetFromHost(importFieldBundle, info=info, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+          call ESMF_InfoGet(info, key='creator', isPresent=isPresent, rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+          call ESMF_InfoGet(info, key='creator', value=creatorName, &
+            default='none',  rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
           if (isPresent) write(message,'(A)') trim(message)//' ['//trim(creatorName)//']'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
@@ -508,9 +520,16 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
       ! enddo
 
       write(message,'(A)') trim(name)//' replaced existing fieldbundle '//trim(itemNameList(i))
-      call ESMF_AttributeGet(importFieldBundle, 'creator', value=creatorName, &
-        defaultvalue='none', isPresent=isPresent, rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      
+      call ESMF_InfoGetFromHost(importFieldBundle, info=info, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call ESMF_InfoGet(info, key='creator', isPresent=isPresent, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      
+      call ESMF_InfoGet(info, key='creator', value=creatorName, &
+        default='none', rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       if (isPresent) write(message,'(A)') trim(message)//' ['//trim(creatorName)//']'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
@@ -529,7 +548,6 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
   end subroutine link_fields_and_fieldbundles_in_states
-
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "link_empty_fields_and_fieldbundles_in_states"
@@ -639,7 +657,9 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
           !> Only log the message at start time of simulation
           if (currTime == startTime) then
-            differCount =MOSSCO_FieldAttributesIdentical(importField, exportField, &
+            !differCount =MOSSCO_FieldAttributesIdentical(importField, exportField, &
+            !  differList=differList, rc=localrc)
+            differCount =MOSSCO_FieldInfoIdentical(importField, exportField, &
               differList=differList, rc=localrc)
               _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
@@ -681,7 +701,8 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
           end if
 
-          call MOSSCO_FieldCopyAttributes(importField, exportField, rc=localrc)
+          call MOSSCO_FieldCopyInfo(importField, exportField, rc=localrc)
+          !call MOSSCO_FieldCopyAttributes(importField, exportField, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
           call ESMF_StateAddReplace(exportState, (/importField/), rc=localrc)
@@ -852,31 +873,34 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
     integer(ESMF_KIND_I4)       :: localrc, rc_
     integer(ESMF_KIND_I4)       :: i, j, itemCount, exportItemCount, importItemCount, fieldCount, count, len
-    character (len=ESMF_MAXSTR) :: message, creatorName, name, fieldName, attributeName, stateName
+    character (len=ESMF_MAXSTR) :: message, creatorName, name, fieldName, key, stateName
     type(ESMF_Field)            :: importField, exportField
     type(ESMF_FieldBundle)      :: importFieldBundle, exportFieldBundle
     type(ESMF_StateItem_Flag)   :: itemType
     logical                     :: isPresent, isNeeded
     type(ESMF_FieldStatus_Flag) :: fieldStatus, exportFieldStatus
     type(ESMF_TypeKind_Flag)    :: typekind
+    type(ESMF_Info)             :: info
 
     rc_ = ESMF_SUCCESS
 
     call ESMF_CplCompGet(cplComp, name=name, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeGet(exportState, count=count, &
-      attcountflag=ESMF_ATTGETCOUNT_ATTRIBUTE, rc=localrc)
+    call ESMF_InfoGetFromHost(cplComp, info=info, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_InfoGet(info, size=count, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     do i=1, count
 
-      call ESMF_AttributeGet(exportState, attributeIndex=i, name=attributeName, rc=localrc)
+      call ESMF_InfoGet(info, idx=i, ikey=key, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       !> Our interest is the foreign_grid_field_name attribute as character
-      if (trim(attributeName) == 'foreign_grid_field_name') then
-        call ESMF_AttributeGet(exportState, trim(attributeName), value=fieldName, rc=localrc)
+      if (trim(key) == 'foreign_grid_field_name') then
+        call ESMF_InfoGet(info, key=key, value=fieldName, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
       else
 
@@ -885,13 +909,13 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         !cycle
 
         !! Otherwise look at the name and see whether it ends in ':needed', then expect a logical value
-        len=len_trim(attributeName)
+        len=len_trim(key)
         if (len<7) cycle
-        if (.not.attributeName(len-6:len) == ':needed') cycle
+        if (.not.key(len-6:len) == ':needed') cycle
 
-        fieldName = trim(attributeName(1:len-7))
+        fieldName = trim(key(1:len-7))
 
-        call ESMF_AttributeGet(exportState, trim(attributeName), value=isNeeded, rc=localrc)
+        call ESMF_InfoGet(info, trim(key), value=isNeeded, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         if (.not.isNeeded) cycle
@@ -980,7 +1004,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
         !> @todo Retain attributes of old field, but somehow this crashes, as all other
         ! calls to exportField around here ...
-        !call MOSSCO_FieldCopyAttributes(importField, exportField, rc=localrc)
+        !call MOSSCO_FieldCopyInfo(importField, exportField, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call ESMF_StateAddReplace(exportState, (/importField/), rc=localrc)
@@ -1287,55 +1311,23 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     integer(ESMF_KIND_I4), intent(out), optional    :: rc
 
     integer(ESMF_KIND_I4)                     :: rc_, localrc
-    character(len=ESMF_MAXSTR)                :: message, attributeName
+    character(len=ESMF_MAXSTR)                :: message, key
     logical                                   :: isPresent
-    real(ESMF_KIND_R8)                        :: real8
-    real(ESMF_KIND_R4)                        :: real4
-    integer(ESMF_KIND_I8)                     :: int8
-    integer(ESMF_KIND_I4)                     :: int4
-    type(ESMF_TypeKind_Flag)                  :: typeKind
+    type(ESMF_Info)                           :: exportInfo, importInfo 
 
     rc_ = ESMF_SUCCESS
     if (present(rc)) rc=rc_
 
-    attributeName='default_value'
-
+    key='default_value'
     if (importField == exportField) return
 
-    call ESMF_AttributeGet(importField, trim(attributeName), isPresent=isPresent, rc=localrc)
+    call ESMF_InfoGetFromHost(importField, info=importInfo, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    if (.not.isPresent) return
-
-    call ESMF_AttributeGet(importField, trim(attributeName), typeKind=typeKind, rc=localrc)
+    call ESMF_InfoGetFromHost(exportField, info=exportInfo, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    if (typeKind == ESMF_TYPEKIND_R8) then
-      call ESMF_AttributeGet(importField, trim(attributeName), value=real8, rc=localrc)
-    elseif (typeKind == ESMF_TYPEKIND_R4) then
-      call ESMF_AttributeGet(importField, trim(attributeName), value=real4, rc=localrc)
-      real8=real(real4, ESMF_KIND_R8)
-    elseif (typeKind == ESMF_TYPEKIND_I8) then
-      call ESMF_AttributeGet(importField, trim(attributeName), value=int8, rc=localrc)
-      real8=real(int8, ESMF_KIND_R8)
-    elseif (typeKind == ESMF_TYPEKIND_I4) then
-      call ESMF_AttributeGet(importField, trim(attributeName), value=int4, rc=localrc)
-      real8=real(int4, ESMF_KIND_R8)
-    else
-      if (present(rc)) rc=ESMF_RC_ARG_BAD
-      return
-    endif
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    call ESMF_AttributeGet(exportField, trim(attributeName), isPresent=isPresent, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    if (.not.isPresent) then
-      call ESMF_AttributeSet(exportField, trim(attributeName), value=real8, rc=localrc)
-      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-    endif
-
-    call MOSSCO_FieldSetValue(exportField, real8, rc=localrc)
+    call MOSSCO_InfoCopy(exportInfo, importInfo, key, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine MOSSCO_field_copy_default_values
@@ -1539,7 +1531,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
       !     !     cycle
       !     !   endif
       !     ! endif
-      !     call MOSSCO_FieldCopyAttributes(importField, exportField, rc=localrc)
+      !     call MOSSCO_FieldCopyInfo(importField, exportField, rc=localrc)
       !     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       !       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       !
