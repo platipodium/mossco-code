@@ -25,12 +25,15 @@
 module mossco_info
 
 use esmf
-use mossco_strings, only : MOSSCO_StringCopy, intformat
+use mossco_strings
+use mossco_memory
 
 implicit none
 
 private
 public MOSSCO_InfoLog, MOSSCO_InfoLogObject, MOSSCO_InfoCopy
+public MOSSCO_InfoString, MOSSCO_InfoIdentical
+public MOSSCO_InfoGet, MOSSCO_InfoSet
 
 interface MOSSCO_InfoLogObject
   module procedure MOSSCO_InfoLogGridComp
@@ -42,6 +45,14 @@ interface MOSSCO_InfoCopy
     module procedure MOSSCO_InfoCopyAll
     module procedure MOSSCO_InfoCopyKey
 end interface MOSSCO_InfoCopy
+
+interface MOSSCO_InfoSet
+    module procedure MOSSCO_InfoSetCharPtr
+end interface MOSSCO_InfoSet
+
+interface MOSSCO_InfoGet
+    module procedure MOSSCO_InfoGetCharPtr
+end interface MOSSCO_InfoGet
 
 contains
 
@@ -381,5 +392,257 @@ end subroutine MOSSCO_InfoCopyAll
       if (present(rc)) rc=localrc
   
     end subroutine MOSSCO_InfoLogField
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_InfoGetCharPtr"
+  subroutine MOSSCO_InfoGetCharPtr(info, key, stringPtr, kwe, rc)
+
+    type(ESMF_Info), intent(in)   :: info
+    character(len=*), intent(in)  :: key
+    character(len=ESMF_MAXSTR), intent(out), pointer :: stringPtr(:)
+    logical, intent(in), optional :: kwe
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)                :: localrc, rc_, i, n, j
+    logical                              :: isPresent
+    character(len=ESMF_MAXSTR), allocatable  :: stringList(:)
+
+    localrc = ESMF_SUCCESS
+    if (present(rc)) rc=ESMF_SUCCESS
+
+    call ESMF_InfoGet(info, key=key, isPresent=isPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  
+    if (.not.isPresent) return
+
+    call ESMF_InfoGetAlloc(info, key, values=stringList, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+  
+    allocate(stringPtr(size(stringList)))
+    do i=1, size(stringList)
+      call MOSSCO_StringCopy(stringPtr(i), stringList(i), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    enddo 
+    deallocate(stringlist)
+
+  end subroutine MOSSCO_InfoGetCharPtr
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_InfoSetCharPtr"
+  !> This private subroutine is called through the MOSSCO_InfoLogObject Interface
+    subroutine MOSSCO_InfoSetCharPtr(info, key, values, kwe, force, pkey, rc)
+  
+      type(ESMF_Info), intent(inout)               :: info
+      character(len=*), intent(in)                 :: key
+      character(len=*), pointer, intent(in)        :: values(:)
+      logical, intent(in ),optional                :: kwe
+      logical, intent(in), optional                :: force
+      character(len=*), intent(in), optional       :: pkey
+      integer(ESMF_KIND_I4), intent(out), optional :: rc
+  
+      integer(ESMF_KIND_I4)      :: localrc, rc_, i
+      logical                    :: force_
+      character(len=ESMF_MAXSTR) :: pkey_
+      character(len=ESMF_MAXSTR), allocatable :: valueList(:)
+      
+      localrc = ESMF_SUCCESS
+      if (present(rc)) rc = localrc 
+      if (present(force)) force_ = force
+      if (present(pkey)) call MOSSCO_StringCopy(pkey_, pkey, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      if (.not.associated(values)) return 
+
+      allocate(valueList(size(values)))
+      do i=1,size(values)
+        call MOSSCO_StringCopy(valueList(i), values(i), rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      enddo
+
+      !> @todo complete interface
+      !call ESMF_InfoSet(info, key, valueList, force=force_, pkey=pkey_, rc=localrc)
+      call ESMF_InfoSet(info, key, valueList, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    end subroutine MOSSCO_InfoSetCharPtr
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_InfoString"
+  subroutine MOSSCO_InfoString(info, key, string, kwe, rc)
+
+    type(ESMF_Info), intent(in)              :: info
+    character(len=*), intent(in)             :: key
+    character(len=*), intent(inout)          :: string
+    type(ESMF_KeywordEnforcer), optional     :: kwe
+    integer(ESMF_KIND_I4), optional, intent(out) :: rc
+
+    integer(ESMF_KIND_I4)                :: localrc, int4, rc_, i
+    logical                              :: isPresent
+    real(ESMF_KIND_R8)                   :: real8
+    real(ESMF_KIND_R4)                   :: real4
+    integer(ESMF_KIND_I8)                :: int8
+    type(ESMF_TypeKind_Flag)             :: typeKind
+    character(len=ESMF_MAXSTR)           :: message
+    logical                              :: bool
+
+    localrc = ESMF_SUCCESS
+
+    if (present(kwe)) localrc = ESMF_SUCCESS
+    if (present(rc)) rc = localrc
+
+    call ESMF_InfoGet(info, key=key, isPresent=isPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (.not.isPresent) then 
+      localrc = ESMF_RC_NOT_FOUND
+      if (present(rc)) rc = localrc
+      return
+    endif 
+
+    call ESMF_InfoGet(info, key=key, typeKind=typeKind, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    if (typeKind == ESMF_TYPEKIND_CHARACTER) then
+      call ESMF_InfoGet(info, key=key, value=string, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    elseif (typeKind == ESMF_TYPEKIND_R8) then
+      call ESMF_InfoGet(info, key=key, value=real8, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      write(string,*) real8
+    elseif (typeKind == ESMF_TYPEKIND_R4) then
+      call ESMF_InfoGet(info, key=key, value=real4, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      write(string,*) real4
+    elseif (typeKind == ESMF_TYPEKIND_I8) then
+      call ESMF_InfoGet(info, key=key, value=int8, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      write(string,*) int8
+    elseif (typeKind == ESMF_TYPEKIND_I4) then
+      call ESMF_InfoGet(info, key=key, value=int4, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      write(string,*) int4
+    elseif (typeKind == ESMF_TYPEKIND_LOGICAL) then
+      call ESMF_InfoGet(info, key=key, value=bool, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      string = '.false.'
+      if (bool) string = '.true.'
+    else 
+      write(message,'(A)')  'key of non-implemented type '
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+    endif
+
+  end subroutine MOSSCO_InfoString
+
+#undef ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_InfoIdentical"
+  function MOSSCO_InfoIdentical(to, from, kwe, &
+    verbose, exclude, owner, differList, rc) result(differCount)
+
+    type(ESMF_Info), intent(in)                 :: to, from
+    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+    character(len=*), dimension(*), optional     :: exclude(:)
+    character(len=ESMF_MAXSTR), allocatable, optional, intent(out)   :: differList(:)
+    character(len=*), optional, intent(in)       :: owner
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+    integer(ESMF_KIND_I4)                        :: differCount
+    logical, intent(in), optional                :: verbose
+
+    integer(ESMF_KIND_I4)                        :: localrc, rc_
+    integer(ESMF_KIND_I4)                        :: fromSize, toSize, i, j, count
+    logical                                      :: isPresent, verbose_
+    character(len=ESMF_MAXSTR)                   :: message, key
+    character(len=ESMF_MAXSTR)                   :: fromString, toString, owner_
+    type(ESMF_TypeKind_Flag)                     :: importTypeKind, exportTypeKind
+    character(len=ESMF_MAXSTR), allocatable      :: excludeList(:)
+
+    owner_ = '--'
+    verbose_ = .false.
+    rc_ = ESMF_SUCCESS
+    differCount = 0
+
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner)
+    if (present(verbose)) verbose_ = verbose
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
+    if (present(exclude)) then
+      count = ubound(exclude,1)-lbound(exclude,1)+1
+      if (count>0) then
+        call MOSSCO_Reallocate(excludeList, count, keep=.false., rc=localrc)
+        excludeList(1:count) = exclude(:)
+      endif
+    else
+      call MOSSCO_Reallocate(excludeList, 1, keep=.false., rc=localrc)
+      !if (allocated(excludeList)) deallocate(excludeList, stat=localrc)
+      !allocate(excludeList(1))
+      excludeList(1) = 'creator'
+    endif
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_InfoGet(from, size=fromSize, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    if (fromSize == 0) return
+
+    call ESMF_InfoGet(to, size=toSize, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    if (toSize == 0) return
+
+    if (present(differList)) then
+      call MOSSCO_Reallocate(differList, fromSize, keep=.false.,  rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+    endif
+
+    do i = 1, fromSize
+
+      call ESMF_InfoGet(from, idx=i, ikey=key, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      ! If this attribute's name is in the exclude list, then cycle to next attribute
+      isPresent = .false.
+      do j = lbound(excludeList,1), ubound(excludeList,1)
+        if ( trim(excludeList(j)) /= trim(key) ) cycle
+        isPresent = .true.
+        exit
+      enddo
+      if (isPresent) cycle
+
+      call ESMF_InfoGet(to, key=key, isPresent=isPresent, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      if (.not.isPresent) cycle
+
+      call MOSSCO_InfoSTring(from, key=key, string=fromString, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      
+      call MOSSCO_InfoSTring(to, key=key, string=tostring, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+      
+      if (trim(fromString) == trim(toString)) cycle
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      differCount = differCount + 1
+
+      if (verbose_ .or. present(differList)) then
+        write(message, '(A)') trim(owner_)
+        call MOSSCO_MessageAdd(message, ' '//owner_)
+        call MOSSCO_MessageAdd(message,':'//trim(key))
+        call MOSSCO_MessageAdd(message,' '//trim(fromString))
+        call MOSSCO_MessageAdd(message,' /= '//trim(toString))
+      endif
+
+      if (verbose_) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      if (present(differList)) then
+        differList(differCount) = trim(message)
+      endif
+
+    enddo
+
+    if (present(differList)) call MOSSCO_Reallocate(differList, differCount, &
+      keep=.true., rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call MOSSCO_Reallocate(excludeList, 0, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+  end function MOSSCO_InfoIdentical
 
 end module mossco_info
