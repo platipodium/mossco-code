@@ -140,6 +140,7 @@ module link_connector
     integer(ESMF_KIND_I4)       :: localrc
     character (len=ESMF_MAXSTR) :: name
     type(ESMF_Time)             :: currTime
+    character(len=ESMF_MAXSTR)  :: message
 
     rc = ESMF_SUCCESS
 
@@ -147,18 +148,24 @@ module link_connector
       rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+    write(message,'(A)') trim(name)//' links foreignGrid and needed fields ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     call link_foreign_grid_or_needed_field_in_states(cplComp, importState, exportState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !call link_foreign_grid_or_needed_field_in_states(cplComp, exportState, importState, rc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+    write(message,'(A)') trim(name)//' links empty fields and fieldBundles ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     call link_empty_fields_and_fieldbundles_in_states(cplComp, importState, exportState, rc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !call link_empty_fields_and_fieldbundles_in_states(exportState, importState, rc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+    write(message,'(A)') trim(name)//' copies default values ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     call MOSSCO_state_copy_default_values(importState, exportState, rc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -606,6 +613,9 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     !! Loop over items
     do i=1, itemCount
 
+      !write(message,'(A,I3,A)') trim(name)//' looks at item ',i,' in export named ',trim(itemNameList(i)),'...'
+      !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+
       if (itemTypeList(i)==ESMF_STATEITEM_FIELD) then
 
         call ESMF_StateGet(exportState, trim(itemNameList(i)), exportField, rc=localrc)
@@ -620,7 +630,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
         !! don't deal with complete fields here
         if (exportFieldStatus .eq. ESMF_FIELDSTATUS_COMPLETE) then
-          write(message, '(A)') trim(name)//' skipped complete field'
+          write(message, '(A)') trim(name)//' skipped already complete field'
           call MOSSCO_FieldString(exportField, message)
           !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
           cycle
@@ -631,7 +641,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
         if (importItemCount < 1) then
-          write(message, '(A)') trim(name)//' skipped non-matched field'
+          write(message, '(A)') trim(name)//' skipped non-imported field'
           call MOSSCO_FieldString(exportField, message)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
           cycle
@@ -674,7 +684,6 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
             endif
           endif
 
-
           if (exportFieldStatus .eq. ESMF_FIELDSTATUS_GRIDSET) then
             call ESMF_FieldGet(exportField,grid=exportGrid,rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
@@ -702,7 +711,6 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
           end if
 
           call MOSSCO_FieldCopyInfo(importField, exportField, rc=localrc)
-          !call MOSSCO_FieldCopyAttributes(importField, exportField, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
           call ESMF_StateAddReplace(exportState, (/importField/), rc=localrc)
@@ -887,7 +895,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     call ESMF_CplCompGet(cplComp, name=name, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_InfoGetFromHost(cplComp, info=info, rc=localrc)
+    call ESMF_InfoGetFromHost(exportState, info=info, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_InfoGet(info, size=count, rc=localrc)
@@ -1324,6 +1332,11 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     call ESMF_InfoGetFromHost(importField, info=importInfo, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+    call ESMF_InfoGet(importInfo, key=key, isPresent=isPresent, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    if (.not.isPresent) return 
+    
     call ESMF_InfoGetFromHost(exportField, info=exportInfo, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
