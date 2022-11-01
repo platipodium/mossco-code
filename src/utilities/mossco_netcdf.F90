@@ -2068,28 +2068,22 @@ module mossco_netcdf
     type(type_mossco_netcdf)                   :: nc
     character(len=*), intent(in), optional     :: owner
 
-
     integer                       :: localrc, rc_, varid
     character(len=1)              :: mode_
-    character(len=255)            :: timeUnit_, string, message
+    character(len=255)            :: timeUnit_, string, message, owner_
     logical                       :: fileIsPresent, checkVersion_
     integer                       :: fileUnit=1555
 
     rc_ = ESMF_SUCCESS
+    localrc = ESMF_SUCCESS
     if (present(kwe)) rc_ = ESMF_SUCCESS
     if (present(rc)) rc = ESMF_SUCCESS
-
-    if (present(checkVersion)) then
-      checkVersion_ = checkVersion
-    else
-      checkVersion_ = .true.
-    endif
-
-    if (present(mode)) then
-      mode_= mode
-    else
-      mode_ = 'W'
-    endif
+    checkVersion_ = .true.
+    if (present(checkVersion)) checkVersion_ = checkVersion
+    mode_ = 'W'
+    if (present(mode)) mode_= mode
+    owner_ = '--'
+    if (present(owner)) call MOSSCO_StringCopy(owner_, owner, rc=localrc)
 
     if (mode_ == 'W' .or. mode_ == 'w') then
       localrc = nf90_open(trim(filename), mode=NF90_WRITE, ncid=nc%ncid)
@@ -2099,7 +2093,7 @@ module mossco_netcdf
         if (present(timeUnit) .and. present(state))  then
           nc = MOSSCO_NetcdfCreate(trim(filename), timeUnit=trim(timeUnit), state=state, rc = rc_)
         elseif (present(timeUnit) .and. .not. present(state))  then
-          nc = MOSSCO_NetcdfCreate(trim(filename), timeUnit=trim(timeUnit), rc = rc_)
+          nc = MOSSCO_NetcdfCreate(trim(filename), timeUnit=trim(timeUnit),  rc = rc_)
         elseif (present(state) .and. .not. present(timeUnit))  then
           nc = MOSSCO_NetcdfCreate(trim(filename), state=state, rc = rc_)
         else
@@ -2195,8 +2189,7 @@ module mossco_netcdf
 
     character(len=*), intent(in)          :: filename
     logical, optional, intent(in)         :: kwe ! Keyword-enforcer
-    character(len=*),optional, intent(in) :: timeUnit
-    !character(len=*),optional, intent(in) :: timeUnit, owner
+    character(len=*),optional, intent(in) :: timeUnit !,owner
     type(ESMF_State), optional, intent(in):: state
     integer, intent(out),optional :: rc
     type(type_mossco_netcdf)      :: nc
