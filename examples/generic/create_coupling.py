@@ -453,37 +453,31 @@ fid.write('''
     character(len=ESMF_MAXSTR)  :: myName
     type(ESMF_Time)             :: currTime
     integer                     :: localrc
+    type(ESMF_Info)             :: info
 
     rc=ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=myName, currTime=currTime, &
       importState=importState, exportState=exportState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
 
-    call ESMF_AttributeAdd(gridComp, convention="NUOPC", purpose="General", &
-      attrList=(/"InitializePhaseMap"/), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_InfoGetFromHost(gridComp, info=info, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(gridComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
-      convention="NUOPC", purpose="General", rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_InfoSet(info, key="NUOPC/General/InitializePhaseMap", &
+      values=InitializePhaseMap, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !call ESMF_StateValidate(importState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !call ESMF_StateValidate(exportState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_CompExit(gridComp, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP0
 
@@ -562,65 +556,50 @@ fid.write('''
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !! Add a CIM component attribute package to this component
-    convention='CIM 1.5'
-    purpose='ModelComp'
-
-    call ESMF_AttributeAdd(gridComp, convention=convention, purpose=purpose, rc=localrc)
+    call ESMF_InfoSet(info, key='CIM 1.5/ModelComp/ShortName', value='toplevel', rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(gridComp, 'ShortName', 'toplevel', convention=convention, &
-      purpose=purpose, rc=localrc)
+    call ESMF_InfoSet(info, key='CIM 1.5/ModelComp/LongName', value='toplevel', rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    call ESMF_AttributeSet(gridComp, 'LongName', 'toplevel', convention=convention, &
-      purpose=purpose, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    call ESMF_AttributeSet(gridComp, 'ModelType', 'framework', convention=convention, &
-      purpose=purpose, rc=localrc)
+    
+    call ESMF_InfoSet(info, key='CIM 1.5/ModelComp/ModelType', value='framework', rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_InfoGet(info, key='simulation_title', value=message, &
       default='Untitled', rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(gridComp, 'SimulationShortName', trim(message), &
-      convention=convention, purpose=purpose, rc=localrc)
+    call ESMF_InfoSet(info, key='CIM 1.5/ModelComp/SimulationShortName', value=message, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(gridComp, 'SimulationLongName', message, convention=convention, &
-      purpose=purpose, rc=localrc)
+    call ESMF_InfoSet(info, key='CIM 1.5/ModelComp/SimulationLongName', value=message, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(gridComp, 'SimulationRationale', 'Modular coupled system simulation', convention=convention, &
-      purpose=purpose, rc=localrc)
+    call ESMF_InfoSet(info, key='CIM 1.5/ModelComp/SimulationRationale', &
+      value='Modular coupled system simulation', rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_InfoGet(info, key='simulation_start', value=message, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(gridComp, 'SimulationStartDate', trim(message), &
-      convention=convention, purpose=purpose, rc=localrc)
+    call ESMF_InfoSet(info, key='CIM 1.5/ModelComp/SimulationStartDate', &
+      value=message, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_InfoGet(info, key='simulation_stop', value=message, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(gridComp, 'SimulationDuration', message, convention=convention, &
-      purpose=purpose, rc=localrc)
+    !> @todo fix duration versus stoptime
+    call ESMF_InfoSet(info, key='CIM 1.5/ModelComp/SimulationDuration', &
+      value='unknown', rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    write(message,'(I4)') petCount
-    call ESMF_AttributeSet(gridComp, 'SimulationNumberOfProcessingElements', message, convention=convention, &
-      purpose=purpose, rc=localrc)
+    call ESMF_InfoSet(info, key='CIM 1.5/ModelComp/SimulationNumberOfProcessingElements', &
+      value=petCount, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    purpose='Platform'
-    !call ESMF_AttributeGetAttPack(gridComp, convention, purpose, attpack=attpack, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    call ESMF_AttributeSet(gridComp, 'MachineName', 'unknown', convention=convention, &
-      purpose=purpose, rc=localrc)
+    call ESMF_InfoSet(info, key='CIM 1.5/Platform/MachineName', &
+      value='unknown', rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !! Allocate the fields for all gridded components and their names
@@ -647,11 +626,10 @@ fid.write('''
 
     do i = 1, numGridComp
       gridCompClockList(i) = ESMF_ClockCreate(clock, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
       call ESMF_ClockSet(gridCompClockList(i), name=trim(gridCompNameList(i)), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     enddo
 
 ''')
@@ -675,20 +653,19 @@ fid.write('''
     do i=1, numGridComp
       gridExportStateList(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED, &
         name=trim(gridCompNameList(i))//'Export')
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
       call ESMF_LogWrite(trim(myName)//' reconciles '//trim(gridCompNameList(i))//'Export', ESMF_LOGMSG_INFO)
       !call ESMF_StateReconcile(gridExportStateList(i), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
       gridImportStateList(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED, &
         name=trim(gridCompNameList(i))//'Import')
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
       call ESMF_LogWrite(trim(myName)//' reconciles '//trim(gridCompNameList(i))//'Import', ESMF_LOGMSG_INFO)
       !call ESMF_StateReconcile(gridImportStateList(i), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     enddo
 ''')
 
@@ -830,28 +807,35 @@ for item in gridCompList:
   j=gridCompList.index(item)
   if (item in foreignGrid.keys()):
     #print item
+    fid.write('    call ESMF_InfoGetFromHost(gridImportStateList(' + str(ito+1)+'), info=info, rc=localrc)\n')
+    fid.write('    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)\n\n')
+    fid.write('    call ESMF_InfoSet(info, key="foreign_grid_field_name", value="'+foreignGrid[item]+'", rc=localrc)\n')
+    fid.write('    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)\n\n')
+    fid.write('    call ESMF_InfoSet(info, key="surface_downwelling_photosynthetic_radiative_flux:needed", value=.true., rc=localrc)\n')
+    fid.write('    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)\n\n')
+    fid.write('    call ESMF_InfoSet(info, key="water_depth_at_soil_surface:needed", value=.true., rc=localrc)\n')
+    fid.write('    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)\n\n')
     fid.write('    call ESMF_AttributeSet(gridImportStateList(' + str(ito+1)+'), name="foreign_grid_field_name", value="'+foreignGrid[item]+'", rc=localrc)\n')
-    fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
-    fid.write('      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
+    fid.write('    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)\n\n')
   if (item == 'fabm_pelagic') :
     fid.write('    call ESMF_AttributeSet(gridImportStateList(' + str(ito+1)+'), name="surface_downwelling_photosynthetic_radiative_flux:needed", value=.true., rc=localrc)\n')
-    fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
-    fid.write('      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
+    fid.write('    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)\n\n')
     fid.write('    call ESMF_AttributeSet(gridImportStateList(' + str(ito+1)+'), name="water_depth_at_soil_surface:needed", value=.true., rc=localrc)\n')
-    fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
-    fid.write('      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
+    fid.write('    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)\n\n')
 
   if item in dependencyDict.keys() and len(dependencyDict[item]) > 0:
     fid.write('    allocate(charValueList(' + str(len(dependencyDict[item])) + '), intValueList(' + str(len(dependencyDict[item])) + '))\n')
     for i,jtem in enumerate(dependencyDict[item]):
       fid.write('    charValueList(' + str(i+1) + ') = \'' + jtem + '\'\n')
       fid.write('    intValueList (' + str(i+1) + ') = ' + str(ifrom + 1) + '\n')
+    fid.write('    call ESMF_InfoSet(info, key="depends_on", values=charValueList, rc=localrc)\n')
+    fid.write('    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)\n\n')
+    fid.write('    call ESMF_InfoSet(info, key="depends_on_id", values=intValueList, rc=localrc)\n')
+    fid.write('    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)\n\n')
     fid.write('    call ESMF_AttributeSet(gridImportStateList(' + str(ito+1)+'), name="depends_on", valueList=charValueList, rc=localrc)\n')
-    fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
-    fid.write('      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
+    fid.write('    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)\n\n')
     fid.write('    call ESMF_AttributeSet(gridImportStateList(' + str(ito+1)+'), name="depends_on_id", valueList=intValueList, rc=localrc)\n')
-    fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
-    fid.write('      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
+    fid.write('    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)\n\n')
     fid.write('    deallocate(charValueList)\n')
     fid.write('    deallocate(intValueList)\n')
 
