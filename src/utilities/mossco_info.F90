@@ -627,7 +627,7 @@ end subroutine MOSSCO_InfoCopyAll
         if (bool) string = '.true.'
       endif
     else 
-      write(message,'(A)')  'key '//trim(key)//' is of non-implemented type ', typeKind
+      write(message,'(A,I2)')  'key '//trim(key)//' is of non-implemented type ', typeKind
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
     endif
 
