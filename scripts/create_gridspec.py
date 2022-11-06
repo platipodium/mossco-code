@@ -3,7 +3,8 @@
 # This script is is part of MOSSCO. It creates from basic grid parameters
 # a GRIDSPEC compliant NetCDF file.
 #
-# @copyright (C) 2014-2020 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2021-2021 Helmholtz-Zentrum Hereon
+# @copyright (C) 2014-2021 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -60,22 +61,24 @@ elif False: # Alpha Ventus Wind park 54.008333°, 6.598333°
   ll_lon, ll_lat = 6.2, 52.6
   ur_lon, ur_lat = 7.0, 53.4
 
-if __name__ == '__main__':
+def create_gridspec(ll_lon, ll_lat, ur_lon, ur_lat, delta_lon, delta_lat):
 
-  nlat=abs(ur_lat-ll_lat)/abs(delta_lat)
-  nlon=abs(ur_lon-ll_lon)/abs(delta_lon)
+  nlat=np.abs((ur_lat-ll_lat)/delta_lat)
+  nlon=np.abs((ur_lon-ll_lon)/delta_lon)
 
-  # ensure that nlat and nlot are whole numbers and adust delta
+  print(nlat,nlon)
+
+  # ensure that nlat and nlon are whole numbers and adust delta
   if (nlat != round(nlat)):
-      delta_lat=abs(ur_lat-ll_lat)/round(nlat)
+      delta_lat=(ur_lat-ll_lat)/round(nlat)
   nlat=int(round(nlat))
 
   if (nlon != round(nlon)):
-      delta_lon=abs(ur_lon-ll_lon)/round(nlon)
+      delta_lon=(ur_lon-ll_lon)/round(nlon)
   nlon=int(round(nlon))
 
-  if len(sys.argv)>1:
-    basename=sys.argv[1]
+  if len(sys.argv)>2:
+    basename=sys.argv[2]
   else:
     basename = 'gridspec_example.nc'
 
@@ -103,25 +106,34 @@ if __name__ == '__main__':
 
 # Meta data
   nc.history = 'Created ' + time.ctime(time.time()) + ' by ' + sys.argv[0]
-  nc.creator = 'Carsten Lemmen <carsten.lemmen@hzg.de>'
+  nc.creator = 'Carsten Lemmen <carsten.lemmen@hereon.de>'
   nc.license = 'Creative Commons share-alike (CCSA)'
   nc.copyright = 'Helmholtz-Zentrum Geesthacht'
-  nc.Conventions = 'CF-1.6'
+  nc.Conventions = 'CF-1.7'
 
   ilon=np.array(range(0,nlon))
   jlat=np.array(range(0,nlat))
 
-  lon[:]=ll_lon+(ilon+0.5)*delta_lon
-  lat[:]=ll_lat+(jlat+0.5)*delta_lat
+  if delta_lon > 0:
+    lon[:]=ll_lon+(ilon+0.5)*delta_lon
+  else:
+    lon[:]=ur_lon+(ilon+0.5)*delta_lon
+
   lon_bnds[:,0]=lon[:]-0.5*delta_lon
   lon_bnds[:,1]=lon[:]+0.5*delta_lon
+ 
+  if delta_lat > 0:
+    lat[:]=ll_lat+(jlat+0.5)*delta_lat
+  else:
+    lat[:]=ur_lat+(jlat+0.5)*delta_lat
+
   lat_bnds[:,0]=lat[:]-0.5*delta_lat
   lat_bnds[:,1]=lat[:]+0.5*delta_lat
 
-  print(lon_bnds[0,:], lat_bnds[-1,:])
+  #print(lon_bnds[0,:], lat_bnds[-1,:])
 
   # add a dummy variable
-  if True:
+  if False:
       var = nc.createVariable('dummy','f4',('lat','lon'))
       var.coordinates='lon lat'
       var.units=''
@@ -130,3 +142,23 @@ if __name__ == '__main__':
       var[:] = np.sin(xx**2 + yy**2)
 
   nc.close()
+
+
+if __name__ == '__main__':
+
+  if (len(sys.argv) > 1): 
+    filename = sys.argv[1]
+
+    ncin = netCDF4.Dataset(filename,'r')
+    lon = ncin.variables["lon"][:]
+    lat = ncin.variables["lat"][:]
+    delta_lon = np.mean(lon[1:]-lon[:-1])
+    delta_lat = np.mean(lat[1:]-lat[:-1])
+    ll_lon, ll_lat = (np.min(lon)-0.5*np.abs(delta_lon), np.min(lat)-0.5*np.abs(delta_lat))
+    ur_lon, ur_lat = (np.max(lon)+0.5*np.abs(delta_lon), np.max(lat)+0.5*np.abs(delta_lat)) 
+    #print(ll_lon, ll_lat, ur_lon, ur_lat, delta_lon, delta_lat)
+    #print(lat)
+  
+create_gridspec(ll_lon, ll_lat, ur_lon, ur_lat, delta_lon, delta_lat)
+    
+
