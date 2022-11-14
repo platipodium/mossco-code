@@ -1,8 +1,9 @@
 #!/bin/bash -x
 # This script is part of MOSSCO.  It helps in installing ESMF
 #
-# @copyright (C) 2013--2021 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen <carsten.lemmen@hzg.de>
+# @copyright (C) 2021-2022 Helmholtz-Zentrum Hereon
+# @copyright (C) 2013-2021 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hereon.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -27,13 +28,13 @@ fi
 test -d ${CONFIG_DIR} || mkdir -p ${CONFIG_DIR}
 echo "  $0 saves ESMF configuration in ${CONFIG_DIR}"
 
-test -z ${ESMF_DIR} && ESMF_DIR=${CONFIG_DIR}/devel/esmf-code
+test -z ${ESMF_DIR} && ESMF_DIR=${CONFIG_DIR}/devel/esmf/esmf-code
 echo "  $0 uses ESMF sources in ${ESMF_DIR}"
 
 # Determine what git tags of the ESMF repo are used.  Prefer the most
 # recent one (we need >= 7_1_0_beta_snapshot_52 for regridding with extrapolation)
 if [ -z "${ESMF_TAGS}" ]; then
-  TAGS=ESMF_8_1_0_beta_snapshot_46
+  TAGS=v8.4.0
 else
   TAGS=${ESMF_TAGS}
 fi
@@ -42,7 +43,7 @@ echo "  $0 installs ESMF for tags ${TAGS}"
 # Determine what compilers  are used.  We often test gfortran, gfortranclang,
 # and intel
 if [ -z "${ESMF_COMPILERS}" ]; then
-  COMPS=gfortranclang # gfortran intel pgi gfortranclang pgigcc intelgcc
+  COMPS=gfortran # gfortranclang intel pgi gfortranclang pgigcc intelgcc
 else
   COMPS="${ESMF_COMPILERS}"
 fi
@@ -50,7 +51,7 @@ echo "  $0 installs ESMF for compilers ${COMPS}"
 
 # Determine what communicators  are used.  We often test openmpi and intelmpi
 if [ -z "${ESMF_COMMUNICATORS}" ]; then
-  COMMS=mpich2 # openmpi mpiuni mpich2 intelmpi
+  COMMS=mpich3 # openmpi mpiuni mpich2 intelmpi
 else
   COMMS="${ESMF_COMMUNICATORS}"
 fi
@@ -167,7 +168,6 @@ for C in $COMMS ; do
 
 cat << EOT > $CONFIG_DIR/.esmf_${ESMF_STRING}
 export ESMF_DIR=${ESMF_DIR}
-#export ESMF_MACHINE=x86_64
 export ESMF_OS=${ESMF_OS}
 export ESMF_ABI=${ESMF_ABI}
 export ESMF_PTHREADS=OFF
@@ -183,7 +183,7 @@ export ESMF_AUTO_LIB_BUILD=ON
 export ESMF_DEFER_LIB_BUILD=ON
 export ESMF_SHARED_LIB_BUILD=ON
 export ESMF_BOPT=g
-export ESMF_OPTLEVEL=4 # works only if BOPT=O
+export ESMF_OPTLEVEL=3 # works only if BOPT=O
 export ESMF_INSTALL_PREFIX=${ESMF_INSTALL_PREFIX}
 export ESMF_LAPACK=internal
 export ESMF_NETCDF=${ESMF_NETCDF}
@@ -198,7 +198,7 @@ export ESMF_COMM=$C
 export ESMFMKFILE=$ESMF_INSTALL_PREFIX/lib/libg/${ESMF_STRING}/esmf.mk
 export ESMF_LAPACK=system
 export ESMF_LAPACK_LIBS=-lvecLibFort
-export ESMF_ACC_SOFTWARE_STACK=openmp4
+#export ESMF_ACC_SOFTWARE_STACK=openmp4
 export ESMF_XERCES=standard
 # export ESMF_XERCES_INCLUDE=/opt/local/include
 # export ESMF_XERCES_LIBS=-lxerces-c
