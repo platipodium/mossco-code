@@ -1,7 +1,8 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2013--2021 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen <carsten.lemmen@hzg.de
+# @copyright (C) 2021-2022 Helmholtz-Zentrum Hereon
+# @copyright (C) 2013-2021 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hereon.de
 # @author Knut Klingbeil <knut.klingbeil@io-warnemuende.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -13,7 +14,7 @@
 EXTRA_DIST = README ACKNOWLEDGEMENTS AUTHORS .gitignore
 SUBDIRS = doc src examples external
 
-export MOSSCO_DATE=$(shell date "+%Y%m%d")
+export MOSSCO_DATE:=$(shell date "+%Y%m%d")
 
 include $(MOSSCO_DIR)/src/Rules.make
 

@@ -44,7 +44,7 @@ else
 $(error Cannot find cmake)
 endif
 
-export MOSSCO_OBJC=false
+export MOSSCO_OBJC:=false
 OBJC=$(shell which objconv 2> /dev/null)
 ifeq ($(strip $(OBJC)),)
 OBJC=$(shell which gobjcopy 2> /dev/null)
@@ -53,18 +53,17 @@ ifeq ($(strip $(OBJC)),)
 OBJC=$(shell which objcopy 2> /dev/null)
 endif
 ifneq ($(strip $(OBJC)),)
-MOSSCO_OBJC=$(shell basename $(OBJC))
+MOSSCO_OBJC:=$(shell basename $(OBJC))
 $(info Using objcopy ... $(MOSSCO_OBJC))
 else
 $(info Using objcopy ... no)
 endif
 
-
-export MOSSCO_GIT=false
+export MOSSCO_GIT:=false
 ifneq ($(wildcard $(shell which git)),)
-MOSSCO_GIT=true
-export MOSSCO_GIT_VERSION=$(shell git --version |cut -f3 -d" ")
-export MOSSCO_GIT_VERSION_MAJOR=$(shell git --version |cut -f3 -d" "|cut -f1 -d.)
+MOSSCO_GIT:=true
+export MOSSCO_GIT_VERSION:=$(shell git --version |cut -f3 -d" ")
+export MOSSCO_GIT_VERSION_MAJOR:=$(shell git --version |cut -f3 -d" "|cut -f1 -d.)
 ifeq ($(MOSSCO_GIT_VERSION_MAJOR),1)
   $(warning Consider upgrading git to version 2)
 endif
@@ -75,19 +74,21 @@ $(info Using git ... $(shell which git) ($(MOSSCO_GIT_VERSION)))
 
 # System-dependent flags
 ifeq ($(shell hostname),rznp0023)
-  export ARFLAGS=rv
-  export AR=ar
+  export ARFLAGS:=rv
+  export AR:=ar
   $(warning use changed ARFLAGS=rvU)
 endif
 
 ifeq ($(shell hostname),KSEZ8002)
-  export ARFLAGS=rvU
-  export AR=ar
+  export ARFLAGS:=rvU
+  export AR:=ar
   $(warning use changed ARFLAGS=rvU)
 endif
 $(info Using ar ... $(AR) -$(ARFLAGS))
 
-export MOSSCO_INSTALL_PREFIX?=$(MOSSCO_DIR)
+ifeq ($(MOSSCO_INSTALL_PREFIX),)
+  export MOSSCO_INSTALL_PREFIX:=$(MOSSCO_DIR)
+endif
 
 # Filter out all MAKELEVELS that are not 1 or 0 to avoid unneccessary execution
 # of the preamble section of this Rules.make in repeated calls.  In most circumstances,
@@ -97,37 +98,37 @@ export MOSSCO_INSTALL_PREFIX?=$(MOSSCO_DIR)
 # 2. ESMF stuff, only if ESMFMKFILE is declared.
 #
 ifndef ESMFMKFILE
-  FORTRAN_COMPILER ?= $(shell echo $(F90) | tr a-z A-Z)
-  FORTRAN_COMPILER ?= $(shell echo $(FC) | tr a-z A-Z)
+  FORTRAN_COMPILER := $(shell echo $(F90) | tr a-z A-Z)
+  FORTRAN_COMPILER := $(shell echo $(FC) | tr a-z A-Z)
   ifeq ("$(FORTRAN_COMPILER)","F77")
     $(error MOSSCO needs a F2003 Fortran compiler, your environment says $$FC=$(FC))
   endif
   #$(error Compiling without ESMF support. Comment this line in Rules.make if you want to proceed at your own risk)
-  MOSSCO_ESMF=false
+  MOSSCO_ESMF:=false
 else
   # Make sure ESMFMKFILE exists and read it, set MOSSCO_ESMF to true
   ifeq ($(wildcard $(ESMFMKFILE)),)
     $(error The file you specified as ESMFMKFILE=$(ESMFMKFILE) does not exist)
   endif
   include $(ESMFMKFILE)
-  MOSSCO_ESMF=true
+  MOSSCO_ESMF:=true
 
 $(info Using ESMFMKFILE ... $(ESMFMKFILE))
 
 	# Find the communicator and determine whether this is parallel device, this
 	# is still buggy with mpiifort and needs improvement
-  ESMF_COMM = $(strip $(shell grep "\# ESMF_COMM:" $(ESMFMKFILE) | cut -d':' -f2-))
+  ESMF_COMM:=$(strip $(shell grep "^# ESMF_COMM:" $(ESMFMKFILE) | cut -d':' -f2-))
 $(info Using ESMF_COMM ... $(ESMF_COMM))
 $(info Using ESMF_F90COMPILER ... $(ESMF_F90COMPILER))
 
   ifeq ("$(ESMF_COMM)","mpiuni")
-    export MOSSCO_MPI ?= false
+    export MOSSCO_MPI:=false
   else
-    export MOSSCO_MPI ?= true
+    export MOSSCO_MPI:=true
     ifeq ($(ESMF_COMM),openmpi)
       ESMF_FC:=$(shell $(ESMF_F90COMPILER) --showme:command 2> /dev/null)
       ifeq ($(ESMF_FC),)
-	ifeq ($(ESMF_F90COMPILER),mpifort)
+	      ifeq ($(ESMF_F90COMPILER),mpifort)
           ESMF_FC:=$(shell mpif90 --showme:command 2> /dev/null)
         endif
       endif
@@ -162,6 +163,16 @@ $(info Using ESMF_F90COMPILER ... $(ESMF_F90COMPILER))
       endif
       ESMF_CC:=$(shell $(ESMF_CXXCOMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
     endif
+		ifeq ($(ESMF_COMM),mpich)
+      ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
+      ifeq ($(ESMF_FC),x86_64)
+        ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f4)
+      endif
+      ifeq ($(ESMF_FC),)
+        $(error $(ESMF_F90COMPILER) is *not* based on $(ESMF_COMM)!)
+      endif
+      ESMF_CC:=$(shell $(ESMF_CXXCOMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
+    endif
     ifeq ($(ESMF_FC),)
       ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
     endif
@@ -169,30 +180,41 @@ $(info Using ESMF_F90COMPILER ... $(ESMF_F90COMPILER))
       ESMF_CC:=$(shell $(ESMF_CXXCOMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
     endif
   endif
-  ESMF_OPENMP = $(strip $(shell grep "\# ESMF_OPENMP:" $(ESMFMKFILE) | cut -d':' -f2-))
+
+  $(info Using ESMF_FC ... $(ESMF_FC))
+  $(info Using ESMF_CC ... $(ESMF_CC))
+
+  ESMF_OPENMP:=$(strip $(shell grep "^# ESMF_OPENMP:" $(ESMFMKFILE) | cut -d':' -f2-))
   ifeq ("$(ESMF_OPENMP)","OFF")
-    export MOSSCO_OMP ?= false
+    export MOSSCO_OMP:=false
   else
-    export MOSSCO_OMP ?= true
+    export MOSSCO_OMP:=true
+    $(info Using ESMF_OPENMP ... $(ESMF_OPENMP))
   endif
-  ESMF_NETCDF = $(strip $(shell grep "\# ESMF_NETCDF:" $(ESMFMKFILE) | cut -d':' -f2-))
+
+  ESMF_NETCDF:=$(strip $(shell grep "^# ESMF_NETCDF:" $(ESMFMKFILE) | cut -d':' -f2-))
   ifneq ("$(ESMF_NETCDF)","")
-    export MOSSCO_NETCDF ?= true
-    export MOSSCO_NETCDF_INCLUDE ?= $(strip $(shell grep "\# ESMF_NETCDF_INCLUDE:" $(ESMFMKFILE) | cut -d':' -f2-))
-    export MOSSCO_NETCDF_LIBS ?= $(strip $(shell grep "\# ESMF_NETCDF_LIBS:" $(ESMFMKFILE) | cut -d':' -f2-))
-    export MOSSCO_NETCDF_LIBPATH ?= $(strip $(shell grep "\# ESMF_NETCDF_LIBPATH:" $(ESMFMKFILE) | cut -d':' -f2-))
+    export MOSSCO_NETCDF:=true
+    export MOSSCO_NETCDF_INCLUDE := $(strip $(shell grep "^# ESMF_NETCDF_INCLUDE:" $(ESMFMKFILE) | cut -d':' -f2-))
+    export MOSSCO_NETCDF_LIBS := $(strip $(shell grep "^# ESMF_NETCDF_LIBS:" $(ESMFMKFILE) | cut -d':' -f2-))
+    export MOSSCO_NETCDF_LIBPATH := $(strip $(shell grep "^# ESMF_NETCDF_LIBPATH:" $(ESMFMKFILE) | cut -d':' -f2-))
+    $(info Using ESMF_NETCDF_INCLUDE ... $(ESMF_NETCDF_INCLUDE))
+    $(info Using ESMF_NETCDF_LIBPATH ... $(ESMF_NETCDF_LIBPATH))
   else
-    export MOSSCO_NETCDF ?= false
+    export MOSSCO_NETCDF:=false
   endif
+
   ifdef ESMF_F90COMPILER
     export MOSSCO_F03COMPILER=$(ESMF_F90COMPILER)
-    export F90 = $(ESMF_F90COMPILER)
-    export FC  = $(ESMF_F90COMPILER)
-    export F77 = $(ESMF_F77COMPILER)
+    export F90 := $(ESMF_F90COMPILER)
+    export FC  := $(ESMF_F90COMPILER)
+    export F77 := $(ESMF_F77COMPILER)
     ifeq ($(ESMF_FC),)
-      ESMF_FC:=$(ESMF_F90COMPILER)
+      ESMF_FC  := $(ESMF_F90COMPILER)
     endif
-    ESMF_FORTRAN_COMPILER := $(shell echo $(notdir $(ESMF_FC)) | tr a-z A-Z | cut -d"-" -f1)
+
+    ESMF_FORTRAN_COMPILER:=$(shell echo $(notdir $(ESMF_FC)) | tr a-z A-Z | cut -d"-" -f1)
+
     ifeq ($(ESMF_FORTRAN_COMPILER),FTN)
       ifndef FORTRAN_COMPILER
         $(error FORTRAN_COMPILER needs to be defined for ftn wrapper)
@@ -200,6 +222,7 @@ $(info Using ESMF_F90COMPILER ... $(ESMF_F90COMPILER))
       $(warning Using FORTRAN_COMPILER=$(FORTRAN_COMPILER) for ftn wrapper)
       ESMF_FORTRAN_COMPILER := $(FORTRAN_COMPILER)
     endif
+
     ifdef FORTRAN_COMPILER
       ifneq ("$(ESMF_FORTRAN_COMPILER)","$(FORTRAN_COMPILER)")
         $(warning Overwriting FORTRAN_COMPILER=$(FORTRAN_COMPILER) with $(ESMF_FORTRAN_COMPILER))
@@ -207,15 +230,16 @@ $(info Using ESMF_F90COMPILER ... $(ESMF_F90COMPILER))
     endif
     export FORTRAN_COMPILER := $(ESMF_FORTRAN_COMPILER)
     ifeq ($(FORTRAN_COMPILER), XLF)
-      MOSSCO_F03VERSION=$(shell $(F90) -qversion | head -1)
+      MOSSCO_F03VERSION:=$(shell $(F90) -qversion | head -1)
     else
-      MOSSCO_F03VERSION=$(shell $(F90) --version | head -1 | awk '{print $$NF}')
+      MOSSCO_F03VERSION:=$(shell $(F90) --version | head -1 | awk '{print $$NF}')
     endif
   endif
   ifdef ESMF_CXXCOMPILER
     export CXX = $(ESMF_CXXCOMPILER)
   endif
 endif
+
 export MOSSCO_ESMF
 export MOSSCO_F03VERSION
 
