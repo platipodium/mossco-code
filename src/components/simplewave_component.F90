@@ -1,8 +1,10 @@
 !> @brief Implementation of an ESMF component for simplewave
 !!
 !! This computer program is part of MOSSCO.
-!! @copyright 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
-!! @author Knut Klingbeil <knut.klingbeil@uni-hamburg.de>
+!! @copyright 2021-2022 Helmholtz-Zentrum Hereon
+!! @copyright 2014-2021 Helmholtz-Zentrum Geesthacht
+!! @copyright 2014-2022 Institut für Ostseeforschung Warnemünde
+!! @author Knut Klingbeil <knut.klingbeil@io-warnemuende.de>
 !! @author Carsten Lemmen <carsten.lemmen@hereon.de>
 
 !
@@ -32,6 +34,7 @@ module simplewave_component
   use mossco_field
   use mossco_config
   use mossco_grid
+  use mossco_info
 
   implicit none
   private
@@ -88,20 +91,20 @@ module simplewave_component
     character(len=ESMF_MAXSTR)  :: name
     type(ESMF_Time)             :: currTime
     integer                     :: localrc
+    type(ESMF_Info)             :: info
 
     call MOSSCO_CompEntry(gridComp, clock, name=name, currTime=currTime, &
       importState=importState, exportState=exportState, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+    call ESMF_InfoGetFromHost(gridComp, info=info, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
     InitializePhaseMap(1) = "IPDv00p1=1"
     InitializePhaseMap(2) = "IPDv00p2=2"
 
-    call ESMF_AttributeAdd(gridComp, convention="NUOPC", purpose="General", &
-      attrList=(/"InitializePhaseMap"/), rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-    call ESMF_AttributeSet(gridComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
-      convention="NUOPC", purpose="General", rc=localrc)
+    call ESMF_InfoSet(info, key="NUOPC/General/InititalizePhaseMap", &
+      values=InitializePhaseMap, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_CompExit(gridComp, rc=localrc)
@@ -130,11 +133,12 @@ module simplewave_component
     character(ESMF_MAXSTR) :: name
     type(ESMF_Time)        :: currTime
 
-    type(ESMF_Grid)        :: grid, grid2
-    type(ESMF_Field)       :: field
+    type(ESMF_Grid)           :: grid, grid2
+    type(ESMF_Field)          :: field
     type(ESMF_StateItem_Flag) :: itemType
     type(ESMF_GeomType_Flag)  :: geomType
     type(ESMF_Mesh)           :: mesh
+    type(ESMF_Info)           :: info
 
     call MOSSCO_CompEntry(gridComp, clock, name=name, currTime=currTime, &
       importState=importState, exportState=exportState, rc=localrc)
@@ -157,19 +161,22 @@ module simplewave_component
       hasGrid=.true.
     endif
 
-    call ESMF_AttributeGet(importState, 'foreign_grid_field_name', &
+    call ESMF_InfoGetFromHost(importstate, info=info, rc=localrc)
+     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_InfoGet(info, key='foreign_grid_field_name', &
       isPresent=isPresent, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (isPresent .and. .not.hasGrid) then
 
-      call ESMF_AttributeGet(importState, 'foreign_grid_field_name', &
-        foreignGridFieldName, rc=localrc)
+      call ESMF_InfoGet(info, key='foreign_grid_field_name', &
+        value=foreignGridFieldName, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call MOSSCO_StateGetForeignGrid(importState, geomType=geomType, &
         grid=grid, mesh=mesh, owner=trim(name), &
-        attributeName='foreign_grid_field_name', totalUWidth=totalUWidth, &
+        key='foreign_grid_field_name', totalUWidth=totalUWidth, &
         totalLWidth=totalLWidth, rank=rank, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -202,7 +209,10 @@ module simplewave_component
           addCornerStagger=.true., rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        call ESMF_AttributeSet(grid, 'creator', trim(name), rc=localrc)
+        call ESMF_InfoGetFromHost(grid, info, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        call ESMF_InfoSet(info, key='creator', value=trim(name), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         write(message,'(A,I6,A)') trim(name)//' uses regular grid from '//trim(gridFileName)
@@ -217,7 +227,10 @@ module simplewave_component
           coordDep2=(/2/), name="simplewaveGrid2D_"//trim(name), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        call ESMF_AttributeSet(grid,'creator',trim(name), rc=localrc)
+        call ESMF_InfoGetFromHost(grid, info, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+        call ESMF_InfoSet(info, key='creator', value=trim(name), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call ESMF_GridAddCoord(grid,staggerloc=ESMF_STAGGERLOC_CENTER,rc=localrc)
@@ -291,10 +304,13 @@ module simplewave_component
         rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_AttributeSet(field,'creator',trim(name), rc=localrc)
+      call ESMF_InfoGetFromHost(field, info=info, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_AttributeSet(field,'units',trim(importList(i)%units), rc=localrc)
+      call ESMF_InfoSet(info, key='creator', value=trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_InfoSet(info, key='units', value=trim(importList(i)%units), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_StateAdd(importState,(/field/), rc=localrc)
@@ -333,10 +349,13 @@ module simplewave_component
         rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_AttributeSet(field,'creator',trim(name), rc=localrc)
+      call ESMF_InfoGetFromHost(field, info=info, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_AttributeSet(field,'units',trim(exportList(i)%units), rc=localrc)
+      call ESMF_InfoSet(info, key='creator', value=trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_InfoSet(info, key='units', value=trim(exportList(i)%units), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_StateAdd(exportState,(/field/),rc=localrc)
@@ -376,6 +395,7 @@ module simplewave_component
     integer                          :: i, j
     character(len=ESMF_MAXSTR)       :: message
     logical                          :: isPresent
+    type(ESMF_Info)                  :: info
 
     type :: allocatable_integer_array
       integer,dimension(:),allocatable :: data
@@ -554,6 +574,7 @@ module simplewave_component
 
     type(ESMF_Clock)        :: myClock
     type(ESMF_Time)         :: nextTime
+    type(ESMF_Info)         :: info
 
     call MOSSCO_CompEntry(gridComp, clock, name=name, currTime=currTime, &
       importState=importState, exportState=exportState, rc=localrc)
