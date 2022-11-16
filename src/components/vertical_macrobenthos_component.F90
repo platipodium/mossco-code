@@ -3,7 +3,8 @@
 !> @file vertical_macrobenthos_component.F90
 !!
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2018 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2021-2022 Helmholtz-Zentrum Hereon
+!> @copyright Copyright (C) 2018-2021 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -31,7 +32,7 @@ module vertical_macrobenthos_component
   use mossco_state
   use mossco_config
   use mossco_strings
-  use mossco_attribute
+  use mossco_info
   use mossco_config
   use mossco_component, ReadRestart => MOSSCO_GridCompReadRestart
   use mossco_component, Finalize => MOSSCO_GridCompFinalize
@@ -89,21 +90,20 @@ module vertical_macrobenthos_component
     character(len=ESMF_MAXSTR)  :: name
     type(ESMF_Time)             :: currTime
     integer                     :: localrc
+    type(ESMF_Info)             :: info 
 
     rc=ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, &
       currTime=currTime, importState=importState,  exportState=exportState, rc=localrc)
 
-    InitializePhaseMap(1) = "IPDv00p1=1"
-
-    call ESMF_AttributeAdd(gridComp, convention="NUOPC", purpose="General", &
-      attrList=(/"InitializePhaseMap"/), rc=localrc)
+    call ESMF_InfoGetFromHost(gridComp, info=info, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(gridComp, name="InitializePhaseMap", &
-      valueList=InitializePhaseMap, &
-      convention="NUOPC", purpose="General", rc=localrc)
+    InitializePhaseMap(1) = "IPDv00p1=1"
+
+    call ESMF_InfoSet(info, key="NUOPC/General/InititalizePhaseMap", &
+      values=InitializePhaseMap, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_CompExit(gridComp, rc=localrc)
@@ -135,6 +135,7 @@ module vertical_macrobenthos_component
     type(ESMF_GeomType_Flag) :: geomType
     logical                  :: isPresent
     character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
+    type(ESMF_Info)          :: info 
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
       importState=importState,  exportState=exportState, rc=localrc)
@@ -172,13 +173,16 @@ module vertical_macrobenthos_component
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
 
-    call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
+    call ESMF_InfoGetFromHost(importState, info=info, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_InfoGet(info, key='foreign_grid_field_name', &
       ispresent=isPresent, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (isPresent) then
       call MOSSCO_StateGetForeignGrid(importState, &
-        attributeName='foreign_grid_field_name', geomType=geomType, grid=grid, &
+        key='foreign_grid_field_name', geomType=geomType, grid=grid, &
         mesh=mesh, owner=trim(name), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -221,6 +225,7 @@ module vertical_macrobenthos_component
       field = ESMF_FieldEmptyCreate(name=itemNameList(i), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+
       call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -247,7 +252,10 @@ module vertical_macrobenthos_component
       field = ESMF_FieldEmptyCreate(name=itemNameList(i), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+      call ESMF_InfoGetFromHost(field, info=info, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_InfoSet(info, key='creator', value=trim(name), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call ESMF_StateAddReplace(exportState, (/field/), rc=localrc)
@@ -278,42 +286,39 @@ module vertical_macrobenthos_component
     type(ESMF_Clock)        :: clock
     integer(ESMF_KIND_I4)   :: localrc
     integer(ESMF_KIND_I4)   :: waittime
+    type(ESMF_Info)         :: info 
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
       importState=importState, exportState=exportState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeGet(gridComp, name='wait_time', &
-      value=waittime, defaultValue=0, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_InfoGetFromHost(gridComp, info=info, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_InfoGet(info, key='wait_time', &
+      value=waittime, default=0, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
 !> @todo do we need an #ifdef __GNUC__ here as this is a gnu extension?
     if (waittime > 0) call sleep(waittime)
 
     call ESMF_ClockGet(clock, stopTime=stopTime, rc=rc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     if (stopTime>currTime) then
       call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
 
     call ESMF_StateValidate(exportState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     !! Finally, log the successful completion of this function
     call MOSSCO_CompExit(gridComp, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine Run
 
