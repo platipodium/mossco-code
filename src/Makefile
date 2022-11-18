@@ -20,7 +20,7 @@ EXTRA_DIST=README Rules.make
 SUBDIRS=include utilities drivers patch
 
 ifeq ($(MOSSCO_ESMF),true)
-SUBDIRS += components mediators connectors nuopc
+SUBDIRS += components mediators connectors #nuopc
 endif
 
 .PHONY: subdirs $(SUBDIRS)
