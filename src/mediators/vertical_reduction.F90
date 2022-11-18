@@ -3,7 +3,8 @@
 !> @file vertical_reduction.F90
 !!
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2016, 2017 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2021-2022 Helmholtz-Zentrum Hereon
+!> @copyright Copyright (C) 2017-2021 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -29,7 +30,7 @@ module vertical_reduction
   use mossco_state
   use mossco_component
   use mossco_config
-  use mossco_attribute
+  use mossco_info
   use mossco_logging
   use mossco_grid
 
@@ -82,18 +83,18 @@ module vertical_reduction
     character(len=ESMF_MAXSTR)  :: name
     type(ESMF_Time)             :: currTime
     integer(ESMF_KIND_I4)       :: localrc
+    type(ESMF_Info)             :: info 
 
     call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    InitializePhaseMap(1) = "IPDv00p1=1"
-
-    call ESMF_AttributeAdd(cplComp, convention="NUOPC", purpose="General", &
-      attrList=(/"InitializePhaseMap"/), rc=localrc)
+    call ESMF_InfoGetFromHost(cplComp, info=info, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(cplComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
-      convention="NUOPC", purpose="General", rc=localrc)
+    InitializePhaseMap(1) = "IPDv00p1=1"
+
+    call ESMF_InfoSet(info, key="NUOPC/General/InititalizePhaseMap", &
+      values=InitializePhaseMap, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_StateReconcile(importState, rc=localrc)
@@ -128,6 +129,7 @@ module vertical_reduction
     logical                         :: labelIsPresent, isPresent, fileIsPresent
     character(len=ESMF_MAXSTR), pointer :: filterExcludeList(:) => null()
     character(len=ESMF_MAXSTR), pointer :: filterIncludeList(:) => null()
+    type(ESMF_Info)                 :: info
 
     rc=ESMF_SUCCESS
 
@@ -196,27 +198,32 @@ module vertical_reduction
       return
     end select
 
+    call ESMF_InfoGetFromHost(cplComp, info=info, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
     !> Add all configurable options as attributes
     if (associated(filterExcludeList)) then
-      call MOSSCO_AttributeSet(cplComp, 'filter_pattern_exclude', filterExcludeList, localrc)
+      call ESMF_InfoSet(info, key='filter_pattern_exclude', values=filterExcludeList, rc=localrc)
+      !call MOSSCO_AttributeSet(cplComp, 'filter_pattern_exclude', filterExcludeList, localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
 
     if (associated(filterIncludeList)) then
-      call MOSSCO_AttributeSet(cplComp, 'filter_pattern_include', filterIncludeList, localrc)
+      call ESMF_InfoSet(info, key='filter_pattern_include', values=filterIncludeList, rc=localrc)
+      !call MOSSCO_AttributeSet(cplComp, 'filter_pattern_include', filterIncludeList, localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
     endif
 
-    call ESMF_AttributeSet(cplComp, 'operator_type', trim(operator), rc=localrc)
+    call ESMF_InfoSet(info, key='operator_type', value=trim(operator), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(cplComp, 'scale_factor', scale_factor, rc=localrc)
+    call ESMF_InfoSet(info, key='scale_factor', value=scale_factor, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(cplComp, 'scale_depth', scale_depth, rc=localrc)
+    call ESMF_InfoSet(info, key='scale_depth', value=scale_depth, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(cplComp, 'add_offset', offset, rc=localrc)
+    call ESMF_InfoSet(info, key='add_offset', value=offset, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_CompExit(cplComp, rc=localrc)
@@ -306,13 +313,13 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     integer(ESMF_KIND_I4)                  :: i, j, jj, rank
     integer(ESMF_KIND_I4)                  :: importFieldCount, exportFieldCount, fieldCount
 
-    logical                                :: isPresent, tagOnly_
+    logical                                :: isPresent, tagOnly_, isArray
     character(len=ESMF_MAXSTR), pointer    :: filterExcludeList(:) => null()
     character(len=ESMF_MAXSTR), pointer    :: filterIncludeList(:) => null()
     character(len=ESMF_MAXSTR), pointer    :: checkExcludeList(:) => null()
 
     real(ESMF_KIND_R8)                     :: offset, scale_factor, scale_depth
-    integer(ESMF_KIND_I4)                  :: localrc, rc_, matchIndex, matchScore
+    integer(ESMF_KIND_I4)                  :: localrc, rc_, matchIndex, matchScore, size
     integer(ESMF_KIND_I8)                  :: advanceCount
     type(ESMF_Clock)                       :: clock
     type(ESMF_Time)                        :: startTime, currTime
@@ -321,6 +328,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     type(ESMF_FieldStatus_Flag)            :: fieldStatus
     type(ESMF_Grid)                        :: grid
     type(ESMF_Field)                       :: exportField
+    type(ESMF_Info)                        :: info
 
     rc_ = ESMF_SUCCESS
     if (present(rc)) rc = rc_
@@ -328,16 +336,19 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     call ESMF_CplCompGet(cplComp, name=name, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_AttributeGet(cplComp, name='add_offset', defaultValue=0.0D0, value=offset, rc=localrc)
+    call ESMF_InfoGetFromHost(cplComp, info=info, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_AttributeGet(cplComp, name='operator_type', defaultValue='average', value=operator, rc=localrc)
+    call ESMF_InfoGet(info, key='add_offset', default=0.0D0, value=offset, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_AttributeGet(cplComp, name='scale_factor', defaultValue=1.0D0, value=scale_factor, rc=localrc)
+    call ESMF_InfoGet(info, key='operator_type', default='average', value=operator, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_AttributeGet(cplComp, name='scale_depth', defaultValue=0.0D0, value=scale_depth, rc=localrc)
+    call ESMF_InfoGet(info, key='scale_factor', default=1.0D0, value=scale_factor, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_InfoGet(info, key='scale_depth', default=0.0D0, value=scale_depth, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_CplCompGet(cplComp, clock=clock, rc=localrc)
@@ -359,10 +370,18 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
       advanceCount = 0
     endif
 
-    call MOSSCO_AttributeGet(cplComp, 'filter_pattern_include', filterIncludeList, rc=localrc)
+    call ESMF_InfoGetArrayMeta(info, key='filter_pattern_include', isArray=isArray, size=size, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call MOSSCO_AttributeGet(cplComp, 'filter_pattern_exclude', filterExcludeList, rc=localrc)
+    allocate(filterIncludeList(size))
+    call ESMF_InfoGet(info, key='filter_pattern_include', values=filterIncludeList, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_InfoGetArrayMeta(info, key='filter_pattern_exclude', isArray=isArray, size=size, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    allocate(filterExcludeList(size))
+    call ESMF_InfoGet(info, key='filter_pattern_exclude', values=filterExcludeList, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call MOSSCO_StateGet(importState, fieldList=importFieldList, fieldCount=importFieldCount, &
@@ -465,6 +484,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     type(ESMF_DistGrid)                    :: distGrid
     type(ESMF_Index_Flag)                  :: indexFlag
     character(len=ESMF_MAXSTR), pointer    :: includeList(:) => null()
+    type(ESMF_Info)                        :: info
 
     rc_ = ESMF_SUCCESS
     if (present(rc)) rc = rc_
@@ -472,16 +492,16 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     call ESMF_CplCompGet(cplComp, name=name, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_AttributeGet(cplComp, 'add_offset', value=offset, defaultValue=0.0D0, rc=localrc)
+    call ESMF_InfoGet(info, 'add_offset', value=offset, default=0.0D0, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_AttributeGet(cplComp, name='operator_type', defaultValue='average', value=operator, rc=localrc)
+    call ESMF_InfoGet(info, key='operator_type', default='average', value=operator, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_AttributeGet(cplComp, name='scale_factor', defaultValue=1.0D0, value=scale_factor, rc=localrc)
+    call ESMF_InfoGet(info, key='scale_factor', default=1.0D0, value=scale_factor, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_AttributeGet(cplComp, name='scale_depth', defaultValue=1.0D0, value=scale_depth, rc=localrc)
+    call ESMF_InfoGet(info, key='scale_depth', default=1.0D0, value=scale_depth, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call ESMF_CplCompGet(cplComp, clock=clock, rc=localrc)
@@ -776,6 +796,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     type(ESMF_FieldStatus_Flag)            :: fieldStatus
     type(ESMF_Grid)                        :: importGrid, exportGrid
     type(ESMF_TypeKind_Flag)               :: typeKind
+    type(ESMF_Info)                        :: info 
 
     scale_factor = 1.0D0
     offset_ = 0.0D0
@@ -832,17 +853,20 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     call ESMF_FieldEmptyComplete(exportfield, typeKind=typeKind, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call MOSSCO_FieldCopyAttributes(exportField, importField, rc=localrc)
+    call MOSSCO_FieldCopyInfo(exportField, importField, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     call MOSSCO_FieldInitialize(exportField, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_AttributeSet(exportField, 'cell_methods', &
-      'vertical: '//trim(operator), rc=localrc)
+    call ESMF_InfoGetFromHost(exportField, info=info, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call ESMF_AttributeSet(exportField, 'creator', trim(name_), rc=localrc)
+    call ESMF_InfoSet(info, key='cell_methods', &
+      value='vertical: '//trim(operator), rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_InfoSet(info, key='creator', value=trim(name_), rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     write(message,'(A)') trim(name)//' created '
@@ -852,7 +876,10 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     !> must be multiplie by the unit of layer_height, which is here assumed to be 'm'
     if (trim(operator) == 'total') then
 
-      call ESMF_AttributeGet(importfield, 'units', unitString, defaultValue='', rc=localrc)
+      call ESMF_InfoGetFromHost(importField, info=info, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call ESMF_InfoGet(info, key='units', value=unitString, default='', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       call MOSSCO_CleanUnit(unitString, rc=localrc)
@@ -871,7 +898,11 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
           unitString = trim(unitString)//' m'
         endif
       endif
-      call ESMF_AttributeSet(exportfield, name='units', value=trim(unitString),  rc=localrc)
+
+      call ESMF_InfoGetFromHost(importField, info=info, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call ESMF_InfoSet(info, key='units', value=trim(unitString),  rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       call MOSSCO_MessageAdd(message,' with unit '//trim(unitString))
