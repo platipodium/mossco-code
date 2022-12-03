@@ -115,10 +115,12 @@ else
 
 $(info Using ESMFMKFILE ... $(ESMFMKFILE))
 
-	# Find the communicator and determine whether this is parallel device, this
-	# is still buggy with mpiifort and needs improvement
-  ESMF_COMM:=$(strip $(shell grep "^# ESMF_COMM:" $(ESMFMKFILE) | cut -d':' -f2-))
+# Find the communicator and determine whether this is parallel device, this
+# is still buggy with mpiifort and needs improvement
+ESMF_COMM:=$(strip $(shell grep '^. ESMF_COMM:' $(ESMFMKFILE) | cut -d':' -f2-))
 $(info Using ESMF_COMM ... $(ESMF_COMM))
+ESMF_OS:=$(strip $(shell grep '^. ESMF_OS:' $(ESMFMKFILE) | cut -d':' -f2-))
+$(info Using ESMF_OS ... $(ESMF_OS))
 $(info Using ESMF_F90COMPILER ... $(ESMF_F90COMPILER))
 
   ifeq ("$(ESMF_COMM)","mpiuni")
@@ -184,7 +186,7 @@ $(info Using ESMF_F90COMPILER ... $(ESMF_F90COMPILER))
   $(info Using ESMF_FC ... $(ESMF_FC))
   $(info Using ESMF_CC ... $(ESMF_CC))
 
-  ESMF_OPENMP:=$(strip $(shell grep "^# ESMF_OPENMP:" $(ESMFMKFILE) | cut -d':' -f2-))
+  ESMF_OPENMP:=$(strip $(shell grep '^. ESMF_OPENMP:' $(ESMFMKFILE) | cut -d':' -f2-))
   ifeq ("$(ESMF_OPENMP)","OFF")
     export MOSSCO_OMP:=false
   else
@@ -192,12 +194,12 @@ $(info Using ESMF_F90COMPILER ... $(ESMF_F90COMPILER))
     $(info Using ESMF_OPENMP ... $(ESMF_OPENMP))
   endif
 
-  ESMF_NETCDF:=$(strip $(shell grep "^# ESMF_NETCDF:" $(ESMFMKFILE) | cut -d':' -f2-))
+  ESMF_NETCDF:=$(strip $(shell grep '^. ESMF_NETCDF:' $(ESMFMKFILE) | cut -d':' -f2-))
   ifneq ("$(ESMF_NETCDF)","")
     export MOSSCO_NETCDF:=true
-    export MOSSCO_NETCDF_INCLUDE := $(strip $(shell grep "^# ESMF_NETCDF_INCLUDE:" $(ESMFMKFILE) | cut -d':' -f2-))
-    export MOSSCO_NETCDF_LIBS := $(strip $(shell grep "^# ESMF_NETCDF_LIBS:" $(ESMFMKFILE) | cut -d':' -f2-))
-    export MOSSCO_NETCDF_LIBPATH := $(strip $(shell grep "^# ESMF_NETCDF_LIBPATH:" $(ESMFMKFILE) | cut -d':' -f2-))
+    export MOSSCO_NETCDF_INCLUDE := $(strip $(shell grep '^. ESMF_NETCDF_INCLUDE:' $(ESMFMKFILE) | cut -d':' -f2-))
+    export MOSSCO_NETCDF_LIBS := $(strip $(shell grep '^. ESMF_NETCDF_LIBS:' $(ESMFMKFILE) | cut -d':' -f2-))
+    export MOSSCO_NETCDF_LIBPATH := $(strip $(shell grep '^. ESMF_NETCDF_LIBPATH:' $(ESMFMKFILE) | cut -d':' -f2-))
     $(info Using ESMF_NETCDF_INCLUDE ... $(ESMF_NETCDF_INCLUDE))
     $(info Using ESMF_NETCDF_LIBPATH ... $(ESMF_NETCDF_LIBPATH))
   else
@@ -499,7 +501,15 @@ ifeq ($(MOSSCO_GETM),true)
   #  GETM_LIBS += -lgotm_fabm_prod $(FABM_LIBS)
   #endif
   #GETM_LIBS += -lturbulence -lutil -loutput_manager -lfield_manager -lyaml
-  GETM_LIBS += -lgetm_all
+  #
+  # Problems with linking on arm64 prevent using the combined libgetm_all
+  #ifneq ($(ESMF_OS),"Darwin")
+  #  GETM_LIBS += -lgetm_all
+  #else
+    GETM_LIBS += -lgetm_esmf_prod -lgetm_prod -loutput_prod -lmeteo_prod -l3d_prod \
+      -l2d_prod -lwaves_prod -lles_prod -lpool_prod -ldomain_prod -linput_prod \
+      -lncdfio_prod -lfutils_prod -L$(GOTM_LIBRARY_PATH) $(GOTM_LIBS)
+  #endif
 
   ifeq ($(FORTRAN_COMPILER), XLF)
     export STATIC += -WF,$(GETM_STATIC_DEFINES)
