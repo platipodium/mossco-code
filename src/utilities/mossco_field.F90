@@ -171,12 +171,11 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, options, rc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
       call MOSSCO_MessageAdd(message, ' ['//stringValue)
-      call MOSSCO_MessageAdd(message, ']'//name)
+      call MOSSCO_MessageAdd(message, ']')
     endif
-  else
-    call MOSSCO_MessageAdd(message,' '//name)
   endif
-
+  call MOSSCO_MessageAdd(message,' '//name)
+  
   !> Add information on geom
   call MOSSCO_StringMatch('geom', options_, isPresent, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
