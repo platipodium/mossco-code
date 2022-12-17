@@ -23,6 +23,7 @@ build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
     - echo "Downloading the latest version of main branch ..."
+    - rm -rf ${MOSSCO_DIR}
     - git clone https://codebase.helmholtz.cloud/mossco/code.git ${MOSSCO_DIR}
     - echo "Building MOSSCO ..."
     - make -j8 -C ${MOSSCO_DIR} all
