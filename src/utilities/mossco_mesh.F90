@@ -44,6 +44,7 @@ subroutine MOSSCO_MeshString(mesh, message, kwe, length, rc)
   integer(ESMF_KIND_I4)   :: rc_, length_, spatialDim, parametricDim, localrc
   integer(ESMF_KIND_I4)   :: numOwnedNodes, numOwnedElements
   character(ESMF_MAXSTR)  :: string, name, formatString
+  type(ESMF_Info)         :: info
 
   logical                            :: isPresent
 
@@ -52,28 +53,18 @@ subroutine MOSSCO_MeshString(mesh, message, kwe, length, rc)
 
   isPresent=.false.
 
-#if ESMF_VERSION_MAJOR < 8 || (ESMF_VERSION_MAJOR == 8 && ESMF_VERSION_MINOR == 0)
-  ! Before ESMF 8, meshes did not have a name property
-  write(name,'(A)') 'mesh'
-#else
-  call ESMF_MeshGet(mesh, name=name, rc=localrc)
+  call ESMF_InfoGetFromHost(mesh, info=info, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-#endif
 
-  !> @todo there are no attributes, there is a ticket requested with ESMF
+  call ESMF_InfoGet(info, key="creator", value=string, default="unknown", rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-  !call ESMF_AttributeGet(mesh, name='creator', isPresent=isPresent, rc=localrc)
-  !_MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-
-  if (isPresent) then
-    !call ESMF_AttributeGet(mesh, name='creator', value=string, rc=localrc)
-    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
-    call MOSSCO_MessageAdd(message, ' ['//string)
-    call MOSSCO_MessageAdd(message, ']'//name)
-  else
-    call MOSSCO_MessageAdd(message,' '//name)
-  endif
-
+  call ESMF_InfoGet(info, key="name", value=name, default="mesh", rc=localrc)
+  _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+ 
+  call MOSSCO_MessageAdd(message, ' ['//string)
+  call MOSSCO_MessageAdd(message, ']'//name)
+  
   call ESMF_MeshGet(mesh, parametricDim=parametricDim, spatialDim=spatialDim, &
     numOwnedNodes=numOwnedNodes, numOwnedElements=numOwnedElements, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
