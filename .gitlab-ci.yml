@@ -1,0 +1,60 @@
+# GitLab CI configuration file for building and running MOSSCO based
+# on a docker/ubuntu/gfortran/openmpi image
+# 
+# @author Carsten Lemmen <carsten.lemmen@hereon.de
+# @copyright 2022 Helmholtz-Zentrum hereon
+# @license CC-0 - Creative Commons Zero
+# SPDX-FileCopyrightText 2022 Helmholtz-Zentrum hereon
+# SPDX-License-Identifier: CC-0
+
+stages:          # List of stages for jobs, and their order of execution
+  - build
+  - test
+  - deploy
+
+default: 
+    image: registry.hzdr.de/mossco/esmf-docker/esmf:v8.3.0-openmpi
+
+variables:
+    ESMFMKFILE: /usr/local/lib/esmf.mk
+    MOSSCO_DIR: ${CI_BUILDS_DIR}/mossco/code
+    
+build-job:       # This job runs in the build stage, which runs first.
+  stage: build
+  script:
+    #- echo "Downloading the latest version of main branch ..."
+    #- rm -rf ${MOSSCO_DIR}
+    #- mkdir -p ${CI_BUILDS_DIR}/mossco
+    #- git clone https://codebase.helmholtz.cloud/mossco/code.git ${MOSSCO_DIR}
+    - echo "Obtaining external codes ..."
+    - make -C ${MOSSCO_DIR} external
+    - echo "Building MOSSCO ..."
+    - make -k -C  ${MOSSCO_DIR} clean
+    - make -C ${MOSSCO_DIR}/src/utilities
+    - make -C ${MOSSCO_DIR} all
+    - make -C ${MOSSCO_DIR} install
+
+unit-test-job:   # This job runs in the test stage.
+  stage: test    # It only starts when the job in the build stage completes successfully.
+  script:
+    - echo "Building tests ..."
+    - make -C ${MOSSCO_DIR} examples
+    - echo "@todo actually run tests!"
+
+lint-test-job:   # This job also runs in the test stage.
+  stage: test    # It can run at the same time as unit-test-job (in parallel).
+  script:
+    - echo "Linting code... This will take about 10 seconds."
+    - sleep 10
+    - echo "No lint issues found."
+
+deploy-job:      # This job runs in the deploy stage.
+  stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
+  script:
+    - echo "Deploying application..."
+    - echo "Application successfully deployed."
+  artifacts:
+        paths:
+            - ${MOSSCO_DIR}/lib
+            - ${MOSSCO_DIR}/bin
+
