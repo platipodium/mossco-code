@@ -1,11 +1,9 @@
 # GitLab CI configuration file for building and running MOSSCO based
 # on a docker/ubuntu/gfortran/openmpi image
 # 
-# @author Carsten Lemmen <carsten.lemmen@hereon.de
-# @copyright 2022 Helmholtz-Zentrum hereon
-# @license CC-0 - Creative Commons Zero
 # SPDX-FileCopyrightText 2022 Helmholtz-Zentrum hereon
-# SPDX-License-Identifier: CC-0
+# SPDX-License-Identifier: CC0-1.0
+# SPDX-FileContributor Carsten Lemmen <carsten.lemmen@hereon.de
 
 stages:          # List of stages for jobs, and their order of execution
   - build
@@ -13,7 +11,7 @@ stages:          # List of stages for jobs, and their order of execution
   - deploy
 
 default: 
-    image: registry.hzdr.de/mossco/esmf-docker/esmf:v8.3.0-openmpi
+    image: registry.hzdr.de/mossco/esmf-docker/esmf:v8.4.0-mpich
 
 variables:
     ESMFMKFILE: /usr/local/lib/esmf.mk
