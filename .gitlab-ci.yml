@@ -22,10 +22,10 @@ variables:
 build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
-    - echo "Downloading the latest version of main branch ..."
-    - rm -rf ${MOSSCO_DIR}
-    - mkdir -p ${CI_BUILDS_DIR}/mossco
-    - git clone https://codebase.helmholtz.cloud/mossco/code.git ${MOSSCO_DIR}
+    #- echo "Downloading the latest version of main branch ..."
+    #- rm -rf ${MOSSCO_DIR}
+    #- mkdir -p ${CI_BUILDS_DIR}/mossco
+    #- git clone https://codebase.helmholtz.cloud/mossco/code.git ${MOSSCO_DIR}
     - echo "Building MOSSCO ..."
     - make -j8 -C ${MOSSCO_DIR} all
     - make -j8 -C ${MOSSCO_DIR} install
