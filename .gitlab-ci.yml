@@ -26,8 +26,11 @@ build-job:       # This job runs in the build stage, which runs first.
     #- rm -rf ${MOSSCO_DIR}
     #- mkdir -p ${CI_BUILDS_DIR}/mossco
     #- git clone https://codebase.helmholtz.cloud/mossco/code.git ${MOSSCO_DIR}
+    - echo "Obtaining external codes ..."
+    - make -C ${MOSSCO_DIR} external
     - echo "Building MOSSCO ..."
     - make -k -C  ${MOSSCO_DIR} clean
+    - make -C ${MOSSCO_DIR}/src/utilities
     - make -C ${MOSSCO_DIR} all
     - make -C ${MOSSCO_DIR} install
 
@@ -35,7 +38,7 @@ unit-test-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
   script:
     - echo "Building tests ..."
-    - make -j8 -C ${MOSSCO_DIR} examples
+    - make -C ${MOSSCO_DIR} examples
     - echo "@todo actually run tests!"
 
 lint-test-job:   # This job also runs in the test stage.
