@@ -1,9 +1,10 @@
 # This Makefile snippet is part of MOSSCO; definition of MOSSCO-wide
 # make rules
 #
-# @copyright (C) 2021-2022 Helmholtz-Zentrum Hereon
-# @copyright (C) 2013-2021 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen <carsten.lemmen@hereon.de>
+# SPDX-FileCopyrightText 2021-2022 Helmholtz-Zentrum Hereon
+# SPDX-FileCopyrightText 2013-2021 Helmholtz-Zentrum Geesthacht
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileContributor Carsten Lemmen <carsten.lemmen@hereon.de
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the
