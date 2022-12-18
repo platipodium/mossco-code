@@ -11,7 +11,7 @@ stages:          # List of stages for jobs, and their order of execution
   - deploy
 
 default: 
-    image: registry.hzdr.de/mossco/esmf-docker/esmf:v8.4.0-mpich
+    image: registry.hzdr.de/mossco/esmf-docker/esmf:v8.4.0-openmpi
 
 variables:
     ESMFMKFILE: /usr/local/lib/esmf.mk
@@ -20,10 +20,6 @@ variables:
 build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
-    #- echo "Downloading the latest version of main branch ..."
-    #- rm -rf ${MOSSCO_DIR}
-    #- mkdir -p ${CI_BUILDS_DIR}/mossco
-    #- git clone https://codebase.helmholtz.cloud/mossco/code.git ${MOSSCO_DIR}
     - echo "Obtaining external codes ..."
     - make -C ${MOSSCO_DIR} external
     - echo "Building MOSSCO ..."
