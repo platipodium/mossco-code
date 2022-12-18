@@ -1,8 +1,9 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright 2021-2022 Helmholtz-Zentrum Hereon
-# @copyright 2013-2021 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen <carsten.lemmen@hereon.de>
+# SPDX-FileCopyrightText 2021-2022 Helmholtz-Zentrum Hereon
+# SPDX-FileCopyrightText 2013-2021 Helmholtz-Zentrum Geesthacht
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileContributor Carsten Lemmen <carsten.lemmen@hereon.de
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -43,7 +44,7 @@ LIBMOSSCO_UTIL_OBJS+= 							\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_loc.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_routehandle.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_locstream.o) \
-  $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(ESMF_GridCreate3D.o)
+    $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(ESMF_GridCreate3D.o)
 
 ifeq ($(MOSSCO_NETCDF),true)
 LIBMOSSCO_UTIL_OBJS+= 							\
