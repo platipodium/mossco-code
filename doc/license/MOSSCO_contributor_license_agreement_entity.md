@@ -1,3 +1,10 @@
+<!--
+SPDX-FileCopyrightText 2021-2022 Helmholtz-Zentrum Hereon
+SPDX-FileCopyrightText 2013-2021 Helmholtz-Zentrum Geesthacht
+SPDX-License-Identifier: CC0-1.0
+SPDX-FileContributor Carsten Lemmen <carsten.lemmen@hereon.de
+-->
+
 # MOSSCO Entity Contributor License Agreement
 
 Thank you for your interest in contributing to MOSSCO ("We" or "Us"). This contributor agreement ("Agreement") documents the rights granted by contributors to Us. To make this document effective, please sign it and send it to Us by email, following the instructions at [www.mossco.de/license](http://www.mossco.de/license). This is a legally binding document, so please read it carefully before agreeing to it. The Agreement may cover more than one software project managed by Us.

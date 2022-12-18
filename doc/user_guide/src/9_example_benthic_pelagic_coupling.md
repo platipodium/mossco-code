@@ -1,3 +1,10 @@
+<!--
+SPDX-FileCopyrightText 2021-2022 Helmholtz-Zentrum Hereon
+SPDX-FileCopyrightText 2013-2021 Helmholtz-Zentrum Geesthacht
+SPDX-License-Identifier: CC0-1.0
+SPDX-FileContributor Carsten Lemmen <carsten.lemmen@hereon.de
+-->
+
 Benthic-pelagic coupling is a central feature, that is supported by MOSSCO. In order to keep most flexibility and modularity, the coupling is distribituted to a number of coupler components. MOSSCO aims to support 1-way and 2-way coupling in the following configurations:
 
   a) only sediment
