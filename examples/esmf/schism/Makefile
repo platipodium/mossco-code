@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2021-2022 Helmholtz-Zentrum Hereon
+# @copyright (C) 2021-2023 Helmholtz-Zentrum Hereon
 # @copyright (C) 2018-2021 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hereon.de>
 # @author Richard Hofmeister
@@ -102,13 +102,14 @@ all:  schism_mossco config
 
 schism_mossco:  toplevel_component.o main.o $(OBJ)
 	echo objcopy --redefine-sym xerbla_=schism_lap_xerbla_ ${SCHISM_BUILD_DIR}/lib/libhydro.a
-	$(F90) $(CPPFLAGS) $^ -o $@ $(MOSSCO_LDFLAGS) $(LDFLAGS) $(LIBS)
+	$(F90) $(CPPFLAGS) $(F90FLAGS) $^ -o $@ $(MOSSCO_LDFLAGS) $(LDFLAGS) $(LIBS)
 
 toplevel_component.o: cap toplevel_component.F90
-	$(F90) $(CPPFLAGS) toplevel_component.F90 -c -o $@ $(MOSSCO_LDFLAGS) $(LDFLAGS) $(LIBS)
+	$(F90) $(CPPFLAGS) $(F90FLAGS) toplevel_component.F90 -c -o $@ $(MOSSCO_LDFLAGS) $(LDFLAGS) $(LIBS)
 
 cap:
-	make -C $(SCHISM_ESMF_DIR)/src esmf
+	#make -C $(SCHISM_ESMF_DIR)/src esmf
+	make -C $(SCHISM_ESMF_DIR) install-esmf
 
 # Generic and cleanup rules
 
