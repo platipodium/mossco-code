@@ -747,11 +747,11 @@ module toplevel_component
 
     !> Link attributes of exportState of the topLevel component (which contains metadata)
     !> to the netcdf component's import state
-    call ESMF_AttributeLink(importState, gridImportStateList(1), rc=localrc)
+    !call ESMF_AttributeLink(importState, gridImportStateList(1), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_AttributeLink(gridComp, gridImportStateList(1), rc=localrc)
+    !call ESMF_AttributeLink(gridComp, gridImportStateList(1), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -765,11 +765,11 @@ module toplevel_component
     call MOSSCO_CompLog(gridComp, rc=localrc)
     !> Link attributes of exportState of the topLevel component (which contains metadata)
     !> to the netcdf component's import state
-    call ESMF_AttributeLink(importState, gridImportStateList(2), rc=localrc)
+    !call ESMF_AttributeLink(importState, gridImportStateList(2), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_AttributeLink(gridComp, gridImportStateList(2), rc=localrc)
+    !call ESMF_AttributeLink(gridComp, gridImportStateList(2), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -783,11 +783,11 @@ module toplevel_component
     call MOSSCO_CompLog(gridComp, rc=localrc)
     !> Link attributes of exportState of the topLevel component (which contains metadata)
     !> to the netcdf component's import state
-    call ESMF_AttributeLink(importState, gridImportStateList(3), rc=localrc)
+    !call ESMF_AttributeLink(importState, gridImportStateList(3), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_AttributeLink(gridComp, gridImportStateList(3), rc=localrc)
+    !call ESMF_AttributeLink(gridComp, gridImportStateList(3), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1191,15 +1191,15 @@ module toplevel_component
     !        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     !enddo
 
-    call ESMF_AttributeWrite(gridComp, convention='CIM 1.5', purpose='ModelComp', &
-      attwriteflag=ESMF_ATTWRITE_JSON, rc=localrc)
+    !call ESMF_AttributeWrite(gridComp, convention='CIM 1.5', purpose='ModelComp', &
+    !  attwriteflag=ESMF_ATTWRITE_JSON, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
       if (rc .ne. ESMF_RC_LIB_NOT_PRESENT) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     endif
 
     do i=1,numGridComp
-      call ESMF_AttributeWrite(gridCompList(i), 'CIM 1.5', 'ModelComp', &
-        attwriteflag=ESMF_ATTWRITE_JSON, rc=localrc)
+      !call ESMF_AttributeWrite(gridCompList(i), 'CIM 1.5', 'ModelComp', &
+      !  attwriteflag=ESMF_ATTWRITE_JSON, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
         if (rc .ne. ESMF_RC_LIB_NOT_PRESENT) call ESMF_Finalize(endflag=ESMF_END_ABORT)
       endif
