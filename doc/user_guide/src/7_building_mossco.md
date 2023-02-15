@@ -1,3 +1,10 @@
+<!--
+SPDX-FileCopyrightText 2021-2022 Helmholtz-Zentrum Hereon
+SPDX-FileCopyrightText 2013-2021 Helmholtz-Zentrum Geesthacht
+SPDX-License-Identifier: CC0-1.0
+SPDX-FileContributor Carsten Lemmen <carsten.lemmen@hereon.de
+-->
+
 As described in the QuickStart manual, "make external" will download all supported model codes and MOSSCO's Make system will automatically take care of their correct compilation. For users, who want to use their own versions of the model codes, various environment variables can be set to control their inclusion. Below the precedence of possible environment variables for the different models is shown.
 
 FABM

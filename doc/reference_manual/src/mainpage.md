@@ -1,3 +1,10 @@
+<!--
+SPDX-FileCopyrightText 2021-2022 Helmholtz-Zentrum Hereon
+SPDX-FileCopyrightText 2013-2021 Helmholtz-Zentrum Geesthacht
+SPDX-License-Identifier: CC0-1.0
+SPDX-FileContributor Carsten Lemmen <carsten.lemmen@hereon.de
+-->
+
 @section what What is MOSSCO?
 
 1. The Modular System for Shelves and Coasts.

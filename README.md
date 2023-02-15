@@ -1,3 +1,10 @@
+<!--
+SPDX-FileCopyrightText 2021-2022 Helmholtz-Zentrum Hereon
+SPDX-FileCopyrightText 2013-2021 Helmholtz-Zentrum Geesthacht
+SPDX-License-Identifier: CC0-1.0
+SPDX-FileContributor Carsten Lemmen <carsten.lemmen@hereon.de
+-->
+
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.597629.svg)](https://doi.org/10.5281/zenodo.597629)
 [![Build Status](https://travis-ci.org/platipodium/mossco-code.svg?branch=master)](https://travis-ci.org/platipodium/mossco-code)
 

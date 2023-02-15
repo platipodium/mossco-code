@@ -11,7 +11,7 @@ stages:          # List of stages for jobs, and their order of execution
   - deploy
 
 default: 
-    image: registry.hzdr.de/mossco/esmf-docker/esmf:v8.4.0-mpich
+    image: registry.hzdr.de/mossco/esmf-docker/esmf:v8.4.0-openmpi
 
 variables:
     ESMFMKFILE: /usr/local/lib/esmf.mk
@@ -19,23 +19,31 @@ variables:
     
 build-job:       # This job runs in the build stage, which runs first.
   stage: build
-  script:
-    #- echo "Downloading the latest version of main branch ..."
-    #- rm -rf ${MOSSCO_DIR}
-    #- mkdir -p ${CI_BUILDS_DIR}/mossco
-    #- git clone https://codebase.helmholtz.cloud/mossco/code.git ${MOSSCO_DIR}
+  before_script: 
+    - cat ${ESMFMKFILE}
     - echo "Obtaining external codes ..."
     - make -C ${MOSSCO_DIR} external
+    - make -C ${MOSSCO_DIR} info
+  script:
     - echo "Building MOSSCO ..."
     - make -k -C  ${MOSSCO_DIR} clean
     - make -C ${MOSSCO_DIR}/src/utilities
     - make -C ${MOSSCO_DIR} all
     - make -C ${MOSSCO_DIR} install
+  artifacts:
+        paths:
+            - ${MOSSCO_DIR}/include
+            - ${MOSSCO_DIR}/lib
+            - ${MOSSCO_DIR}/bin
 
 unit-test-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
+  before_script: 
+    - make -C ${MOSSCO_DIR} external
   script:
     - echo "Building tests ..."
+    - make -C ${MOSSCO_DIR} all
+    - make -C ${MOSSCO_DIR} install
     - make -C ${MOSSCO_DIR} examples
     - echo "@todo actually run tests!"
 

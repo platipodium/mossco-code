@@ -1,9 +1,12 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2013, 2014, 2015, 2016, 2017 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen <carsten.lemmen@hereon.de
-# @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
-# @author Knut Klingbeil, Institut für Ostseeforschung Warnemünde
+# SPDX-FileCopyrightText 2021-2022 Helmholtz-Zentrum Hereon
+# SPDX-FileCopyrightText 2013-2021 Helmholtz-Zentrum Geesthacht
+# SPDX-FileCopyrightText 2013-2022 Institut für Ostseeforschung Warnemünde
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileContributor Carsten Lemmen <carsten.lemmen@hereon.de
+# SPDX-FileContributor Knut Klingbeil <knut.klingbeil@io-warnemuende.de>
+# SPDX-FileContributor richard Hofmeister
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the

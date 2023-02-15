@@ -1,0 +1,34 @@
+# SPDX-FileCopyrightText 2022 Helmholtz-Zentrum Hereon
+# SPDX-License-Identifier: CC0-1.0
+# SPDX-FileContributor Carsten Lemmen <carsten.lemmen@hereon.de
+
+[tool.poetry]
+name = "mossco"
+version = "1.2.0"
+authors = ["Carsten Lemmen <carsten.lemmen@hereon.de>"]
+keywords = ["MOSSCO", "ESMF"]
+description = "Modular System for Shelves and Coasts"
+license = "GPL-3.0-or-later"
+readme = "README.md"
+homepage = "http://www.mossco.de"
+documentation = "http://www.mossco.de/doc"
+repository = "git@gitlab.hzdr.de:mossco/code.git"
+classifiers = [
+  "Development Status :: 7 - Upscaling",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+  "Natural Language :: English",
+  "Programming Language :: Fortran :: 2003",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Coupler",
+]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+reuse = "^1.1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

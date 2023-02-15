@@ -1,3 +1,10 @@
+<!--
+SPDX-FileCopyrightText 2021-2022 Helmholtz-Zentrum Hereon
+SPDX-FileCopyrightText 2013-2021 Helmholtz-Zentrum Geesthacht
+SPDX-License-Identifier: CC0-1.0
+SPDX-FileContributor Carsten Lemmen <carsten.lemmen@hereon.de
+-->
+
 # Recipe #2: GETM parallel in MOSSCO on ocean-fe (HZG)
 
 This recipe describes the the run of a parallel GETM test case from $MOSSCO_DIR/examples/generic

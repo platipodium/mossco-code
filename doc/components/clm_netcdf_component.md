@@ -1,3 +1,10 @@
+<!--
+SPDX-FileCopyrightText 2021-2022 Helmholtz-Zentrum Hereon
+SPDX-FileCopyrightText 2013-2021 Helmholtz-Zentrum Geesthacht
+SPDX-License-Identifier: CC0-1.0
+SPDX-FileContributor Carsten Lemmen <carsten.lemmen@hereon.de
+-->
+
 # CLM NetCDF component
 
 This component communicates information from the Climate Local Model (CLM) available in NetCDF format from the CoastDat2 database http://www.coastdat.de/data_all/index.php to a coupled system.

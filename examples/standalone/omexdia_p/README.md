@@ -1,3 +1,10 @@
+<!--
+SPDX-FileCopyrightText 2021-2022 Helmholtz-Zentrum Hereon
+SPDX-FileCopyrightText 2013-2021 Helmholtz-Zentrum Geesthacht
+SPDX-License-Identifier: CC0-1.0
+SPDX-FileContributor Carsten Lemmen <carsten.lemmen@hereon.de
+-->
+
 omexdia_p: performs a 10 year simulation running only FABM's omexdia_p model in the fabm_sediment_driver (without ESMF) for a constant input flux of organic material from the sediment surface. The boundary conditions are:
 
 variable                     | value  | unit

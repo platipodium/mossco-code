@@ -1,7 +1,9 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2015 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen <carsten.lemmen@hereon.de>
+# SPDX-FileCopyrightText 2021-2022 Helmholtz-Zentrum Hereon
+# SPDX-FileCopyrightText 2015-2021 Helmholtz-Zentrum Geesthacht
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileContributor Carsten Lemmen <carsten.lemmen@hereon.de
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the
