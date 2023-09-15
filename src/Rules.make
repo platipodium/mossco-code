@@ -1,7 +1,7 @@
 # This Makefile snippet is part of MOSSCO; definition of MOSSCO-wide
 # make rules
 #
-# SPDX-FileCopyrightText 2021-2022 Helmholtz-Zentrum Hereon
+# SPDX-FileCopyrightText 2021-2023 Helmholtz-Zentrum Hereon
 # SPDX-FileCopyrightText 2013-2021 Helmholtz-Zentrum Geesthacht
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileContributor Carsten Lemmen <carsten.lemmen@hereon.de
@@ -151,6 +151,9 @@ $(info Using ESMF_F90COMPILER ... $(ESMF_F90COMPILER))
       ifeq ($(ESMF_FC),x86_64)
         ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f4)
       endif
+      ifeq ($(ESMF_FC),arm64)
+        ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f4)
+      endif
       ifeq ($(ESMF_FC),)
         $(error $(ESMF_F90COMPILER) is *not* based on $(ESMF_COMM)!)
       endif
@@ -161,6 +164,10 @@ $(info Using ESMF_F90COMPILER ... $(ESMF_F90COMPILER))
       ifeq ($(ESMF_FC),x86_64)
         ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f4)
       endif
+      ifeq ($(ESMF_FC),arm64)
+        ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f4)
+      endif
+      
       ifeq ($(ESMF_FC),)
         $(error $(ESMF_F90COMPILER) is *not* based on $(ESMF_COMM)!)
       endif
@@ -169,6 +176,9 @@ $(info Using ESMF_F90COMPILER ... $(ESMF_F90COMPILER))
 		ifeq ($(ESMF_COMM),mpich)
       ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
       ifeq ($(ESMF_FC),x86_64)
+        ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f4)
+      endif
+      ifeq ($(ESMF_FC),arm64)
         ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f4)
       endif
       ifeq ($(ESMF_FC),)
