@@ -2,7 +2,7 @@
 !> @file main.F90
 !!
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2021-2022 Helmholtz-Zentrum Hereon
+!> @copyright Copyright (C) 2021-2023 Helmholtz-Zentrum hereon GmbH
 !> @copyright Copyright (C) 2013-2021 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !> @author Knut Klingbeil <knut.klingbeil@io-warnemuende.de>
