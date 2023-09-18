@@ -4,7 +4,7 @@
 # This script is is part of MOSSCO. It creates from YAML descriptions of
 # couplings a toplevel_component.F90 source file
 #
-# @copyright (C) 2021-2022 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2021-2023 Helmholtz-Zentrum hereon GmbH
 # @copyright (C) 2014-2021 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hereon.de>
 #
@@ -76,7 +76,7 @@ if not os.path.exists(filename):
     print ('File ' + filename + ' does not exist.')
     sys.exit(1)
 
-with open(filename,'rU') as fid:
+with open(filename,'r') as fid:
     print ('Using ' + filename + ' ...')
     config = yaml.load(fid, Loader=Loader)
 
