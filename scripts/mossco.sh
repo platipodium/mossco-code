@@ -4,8 +4,8 @@
 #        You may want to link this script into directory within your $PATH
 #
 # This computer program is part of MOSSCO.
-# @copyright Copyright (C) 2021-2023 Helmholtz-Zentrum Hereon
-# @copyright Copyright (C) 2014-2021 Helmholtz-Zentrum Geesthacht
+# @copyright Copyright (C) 2021-2023 Helmholtz-Zentrum hereon GmbH
+# @copyright Copyright (C) 2014-2021 Helmholtz-Zentrum Geesthacht GmbH
 # @author Carsten Lemmen, <carsten.lemmen@hereon>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -311,7 +311,8 @@ case ${SYSTEM} in
                 ;;
   SGE)    MPI_PREFIX="mpirun"
                 ;;
-  SLURM)  MPI_PREFIX="srun --propagate=STACK --mpi=pmi2"
+#  SLURM)  MPI_PREFIX="srun --propagate=STACK --mpi=pmi2"
+  SLURM)  MPI_PREFIX="srun"
                 ;;
   *)  MPI_PREFIX="mpirun"
                 ;;
@@ -509,14 +510,13 @@ EOT
       echo "# module load Intel/2019.0.117-GCC-7.3.0 ParaStationMPI/5.2.1-1" >> slurm.sh
       echo "# module load ESMF/7.1.0r" >> slurm.sh
     else
-      # Tested on strand.hzg.de
+      # Tested on strand.hereon.de
       if [ ${QUEUE} == undefined ]; then QUEUE=pCluster; fi
       echo \#SBATCH --partition=${QUEUE} >> slurm.sh
       echo \#SBATCH --exclusive >> slurm.sh
       echo \#export OMP_NUM_THREADS=48 >> slurm.sh
       echo "" >> slurm.sh
       echo "module load compilers/intel intelmpi" >> slurm.sh
-      echo "/project/opt/intel/bin/compilervars.sh intel64" >> slurm.sh
     fi
 
     echo "" >> slurm.sh
