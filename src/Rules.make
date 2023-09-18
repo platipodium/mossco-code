@@ -993,6 +993,13 @@ endif
 
 #$(AR) Trus $(MOSSCO_LIBRARY_PATH)/libgetm_external.a $(GETM_LIBRARY_PATH)/lib*_prod.a
 
+install-gotm-bin: libgotm_external
+	@mkdir -p $(MOSSCO_INSTALL_PREFIX)/bin
+	@ln -sf $(GOTM_PREFIX)/bin/gotm  $(MOSSCO_INSTALL_PREFIX)/bin/gotm
+	@echo "Executable 'gotm' has been installed to $(MOSSCO_INSTALL_PREFIX)/bin. "
+	@echo "Consider to add this directory to your PATH"
+
+
 install-mossco-bin:
 	@mkdir -p $(MOSSCO_INSTALL_PREFIX)/bin
 	@ln -sf $(MOSSCO_DIR)/scripts/mossco.sh  $(MOSSCO_INSTALL_PREFIX)/bin/mossco
@@ -1005,7 +1012,9 @@ install-mossco-include:
 	@cp $(MOSSCO_MODULE_PATH)/*.mod $(MOSSCO_INSTALL_PREFIX)/include
 	@echo "Use includes with  '-I $(MOSSCO_INSTALL_PREFIX)/include'"
 
-install: install-mossco-bin install-mossco-include install-mossco-lib
+install: install-gotm install-mossco
+install-mossco: install-mossco-bin install-mossco-include install-mossco-lib
+install-gotm: install-gotm-bin
 
 install-mossco-lib:
 	@(cd $(MOSSCO_LIBRARY_PATH); for F in *.a ; do $(AR) x $$F; done )
