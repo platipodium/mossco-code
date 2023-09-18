@@ -4,7 +4,7 @@
 #        You may want to link this script into directory within your $PATH
 #
 # This computer program is part of MOSSCO.
-# @copyright Copyright (C) 2021-2022 Helmholtz-Zentrum Hereon
+# @copyright Copyright (C) 2021-2023 Helmholtz-Zentrum Hereon
 # @copyright Copyright (C) 2014-2021 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, <carsten.lemmen@hereon>
 #
@@ -28,6 +28,7 @@ LOGLEVEL='undefined'
 WAITTIME=0
 QUEUE='undefined'
 RESTART=0
+PYTHON=$(which python)
 
 # Function for printing usage of this script
 function usage {
@@ -253,7 +254,7 @@ if  [[ ${REMAKE} == 1 ]] ; then
         echo "ERROR: Script create_coupling.py is not executable, please chmod +x this file."
         exit 1
       fi
-      python ${DIR}/create_coupling.py ${ARG} || exit 1
+      ${PYTHON} ${DIR}/create_coupling.py ${ARG} || exit 1
       EXE=./${EXE_BASE}
     fi
 

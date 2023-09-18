@@ -3,7 +3,8 @@
 # This script is is part of MOSSCO. It creates from basic grid parameters
 # a SCRIP complient NetCDF file.
 #
-# @copyright (C) 2014, 2017 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2021-2023 Helmholtz-Zentrum hereon GmbH
+# @copyright (C) 2014-2021 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -18,108 +19,122 @@ import sys
 import numpy
 import time
 
-if (1==1):
-  ll_lon = -4.		#lower left of cell corner 4°W
-  ll_lat = 50.
-  ur_lon = 15.
-  ur_lat = 61.
-  delta_lon = 0.035		#delta lon in dezimalgrad
-  delta_lat = 0.02
-if (2==2): ## spherical box / deep lake test case
-  delta_lon=0.01250
-  delta_lat=0.25/30.0
-  ll_lon=0.0
-  ur_lon=1.25
-  ll_lat=45.0
-  ur_lat=45.25
-if (3==3): ## 1x20 box, mussel experiment
-  delta_lon=0.5
-  delta_lat=1
-  ll_lon=0.0
-  ur_lon=10.0
-  ll_lat=54
-  ur_lat=55
+if 1 == 1:
+    ll_lon = -4.0  # lower left of cell corner 4°W
+    ll_lat = 50.0
+    ur_lon = 15.0
+    ur_lat = 61.0
+    delta_lon = 0.035  # delta lon in dezimalgrad
+    delta_lat = 0.02
+if 2 == 2:  ## spherical box / deep lake test case
+    delta_lon = 0.01250
+    delta_lat = 0.25 / 30.0
+    ll_lon = 0.0
+    ur_lon = 1.25
+    ll_lat = 45.0
+    ur_lat = 45.25
+if 3 == 3:  ## 1x20 box, mussel experiment
+    delta_lon = 0.5
+    delta_lat = 1
+    ll_lon = 0.0
+    ur_lon = 10.0
+    ll_lat = 54
+    ur_lat = 55
+if 4 == 4:  ## MuSSel SDM 120 x 260 at 0.05 deg from -3, 51
+    delta_lon = 0.05
+    delta_lat = 0.05
+    ll_lon = -3.0
+    ur_lon = 10.0
+    ll_lat = 51
+    ur_lat = 57
+if 5 == 5:  ## MuSSel netlogo 320 x 120 at 0.025 deg from 2, 53
+    delta_lon = 0.025
+    delta_lat = 0.025
+    ll_lon = 2.0
+    ur_lon = 10.0
+    ll_lat = 53
+    ur_lat = 56
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+    nlat = abs(ur_lat - ll_lat) / abs(delta_lat)
+    nlon = abs(ur_lon - ll_lon) / abs(delta_lon)
 
-  nlat=abs(ur_lat-ll_lat)/abs(delta_lat)
-  nlon=abs(ur_lon-ll_lon)/abs(delta_lon)
+    # ensure that nlat and nlot are whole numbers and adust delta
+    if nlat != round(nlat):
+        delta_lat = abs(ur_lat - ll_lat) / round(nlat)
+    nlat = int(round(nlat))
 
-  # ensure that nlat and nlot are whole numbers and adust delta
-  if (nlat != round(nlat)):
-      delta_lat=abs(ur_lat-ll_lat)/round(nlat)
-  nlat=int(round(nlat))
+    if nlon != round(nlon):
+        delta_lon = abs(ur_lon - ll_lon) / round(nlon)
+    nlon = int(round(nlon))
 
-  if (nlon != round(nlon)):
-      delta_lon=abs(ur_lon-ll_lon)/round(nlon)
-  nlon=int(round(nlon))
+    if len(sys.argv) > 1:
+        basename = sys.argv[1]
+    else:
+        basename = "scrip_example.nc"
 
-  if len(sys.argv)>1:
-    basename=sys.argv[1]
-  else:
-    basename = 'scrip_example.nc'
+    nc = netCDF4.Dataset(basename, "w", format="NETCDF3_CLASSIC")
 
+    nc.createDimension("grid_size", nlon * nlat)
+    nc.createDimension("grid_corners", 4)
+    nc.createDimension("grid_rank", 2)
 
-  nc=netCDF4.Dataset(basename,'w',format='NETCDF3_CLASSIC')
+    grid_dims = nc.createVariable("grid_dims", "i4", ("grid_rank"))
+    grid_imask = nc.createVariable("grid_imask", "i4", ("grid_size"))
 
-  nc.createDimension('grid_size',nlon*nlat)
-  nc.createDimension('grid_corners',4)
-  nc.createDimension('grid_rank',2)
+    grid_center_lat = nc.createVariable("grid_center_lat", "f8", ("grid_size"))
+    grid_center_lat.units = "degrees"
+    #  grid_center_lat[:]= ...
 
-  grid_dims = nc.createVariable('grid_dims','i4',('grid_rank'))
-  grid_imask = nc.createVariable('grid_imask','i4',('grid_size'))
+    grid_center_lon = nc.createVariable("grid_center_lon", "f8", ("grid_size"))
+    grid_center_lon.units = "degrees"
+    #  grid_center_lon[:]= ...
 
-  grid_center_lat = nc.createVariable('grid_center_lat','f8',('grid_size'))
-  grid_center_lat.units='degrees'
-#  grid_center_lat[:]= ...
+    grid_corner_lat = nc.createVariable(
+        "grid_corner_lat", "f8", ("grid_size", "grid_corners")
+    )
+    grid_corner_lat.units = "degrees"
 
-  grid_center_lon = nc.createVariable('grid_center_lon','f8',('grid_size'))
-  grid_center_lon.units='degrees'
-#  grid_center_lon[:]= ...
+    grid_corner_lon = nc.createVariable(
+        "grid_corner_lon", "f8", ("grid_size", "grid_corners")
+    )
+    grid_corner_lon.units = "degrees"
 
-  grid_corner_lat = nc.createVariable('grid_corner_lat','f8',('grid_size','grid_corners'))
-  grid_corner_lat.units='degrees'
+    # Meta data
+    nc.history = "Created " + time.ctime(time.time()) + " by " + sys.argv[0]
+    nc.creator = "Carsten Lemmen <carsten.lemmen@hzg.de>"
+    nc.license = "Creative Commons share-alike (CCSA)"
+    nc.copyright = "Helmholtz-Zentrum Geesthacht"
+    nc.Conventions = "SCRIP"
 
-  grid_corner_lon = nc.createVariable('grid_corner_lon','f8',('grid_size','grid_corners'))
-  grid_corner_lon.units='degrees'
+    grid_dims[:] = [nlon, nlat]
+    grid_imask[:] = 1
 
-# Meta data
-  nc.history = 'Created ' + time.ctime(time.time()) + ' by ' + sys.argv[0]
-  nc.creator = 'Carsten Lemmen <carsten.lemmen@hzg.de>'
-  nc.license = 'Creative Commons share-alike (CCSA)'
-  nc.copyright = 'Helmholtz-Zentrum Geesthacht'
-  nc.Conventions = 'SCRIP'
+    ilon = numpy.array(range(0, nlon))
+    jlat = numpy.array(range(0, nlat))
 
+    glon = ll_lon + (ilon + 0.5) * delta_lon
+    glat = ll_lat + (jlat + 0.5) * delta_lat
 
-  grid_dims[:]=[nlon,nlat]
-  grid_imask[:]=1
+    for j in jlat:
+        k = ilon + j * nlon
+        grid_center_lon[k] = glon
+        # grid_center_lat[k]=ll_lat + (repeat(j,nlon)+0.5) * delta_lat
+    for i in ilon:
+        k = jlat + i * nlat
+        grid_center_lat[k] = glat
+        # grid_center_lat[k]=ll_lat + (repeat(j,nlon)+0.5) * delta_lat
 
-  ilon=numpy.array(range(0,nlon))
-  jlat=numpy.array(range(0,nlat))
+    grid_corner_lon[:, 0] = grid_center_lon[:] - 0.5 * delta_lon
+    grid_corner_lon[:, 1] = grid_center_lon[:] + 0.5 * delta_lon
 
-  glon=ll_lon+(ilon+0.5)*delta_lon
-  glat=ll_lat+(jlat+0.5)*delta_lat
+    grid_corner_lat[:, 0] = grid_center_lat[:] - 0.5 * delta_lat
+    grid_corner_lat[:, 2] = grid_center_lat[:] + 0.5 * delta_lat
+    grid_corner_lon[:, 2] = grid_corner_lon[:, 1]
+    grid_corner_lon[:, 3] = grid_corner_lon[:, 0]
+    grid_corner_lat[:, 1] = grid_corner_lat[:, 0]
+    grid_corner_lat[:, 3] = grid_corner_lat[:, 2]
 
-  for j in jlat:
-      k=ilon+j*nlon
-      grid_center_lon[k]=glon
-      #grid_center_lat[k]=ll_lat + (repeat(j,nlon)+0.5) * delta_lat
-  for i in ilon:
-      k=jlat+i*nlat
-      grid_center_lat[k]=glat
-      #grid_center_lat[k]=ll_lat + (repeat(j,nlon)+0.5) * delta_lat
-
-
-  grid_corner_lon[:,0]=grid_center_lon[:] - 0.5 * delta_lon
-  grid_corner_lon[:,1]=grid_center_lon[:] + 0.5 * delta_lon
-
-  grid_corner_lat[:,0]=grid_center_lat[:]-0.5*delta_lat
-  grid_corner_lat[:,2]=grid_center_lat[:]+0.5*delta_lat
-  grid_corner_lon[:,2]=grid_corner_lon[:,1]
-  grid_corner_lon[:,3]=grid_corner_lon[:,0]
-  grid_corner_lat[:,1]=grid_corner_lat[:,0]
-  grid_corner_lat[:,3]=grid_corner_lat[:,2]
-
-  print grid_corner_lon[0,0], grid_corner_lon[-1,2]
-  print grid_corner_lat[0,0], grid_corner_lat[-1,2]
-  nc.close()
+    print(grid_corner_lon[0, 0], grid_corner_lon[-1, 2])
+    print(grid_corner_lat[0, 0], grid_corner_lat[-1, 2])
+    nc.close()
