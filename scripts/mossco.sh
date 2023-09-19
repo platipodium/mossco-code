@@ -311,8 +311,7 @@ case ${SYSTEM} in
                 ;;
   SGE)    MPI_PREFIX="mpirun"
                 ;;
-#  SLURM)  MPI_PREFIX="srun --propagate=STACK --mpi=pmi2"
-  SLURM)  MPI_PREFIX="srun"
+  SLURM)  MPI_PREFIX="srun --propagate=STACK --mpi=pmi2"
                 ;;
   *)  MPI_PREFIX="mpirun"
                 ;;
