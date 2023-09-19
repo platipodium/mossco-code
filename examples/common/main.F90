@@ -322,12 +322,7 @@ program main
 
   call MOSSCO_TimeSet(stopTime, stop, localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-  write(*,*) start, stop 
-  call ESMF_TimePrint(startTime, options="string")
-  call ESMF_TimePrint(stopTime, options="string")
-  stop
-
+  
   if (startTime >= stopTime) then
     call ESMF_TimeGet(startTime, timeStringISOFrac=timestring, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
