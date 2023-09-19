@@ -3,8 +3,8 @@
 !!
 !> This computer program is part of MOSSCO.
 !> @copyright Copyright (C) 2021-2023 Helmholtz-Zentrum hereon GmbH
-!> @copyright Copyright (C) 2013-2021 Helmholtz-Zentrum Geesthacht
-!> @author Carsten Lemmen <carsten.lemmen@hzg.de>
+!> @copyright Copyright (C) 2013-2021 Helmholtz-Zentrum Geesthacht GmbH
+!> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 !> @author Knut Klingbeil <knut.klingbeil@io-warnemuende.de>
 !> @author Richard Hofmeister
 !
@@ -322,6 +322,11 @@ program main
 
   call MOSSCO_TimeSet(stopTime, stop, localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+  write(*,*) start, stop 
+  call ESMF_TimePrint(startTime, options="string")
+  call ESMF_TimePrint(stopTime, options="string")
+  stop
 
   if (startTime >= stopTime) then
     call ESMF_TimeGet(startTime, timeStringISOFrac=timestring, rc=localrc)

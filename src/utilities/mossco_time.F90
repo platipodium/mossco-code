@@ -1,8 +1,8 @@
 !> @brief Implementation of time utilities
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright 2021-2022 Helmholtz-Zentrum Hereon
-!> @copyright 2014-2021 Helmholtz-Zentrum Geesthacht
+!> @copyright 2021-2023 Helmholtz-Zentrum hereon GmbH
+!> @copyright 2014-2021 Helmholtz-Zentrum Geesthacht GmbH
 !> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -199,14 +199,18 @@ subroutine MOSSCO_TimeSet(time, datetimestring, rc)
     if (i==4) read(datestring(1:3),'(i3)', iostat=localrc) yy
     if (i==3) read(datestring(1:2),'(i2)', iostat=localrc) yy
     if (i==2) read(datestring(1:1),'(i1)', iostat=localrc) yy
-    if (i>0) write(datestring,'(A)') datestring(i+1:len_trim(datestring))
+    message=''
+    message(1:len_trim(datestring)-i+1) = datestring(i+1:len_trim(datestring))
+    write(datestring,'(A)') trim(message)
     i=index(datestring, '-')
   endif
 
   if (i>0) then ! a second hyphen was found
     if (i==3) read(datestring(1:2),'(i2)', iostat=localrc) mm
     if (i==2) read(datestring(1:1),'(i1)', iostat=localrc) mm
-    write(datestring,'(A)') datestring(i+1:len_trim(datestring))
+    message=''
+    message(1:len_trim(datestring)-i+1) = datestring(i+1:len_trim(datestring))
+    write(datestring,'(A)') trim(message)
     if (len_trim(datestring) == 2) read(datestring(1:2),'(i2)', iostat=localrc) dd
     if (len_trim(datestring) == 1) read(datestring(1:1),'(i1)', iostat=localrc) dd
   endif
@@ -220,14 +224,18 @@ subroutine MOSSCO_TimeSet(time, datetimestring, rc)
   else
     if (i==3) read(timestring(1:2),'(i2)', iostat=localrc) h
     if (i==2) read(timestring(1:1),'(i1)', iostat=localrc) h
-    if (i>0) write(timestring,'(A)') timestring(i+1:len_trim(timestring))
+    message=''
+    message(1:len_trim(timestring)-i+1) = timestring(i+1:len_trim(timestring))
+    write(timestring,'(A)') trim(message)
     i=index(timestring, ':')
   endif
 
   if (i>0) then ! a second colon was found
     if (i==3) read(timestring(1:2),'(i2)', iostat=localrc) m
     if (i==2) read(timestring(1:1),'(i1)', iostat=localrc) m
-    write(timestring,'(A)') timestring(i+1:len_trim(timestring))
+    message=''
+    message(1:len_trim(timestring)-i+1) = timestring(i+1:len_trim(timestring))
+    write(timestring,'(A)') trim(message)
     if (len_trim(timestring) == 1) read(timestring(1:2),'(i2)', iostat=localrc) s
     if (len_trim(timestring) == 2) read(timestring(1:1),'(i1)', iostat=localrc) s
   endif
@@ -237,6 +245,8 @@ subroutine MOSSCO_TimeSet(time, datetimestring, rc)
   if (mm == 0) mm=1
   if (dd == 0) dd=1
 
+  write(*,*) trim(datetimestring), trim(datestring), trim(timestring)
+  write(*,*) yy, mm, dd, h, m, s
   call ESMF_TimeSet(time, yy=yy, mm=mm, dd=dd, h=h,m =m, s=s, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
