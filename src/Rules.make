@@ -147,17 +147,28 @@ $(info Using ESMF_F90COMPILER ... $(ESMF_F90COMPILER))
       endif
     endif
     ifneq (,$(findstring mpich,$(ESMF_COMM)))
-      ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
-      ifeq ($(ESMF_FC),x86_64)
-        ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f4)
+      ESMF_FC_CANONICAL:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1)
+      ESMF_FC:=$(shell echo $(ESMF_FC_CANONICAL) | cut -d'-' -f1)
+      ifneq (,$(filter $(ESMF_FC),x86_64 arm64))
+        ESMF_FC:=$(shell echo $(ESMF_FC_CANONICAL) | $(AWK) -F'-' '{print $$4}')
       endif
-      ifeq ($(ESMF_FC),arm64)
-        ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f4)
+      ifeq ($(ESMF_FC),gnu)
+        ESMF_FC:=gfortran
       endif
       ifeq ($(ESMF_FC),)
         $(error $(ESMF_F90COMPILER) is *not* based on $(ESMF_COMM)!)
       endif
-      ESMF_CC:=$(shell $(ESMF_CXXCOMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
+      ESMF_CC_CANONICAL:=$(shell $(ESMF_CXXCOMPILER) -compile_info 2> /dev/null | cut -d' ' -f1)
+      ESMF_CC:=$(shell echo $(ESMF_CC_CANONICAL) | cut -d'-' -f1)
+      ifneq (,$(filter $(ESMF_CC),x86_64 arm64))
+        ESMF_CC:=$(shell echo $(ESMF_CC_CANONICAL) | $(AWK) -F'-' '{print $$4}')
+      endif
+      ifeq ($(ESMF_CC),gnu)
+        ESMF_CC:=gcc
+      endif
+      ifeq ($(ESMF_CC),)
+        $(error $(ESMF_CXXCOMPILER) is *not* based on $(ESMF_COMM)!)
+      endif
     endif
   endif
 
