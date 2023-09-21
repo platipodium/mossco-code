@@ -512,7 +512,9 @@ EOT
       # Tested on strand.hereon.de
       if [ ${QUEUE} == undefined ]; then QUEUE=pCluster; fi
       echo \#SBATCH --partition=${QUEUE} >> slurm.sh
-      echo \#SBATCH --exclusive >> slurm.sh
+      if [ ${NPROC} -gt 48 ]; then 
+        echo \#SBATCH --exclusive >> slurm.sh
+      fi
       echo \#export OMP_NUM_THREADS=48 >> slurm.sh
       echo "" >> slurm.sh
       echo "module load compilers/intel intelmpi" >> slurm.sh
