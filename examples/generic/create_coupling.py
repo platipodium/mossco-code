@@ -5,7 +5,7 @@
 # couplings a toplevel_component.F90 source file
 #
 # @copyright (C) 2021-2023 Helmholtz-Zentrum hereon GmbH
-# @copyright (C) 2014-2021 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2014-2021 Helmholtz-Zentrum Geesthacht GmbH
 # @author Carsten Lemmen <carsten.lemmen@hereon.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -103,7 +103,7 @@ else:
 if 'copyright' in config.keys():
     copyright = config.pop('copyright')
 else:
-    copyright = 'Copyright (C) 2022 Helmholtz-Zentrum Hereon'
+    copyright = 'Copyright 2023 Helmholtz-Zentrum Hereon GmbH'
 
 if 'dependencies' in config.keys():
   dependencies = config.pop('dependencies')
@@ -1383,10 +1383,10 @@ fid.write('''
 
     stringList(1,1)='Name';               stringList(1,2)='Carsten Lemmen'
     stringList(2,1)='Abbreviation';       stringList(2,2)='cl'
-    stringList(3,1)='PhysicalAddress';    stringList(3,2)='Helmholtz-Zentrum Geesthacht'
-    stringList(4,1)='EmailAddress';       stringList(4,2)='carsten.lemmen@hzg.de'
+    stringList(3,1)='PhysicalAddress';    stringList(3,2)='Helmholtz-Zentrum Hereon'
+    stringList(4,1)='EmailAddress';       stringList(4,2)='carsten.lemmen@hereon.de'
     stringList(5,1)='ResponsiblePartyRole';   stringList(5,2)='Contact'
-    stringList(6,1)='URL';   stringList(6,2)='http://www.hzg.de'
+    stringList(6,1)='URL';   stringList(6,2)='http://www.hereon.de'
 
     !> @todo te following code throws attribute warnings in ESMF7, this needs
     !> to be investigated and is disabled for now.
