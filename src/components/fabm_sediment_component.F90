@@ -4,8 +4,8 @@
 !! MOSSCO sediment component.
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2021-2022 Helmholtz-Zentrum Hereon
-!> @copyright Copyright (C) 2013-2021 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2021-2023 Helmholtz-Zentrum Hereon GmbH
+!> @copyright Copyright (C) 2013-2021 Helmholtz-Zentrum Geesthacht GmbH
 !> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 !> @author Richard Hofmeister
 !
@@ -220,11 +220,12 @@ module fabm_sediment_component
     type(ESMF_CoordSys_Flag)   :: coordSys
 
     type(ESMF_MeshLoc)                 :: meshloc
-    integer(ESMF_KIND_I4)              :: lbnd(3), ubnd(3)
+    integer(ESMF_KIND_I4)              :: lbnd(3), ubnd(3), dimCount
     character(len=ESMF_MAXSTR)         :: creatorName
     type(ESMF_Field), allocatable      :: fieldList(:)
     integer                            :: unit
     type(ESMF_VM)                      :: vm
+    type(ESMF_Info)                    :: info
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
       importState=importState, exportState=exportState, rc=localrc)
@@ -296,9 +297,12 @@ module fabm_sediment_component
       sed%grid%inum=numElements
       sed%grid%jnum=1
     else
-      call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
-           value=foreignGeomFieldName, defaultValue='none',rc=localrc)
-        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_InfoGetFromHost(importState, info, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_InfoGet(info, key='foreign_grid_field_name', &
+        value=foreignGeomFieldName, default='none', rc=localrc)
 
       if (trim(foreignGeomFieldName)=='none') then
         sed%grid%type=LOCAL_GRID
@@ -411,10 +415,12 @@ module fabm_sediment_component
         call ESMF_FieldGet(fieldList(1), meshloc=meshloc, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        call ESMF_AttributeGet(fieldList(1), 'creator', value=creatorName, &
-          defaultValue='unknown', rc=localrc)
+        call ESMF_InfoGetFromHost(fieldList(1), info, rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
+  
+        call ESMF_InfoGet(info, key='creator', &
+          value=creatorName, default='unknown', rc=localrc)
+         
         if (trim(creatorName) == 'schism') then
           call ESMF_FieldGetBounds(fieldList(1), localDe=0, computationalLBound=lbnd(1:1), &
             computationalUBound=ubnd(1:1), rc=localrc)
@@ -446,6 +452,8 @@ module fabm_sediment_component
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
       sed%grid%inum=1
       sed%grid%jnum=1
+      write(message,'(A)') trim(name)//' local grid not implemented, please specify foreign_grid_field_name'
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
     endif
 
     !! The grid specification should also go to outside this routine, and update the grid of
@@ -686,7 +694,12 @@ module fabm_sediment_component
 #if 0
       state_mesh = ESMF_MeshCreate(surface_mesh,rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      !call ESMF_AttributeSet(surface_mesh,'creator', trim(name), rc=localrc)
+
+      call ESMF_InfoGetFromHost(state_mesh, info, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_InfoSet(info, key='creator', value=trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 #endif
 
       !! create state and flux fields
@@ -699,7 +712,10 @@ module fabm_sediment_component
                   !gridToFieldMap=(/1,2/), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+        call ESMF_InfoGetFromHost(field, info, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+  
+        call ESMF_InfoSet(info, key='creator', value=trim(name), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call ESMF_FieldGet(field=field, farrayPtr=statemesh_ptr, rc=localrc)
@@ -725,9 +741,12 @@ module fabm_sediment_component
                     meshloc=ESMF_MESHLOC_ELEMENT,rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+          call ESMF_InfoGetFromHost(field, info, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
+    
+          call ESMF_InfoSet(info, key='creator', value=trim(name), rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    
           call ESMF_FieldGet(field=field, farrayPtr=farrayPtr1, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -752,9 +771,12 @@ module fabm_sediment_component
                    name=only_var_name(sed%model%diagnostic_variables(n)%long_name)//'_in_soil', rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+          call ESMF_InfoGetFromHost(field, info, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
+    
+          call ESMF_InfoSet(info, key='creator', value=trim(name), rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    
           write(message, '(A)') trim(name)//' created for export '
           call MOSSCO_FieldString(field, message, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
@@ -790,7 +812,10 @@ module fabm_sediment_component
       call ESMF_FieldGet(field,farrayPtr=farrayPtr1,rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+      call ESMF_InfoGetFromHost(field, info, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_InfoSet(info, key='creator', value=trim(name), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       farrayPtr1(RANGE1D)=bdys(RANGE1D,lbnd(2),1)
@@ -811,9 +836,12 @@ module fabm_sediment_component
                    typekind=ESMF_TYPEKIND_R8, meshloc=ESMF_MESHLOC_ELEMENT, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+          call ESMF_InfoGetFromHost(field, info, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
+    
+          call ESMF_InfoSet(info, key='creator', value=trim(name), rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+    
           call ESMF_FieldGet(field,farrayPtr=farrayPtr1,rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -841,9 +869,12 @@ module fabm_sediment_component
                    typekind=ESMF_TYPEKIND_R8, meshloc=ESMF_MESHLOC_ELEMENT, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-            call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+            call ESMF_InfoGetFromHost(field, info, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
+      
+            call ESMF_InfoSet(info, key='creator', value=trim(name), rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+  
             call ESMF_FieldGet(field,farrayPtr=farrayPtr1,rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
@@ -873,7 +904,10 @@ module fabm_sediment_component
           coorddep2=(/2/),rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        call ESMF_AttributeSet(flux_grid, 'creator', trim(name), rc=localrc)
+        call ESMF_InfoGetFromHost(flux_grid, info, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+  
+        call ESMF_InfoSet(info, key='creator', value=trim(name), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call ESMF_GridAddCoord(flux_grid, rc=localrc)
@@ -886,7 +920,10 @@ module fabm_sediment_component
           coorddep2=(/2/),rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        call ESMF_AttributeSet(state_grid, 'creator', trim(name), rc=localrc)
+        call ESMF_InfoGetFromHost(state_grid, info, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+  
+        call ESMF_InfoSet(info, key='creator', value=trim(name), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         call ESMF_GridAddCoord(state_grid, rc=localrc)
@@ -895,6 +932,10 @@ module fabm_sediment_component
       endif
       ! by here, have flux_grid available
       call ESMF_GridGet(flux_grid, indexflag=indexflag,rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_GridGet(flux_grid, staggerloc=ESMF_STAGGERLOC_CENTER, localDe=0, &
+        exclusiveLBound=lbnd(1:2), exclusiveUBound=ubnd(1:2), rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       ! put concentration array into export state
@@ -909,17 +950,21 @@ module fabm_sediment_component
                          !gridToFieldMap=(/1,2/), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+        call ESMF_InfoGetFromHost(field, info, rc=localrc)
+        _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+  
+        call ESMF_InfoSet(info, key='creator', value=trim(name), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-        call ESMF_AttributeSet(field,'units',trim(sed%export_states(n)%units), rc=localrc)
+        call ESMF_InfoSet(info, key='units', value=trim(sed%export_states(n)%units), rc=localrc)
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
         !> do not set missing value and leave this to netcdf component
         !call ESMF_AttributeSet(field,'missing_value',sed%missing_value, rc=localrc)
         !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        call ESMF_FieldGet(field=field, farrayPtr=farrayPtr3, rc=localrc)
+
+        call ESMF_FieldGet(field=field, farrayPtr=farrayPtr3, rc=localrc)        
         _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
         farrayPtr3 = sed%export_states(n)%data ! initialize with 0.0
 
@@ -939,11 +984,14 @@ module fabm_sediment_component
                          staggerloc=ESMF_STAGGERLOC_CENTER,rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          !> fluxes are defined in concentration*m/s
-          call ESMF_AttributeSet(field,'units',trim(sed%export_states(n)%units)//'/s')
+          call ESMF_InfoGetFromHost(field, info, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-          call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+    
+          call ESMF_InfoSet(info, key='creator', value=trim(name), rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+  
+          !> fluxes are defined in concentration*m/s
+          call ESMF_InfoSet(info, key='units', value=trim(sed%export_states(n)%units)//'/s', rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           call ESMF_FieldGet(field=field, localDe=0, farrayPtr=farrayPtr2, &
@@ -972,10 +1020,13 @@ module fabm_sediment_component
                    name=only_var_name(sed%model%diagnostic_variables(n)%long_name)//'_in_soil', rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+          call ESMF_InfoGetFromHost(field, info, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-          call ESMF_AttributeSet(field,'units',trim(sed%model%diagnostic_variables(n)%units))
+    
+          call ESMF_InfoSet(info, key='creator', value=trim(name), rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+  
+          call ESMF_InfoSet(info, key='units', value=trim(sed%model%diagnostic_variables(n)%units), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           write(message, '(A)') trim(name)//' created diagnostic '
@@ -997,10 +1048,13 @@ module fabm_sediment_component
       call ESMF_FieldEmptySet(field, grid=flux_grid, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+      call ESMF_InfoGetFromHost(field, info, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_AttributeSet(field,'units','1', rc=localrc)
+      call ESMF_InfoSet(info, key='creator', value=trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_InfoSet(info, key='units', value='1', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       write(message, '(A)') trim(name)//' created for import '
@@ -1016,10 +1070,13 @@ module fabm_sediment_component
                typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+      call ESMF_InfoGetFromHost(field, info, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_AttributeSet(field,'units','W m-2', rc=localrc)
+      call ESMF_InfoSet(info, key='creator', value=trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_InfoSet(info, key='units', value='W m-2', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call MOSSCO_FieldInitialize(field, value=0.0_rk, rc=localrc)
@@ -1057,10 +1114,13 @@ module fabm_sediment_component
                typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+      call ESMF_InfoGetFromHost(field, info, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-      call ESMF_AttributeSet(field,'units','degreeC', rc=localrc)
+      call ESMF_InfoSet(info, key='creator', value=trim(name), rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+      call ESMF_InfoSet(info, key='units', value='degreeC', rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
       call MOSSCO_FieldInitialize(field, value=pel_Temp, rc=localrc)
@@ -1081,10 +1141,13 @@ module fabm_sediment_component
                    typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-          call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+          call ESMF_InfoGetFromHost(field, info, rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-          call ESMF_AttributeSet(field,'units',trim(sed%export_states(n)%units), rc=localrc)
+    
+          call ESMF_InfoSet(info, key='creator', value=trim(name), rc=localrc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+  
+          call ESMF_InfoSet(info, key='units', value=trim(sed%export_states(n)%units), rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
           call MOSSCO_FieldInitialize(field, value=0.0_rk, rc=localrc)
@@ -1105,12 +1168,15 @@ module fabm_sediment_component
                    typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-            call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+            call ESMF_InfoGetFromHost(field, info, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
-            call ESMF_AttributeSet(field,'units','m s-1', rc=localrc)
+      
+            call ESMF_InfoSet(info, key='creator', value=trim(name), rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-
+    
+            call ESMF_InfoSet(info, key='units', value='m s-1', rc=localrc)
+            _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+  
             call MOSSCO_FieldInitialize(field, value=0.0_rk, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
