@@ -245,8 +245,6 @@ subroutine MOSSCO_TimeSet(time, datetimestring, rc)
   if (mm == 0) mm=1
   if (dd == 0) dd=1
 
-  write(*,*) trim(datetimestring), trim(datestring), trim(timestring)
-  write(*,*) yy, mm, dd, h, m, s
   call ESMF_TimeSet(time, yy=yy, mm=mm, dd=dd, h=h,m =m, s=s, rc=localrc)
   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
