@@ -414,6 +414,9 @@ ifdef GETMDIR
       export GETM_PARALLEL=false
     endif
   endif
+  export GETM_BINARY_DIR=$(MOSSCO_DIR)/external/getm/build
+  export GETM_PREFIX=$(MOSSCO_DIR)/external/getm/install
+
 endif
 
 export MOSSCO_GETM
@@ -906,7 +909,9 @@ json_build:
 ifeq ($(MOSSCO_JSON),true)
 ifndef MOSSCO_JSON_BINARY_DIR
 	@mkdir -p $(JSON_BINARY_DIR)
-	(cd $(JSON_BINARY_DIR) && $(CMAKE) $(JSONDIR)/src -DCMAKE_INSTALL_PREFIX=$(JSON_PREFIX)
+	(cd $(JSON_BINARY_DIR) && $(CMAKE) $(JSONDIR)/src \
+    -DCMAKE_INSTALL_PREFIX=$(JSON_PREFIX) \
+    -DCMAKE_Fortran_COMPILER="$(MOSSCO_F90COMPILER)")
 endif
 endif
 
@@ -941,7 +946,9 @@ gotm_build:
 ifeq ($(MOSSCO_GOTM),true)
 ifndef MOSSCO_GOTM_BINARY_DIR
 	@mkdir -p $(GOTM_BINARY_DIR)
-	(cd $(GOTM_BINARY_DIR) && $(CMAKE) $(GOTMDIR) -DCMAKE_INSTALL_PREFIX=$(GOTM_PREFIX) -DGOTM_USE_FABM=OFF -DCMAKE_Fortran_FLAGS="$(GOTM_FFLAGS)")
+	(cd $(GOTM_BINARY_DIR) && $(CMAKE) $(GOTMDIR) -DCMAKE_INSTALL_PREFIX=$(GOTM_PREFIX) \
+   -DGOTM_USE_FABM=OFF -DCMAKE_Fortran_FLAGS="$(GOTM_FFLAGS)"\
+   -DCMAKE_Fortran_COMPILER="$(MOSSCO_F90COMPILER)")
 endif
 endif
 
@@ -960,6 +967,20 @@ ifdef GOTM_BINARY_DIR
      done; cp $(GOTM_BINARY_DIR)/gotmlib/libgotm.a $(GOTM_PREFIX)/lib; \
      cp $(GOTM_BINARY_DIR)/input/libinput_manager.a $(GOTM_PREFIX)/lib)
 	cp $(GOTM_BINARY_DIR)/extern/flexout/extern/yaml/modules/yaml_settings.mod $(GOTM_PREFIX)/include/
+endif
+endif
+
+# We don't use getm_build target here becaus of the lack of? NUOPC support
+# in the cmake build for getm.
+getm_build:
+ifeq ($(MOSSCO_GETM),true)
+ifndef MOSSCO_GETM_BINARY_DIR
+	@mkdir -p $(GETM_BINARY_DIR)
+	@export GETM_NUOPC=true
+	(cd $(GETM_BINARY_DIR) && $(CMAKE) $(GETMDIR)/src -DCMAKE_INSTALL_PREFIX=$(GETM_PREFIX) \
+	  -DCMAKE_Fortran_FLAGS="$(GETM_FFLAGS) -I$(GOTM_PREFIX)/include" \
+	  -DGETM_USE_FABM=OFF \
+	  -DCMAKE_Fortran_COMPILER="$(MOSSCO_F90COMPILER)" && make getm install )
 endif
 endif
 
