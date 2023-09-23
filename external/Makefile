@@ -1,7 +1,9 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht, Institut für Ostseeforschung Warnemünde
-# @author Carsten Lemmen <carsten.lemmen@hzg.de>
+# @copyright 2021-2023 Helmholtz-Zentrum hereon GmbH
+# @copyright 2013-2021 Helmholtz-Zentrum Geesthacht GmbH
+# @copyright 2013-2018 Institut für Ostseeforschung Warnemünde
+# @author Carsten Lemmen <carsten.lemmen@hereon.de>
 # @author Knut Klingbeil <knut.klingbeil@io-warnemuende.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the

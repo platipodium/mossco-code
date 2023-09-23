@@ -1,8 +1,8 @@
 # This Makefile snippet is part of MOSSCO; definition of MOSSCO-wide
 # make rules
 #
-# SPDX-FileCopyrightText 2021-2023 Helmholtz-Zentrum Hereon
-# SPDX-FileCopyrightText 2013-2021 Helmholtz-Zentrum Geesthacht
+# SPDX-FileCopyrightText 2021-2023 Helmholtz-Zentrum Hereon GmbH
+# SPDX-FileCopyrightText 2013-2021 Helmholtz-Zentrum Geesthacht GmbH
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileContributor Carsten Lemmen <carsten.lemmen@hereon.de
 #
@@ -171,6 +171,9 @@ $(info Using ESMF_F90COMPILER ... $(ESMF_F90COMPILER))
       endif
     endif
   endif
+
+  export MOSSCO_F90COMPILER=$(shell which $(ESMF_FC))
+  export MOSSCO_CCOMPILER=$(shell which $(ESMF_CC))
 
   $(info Using ESMF_FC ... $(ESMF_FC))
   $(info Using ESMF_CC ... $(ESMF_CC))
@@ -882,7 +885,10 @@ fabm_build:
 ifeq ($(MOSSCO_FABM),true)
 ifndef MOSSCO_FABM_BINARY_DIR
 	@mkdir -p $(FABM_BINARY_DIR)
-	(cd $(FABM_BINARY_DIR) && $(CMAKE) $(FABMDIR)/src -DCMAKE_INSTALL_PREFIX=$(FABM_PREFIX) -DFABM_HOST=$(FABMHOST) -DCMAKE_Fortran_FLAGS="$(FABM_FFLAGS)")
+	(cd $(FABM_BINARY_DIR) && $(CMAKE) $(FABMDIR)/src \
+     -DCMAKE_INSTALL_PREFIX=$(FABM_PREFIX) -DFABM_HOST=$(FABMHOST) \
+     -DCMAKE_Fortran_FLAGS="$(FABM_FFLAGS)" \
+     -DCMAKE_Fortran_COMPILER="$(MOSSCO_F90COMPILER)")
 endif
 endif
 
