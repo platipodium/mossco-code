@@ -24,8 +24,9 @@
 
 module mossco_memory
 
-  use esmf
-
+  use esmf, only : ESMF_KIND_I4, ESMf_KeywordEnforcer, ESMF_MAXPATHLEN, ESMF_SUCCESS
+  use esmf, only : ESMF_MAXSTR, ESMF_LOGMSG_ERROR, ESMF_RC_MEM_DEALLOCATE, ESMF_RC_MEM_ALLOCATE
+  use esmf, only : ESMF_Field, ESMF_StateItem_Flag, ESMF_LogWrite, ESMF_RC_ARG_BAD
   implicit none
 
   public :: MOSSCO_Reallocate
@@ -43,6 +44,7 @@ contains
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_FieldListReallocate"
   subroutine MOSSCO_FieldListReallocate(fieldList, fieldCount, kwe, keep, owner, rc)
+
 
     type(ESMF_Field), intent(inout), allocatable     :: fieldList(:)
     integer(ESMF_KIND_I4), intent(in)                :: fieldCount
