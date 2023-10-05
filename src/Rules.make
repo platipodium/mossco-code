@@ -129,12 +129,19 @@ $(info Using ESMF_F90COMPILER ... $(ESMF_F90COMPILER))
   else
     export MOSSCO_MPI:=true
     ifeq ($(ESMF_COMM),openmpi)
-      ESMF_FC:=$(shell $(ESMF_F90COMPILER) --showme:command 2> /dev/null)
-      ifeq ($(ESMF_FC),)
-	      ifeq ($(ESMF_F90COMPILER),mpifort)
-          ESMF_FC:=$(shell mpif90 --showme:command 2> /dev/null)
-        endif
+      ESMF_FC_CANONICAL:=$(shell $(ESMF_F90COMPILER) --showme:command 2> /dev/null | cut -d' ' -f1)
+      ESMF_FC:=$(shell echo $(ESMF_FC_CANONICAL) | cut -d'-' -f1)
+      ifneq (,$(filter $(ESMF_FC),X86_64 x86_64 arm64))
+        ESMF_FC:=$(shell echo $(ESMF_FC_CANONICAL) | $(AWK) -F'-' '{print $$NF}')
       endif
+      ifeq ($(ESMF_FC),gnu)
+        ESMF_FC:=gfortran
+      endif
+#      ifeq ($(ESMF_FC),)
+#	      ifeq ($(ESMF_F90COMPILER),mpifort)
+#          ESMF_FC:=$(shell mpif90 --showme:command 2> /dev/null)
+#        endif
+#      endif
       ifeq ($(ESMF_FC),)
         $(error $(ESMF_F90COMPILER) is *not* based on $(ESMF_COMM)!)
       endif
@@ -149,8 +156,8 @@ $(info Using ESMF_F90COMPILER ... $(ESMF_F90COMPILER))
     ifneq (,$(findstring mpich,$(ESMF_COMM)))
       ESMF_FC_CANONICAL:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1)
       ESMF_FC:=$(shell echo $(ESMF_FC_CANONICAL) | cut -d'-' -f1)
-      ifneq (,$(filter $(ESMF_FC),x86_64 arm64))
-        ESMF_FC:=$(shell echo $(ESMF_FC_CANONICAL) | $(AWK) -F'-' '{print $$4}')
+      ifneq (,$(filter $(ESMF_FC),X86_64 x86_64 arm64))
+        ESMF_FC:=$(shell echo $(ESMF_FC_CANONICAL) | $(AWK) -F'-' '{print $$NF}')
       endif
       ifeq ($(ESMF_FC),gnu)
         ESMF_FC:=gfortran
