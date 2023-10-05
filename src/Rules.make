@@ -114,15 +114,15 @@ else
   include $(ESMFMKFILE)
   MOSSCO_ESMF:=true
 
-$(info Using ESMFMKFILE ... $(ESMFMKFILE))
+  $(info Using ESMFMKFILE ... $(ESMFMKFILE))
 
-# Find the communicator and determine whether this is parallel device, this
-# is still buggy with mpiifort and needs improvement
-ESMF_COMM:=$(strip $(shell grep '^. ESMF_COMM:' $(ESMFMKFILE) | cut -d':' -f2-))
-$(info Using ESMF_COMM ... $(ESMF_COMM))
-ESMF_OS:=$(strip $(shell grep '^. ESMF_OS:' $(ESMFMKFILE) | cut -d':' -f2-))
-$(info Using ESMF_OS ... $(ESMF_OS))
-$(info Using ESMF_F90COMPILER ... $(ESMF_F90COMPILER))
+  # Find the communicator and determine whether this is parallel device, this
+  # is still buggy with mpiifort and needs improvement
+  ESMF_COMM:=$(strip $(shell grep '^. ESMF_COMM:' $(ESMFMKFILE) | cut -d':' -f2-))
+  $(info Using ESMF_COMM ... $(ESMF_COMM))
+  ESMF_OS:=$(strip $(shell grep '^. ESMF_OS:' $(ESMFMKFILE) | cut -d':' -f2-))
+  $(info Using ESMF_OS ... $(ESMF_OS))
+  $(info Using ESMF_F90COMPILER ... $(ESMF_F90COMPILER))
 
   ifeq ("$(ESMF_COMM)","mpiuni")
     export MOSSCO_MPI:=false
@@ -130,53 +130,45 @@ $(info Using ESMF_F90COMPILER ... $(ESMF_F90COMPILER))
     export MOSSCO_MPI:=true
     ifeq ($(ESMF_COMM),openmpi)
       ESMF_FC_CANONICAL:=$(shell $(ESMF_F90COMPILER) --showme:command 2> /dev/null | cut -d' ' -f1)
-      ESMF_FC:=$(shell echo $(ESMF_FC_CANONICAL) | cut -d'-' -f1)
-      ifneq (,$(filter $(ESMF_FC),X86_64 x86_64 arm64))
-        ESMF_FC:=$(shell echo $(ESMF_FC_CANONICAL) | $(AWK) -F'-' '{print $$NF}')
-      endif
-      ifeq ($(ESMF_FC),gnu)
-        ESMF_FC:=gfortran
-      endif
+      ESMF_CC_CANONICAL:=$(shell $(ESMF_CXXCOMPILER) --showme:command 2> /dev/null | cut -d' ' -f1)
+    endif 
+    ifeq ($(ESMF_COMM),intelmpi)
+      ESMF_FC_CANONICAL:=$(shell $(ESMF_F90COMPILER) -show 2> /dev/null | cut -d' ' -f1 )
+      ESMF_CC_CANONICAL:=$(shell $(ESMF_F90COMPILER) -show 2> /dev/null | cut -d' ' -f1 )
+    endif
+    ifneq (,$(findstring mpich,$(ESMF_COMM)))
+      ESMF_FC_CANONICAL:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1)
+      ESMF_CC_CANONICAL:=$(shell $(ESMF_CXXCOMPILER) -compile_info 2> /dev/null | cut -d' ' -f1)
+    endif
+
+    ifeq ($(ESMF_FC_CANONICAL),)
+      $(error $(ESMF_F90COMPILER) is *not* based on $(ESMF_COMM)!)
+    endif
+    ifeq ($(ESMF_CC_CANONICAL),)
+      $(error $(ESMF_CXXCOMPILER) is *not* based on $(ESMF_COMM)!)
+    endif
+
+    ESMF_FC:=$(shell echo $(ESMF_FC_CANONICAL) | cut -d'-' -f1)
+    ifneq (,$(filter $(ESMF_FC),X86_64 x86_64 arm64))
+      ESMF_FC:=$(shell echo $(ESMF_FC_CANONICAL) | $(AWK) -F'-' '{print $$NF}')
+    endif
+    ifeq ($(ESMF_FC),gnu)
+      ESMF_FC:=gfortran
+    endif
+
+    ESMF_CC:=$(shell echo $(ESMF_CC_CANONICAL) | cut -d'-' -f1)
+    ifneq (,$(filter $(ESMF_CC),X86_64 x86_64 arm64))
+      ESMF_CC:=$(shell echo $(ESMF_CC_CANONICAL) | $(AWK) -F'-' '{print $$NF}')
+    endif
+    ifeq ($(ESMF_CC),gnu)
+      ESMF_CC:=g++
+    endif
+
 #      ifeq ($(ESMF_FC),)
 #	      ifeq ($(ESMF_F90COMPILER),mpifort)
 #          ESMF_FC:=$(shell mpif90 --showme:command 2> /dev/null)
 #        endif
 #      endif
-      ifeq ($(ESMF_FC),)
-        $(error $(ESMF_F90COMPILER) is *not* based on $(ESMF_COMM)!)
-      endif
-      ESMF_CC:=$(shell $(ESMF_CXXCOMPILER) --showme:command 2> /dev/null)
-    endif
-    ifeq ($(ESMF_COMM),intelmpi)
-      ESMF_FC:=$(shell $(ESMF_F90COMPILER) -show 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
-      ifeq ($(ESMF_FC),)
-        $(error $(ESMF_F90COMPILER) is *not* based on $(ESMF_COMM)!)
-      endif
-    endif
-    ifneq (,$(findstring mpich,$(ESMF_COMM)))
-      ESMF_FC_CANONICAL:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1)
-      ESMF_FC:=$(shell echo $(ESMF_FC_CANONICAL) | cut -d'-' -f1)
-      ifneq (,$(filter $(ESMF_FC),X86_64 x86_64 arm64))
-        ESMF_FC:=$(shell echo $(ESMF_FC_CANONICAL) | $(AWK) -F'-' '{print $$NF}')
-      endif
-      ifeq ($(ESMF_FC),gnu)
-        ESMF_FC:=gfortran
-      endif
-      ifeq ($(ESMF_FC),)
-        $(error $(ESMF_F90COMPILER) is *not* based on $(ESMF_COMM)!)
-      endif
-      ESMF_CC_CANONICAL:=$(shell $(ESMF_CXXCOMPILER) -compile_info 2> /dev/null | cut -d' ' -f1)
-      ESMF_CC:=$(shell echo $(ESMF_CC_CANONICAL) | cut -d'-' -f1)
-      ifneq (,$(filter $(ESMF_CC),x86_64 arm64))
-        ESMF_CC:=$(shell echo $(ESMF_CC_CANONICAL) | $(AWK) -F'-' '{print $$4}')
-      endif
-      ifeq ($(ESMF_CC),gnu)
-        ESMF_CC:=gcc
-      endif
-      ifeq ($(ESMF_CC),)
-        $(error $(ESMF_CXXCOMPILER) is *not* based on $(ESMF_COMM)!)
-      endif
-    endif
   endif
 
   export MOSSCO_F90COMPILER=$(shell which $(ESMF_FC))
@@ -254,24 +246,7 @@ ifeq ($(FORTRAN_COMPILER),MPXLF2003_R)
   FORTRAN_COMPILER=XLF
 endif
 
-MOSSCO_CCOMPILER=gcc # default
-ifeq ($(ESMF_COMPILER),pgi)
-  MOSSCO_CCOMPILER=pgc
-endif
 
-ifeq ($(ESMF_COMPILER),intel)
-  MOSSCO_CCOMPILER=icc
-endif
-
-ifeq ($(ESMF_COMPILER),xlf)
-  MOSSCO_CCOMPILER=xlc
-endif
-
-ifeq ($(ESMF_COMPILER),gfortranclang)
-  MOSSCO_CCOMPILER=clang
-endif
-
-export MOSSCO_CCOMPILER
 
 # 3. Checking for the either FABM, GOTM, GETM, SCHISM.  Set the MOSSCO_XXXX variables
 #    of these three components to process them later
