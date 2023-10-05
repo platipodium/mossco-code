@@ -1,8 +1,8 @@
 !> @brief Implementation of additional ESMF memory allocation utilities
 !
 !  This computer program is part of MOSSCO.
-!> @copyright 2021-2022 Helmholtz-Zentrum Hereon
-!> @copyright 2016-2021 Helmholtz-Zentrum Geesthacht
+!> @copyright 2021-2023 Helmholtz-Zentrum Hereon GmbH
+!> @copyright 2016-2021 Helmholtz-Zentrum Geesthacht GmbH
 !> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the

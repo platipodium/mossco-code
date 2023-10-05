@@ -1,7 +1,7 @@
 # This Makefile is part of MOSSCO
 #
-# SPDX-FileCopyrightText 2021-2022 Helmholtz-Zentrum Hereon
-# SPDX-FileCopyrightText 2013-2021 Helmholtz-Zentrum Geesthacht
+# SPDX-FileCopyrightText 2021-2023 Helmholtz-Zentrum Hereon GmbH
+# SPDX-FileCopyrightText 2013-2021 Helmholtz-Zentrum Geesthacht GmbH
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileContributor Carsten Lemmen <carsten.lemmen@hereon.de
 #
