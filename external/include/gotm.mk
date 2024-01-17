@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2021-2022 Helmholtz-Zentrum Hereon
+# @copyright (C) 2021-2024 Helmholtz-Zentrum Hereon
 # @copyright (C) 2017-2021 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hereon.de>
 # @author Knut Klingbeil, Institut für Ostseeforschung Warnemünde
@@ -20,7 +20,7 @@ ifeq ($(wildcard $(external_GOTMDIR)/src/gotm/gotm.F90),)
 	#@$(GIT) clone -b master --depth 1 https://github.com/gotm-model/code.git $(external_GOTMDIR) || $(GIT) clone -b master --depth 1 git://github.com/gotm-model/code.git $(external_GOTMDIR)
 	@( cd $(external_GOTMDIR) && $(GIT) submodule update --depth 1 --init --recursive extern/flexout )
 else
-	@( cd $(external_GOTMDIR) && $(GIT) checkout master )
+	@( cd $(external_GOTMDIR) && $(GIT) checkout 7de74f )
 ifeq ($(wildcard $(external_GOTMDIR)/extern/flexout/src/output_manager.F90),)
 	@( cd $(external_GOTMDIR) && $(GIT) submodule update --init --recursive extern/flexout )
 endif
