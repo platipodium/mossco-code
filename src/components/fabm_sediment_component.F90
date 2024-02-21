@@ -4,7 +4,7 @@
 !! MOSSCO sediment component.
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2021-2023 Helmholtz-Zentrum Hereon GmbH
+!> @copyright Copyright (C) 2021-2024 Helmholtz-Zentrum Hereon GmbH
 !> @copyright Copyright (C) 2013-2021 Helmholtz-Zentrum Geesthacht GmbH
 !> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 !> @author Richard Hofmeister

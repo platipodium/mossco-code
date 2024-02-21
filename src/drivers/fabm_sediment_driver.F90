@@ -3,7 +3,7 @@
 !!
 !! The driver contains the sediment driver module
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2021-2022 Helmholtz-Zentrum Hereon
+!> @copyright Copyright (C) 2021-2024 Helmholtz-Zentrum hereon GmbH
 !> @copyright Copyright (C) 2013-2021 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 !> @author Richard Hofmeister
