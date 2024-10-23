@@ -34,7 +34,7 @@ echo "  $0 uses ESMF sources in ${ESMF_DIR}"
 # Determine what git tags of the ESMF repo are used.  Prefer the most
 # recent one (we need >= 7_1_0_beta_snapshot_52 for regridding with extrapolation)
 if [ -z "${ESMF_TAGS}" ]; then
-  TAGS=v8.4.0
+  TAGS=v8.5.0
 else
   TAGS=${ESMF_TAGS}
 fi
@@ -43,7 +43,7 @@ echo "  $0 installs ESMF for tags ${TAGS}"
 # Determine what compilers  are used.  We often test gfortran, gfortranclang,
 # and intel
 if [ -z "${ESMF_COMPILERS}" ]; then
-  COMPS=gfortran # gfortranclang intel pgi gfortranclang pgigcc intelgcc
+  COMPS=gfortranclang # gfortranclang intel pgi gfortranclang pgigcc intelgcc
 else
   COMPS="${ESMF_COMPILERS}"
 fi
@@ -51,7 +51,7 @@ echo "  $0 installs ESMF for compilers ${COMPS}"
 
 # Determine what communicators  are used.  We often test openmpi and intelmpi
 if [ -z "${ESMF_COMMUNICATORS}" ]; then
-  COMMS=mpich3 # openmpi mpiuni mpich2 intelmpi
+  COMMS=openmpi # openmpi mpiuni mpich2 intelmpi
 else
   COMMS="${ESMF_COMMUNICATORS}"
 fi
