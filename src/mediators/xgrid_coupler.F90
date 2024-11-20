@@ -70,9 +70,9 @@ module xgrid_coupler
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
         
     ! Need to reconcile import and export states
-    call ESMF_StateReconcile(importState, vm, rc=rc)
+    call ESMF_StateReconcile(importState, vm=vm, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_StateReconcile(exportState, vm, rc=rc)
+    call ESMF_StateReconcile(exportState, vm=vm, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     call ESMF_StateGet(importState, itemCount=itemCount, rc=rc)
