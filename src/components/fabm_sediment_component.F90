@@ -2012,6 +2012,9 @@ module fabm_sediment_component
             fluxes(RANGE2D,n) = -(sed%conc(RANGE2D,1,n)-bdys(RANGE2D,n+1))/ &
               sed%grid%dz(RANGE2D,1)*(sed%bioturbation + sed%diffusivity+bdys(RANGE2D,1) * &
               0.035d0)*sed%porosity(RANGE2D,1)/86400._rk/10000._rk
+            ! @todo what happens if we do clipping here
+            !fluxes = sign(fluxes) * max(min(conc, bdys)/dt_coupling, abs(fluxes)
+
           else
             !> reset fluxes to zero
             fluxes(RANGE2D,n) = 0.0d0
