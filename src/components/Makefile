@@ -1,7 +1,7 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2021-2022 Helmholtz-Zentrum Hereon
-# @copyright (C) 2013-2021 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2021-2025 Helmholtz-Zentrum hereon GmbH
+# @copyright (C) 2013-2021 Helmholtz-Zentrum Geesthacht GmbH
 # @author Carsten Lemmen <carsten.lemmen@hereon.de>
 # @author Richard Hofmeister
 # @author Knut Klingbeil <knut.klingbeil@io-warnemuende.de>

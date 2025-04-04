@@ -1,9 +1,9 @@
 # This Makefile snippet is part of MOSSCO; definition of MOSSCO-wide
 # make rules
 #
-# SPDX-FileCopyrightText 2021-2023 Helmholtz-Zentrum Hereon GmbH
+# SPDX-FileCopyrightText 2021-2025 Helmholtz-Zentrum Hereon GmbH
 # SPDX-FileCopyrightText 2013-2021 Helmholtz-Zentrum Geesthacht GmbH
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: CC0-1.0
 # SPDX-FileContributor Carsten Lemmen <carsten.lemmen@hereon.de
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -292,11 +292,12 @@ include $(MOSSCO_DIR/src/schism.mk)
 ifeq ($(MOSSCO_FABM),true)
 #!> @todo remove FABMHOST here and move it to makefiles where FABM is remade
 ifdef FABMHOST
-ifneq ($(FABMHOST),mossco)
-$(warning FABMHOST changed from $(FABMHOST) to mossco)
+  ifneq ($(FABMHOST),mossco)
+    $(warning FABMHOST is not mossco but $(FABMHOST))
+  endif
+else 
+  export FABMHOST=mossco
 endif
-endif
-export FABMHOST=mossco
 endif
 
 # 3b. GOTM
@@ -870,10 +871,17 @@ fabm_build:
 ifeq ($(MOSSCO_FABM),true)
 ifndef MOSSCO_FABM_BINARY_DIR
 	@mkdir -p $(FABM_BINARY_DIR)
+  ifeq ($wildcard $(FABMDIR)/CMakelist.txt,)
 	(cd $(FABM_BINARY_DIR) && $(CMAKE) $(FABMDIR)/src \
      -DCMAKE_INSTALL_PREFIX=$(FABM_PREFIX) -DFABM_HOST=$(FABMHOST) \
      -DCMAKE_Fortran_FLAGS="$(FABM_FFLAGS)" \
      -DCMAKE_Fortran_COMPILER="$(MOSSCO_F90COMPILER)")
+  else
+	(cd $(FABM_BINARY_DIR) && $(CMAKE) $(FABMDIR) \
+     -DCMAKE_INSTALL_PREFIX=$(FABM_PREFIX) -DFABM_HOST=$(FABMHOST) \
+     -DCMAKE_Fortran_FLAGS="$(FABM_FFLAGS)" \
+     -DCMAKE_Fortran_COMPILER="$(MOSSCO_F90COMPILER)")
+  endif
 endif
 endif
 
