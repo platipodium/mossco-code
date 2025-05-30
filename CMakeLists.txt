@@ -1,8 +1,12 @@
 cmake_minimum_required(VERSION 3.10)
 
 # Project Name
-project(MyProject VERSION 1.0
- LANGUAGES CXX)
+project(mossco VERSION 1.2.0
+    DESCRIPTION "Modular System for Shelves and Coasts"
+    LANGUAGES Fortran C CXX)
+
+# Homepage URL
+set(PROJECT_HOMEPAGE_URL "http://www.mossco.de")
 
 # Standard C++
 set(CMAKE_CXX_STANDARD 11)
