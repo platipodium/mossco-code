@@ -36,3 +36,6 @@ find_package_handle_standard_args (FABM DEFAULT_MSG FABM_LIBRARIES FABM_INCLUDE_
 # For backward compatibility:
 set(FABM_LIBRARY FABM_LIBRARIES)
 set(FABM_INCLUDE_DIR FABM_INCLUDE_DIRS)
+
+message(STATUS "FABM library found: ${FABM_LIBRARIES}")
+message(STATUS "FABM include directory found: ${FABM_INCLUDE_DIRS}")
