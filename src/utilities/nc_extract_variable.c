@@ -3,8 +3,8 @@
   @brief Implementation of a netcdf utility that extracts a subset of variables
 
   This computer program is part of MOSSCO.
-  @copyright 2021-2022 Helmholtz-Zentrum Hereon
-  @copyright 2015-2021 Helmholtz-Zentrum Geesthacht
+  @copyright 2021-2022 Helmholtz-Zentrum hereon GmbH
+  @copyright 2015-2021 Helmholtz-Zentrum Geesthacht GmbH
   @author Carsten Lemmen <carsten.lemmen@hereon.de>
 
   MOSSCO is free software: you can redistribute it and/or modify it under the

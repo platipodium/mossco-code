@@ -1,8 +1,8 @@
 !> @brief Collection of modules for MOSSCO utilities
 !
 !  This computer program is part of MOSSCO.
-!> @copyright 2021-2022 Helmholtz-Zentrum Hereon
-!> @copyright 2016-2021 Helmholtz-Zentrum Geesthacht
+!> @copyright 2021-2025 Helmholtz-Zentrum hereon GmbH
+!> @copyright 2016-2021 Helmholtz-Zentrum Geesthacht GmbH
 !> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -31,4 +31,4 @@ use mossco_parameter
 use mossco_state
 use mossco_strings
 
-end module mossco_logging
+end module mossco

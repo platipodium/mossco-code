@@ -27,7 +27,7 @@ set(UTILITIES_SOURCES
     mossco_attribute.F90
     mossco_component.F90
     mossco_config.F90
-    mossco_db.F90
+    #mossco_db.F90
     mossco_dictionary.F90
     mossco_field.F90
     mossco_geom.F90
@@ -46,8 +46,8 @@ set(UTILITIES_SOURCES
     mossco_strings.F90
     mossco_time.F90
     mossco_variable_types.F90
-    nc_extract_variable.c
-    nc_extract_variable_lasttime.c
+    #nc_extract_variable.c
+    #nc_extract_variable_lasttime.c
     solver_library.F90
 )
 
