@@ -1,16 +1,16 @@
+# SPDX-FileCopyrightText 2022 Helmholtz-Zentrum Hereon
+# SPDX-License-Identifier: CC0-1.0
+# SPDX-FileContributor Carsten Lemmen <carsten.lemmen@hereon.de>
+
 cmake_minimum_required(VERSION 3.10)
 
 # Project Name
 project(mossco VERSION 1.2.0
     DESCRIPTION "Modular System for Shelves and Coasts"
-    LANGUAGES Fortran C CXX)
+    LANGUAGES Fortran C)
 
 # Homepage URL
 set(PROJECT_HOMEPAGE_URL "http://www.mossco.de")
-
-# Standard C++
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Add subdirectories
 add_subdirectory(src)

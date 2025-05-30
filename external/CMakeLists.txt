@@ -1,3 +1,8 @@
+# SPDX-FileCopyrightText 2022 Helmholtz-Zentrum Hereon
+# SPDX-License-Identifier: CC0-1.0
+# SPDX-FileContributor Carsten Lemmen <carsten.lemmen@hereon.de>
+
+# Placeholder for external CMake definitions
 # This directory will contain external dependencies.
 # Use FetchContent or find_package to include them.
 # Example:
