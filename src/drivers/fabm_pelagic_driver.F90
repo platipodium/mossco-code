@@ -2,10 +2,10 @@
 !> @brief 3D generic driver for the Framework for Aquatic Biogeochemical Models (FABM)
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2021-2022 Helmholtz-Zentrum Hereon
-!> @copyright Copyright 2013-2021 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2021-2025 Helmholtz-Zentrum hereon GmbH
+!> @copyright Copyright 2013-2021 Helmholtz-Zentrum Geesthacht GmbH
 !> @author Richard Hofmeister
-!> @author Carsten Lemmen <carsten.lemmen@hereon.de
+!> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the

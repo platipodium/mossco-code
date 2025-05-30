@@ -34,16 +34,27 @@ if(USE_GETM)
     )
 endif()
 
-option(USE_FABM "Enable FABM-based drivers" OFF)
-if(USE_FABM)
+include(FindFABM)
+
+# Add FABM include directories if found
+if(FABM_INCLUDE_DIRS)
+    target_include_directories(mossco_drivers PRIVATE ${FABM_INCLUDE_DIRS})
+endif()
+if(FABM_LIBRARIES)
+    target_link_libraries(mossco_drivers PRIVATE ${FABM_LIBRARIES})
+endif()
+
+option(USE_FABM "Enable FABM-based drivers" ON)
+#if(USE_FABM)
+# FABM drivers are enabled by default, so we append them to DRIVER_SOURCES
     list(APPEND DRIVER_SOURCES
-    fabm0d_driver.F90
-    fabm_benthic_driver.F90
-    fabm_gotm_driver.F90
+    #fabm0d_driver.F90
+    #fabm_benthic_driver.F90
+    #fabm_gotm_driver.F90
     fabm_pelagic_driver.F90
     fabm_sediment_driver.F90
     )
-endif()
+#endif()
 
 # Option to enable or disable EROSED-related sources
 option(USE_EROSED "Enable EROSED-related drivers (biotypes, benthoseffect_class)" OFF)
@@ -77,6 +88,7 @@ endif()
 
 
 # Option to enable or disable clm_driver.F90
+# @todo this really depends on working netcdf only 
 option(USE_CLM "Enable CLM file-based coupling" OFF)
 if(USE_CLM )
     list(APPEND DRIVER_SOURCES 
@@ -90,6 +102,8 @@ target_sources(mossco_drivers PRIVATE ${DRIVER_SOURCES})
 # Link against mossco_utilities to get access to ESMF, versioning, NetCDF (via ESMF), etc.
 # Using PUBLIC will propagate the usage requirements of mossco_utilities (like its INTERFACE include directories
 # and link libraries) to targets that link against mossco_drivers.
+
+target_include_directories(mossco_drivers PUBLIC ${CMAKE_BINARY_DIR}/src/utilities)
 target_link_libraries(mossco_drivers PUBLIC mossco_utilities)
 
 # Ensure that consumers of mossco_drivers can find Fortran modules (.mod files)
