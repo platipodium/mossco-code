@@ -12,10 +12,20 @@ project(mossco VERSION 1.2.0
 # Homepage URL
 set(PROJECT_HOMEPAGE_URL "http://www.mossco.de")
 
+# Find CMake modules
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
+include(GitVersion)
+include(FindESMF)
+include(FindNetCDF)
+
+get_version_from_git()
+
+
 # Add subdirectories
 add_subdirectory(src)
-add_subdirectory(examples)
-add_subdirectory(external)
+#add_subdirectory(examples)
+#add_subdirectory(external)
 
 # Enable testing with CTest
 enable_testing()
