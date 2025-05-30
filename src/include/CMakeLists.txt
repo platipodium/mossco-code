@@ -7,4 +7,4 @@ configure_file(
     ${CMAKE_CURRENT_BINARY_DIR}/include/version.h
 )
 
-target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/include)
+#target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/include)

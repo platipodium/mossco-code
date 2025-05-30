@@ -49,7 +49,6 @@ set(UTILITIES_SOURCES
     nc_extract_variable.c
     nc_extract_variable_lasttime.c
     solver_library.F90
-    ${MOSSCO_SHA_OUTPUT} # Add generated file to sources
 )
 
 target_sources(mossco_utilities PRIVATE ${UTILITIES_SOURCES})
@@ -101,7 +100,7 @@ find_package(NetCDF REQUIRED COMPONENTS Fortran C)
 
 if(NetCDF_FOUND)
     message(STATUS "NetCDF found. Linking with NetCDF::NetCDF_Fortran and NetCDF::NetCDF_C.")
-    target_link_libraries(mossco_utilities PRIVATE NetCDF::NetCDF_Fortran NetCDF::NetCDF_C)
+    #target_link_libraries(mossco_utilities PRIVATE NetCDF::NetCDF_Fortran NetCDF::NetCDF_C)
     # Modern NetCDF targets should propagate their include directories.
     # If not, explicitly add:
     # target_include_directories(mossco_utilities PRIVATE ${NetCDF_INCLUDE_DIRS})
@@ -127,7 +126,7 @@ elseif(CMAKE_Fortran_COMPILER_ID STREQUAL "XL" OR CMAKE_Fortran_COMPILER_ID STRE
 endif()
 
 # Add a dependency to ensure mossco_sha.F90 is generated before mossco_utilities is compiled
-add_dependencies(mossco_utilities ${MOSSCO_SHA_OUTPUT}) # This is not the right way for source files.
+#add_dependencies(mossco_utilities ${MOSSCO_SHA_OUTPUT}) # This is not the right way for source files.
 # The custom command output being part of UTILITIES_SOURCES handles this dependency.
 
 message(STATUS "Configured mossco_utilities library.")
