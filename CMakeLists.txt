@@ -17,10 +17,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 include(GitVersion)
 include(FindESMF)
-include(FindNetCDF)
 
 get_version_from_git()
-
 
 # Add subdirectories
 add_subdirectory(src)

@@ -37,7 +37,10 @@ if(NOT DEFINED ESMFMKFILE)
   else()
     set(ESMFMKFILE $ENV{ESMFMKFILE})
   endif()
+else()
+    message(STATUS "Using esmf.mk file ${ESMFMKFILE}")
 endif()
+
 
 # Only parse the mk file if it is found
 if(EXISTS ${ESMFMKFILE})
@@ -103,6 +106,7 @@ if(EXISTS ${ESMFMKFILE})
     message(STATUS "Detected ESMF Beta snapshot: ${ESMF_BETA_SNAPSHOT}")
   endif()
   set(ESMF_VERSION "${ESMF_VERSION_MAJOR}.${ESMF_VERSION_MINOR}.${ESMF_VERSION_PATCH}")
+  message(STATUS "ESMF version is ${ESMF_VERSION}")
 
   # Find the ESMF library
   if(USE_ESMF_STATIC_LIBS)

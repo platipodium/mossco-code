@@ -3,7 +3,7 @@
 # SPDX-FileContributor: Carsten Lemmen <carsten.lemmen@hereon.de>
 
 configure_file(
-    ${CMAKE_SOURCE_DIR}/include/version.h.in
+    ${CMAKE_SOURCE_DIR}/src/include/version.h.in
     ${CMAKE_CURRENT_BINARY_DIR}/include/version.h
 )
 
