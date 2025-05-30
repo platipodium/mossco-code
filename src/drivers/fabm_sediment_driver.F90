@@ -3,7 +3,7 @@
 !!
 !! The driver contains the sediment driver module
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2021-2024 Helmholtz-Zentrum hereon GmbH
+!> @copyright Copyright (C) 2021-2025 Helmholtz-Zentrum hereon GmbH
 !> @copyright Copyright (C) 2013-2021 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 !> @author Richard Hofmeister
@@ -48,8 +48,8 @@ type, public :: fabm_sed_grid !< sediment grid type (part of type_sed)
    integer  :: knum,inum=-1,jnum=-1
    real(rk) :: dzmin
    logical  :: use_ugrid=.false.
-   logical, dimension(:,:,:), pointer :: mask => null()
-   logical, dimension(:,:), pointer :: mask_hz => null()
+   integer, dimension(:,:,:), pointer :: mask => null()
+   integer, dimension(:,:), pointer :: mask_hz => null()
    integer  :: type=LOCAL_GRID
 contains
    procedure :: init_grid
@@ -249,11 +249,11 @@ sed%knum = sed%grid%knum
 
 if (.not.associated(sed%mask)) then
   allocate(sed%mask(sed%grid%inum,sed%grid%jnum,sed%grid%knum))
-  sed%mask = .false.
+  sed%mask = 0
 end if
 if (.not.associated(sed%grid%mask_hz)) then
   allocate(sed%grid%mask_hz(sed%grid%inum,sed%grid%jnum))
-  sed%grid%mask_hz = .false.
+  sed%grid%mask_hz = 0
 end if
 ! add mask to grid
 sed%grid%mask => sed%mask
@@ -428,7 +428,7 @@ if (from_surface_eff) then
 end if
 
 ! set porosity to 1.0 in the mask to avoid overflows in get_rhs
-where(sed%mask) sed%porosity = 1.0d0
+where(sed%mask > 0) sed%porosity = 1.0d0
 
 ! update interface porosity
 sed%intf_porosity(:,:,1) = sed%porosity(:,:,1)
@@ -461,7 +461,7 @@ if(associated(sed%mask)) then
     do j=1,sed%jnum
       do i=1,sed%inum
         !> @todo: check adaptive solver for -1.d20 or other negative missing values
-        if (sed%mask(i,j,k)) sed%conc(i,j,k,:)=sed%missing_value
+        if (sed%mask(i,j,k) > 0) sed%conc(i,j,k,:)=sed%missing_value
       end do
     end do
   end do
@@ -500,30 +500,30 @@ subroutine fabm_sed_check_domain(sed, rc)
   write(0,*) 'shape(cond)=',shape(sed%conc),' shape(mask)=', shape(sed%mask)
 #endif
 
-  if (any(.not.sed%mask.and.sed%porosity<=0)) then
+  if (any(.not.(sed%mask > 0).and.sed%porosity<=0)) then
     write(0,*) 'FATAL sediment porosity <=0 '
     stop
   endif
 
-  if (any(.not.sed%mask.and.sed%porosity > 1)) then
+  if (any(.not.(sed%mask > 0).and.sed%porosity > 1)) then
     write(0,*) 'FATAL sediment porosity > 1 '
     stop
   endif
 
-  if (any(.not.sed%mask(:,:,1:sed%knum-1).and..not.sed%mask(:,:,2:sed%knum) &
+  if (any(.not.(sed%mask(:,:,1:sed%knum-1) > 0).and..not.(sed%mask(:,:,2:sed%knum) > 0) &
     .and.sed%grid%dzc <= 0)) then
     write(0,*) 'FATAL sediment central layer difference <= 0 '
     do k=1,sed%knum-1; do j=1,sed%jnum; do i=1,sed%inum
-      if (.not.sed%mask(i,j,k).and..not.sed%mask(i,j,k+1).and.sed%grid%dzc(i,j,k) <= 0) &
+      if (.not.(sed%mask(i,j,k)> 0).and..not.(sed%mask(i,j,k+1)>0).and.sed%grid%dzc(i,j,k) <= 0) &
         write(0,*) 'dz(i,j,k) ',i,j,k, sed%grid%dzc(i,j,k)
     enddo; enddo; enddo
     stop
   endif
 
-  if (any(.not.sed%mask.and.sed%grid%dz < sed%grid%dzmin)) then
+  if (any(.not.(sed%mask>0).and.sed%grid%dz < sed%grid%dzmin)) then
     write(0,*) 'FATAL sediment layer height < minimum value ', sed%grid%dzmin
     do k=1,sed%knum; do j=1,sed%jnum; do i=1,sed%inum
-      if (.not.sed%mask(i,j,k).and.sed%grid%dz(i,j,k) < sed%grid%dzmin) &
+      if (.not.(sed%mask(i,j,k)>0).and.sed%grid%dz(i,j,k) < sed%grid%dzmin) &
         write(0,*) 'dz(i,j,k) ',i,j,k, sed%grid%dz(i,j,k)
     enddo; enddo; enddo
     stop
@@ -531,14 +531,14 @@ subroutine fabm_sed_check_domain(sed, rc)
 
   if (associated(sed%conc)) then
     do k=1,sed%knum; do j=1,sed%jnum; do i=1,sed%inum
-      if (sed%mask(i,j,k)) then
+      if (sed%mask(i,j,k)>0) then
         sed%conc(i,j,k,:)=1.d20
       endif
     enddo; enddo; enddo
   end if
 
   ! set porosity to 1.0 in the mask to avoid overflows in get_rhs
-  where(sed%mask) sed%porosity = 1.0d0
+  where(sed%mask > 0) sed%porosity = 1.0d0
 
   if (present(rc)) rc=rc_
 
@@ -598,7 +598,7 @@ subroutine get_rhs(rhs_driver, rhs)
     endif
     !write(0,*) shape(rhs_driver%mask(:,:,k)), shape(rhs_driver%temp3d(:,:,k))
     !write(0,*) shape(rhs_driver%bdys(:,:,1)), shape(rhs_driver%par(:,:,k))
-    where (.not.rhs_driver%mask(:,:,k))
+    where (.not.rhs_driver%mask(:,:,k) > 0)
       rhs_driver%temp3d(:,:,k) = rhs_driver%bdys(:,:,1)
       rhs_driver%par(:,:,k) = rhs_driver%par_surface * exp(-cumdepth/rhs_driver%k_par)
     end where
@@ -700,7 +700,7 @@ subroutine get_rhs(rhs_driver, rhs)
       call fabm_do(rhs_driver%model,1,rhs_driver%inum,j,k,rhs(:,j,k,:))
 
       do i=1,rhs_driver%inum
-         if (.not.rhs_driver%mask(i,j,k)) then
+         if (.not.rhs_driver%mask(i,j,k) > 0) then
            !call fabm_do(rhs_driver%model,i,j,k,rhs(i,j,k,:))
          else
            ! set transport to 0.0 - evtl. skip calculation of transport completely
@@ -772,7 +772,7 @@ dC = 0.0_rk
 ! positive flux is directed downward
 do j=1,grid%jnum
    do i=1,grid%inum
-     if (.not.grid%mask(i,j,1)) then
+     if (.not.grid%mask(i,j,1) > 0) then
       do k = 2,grid%knum
          Flux(i,j,k) = -D(i,j,k) * (C(i,j,k)-C(i,j,k-1)) /grid%dzc(i,j,k-1)
       end do
