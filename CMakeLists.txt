@@ -1,6 +1,6 @@
-# SPDX-FileCopyrightText 2022 Helmholtz-Zentrum Hereon
+# SPDX-FileCopyrightText: 2025 Helmholtz-Zentrum hereon GmbH
 # SPDX-License-Identifier: CC0-1.0
-# SPDX-FileContributor Carsten Lemmen <carsten.lemmen@hereon.de>
+# SPDX-FileContributor: Carsten Lemmen <carsten.lemmen@hereon.de>
 
 cmake_minimum_required(VERSION 3.10)
 
