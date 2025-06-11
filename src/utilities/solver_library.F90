@@ -3,8 +3,8 @@
 !!
 !! @author Richard Hofmeister
 !! @author Carsten Lemmen <carsten.lemmen@hereon.de
-!! @copyright 2021-2022 Helmholtz-Zentrum Hereon
-!! @copyright 2013-2021 Helmholtz-Zentrum Geesthacht
+!! @copyright 2021-2025 Helmholtz-Zentrum Hereon GmbH
+!! @copyright 2013-2021 Helmholtz-Zentrum Geesthacht GmbH
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -40,7 +40,7 @@ type, public :: type_rhs_driver !< base driver class
    real(selected_real_kind(13)) :: dt_min=1.d-9 ! minimum timestep
    real(selected_real_kind(13)) :: relative_change_min=-0.9d0 ! minimum relative change
    real(selected_real_kind(13)),dimension(:,:,:,:),pointer :: conc=>null()
-   logical, dimension(:,:,:), pointer :: mask=>null()
+   integer, dimension(:,:,:), pointer :: mask=>null()
    real(selected_real_kind(13)) :: last_min_dt=1.e20
    integer                      :: last_min_dt_grid_cell(4)=(/-99,-99,-99,-99/)
    logical                      :: adaptive_solver_diagnostics=.false.
