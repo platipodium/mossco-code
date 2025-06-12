@@ -4,8 +4,8 @@
 !! MOSSCO pelagic component.
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2021-2022 Helmholtz-Zentrum Hereon
-!> @copyright Copyright (C) 2013-2021 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2021-2025 Helmholtz-Zentrum Hereon GmbH
+!> @copyright Copyright (C) 2013-2021 Helmholtz-Zentrum Geesthacht GmbH
 !> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 !> @author Richard Hofmeister 
 !
@@ -382,7 +382,7 @@ module fabm_pelagic_component
     integer,dimension(:,:)  ,allocatable,target :: minIndexPDe,maxIndexPDe
     integer,dimension(:,:,:),allocatable,target :: deBlockList
     integer                    :: day_of_year, day, seconds_of_day, unit
-    logical, dimension(:,:,:), pointer :: mask=>null(), tightMask=>null()
+    integer, dimension(:,:,:), pointer :: mask=>null(), tightMask=>null()
     integer, dimension(:,:,:), pointer :: gridmask=>null()
     real(ESMF_KIND_R8), dimension(:)  , pointer :: coord1d=>null()
     real(ESMF_KIND_R8), dimension(:,:), pointer :: coord2d=>null()
@@ -700,7 +700,7 @@ module fabm_pelagic_component
     allocate(mask(1-totalLWidth3(1,1):inum+totalUWidth3(1,1), &
                   1-totalLWidth3(2,1):jnum+totalUWidth3(2,1), &
                   1-totalLWidth3(3,1):numlayers+totalUWidth3(3,1)))
-    mask = .false.
+    mask = 0
     allocate(pel%is_openboundary(1-totalLWidth3(1,1):inum+totalUWidth3(1,1), &
                                  1-totalLWidth3(2,1):jnum+totalUWidth3(2,1), &
                                  1-totalLWidth3(3,1):numlayers+totalUWidth3(3,1)))
@@ -716,7 +716,7 @@ module fabm_pelagic_component
     if (isPresent) then
       call ESMF_GridGetItem(state_grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask, rc=localrc)
       _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
-      mask = ( gridmask.le.0 ) !>@todo: mask where gridmask /= 1
+      mask = gridmask  !>@todo: mask where gridmask /= 1
       pel%is_openboundary = ( gridmask > 1 )
       pel%is_openboundary_hz = pel%is_openboundary(:,:,1)
     endif
@@ -2091,7 +2091,7 @@ module fabm_pelagic_component
       ! integrate bottom upward fluxes
       ! todo: this does not work with the link coupler, yet. the bfl(:)%p pointers
       !       have to be updated from importState here in Run
-      if (any((pel%layer_height(RANGE2D,1) <= 0).and.(.not.pel%mask(RANGE2D,1)))) then
+      if (any((pel%layer_height(RANGE2D,1) <= 0).and.(pel%mask(RANGE2D,1)==0))) then
         write(message,'(A)') '  non-positive layer height detected'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -2387,7 +2387,7 @@ module fabm_pelagic_component
     endif
 
     do k=1,pel%knum
-      if (any((pel%layer_height(RANGE2D,k) <= 0).and.(.not.pel%mask(RANGE2D,k)))) then
+      if (any((pel%layer_height(RANGE2D,k) <= 0).and.(pel%mask(RANGE2D,k) == 0))) then
         write(message,'(A)') trim(name)//' received non-positive layer height'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         if (present(rc)) rc = ESMF_RC_ARG_BAD
@@ -2398,7 +2398,7 @@ module fabm_pelagic_component
     pel%column_height(RANGE2D) = sum(pel%layer_height(RANGE2D,lbnd3(3):ubnd3(3)),3)
 
     do k=1,pel%knum
-      where (.not.pel%mask(RANGE2D,k))
+      where (pel%mask(RANGE2D,k) == 0)
         pel%cell_column_fraction(RANGE2D,k) &
           = pel%layer_height(RANGE2D,k) / (pel%column_height(RANGE2D))
       endwhere
@@ -2499,7 +2499,7 @@ module fabm_pelagic_component
       !> Dilute concentration with volume flux if requested by river_dilution flag
       if (associated(pel%volume_flux) .and. .not.(pel%model%state_variables(n)%no_river_dilution)) then
         do k=1, pel%knum
-          where (.not.pel%mask(RANGE2D,k))
+          where (pel%mask(RANGE2D,k)== 0)
 
             pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
               * pel%layer_height(RANGE2D,k)*pel%column_area(RANGE2D) &
@@ -2559,7 +2559,7 @@ module fabm_pelagic_component
           !> which is equal to dt*mass_river[g/s]/total_diluted_volume [g/m**3]
           if (associated(pel%volume_flux) .and. isPowder) then
             do k=1, pel%knum
-              where (.not.pel%mask(RANGE2D,k))
+              where (pel%mask(RANGE2D,k) == 0)
               pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
                 + dt * ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) &
                 / (pel%column_height(RANGE2D) * pel%column_area(RANGE2D) &
@@ -2568,7 +2568,7 @@ module fabm_pelagic_component
             enddo
           elseif (isPowder) then
             do k=1, pel%knum
-              where (.not.pel%mask(RANGE2D,k))
+              where (pel%mask(RANGE2D,k) == 0)
               pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
                 + dt * ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) &
                 / (pel%column_height(RANGE2D) * pel%column_area(RANGE2D))
@@ -2576,7 +2576,7 @@ module fabm_pelagic_component
             enddo
           elseif (isConcentration) then
             do k=1, pel%knum
-              where (.not.pel%mask(RANGE2D,k))
+              where (pel%mask(RANGE2D,k) == 0)
               pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
                 + dt * ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))
               endwhere
@@ -2604,7 +2604,7 @@ module fabm_pelagic_component
           !> If the flux is in concentration units, then the following is correct
           !> Carefully exclude masked items and (for negative fluxes) a CFL-like maximum halving
           if (isConcentration) then
-            where (.not.pel%mask(RANGE3D) .and. pel%conc(RANGE3D,n) + &
+            where (pel%mask(RANGE3D) == 0 .and. pel%conc(RANGE3D,n) + &
               2 * dt * ratePtr3(RANGE3D) > 0.0 )
               pel%conc(RANGE3D,n) = pel%conc(RANGE3D,n) + dt * ratePtr3(RANGE3D)
             endwhere
@@ -2689,7 +2689,7 @@ module fabm_pelagic_component
     !> are one of valid numbers or are masked
     !
     do n = 1,pel%nvar
-      if (any((pel%conc(RANGE3D,n)) /= pel%conc(RANGE3D,n) .and..not.pel%mask(RANGE3D))) then
+      if (any((pel%conc(RANGE3D,n)) /= pel%conc(RANGE3D,n) .and. pel%mask(RANGE3D)==0)) then
         foundNaN = .true.
         exit
       endif
@@ -2704,7 +2704,7 @@ module fabm_pelagic_component
     do i=1,pel%inum
       do j=1,pel%jnum
         do k=1,pel%knum
-          if ( pel%mask(i,j,k) ) cycle
+          if ( pel%mask(i,j,k) > 0 ) cycle
           if ( any(pel%conc(i,j,k,:) /= pel%conc(i,j,k,:)) ) then
 
             write(message,'(A,3i4)')  '-- NaN detected at indices (i,j,k) ',i,j,k
