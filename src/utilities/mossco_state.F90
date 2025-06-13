@@ -1,8 +1,8 @@
 !> @brief Implementation of ESMF State utilities
 !
 !  This computer program is part of MOSSCO.
-!> @copyright 2021-2022 Helmholtz-Zentrum Hereon
-!> @copyright 2014-2021 Helmholtz-Zentrum Geesthacht
+!> @copyright 2021-2025 Helmholtz-Zentrum hereon GmbH 
+!> @copyright 2014-2021 Helmholtz-Zentrum Geesthacht GmbH
 !> @copyright 2014-2019 Institut für Ostseeforschung Warnemünde
 !> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 !> @author Richard Hofmeister

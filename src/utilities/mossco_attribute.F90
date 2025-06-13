@@ -1,7 +1,7 @@
 !> @brief Implementation of extensions to the ESMF Attribute utilities
 !
 !  This computer program is part of MOSSCO.
-!> @copyright 2021-2023 Helmholtz-Zentrum Hereon GmbH
+!> @copyright 2021-2025 Helmholtz-Zentrum hereon GmbH
 !> @copyright 2015-2021 Helmholtz-Zentrum Geesthacht GmbH
 !> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 !

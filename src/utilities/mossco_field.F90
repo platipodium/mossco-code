@@ -1,7 +1,7 @@
 !> @brief Implementation of additional ESMF Field utilities
 !
 !  This computer program is part of MOSSCO.
-!> @copyright 2021-2022 Helmholtz-Zentrum Hereon
+!> @copyright 2021-2025 Helmholtz-Zentrum hereon GmbH
 !> @copyright 2015-2021 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 !> @author Richard Hofmeister
@@ -2570,6 +2570,8 @@ end subroutine MOSSCO_FieldCopyAttribute
     type(ESMF_Grid)                        :: grid
     character(len=ESMF_MAXSTR), allocatable :: options(:)
 
+    type(ESMF_Info)                          :: exportInfo, importInfo
+
     rc_ = ESMF_SUCCESS
     owner_ = '--'
     if (present(rc)) rc = rc_
@@ -2649,18 +2651,29 @@ end subroutine MOSSCO_FieldCopyAttribute
     if (allocated(exportUbnd)) deallocate(exportUbnd)
     if (allocated(exportLbnd)) deallocate(exportLbnd)
 
-    call MOSSCO_AttributeGet(importField, 'missing_value', importMissingValue, &
-      defaultValue=-1D30, convert=.true., rc=localrc)
+    call ESMF_InfoGetFromHost(importField, info=importInfo, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
+
+    call ESMF_InfoGet(importInfo, key='missing_value', value=importMissingValue, &
+                  default=-1D30, rc=localrc)
+    !call MOSSCO_AttributeGet(importField, 'missing_value', importMissingValue, &
+    !  defaultValue=-1D30, convert=.true., rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
-    call MOSSCO_AttributeGet(exportField, 'missing_value', exportMissingValue, &
-      defaultValue=-1D30, convert=.true., rc=localrc)
+    call ESMF_InfoGetFromHost(exportField, info=exportInfo, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+    call ESMF_InfoGet(exportInfo, key='missing_value', value=exportMissingValue, &
+                  default=-1D30, rc=localrc)
+    !call MOSSCO_AttributeGet(exportField, 'missing_value', exportMissingValue, &
+    !  defaultValue=-1D30, convert=.true., rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     !> @todo The has_boundary_data attribute is set to .true. by default here,
     !> this should be changed by a configuration attribute and the attribute name MOSSCO_AttributeGet
     !> be synchronized with the transporting component (e.g. getm_component)
-    call ESMF_AttributeSet(exportField, 'has_boundary_data', .true., rc=localrc)
+    call ESMF_InfoSet(exportInfo, key='has_boundary_data', value=.true., rc=localrc)
+    !call ESMF_AttributeSet(exportField, 'has_boundary_data', .true., rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
     if (.not. tagOnly_) then
@@ -2735,6 +2748,12 @@ end subroutine MOSSCO_FieldCopyAttribute
         endif
       endif
 
+      call ESMF_InfoGetFromHost(importField, info=importInfo, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+      call ESMF_InfoGetFromHost(exportField, info=exportInfo, rc=localrc)
+      _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
       select case (rank)
         case(2)
           call ESMF_FieldGet(importField, farrayPtr=importPtr2, rc=localrc)
@@ -2753,20 +2772,25 @@ end subroutine MOSSCO_FieldCopyAttribute
 
           !> @todo add infinity to mask
 
-          call ESMF_AttributeGet(importField, 'valid_min', isPresent=isPresent, rc=localrc)
+          isPresent = ESMF_InfoIsPresent(importInfo, "valid_min", rc=rc)
+          !call ESMF_AttributeGet(importField, 'valid_min', rc=localrc)
           _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
 
           if (isPresent) then
-            call MOSSCO_AttributeGet(importField, label='valid_min', value=real8, &
-              convert=.true., rc=localrc)
+            !call MOSSCO_AttributeGet(importField, label='valid_min', value=real8, &
+            !  convert=.true., rc=localrc)
+            call ESMF_InfoGet(importInfo, key='valid_min', value=real8, rc=localrc)
             _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
             mask2 = (mask2 .and. importPtr2(RANGE2D) >= real8)
           endif
 
-          call ESMF_AttributeGet(exportField, 'valid_min', isPresent=isPresent, rc=localrc)
+          !call ESMF_AttributeGet(exportField, 'valid_min', isPresent=isPresent, rc=localrc)
+          isPresent = ESMF_InfoIsPresent(exportInfo, "valid_min", rc=rc)
+          _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
           if (isPresent) then
-            call MOSSCO_AttributeGet(importField, label='valid_min', value=real8, &
-              convert=.true., rc=localrc)
+            !call MOSSCO_AttributeGet(importField, label='valid_min', value=real8, &
+            !  convert=.true., rc=localrc)
+            call ESMF_InfoGet(exportInfo, key='valid_min', value=real8, rc=localrc)
             mask2 = (mask2 .and. importPtr2(RANGE2D) >= real8)
           endif
 
