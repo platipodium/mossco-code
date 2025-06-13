@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF component that calculates benthos effects
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018
+!> @copyright Copyright (C) 2013-20218
 !>  Helmholtz-Zentrum Geesthacht, Bundesanstalt für Wasserbau
 !> @author M. Hassan Nasermoaddeli
 !> @author Carsten Lemmen
@@ -104,6 +104,7 @@ contains
     type(ESMF_Time)             :: currTime
     integer(ESMF_KIND_I4)       :: localrc
     logical                     :: isPresent
+    type(ESMF_Info)             :: info
 
     rc=ESMF_SUCCESS
 
@@ -113,13 +114,11 @@ contains
 
     InitializePhaseMap(1) = "IPDv00p1=1"
 
-    call ESMF_AttributeAdd(gridComp, convention="NUOPC", purpose="General", &
-      attrList=(/"InitializePhaseMap"/), rc=localrc)
+    call ESMF_InfoGetFromHost(gridComp, info=info, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(gridComp, name="InitializePhaseMap", &
-      valueList=InitializePhaseMap, &
-      convention="NUOPC", purpose="General", rc=localrc)
+    call ESMF_InfoSet(info, key="NUOPC/General/InitializePhaseMap", &
+      values=InitializePhaseMap, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call ESMF_GridCompGet(gridComp, importStateIsPresent=isPresent, rc=localrc)

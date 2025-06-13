@@ -1,7 +1,8 @@
 !> @brief Implementation of an ESMF grid input component
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2016, 2017, 2018 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2021-2025 Helmholtz-Zentrum hereon GmbH
+!> @copyright Copyright 2016-2021 Helmholtz-Zentrum Geesthacht GmbH
 !> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 
 !
@@ -87,6 +88,7 @@ module grid_component
     character(len=ESMF_MAXSTR)  :: name
     type(ESMF_Time)             :: currTime
     integer                     :: localrc
+    type(ESMF_Info)             :: info
 
     rc=ESMF_SUCCESS
 
@@ -96,12 +98,11 @@ module grid_component
 
     InitializePhaseMap(1) = "IPDv00p1=1"
 
-    call ESMF_AttributeAdd(gridComp, convention="NUOPC", purpose="General", &
-      attrList=(/"InitializePhaseMap"/), rc=localrc)
+    call ESMF_InfoGetFromHost(gridComp, info=info, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(gridComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
-      convention="NUOPC", purpose="General", rc=localrc)
+    call ESMF_InfoSet(info, key="NUOPC/General/InitializePhaseMap", &
+      values=InitializePhaseMap, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_CompExit(gridComp, rc=localrc)

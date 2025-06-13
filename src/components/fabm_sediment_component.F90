@@ -146,6 +146,7 @@ module fabm_sediment_component
     character(len=ESMF_MAXSTR)  :: name
     type(ESMF_Time)             :: currTime
     integer                     :: localrc
+    type(ESMF_Info)             :: info
 
     rc=ESMF_SUCCESS
 
@@ -155,12 +156,11 @@ module fabm_sediment_component
 
     InitializePhaseMap(1:2) = (/'IPDv00p1=1','IPDv00p2=2'/)
 
-    call ESMF_AttributeAdd(gridComp, convention="NUOPC", purpose="General", &
-      attrList=(/"InitializePhaseMap"/), rc=localrc)
+    call ESMF_InfoGetFromHost(gridComp, info=info, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(gridComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
-      convention="NUOPC", purpose="General", rc=localrc)
+    call ESMF_InfoSet(info, key="NUOPC/General/InitializePhaseMap", &
+      values=InitializePhaseMap, rc=localrc)
     _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_CompExit(gridComp, rc=localrc)
@@ -475,7 +475,7 @@ module fabm_sediment_component
     !! get grid mask
     !allocate(sed%mask(1:sed%grid%inum,1:sed%grid%jnum,1:sed%grid%knum))
     allocate(sed%mask(RANGE2D,1:sed%grid%knum))
-    sed%mask = .false.
+    sed%mask = 0
     isPresent = .true.
 
     if (sed%grid%type==FOREIGN_GRID .and. geomType==ESMF_GEOMTYPE_GRID) then
@@ -496,7 +496,7 @@ module fabm_sediment_component
 
       do i=lbnd(1),ubnd(1)
         do j=lbnd(2),ubnd(2)
-          sed%mask(i,j,:) = (gridmask(i,j).le.0)
+          sed%mask(i,j,:) = gridmask(i,j)
         enddo
       enddo
     endif
@@ -627,7 +627,7 @@ module fabm_sediment_component
 
     do i=lbnd(1),ubnd(1)
       do j=lbnd(2),ubnd(2)
-        if (.not.sed%mask(i,j,1)) sed%conc(i,j,:,:) = sed1d%conc(1,1,:,:)
+        if (sed%mask(i,j,1) == 0) sed%conc(i,j,:,:) = sed1d%conc(1,1,:,:)
       enddo
     enddo
 
@@ -2389,7 +2389,7 @@ module fabm_sediment_component
     do i=1,sed%inum
       do j=1,sed%jnum
         do k=1,sed%knum
-          if ( sed%mask(i,j,k) ) cycle
+          if ( sed%mask(i,j,k) > 0 ) cycle
           if ( any(sed%conc(i,j,k,:) /= sed%conc(i,j,k,:)) ) then
 #ifdef DEBUG_NAN
             write(message,'(A,3i4)')  '  NaN detected at indices (i,j,k) ',i,j,k

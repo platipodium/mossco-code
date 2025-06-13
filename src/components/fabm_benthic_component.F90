@@ -4,7 +4,8 @@
 !! MOSSCO benthic component.
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013, 2014, 2015, 2016, 2018 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2021-2021 Helmholtz-Zentrum hereon GmbH
+!> @copyright Copyright (C) 2013-2021 Helmholtz-Zentrum Geesthacht GmbH
 !> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 !> @author Richard Hofmeister <richard.hofmeister@hereon.de>
 !
@@ -118,24 +119,19 @@ module fabm_benthic_component
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
 
-    call ESMF_AttributeAdd(gridComp, convention="NUOPC", purpose="General", &
-      attrList=(/"InitializePhaseMap"/), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_InfoGetFromHost(gridComp, info=info, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(gridComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
-      convention="NUOPC", purpose="General", rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_InfoSet(info, key="NUOPC/General/InitializePhaseMap", &
+      values=InitializePhaseMap, rc=localrc)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
     call MOSSCO_CompExit(gridComp, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc)
 
   end subroutine InitializeP0
 
@@ -342,7 +338,7 @@ module fabm_benthic_component
     integer,dimension(:,:)  ,allocatable,target :: minIndexPDe,maxIndexPDe
     integer,dimension(:,:,:),allocatable,target :: deBlockList
     integer                    :: day_of_year, day, seconds_of_day
-    logical, dimension(:,:,:), pointer :: mask=>null()
+    integer, dimension(:,:,:), pointer :: mask=>null()
     integer, dimension(:,:,:), pointer :: gridmask=>null()
     real(ESMF_KIND_R8), dimension(:)  , pointer :: coord1d=>null()
     real(ESMF_KIND_R8), dimension(:,:), pointer :: coord2d=>null()
@@ -569,7 +565,7 @@ module fabm_benthic_component
     allocate(mask(1-totalLWidth3(1,1):inum+totalUWidth3(1,1), &
                   1-totalLWidth3(2,1):jnum+totalUWidth3(2,1), &
                   1-totalLWidth3(3,1):numlayers+totalUWidth3(3,1)))
-    mask = .false.
+    mask = 0
     allocate(ben%is_openboundary(1-totalLWidth3(1,1):inum+totalUWidth3(1,1), &
                                  1-totalLWidth3(2,1):jnum+totalUWidth3(2,1), &
                                  1-totalLWidth3(3,1):numlayers+totalUWidth3(3,1)))
@@ -581,7 +577,7 @@ module fabm_benthic_component
 
     call ESMF_GridGetItem(state_grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask, rc=localrc)
     if (localrc == ESMF_SUCCESS) then
-      mask = ( gridmask.le.0 ) !>@todo: mask where gridmask /= 1
+      mask = ( gridmask ) !>@todo: mask where gridmask /= 1
       ben%is_openboundary = ( gridmask > 1 )
       ben%is_openboundary_hz = ben%is_openboundary(:,:,1)
     end if
@@ -1475,7 +1471,7 @@ module fabm_benthic_component
       ! integrate bottom upward fluxes
       ! todo: this does not work with the link coupler, yet. the bfl(:)%p pointers
       !       have to be updated from importState here in Run
-      if (any((ben%layer_height(RANGE2D,1) <= 0).and.(.not.ben%mask(RANGE2D,1)))) then
+      if (any((ben%layer_height(RANGE2D,1) <= 0).and.(ben%mask(RANGE2D,1)==0))) then
         write(message,'(A)') '  non-positive layer height detected'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1559,8 +1555,8 @@ module fabm_benthic_component
                   index(itemName,'_flux_at_water_surface')>0) then
             farrayPtr3(RANGE2D,ben%knum) = farrayPtr3(RANGE2D,ben%knum) + ratePtr2(RANGE2D) * dt / ben%layer_height(RANGE2D,ben%knum)
           elseif (index(itemName,'_flux_at_soil_surface')>0) then
-            !> @todo Skip if  .not.ben%mask(RANGE2D,k)
-            ! if (all(ratePtr2(RANGE2D) == 0.0 .or. ben%mask(RANGE2D,1)) cycle
+            !> @todo Skip if  ben%mask(RANGE2D,k) == 0
+            ! if (all(ratePtr2(RANGE2D) == 0.0 .or. ben%mask(RANGE2D,1) == 0) cycle
             ! Avoid overshoot of negative fluxes within a timestep
             ! where (farrayPtr3(RANGE2D,1) + ratePtr2(RANGE2D) * dt / ben%layer_height(RANGE2D,1) > 0)
               farrayPtr3(RANGE2D,1) = farrayPtr3(RANGE2D,1) + ratePtr2(RANGE2D) * dt / ben%layer_height(RANGE2D,1)
@@ -1678,14 +1674,14 @@ module fabm_benthic_component
     end if
 
     do k=1,ben%knum
-      if (any((ben%layer_height(RANGE2D,k) <= 0).and.(.not.ben%mask(RANGE2D,k)))) then
+      if (any((ben%layer_height(RANGE2D,k) <= 0).and.(ben%mask(RANGE2D,k) == 0))) then
         write(message,'(A)') '  non-positive layer height detected'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      where (.not.ben%mask(RANGE2D,k))
-      ben%cell_per_column_volume(RANGE2D,k) = 1.0d0 / &
+      where (ben%mask(RANGE2D,k)==0)
+        ben%cell_per_column_volume(RANGE2D,k) = 1.0d0 / &
         (sum(ben%layer_height(RANGE3D),dim=3)*ben%column_area(RANGE2D))
       endwhere
     enddo

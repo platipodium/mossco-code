@@ -2,8 +2,8 @@
 !
 !  This computer program is part of MOSSCO.
 !> @copyright 2013-2022 Institut für Ostseeforschung Warnemünde
-!> @copyright 2021-2022 Helmholtz-Zentrum Hereon
-!> @copyright 2013-2021 Helmholtz-Zentrum Geesthacht
+!> @copyright 2021-2025 Helmholtz-Zentrum Hereon GmbH
+!> @copyright 2013-2021 Helmholtz-Zentrum Geesthacht GmbH
 !> @author Knut Klingbeil <klingbeil@io-warnemuende.de>
 !> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 !> @author Richard Hofmeister
@@ -164,6 +164,7 @@ module getm_component
 ! !LOCAL VARIABLES
     character(len=NUOPC_PhaseMapStringLength) :: InitializePhaseMap(2)
     integer(ESMF_KIND_I4) :: localrc
+      type(ESMF_Info) :: info
 !
 !EOP
 !-----------------------------------------------------------------------
@@ -182,16 +183,13 @@ module getm_component
    InitializePhaseMap(1) = "IPDv00p1=1"
    InitializePhaseMap(2) = "IPDv00p2=2"
 
-   !call NUOPC_CompAttributeAdd(gridComp)
-    call ESMF_AttributeAdd(gridComp,convention="NUOPC",purpose="General", &
-                          attrList=(/"InitializePhaseMap"/), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_InfoGetFromHost(gridComp, info=info, rc=localrc)
+    _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
+    call ESMF_InfoSet(info, key="NUOPC/General/InitializePhaseMap", &
+      values=InitializePhaseMap, rc=localrc)
+    _LOG_AND_FINALIZE_ON_ERROR_(rc)
 
-    call ESMF_AttributeSet(gridComp,name="InitializePhaseMap",           &
-                                   valueList=InitializePhaseMap,        &
-                                   convention="NUOPC",purpose="General",rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_CompExit(gridComp, rc=localrc)
 #ifdef DEBUG

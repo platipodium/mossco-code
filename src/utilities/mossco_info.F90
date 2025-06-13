@@ -2,7 +2,7 @@
 !> @brief Implementation of extensions to the ESMF Info utilities
 !
 !  This computer program is part of MOSSCO.
-!> @copyright 2022 Helmholtz-Zentrum Hereon
+!> @copyright 2022-2025 Helmholtz-Zentrum hereon GmbH
 !> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -55,6 +55,42 @@ interface MOSSCO_InfoGet
 end interface MOSSCO_InfoGet
 
 contains
+
+! The following is elegant but does not work currently:
+! Unlimited polymorphic actual argument at (1) is not matched with either an unlimited polymorphic or assumed type dummy argument
+!
+! #undef  ESMF_METHOD
+! #define ESMF_METHOD "MOSSCO_InfoCopyKey_untyped"
+! subroutine MOSSCO_InfoCopyKey_untyped(to, from, key, kwe, typeKind, rc)
+!   class(*), intent(inout)                   :: to
+!   class(*), intent(in)                      :: from
+!   character(len=*), intent(in)             :: key
+!   type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+!   type(ESMF_TypeKind_Flag), intent(in), optional   :: typeKind
+!   integer(ESMF_KIND_I4), intent(out), optional     :: rc
+
+!   type(ESMF_Info) :: toInfo, fromInfo
+!   type(ESMF_TypeKind_Flag)     :: typeKind_
+!   integer(ESMF_KIND_I4)        :: localrc, rc_
+
+!   rc_ = ESMF_SUCCESS
+!   if (present(rc)) rc = rc_
+!   if (present(kwe)) rc_ = ESMF_SUCCESS
+
+!   call ESMF_InfoGetFromHost(to, info=toInfo, rc=localrc)
+!   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+!   call ESMF_InfoGetFromHost(from, info=fromInfo, rc=localrc)
+!   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_) 
+
+!   if (present(typeKind)) then 
+!     call MOSSCO_InfoCopyKey(toInfo, fromInfo, key, typeKind=typeKind, rc=localrc)
+!   else
+!     call MOSSCO_InfoCopyKey(toInfo, fromInfo, key, rc=localrc)
+!   endif 
+!   _MOSSCO_LOG_AND_FINALIZE_ON_ERROR_(rc_)
+
+! end subroutine MOSSCO_InfoCopyKey_untyped
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_InfoCopyKey"

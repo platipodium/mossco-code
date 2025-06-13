@@ -217,8 +217,8 @@
     class(type_mossco_fabm_pelagic) :: pf
     integer  :: inum,jnum,knum
     real(rk) :: dt
-    logical, dimension(1:inum,1:jnum,1:knum), optional :: mask
-    logical, dimension(1:inum,1:jnum), target :: mask_hz
+    integer, dimension(1:inum,1:jnum,1:knum), optional :: mask
+    integer, dimension(1:inum,1:jnum), target :: mask_hz
 
     type(export_state_type), pointer :: export_state
     integer :: n
@@ -240,9 +240,9 @@
     if (present(mask)) then
       pf%mask=mask
     else
-      pf%mask(:,:,:) = .false.
+      pf%mask(:,:,:) = 0
     end if
-    mask_hz = any(pf%mask, dim=3)
+    mask_hz = maxval(pf%mask, dim=3)
 
     call fabm_set_mask(pf%model, pf%mask, mask_hz)
 
@@ -369,7 +369,7 @@
     do i=1,pf%inum
       do j=1,pf%jnum
         do k=1,pf%knum
-          if (.not.pf%mask(i,j,k)) &
+          if (pf%mask(i,j,k) == 0) &
             pf%layer_height(i,j,k) = pf%zi(i,j,k0+k) - pf%zi(i,j,k0+k-1)
         end do
       end do
@@ -402,7 +402,7 @@
       do i=1,rhs_driver%inum
         rhs(i,j,rhs_driver%knum,:) = rhs(i,j,rhs_driver%knum,:)/rhs_driver%layer_height(i,j,rhs_driver%knum)
       end do
-      !if (.not.rhs_driver%mask(i,j,1)) then
+      !if (rhs_driver%mask(i,j,1) == 0) then
       !  call fabm_do_bottom()
       !end if
     end do
@@ -803,7 +803,7 @@ if ( any(bioext /= bioext) ) write(0,*) 'ERROR: fabm_pelagic_driver#800 bioext =
 
      do i=1,pf%inum
        do j=1,pf%jnum
-!         if (.not.pf%mask(i,j,1)) then
+!         if (pf%mask(i,j,1) == 0) then
 if ( pf%I_0(i,j) /= pf%I_0(i,j) ) write(0,*) 'ERROR: fabm_pelagic_driver#800 pf%I_0 = ',i,j,pf%I_0(i,j)
 if ( pf%albedo(i,j) /= pf%albedo(i,j) ) write(0,*) 'ERROR: fabm_pelagic_driver#809 pf%albedo = ',i,j,pf%albedo(i,j)
 if ( any(pf%par(i,j,:) /= pf%par(i,j,:)) ) write(0,*) 'ERROR: fabm_pelagic_driver#810 pf%par = ',i,j,pf%par(i,j,:)
