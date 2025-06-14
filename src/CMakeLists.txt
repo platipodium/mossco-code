@@ -7,7 +7,7 @@
 add_subdirectory(include)
 add_subdirectory(utilities)
 add_subdirectory(drivers)
-#add_subdirectory(components)
+add_subdirectory(components)
 #add_subdirectory(connectors)
 #add_subdirectory(mediators)
 #add_subdirectory(test)
