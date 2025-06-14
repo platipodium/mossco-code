@@ -25,6 +25,18 @@ if(BUILD_SHARED_LIBS)
    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
 
+# Set default parallel build jobs
+if(NOT DEFINED CMAKE_BUILD_PARALLEL_LEVEL)
+    set(CMAKE_BUILD_PARALLEL_LEVEL 8)
+endif()
+
+# For older CMake versions or additional compatibility
+if(CMAKE_GENERATOR MATCHES "Unix Makefiles")
+    if(NOT DEFINED ENV{MAKEFLAGS})
+        set(ENV{MAKEFLAGS} "-j8")
+    endif()
+endif()
+
 # Options for third-party packages that we an link into
 option(USE_HAMSOM "Enable HAMSOM-based drivers" OFF)
 option(USE_CMAQ "Enable CMAQ-based drivers" OFF)
@@ -65,8 +77,9 @@ if(USE_FABM)
     endif()
 
     set(FABM_FORCED_HOST mossco)
-    add_subdirectory("${FABM_SOURCE_DIR}" external/fabm/code)
+    add_subdirectory("${FABM_SOURCE_DIR}" fabm)
     mark_as_advanced(CLEAR FABM_BASE)
+ 
   endif()
 endif()
 
@@ -115,7 +128,7 @@ if(USE_GOTM)
 endif()
 
 
-include(ConfigureGETM)
+#include(ConfigureGETM)
 
 include(GitVersion)
 include(FindESMF)
@@ -123,7 +136,7 @@ include(FindESMF)
 get_version_from_git()
 
 # Add subdirectories
-#add_subdirectory(src)
+add_subdirectory(src)
 #add_subdirectory(examples)
 #add_subdirectory(external)
 

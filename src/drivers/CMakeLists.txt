@@ -40,22 +40,30 @@ if(USE_FABM)
         fabm_sediment_driver.F90
     )
 
-    set(FABM_HOST mossco)
-    set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
-    add_subdirectory(
-        ${CMAKE_CURRENT_SOURCE_DIR}/../../external/fabm/code
-        ${CMAKE_BINARY_DIR}/external/fabm/build
-    )
-
-    #include(FindFABM)
-
     # Add FABM include directories if found
     if(FABM_INCLUDE_DIRS)
         target_include_directories(mossco_drivers PRIVATE ${FABM_INCLUDE_DIRS})
+    else()
+        file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/fabm/include)
+        file(COPY ${FABM_BASE}/src/drivers/mossco/fabm_driver.h 
+            DESTINATION ${CMAKE_BINARY_DIR}/fabm/include
+        )
+        file(GLOB FABM_HEADERS "${FABM_BASE}/include/*.h")
+        file(COPY ${FABM_HEADERS} 
+            DESTINATION ${CMAKE_BINARY_DIR}/fabm/include
+        )
+        target_include_directories(mossco_drivers PRIVATE
+            ${CMAKE_BINARY_DIR}/fabm/include
+            ${CMAKE_BINARY_DIR}/fabm/modules
+        )
     endif()
+
     if(FABM_LIBRARIES)
         target_link_libraries(mossco_drivers PRIVATE ${FABM_LIBRARIES})
+    else()
+        target_link_libraries(mossco_drivers PRIVATE ${CMAKE_BINARY_DIR}/fabm/libfabm.a)
     endif()
+
 endif()
 
 # Option to enable or disable EROSED-related sources

@@ -161,6 +161,6 @@ if(EXISTS ${ESMFMKFILE})
 
 else()
   set(ESMF_FOUND FALSE CACHE BOOL "esmf.mk file NOT found" FORCE)
-  message(WARNING "ESMFMKFILE ${ESMFMKFILE} not found. Try setting ESMFMKFILE \
+  message(FATAL "ESMFMKFILE ${ESMFMKFILE} not found. Try setting ESMFMKFILE \
                    to esmf.mk location.")
 endif()
