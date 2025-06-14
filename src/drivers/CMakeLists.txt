@@ -13,51 +13,52 @@ set(DRIVER_SOURCES
     #vertical_macrobenthos_driver.F90
 )
 
-option(USE_HAMSOM "Enable HAMSOM-based drivers" OFF)
 if(USE_HAMSOM)
     list(APPEND DRIVER_SOURCES
         hamsom_driver.F90
     )
 endif()
 
-option(USE_CMAQ "Enable CMAQ-based drivers" OFF)
 if(USE_CMAQ)
     list(APPEND DRIVER_SOURCES
         cmaq_driver.F90
     )
 endif()
 
-option(USE_GETM "Enable GETM-based drivers" OFF)
 if(USE_GETM)
     list(APPEND DRIVER_SOURCES
         getm_driver.F90
     )
 endif()
 
-include(FindFABM)
-
-# Add FABM include directories if found
-if(FABM_INCLUDE_DIRS)
-    target_include_directories(mossco_drivers PRIVATE ${FABM_INCLUDE_DIRS})
-endif()
-if(FABM_LIBRARIES)
-    target_link_libraries(mossco_drivers PRIVATE ${FABM_LIBRARIES})
-endif()
-
-option(USE_FABM "Enable FABM-based drivers" ON)
-#if(USE_FABM)
-# FABM drivers are enabled by default, so we append them to DRIVER_SOURCES
+if(USE_FABM)
     list(APPEND DRIVER_SOURCES
-    #fabm0d_driver.F90
-    #fabm_benthic_driver.F90
-    #fabm_gotm_driver.F90
-    fabm_pelagic_driver.F90
-    fabm_sediment_driver.F90
+        #fabm0d_driver.F90
+        #fabm_benthic_driver.F90
+        #fabm_gotm_driver.F90
+        fabm_pelagic_driver.F90
+        fabm_sediment_driver.F90
     )
-#endif()
+
+    set(FABM_HOST mossco)
+    set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+    add_subdirectory(
+        ${CMAKE_CURRENT_SOURCE_DIR}/../../external/fabm/code
+        ${CMAKE_BINARY_DIR}/external/fabm/build
+    )
+
+    #include(FindFABM)
+
+    # Add FABM include directories if found
+    if(FABM_INCLUDE_DIRS)
+        target_include_directories(mossco_drivers PRIVATE ${FABM_INCLUDE_DIRS})
+    endif()
+    if(FABM_LIBRARIES)
+        target_link_libraries(mossco_drivers PRIVATE ${FABM_LIBRARIES})
+    endif()
+endif()
 
 # Option to enable or disable EROSED-related sources
-option(USE_EROSED "Enable EROSED-related drivers (biotypes, benthoseffect_class)" OFF)
 if(USE_EROSED)
     list(APPEND DRIVER_SOURCES 
         biotypes.F90 

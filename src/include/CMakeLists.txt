@@ -1,15 +1,36 @@
-# CMakeLists.txt for src/include
+# This CMakeLists.txt is part of MOSSCO
+#
+# SPDX-FileCopyrightText 2021-2025 Helmholtz-Zentrum hereon GmbH
+# SPDX-FileCopyrightText 2014-2021 Helmholtz-Zentrum Geesthacht
+# SPDX-License-Identifier: CC0-1.0
+# SPDX-FileContributor Carsten Lemmen <carsten.lemmen@hereon.de>
+#
+# MOSSCO is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
+
+# Set MOSSCO_DIR if not already set
+if(NOT DEFINED MOSSCO_DIR)
+    get_filename_component(MOSSCO_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../.." ABSOLUTE)
+endif()
 
 # Ensure the output directory for headers exists
-set(GENERATED_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
+set(GENERATED_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR})
 file(MAKE_DIRECTORY ${GENERATED_INCLUDE_DIR})
 
 # --- version.h ---
 # Assuming PROJECT_VERSION_MAJOR, PROJECT_VERSION_MINOR, PROJECT_VERSION_PATCH are set in the root CMakeLists.txt
 # Example: set(PROJECT_VERSION_MAJOR 1) set(PROJECT_VERSION_MINOR 0) set(PROJECT_VERSION_PATCH 0)
-if(NOT DEFINED PROJECT_VERSION_MAJOR) set(PROJECT_VERSION_MAJOR 0) endif()
-if(NOT DEFINED PROJECT_VERSION_MINOR) set(PROJECT_VERSION_MINOR 0) endif()
-if(NOT DEFINED PROJECT_VERSION_PATCH) set(PROJECT_VERSION_PATCH 0) endif()
+if(NOT DEFINED PROJECT_VERSION_MAJOR) 
+  set(PROJECT_VERSION_MAJOR 0) 
+endif()
+if(NOT DEFINED PROJECT_VERSION_MINOR)
+  set(PROJECT_VERSION_MINOR 0)
+  endif()
+if(NOT DEFINED PROJECT_VERSION_PATCH)
+  set(PROJECT_VERSION_PATCH 0)
+endif()
 
 # Create a version.h.in if it doesn't exist (basic example)
 set(VERSION_H_IN_CONTENT "
@@ -43,6 +64,7 @@ message(STATUS "Configured ${VERSION_H_FILE}")
 # --- git-sha.h ---
 find_package(Git QUIET)
 find_package(Subversion QUIET)
+find_package(CVS QUIET)
 
 set(GIT_SHA_H_FILE ${GENERATED_INCLUDE_DIR}/git-sha.h)
 set(GENERATE_GIT_SHA_SCRIPT ${CMAKE_CURRENT_LIST_DIR}/generate_git_sha.cmake)

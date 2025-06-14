@@ -2,8 +2,8 @@
 # if provided in GOTM_PREFIX, use FABM modules used by GOTM
 find_path(FABM_PREFIX_PATH
   NAMES include/fabm_driver.h
-  HINTS "$ENV{FABM_PREFIX}" "${GOTM_PREFIX}" "$ENV{FABM_PREFIX}"
-  PATHS "$ENV{LOCALAPPDATA}/fabm/gotm" "$ENV{APPDATA}/fabm/gotm" "$ENV{HOME}/local/fabm/gotm"
+  HINTS "$ENV{FABM_PREFIX}" "$ENV{GOTM_PREFIX}" 
+  PATHS "$ENV{LOCALAPPDATA}/fabm/gotm" "$ENV{APPDATA}/fabm/gotm" "$ENV{HOME}/local/fabm/gotm" "${CURRENT_SOURCE_DIR}/../../external/fabm/install"
   DOC "Installation prefix for Framework for Aquatic Biogeochemical Models - fabm.net"
 )
 
