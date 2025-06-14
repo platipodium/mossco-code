@@ -28,8 +28,9 @@ endif()
 # Options for third-party packages that we an link into
 option(USE_HAMSOM "Enable HAMSOM-based drivers" OFF)
 option(USE_CMAQ "Enable CMAQ-based drivers" OFF)
-option(USE_GETM "Enable GETM-based drivers" ON)
-option(USE_GOTM "Enable GOTM-based drivers" ON)
+option(USE_GETM "Enable GETM-based drivers" OFF)
+option(USE_SCHISM "Enable SCHISM drivers" OFF)
+option(USE_GOTM "Enable GOTM-based drivers" OFF)
 option(USE_FABM "Enable FABM-based drivers" ON)
 option(USE_EROSED "Enable EROSED-related drivers (biotypes, benthoseffect_class)" OFF)
 
@@ -64,17 +65,57 @@ if(USE_FABM)
     endif()
 
     set(FABM_FORCED_HOST mossco)
-    cmake_policy(PUSH)
-    cmake_policy(VERSION 3.5)  
     add_subdirectory("${FABM_SOURCE_DIR}" external/fabm/code)
-    cmake_policy(POP)
     mark_as_advanced(CLEAR FABM_BASE)
   endif()
 endif()
 
+# The GOTM part does not work as it runs into recursion issues.
+if(USE_GOTM)
+  mark_as_advanced(FORCE GOTM_PREFIX GOTM_BASE)
+
+  if(GOTM_PREFIX)
+    find_package(gotm REQUIRED CONFIG HINTS "${GOTM_PREFIX}" NO_DEFAULT_PATH)
+    mark_as_advanced(CLEAR GOTM_PREFIX)
+  else()
+    # Determine GOTM_BASE
+    if(NOT DEFINED GOTM_BASE)
+      if(DEFINED ENV{GOTM_BASE})
+        set(GOTM_BASE $ENV{GOTM_BASE})
+      else()
+        set(GOTM_BASE "${CMAKE_CURRENT_LIST_DIR}/external/gotm/code")
+      endif()
+    endif()
+
+    message(STATUS "Using GOTM_BASE=${GOTM_BASE}")
+
+    # Use separate variable to locate GOTM source
+    find_path(GOTM_SOURCE_DIR src/gotm/gotm.F90
+      HINTS "${GOTM_BASE}"
+      DOC "Path to GOTM source directory."
+      NO_CMAKE_FIND_ROOT_PATH
+    )
+
+    if(NOT GOTM_SOURCE_DIR)
+      message(FATAL_ERROR "Could not find GOTM source at or near ${GOTM_BASE}")
+    endif()
+
+    # Safely set policy for variable overrides
+    cmake_policy(PUSH)
+    cmake_policy(SET CMP0079 NEW)
+
+    set(GOTM_USE_FABM NOT ${USE_FABM} CACHE BOOL "Toggle FABM in GOTM" FORCE)
+
+    add_subdirectory("${GOTM_SOURCE_DIR}" external/gotm/code)
+
+    cmake_policy(POP)
+
+    mark_as_advanced(CLEAR GOTM_BASE)
+  endif()
+endif()
 
 
-
+include(ConfigureGETM)
 
 include(GitVersion)
 include(FindESMF)
