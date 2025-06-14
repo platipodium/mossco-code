@@ -142,3 +142,10 @@ add_subdirectory(src)
 
 # Enable testing with CTest
 enable_testing()
+
+add_library(mossco STATIC
+    $<TARGET_OBJECTS:mossco_drivers>
+    $<TARGET_OBJECTS:mossco_components>
+    $<TARGET_OBJECTS:mossco_mediators>
+    $<TARGET_OBJECTS:mossco_utilities>
+)

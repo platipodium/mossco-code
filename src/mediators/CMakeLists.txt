@@ -2,10 +2,9 @@
 # SPDX-License-Identifier: CC0-1.0
 # SPDX-FileContributor: Carsten Lemmen <carsten.lemmen@hereon.de>
 
+add_library(mossco_mediators OBJECT ${MEDIATOR_SOURCES})
 
-add_library(mossco_mediators STATIC)
-
-set(CONNECTOR_SOURCES
+set(MEDIATOR_SOURCES
 benthic_pelagic_coupler.F90
 #calculator_old.F90
 calculator.F90
@@ -25,7 +24,7 @@ vertical_reduction.F90
 xgrid_coupler.F90
 )
 
-target_sources(mossco_mediators PRIVATE ${CONNECTOR_SOURCES})
+target_sources(mossco_mediators PRIVATE ${MEDIATOR_SOURCES})
 
 target_include_directories(mossco_mediators PUBLIC 
     ${CMAKE_BINARY_DIR}/src/utilities

@@ -18,7 +18,7 @@ add_custom_command(
 )
 
 # Define the library target
-add_library(mossco_utilities "")
+add_library(mossco_utilities OBJECT ${UTILITIES_SOURCES})
 
 # List of source files
 set(UTILITIES_SOURCES

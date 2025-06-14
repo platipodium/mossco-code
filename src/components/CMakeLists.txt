@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: CC0-1.0
 # SPDX-FileContributor: Carsten Lemmen <carsten.lemmen@hereon.de>
 
-add_library(mossco_components STATIC)
+add_library(mossco_components OBJECT ${COMPONENT_SOURCES})
 
 set(COMPONENT_SOURCES
     #clm_netcdf_component.F90
