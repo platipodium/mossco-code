@@ -4,7 +4,7 @@
 # This script is is part of MOSSCO. It creates from YAML descriptions of
 # couplings a toplevel_component.F90 source file
 #
-# @copyright (C) 2021-2023 Helmholtz-Zentrum hereon GmbH
+# @copyright (C) 2021-2025 Helmholtz-Zentrum hereon GmbH
 # @copyright (C) 2014-2021 Helmholtz-Zentrum Geesthacht GmbH
 # @author Carsten Lemmen <carsten.lemmen@hereon.de>
 #
@@ -385,7 +385,8 @@ module toplevel_component
 
 for jtem in instanceList:
 
-    if jtem.find('_mediator')>0 or jtem.find('_connector')>0 or jtem == 'vertical_reduction' or jtem == 'calculator' or jtem.find('_coupler')>0 or jtem.find('_cmi')>0:
+    if jtem.find('_mediator')>0 or jtem.find('_connector')>0 or jtem == 'vertical_reduction' \
+      or jtem == 'calculator' or jtem.find('_coupler')>0 or jtem.find('_cmi')>0 or jtem.find('_cap')>0:
       fid.write('  use ' + jtem + ', only : ' + jtem + '_SetServices => SetServices \n')
     else: fid.write('  use ' + jtem + '_component, only : ' + jtem + '_SetServices => SetServices \n')
 
