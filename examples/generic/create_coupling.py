@@ -103,7 +103,7 @@ else:
 if 'copyright' in config.keys():
     copyright = config.pop('copyright')
 else:
-    copyright = 'Copyright 2023 Helmholtz-Zentrum Hereon GmbH'
+    copyright = 'Copyright 2025 Helmholtz-Zentrum hereon GmbH'
 
 if 'dependencies' in config.keys():
   dependencies = config.pop('dependencies')

@@ -1,8 +1,8 @@
 # This Makefile is part of MOSSCO
 #
-# SPDX-FileCopyrightText 2021-2022 Helmholtz-Zentrum Hereon
-# SPDX-FileCopyrightText 2014-2021 Helmholtz-Zentrum Geesthacht
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText 2021-2025 Helmholtz-Zentrum hereon GmbH
+# SPDX-FileCopyrightText 2014-2021 Helmholtz-Zentrum Geesthacht GmbH
+# SPDX-License-Identifier: CC0-1.0
 # SPDX-FileContributor Carsten Lemmen <carsten.lemmen@hereon.de
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -102,7 +102,7 @@ mossco-sha: git-sha.h
 	  if [ $(shell grep -c MOSSCO_GIT_SHA_KEY $(SHA_FILE)) -gt 0 ] ; then \
 	    $(SED) -i '/MOSSCO_GIT_SHA_KEY/d' $(SHA_FILE) ; \
 	  fi ; \
-	  echo 'character(len=40), parameter :: MOSSCO_GIT_SHA_KEY = "'$(MOSSCO_SHA)'"'	 >> $(SHA_FILE) ; \
+	  echo 'character(len=40) :: MOSSCO_GIT_SHA_KEY = "'$(MOSSCO_SHA)'"'	 >> $(SHA_FILE) ; \
 	fi
 
 mossco-setup-sha: git-sha.h
@@ -110,7 +110,7 @@ mossco-setup-sha: git-sha.h
 	  if [ $(shell grep -c MOSSCO_SETUP_GIT_SHA_KEY $(SHA_FILE)) -gt 0 ] ; then \
 	    $(SED) -i '/MOSSCO_SETUP_GIT_SHA_KEY/d' $(SHA_FILE) ; \
 	  fi ; \
-	  echo 'character(len=40), parameter :: MOSSCO_SETUP_GIT_SHA_KEY = "'$(MOSSCO_SETUP_SHA)'"'	 >> $(SHA_FILE) ; \
+	  echo 'character(len=40) :: MOSSCO_SETUP_GIT_SHA_KEY = "'$(MOSSCO_SETUP_SHA)'"'	 >> $(SHA_FILE) ; \
 	fi
 
 fabm-sha:  git-sha.h
@@ -118,7 +118,7 @@ fabm-sha:  git-sha.h
 	  if [ $(shell grep -c FABM_GIT_SHA_KEY $(SHA_FILE)) -gt 0 ] ; then \
 	    $(SED) -i '/FABM_GIT_SHA_KEY/d' $(SHA_FILE) ; \
 	  fi ; \
-	  echo 'character(len=40), parameter :: FABM_GIT_SHA_KEY = "'$(FABM_SHA)'"'	 >> $(SHA_FILE) ; \
+	  echo 'character(len=40) :: FABM_GIT_SHA_KEY = "'$(FABM_SHA)'"'	 >> $(SHA_FILE) ; \
 	fi
 
 gotm-sha:  git-sha.h
@@ -126,7 +126,7 @@ gotm-sha:  git-sha.h
 	  if [ $(shell grep -c GOTM_GIT_SHA_KEY $(SHA_FILE)) -gt 0 ] ; then \
 	    $(SED) -i '/GOTM_GIT_SHA_KEY/d' $(SHA_FILE) ; \
 	  fi ; \
-	  echo 'character(len=40), parameter :: GOTM_GIT_SHA_KEY = "'$(GOTM_SHA)'"'	 >> $(SHA_FILE) ; \
+	  echo 'character(len=40) :: GOTM_GIT_SHA_KEY = "'$(GOTM_SHA)'"'	 >> $(SHA_FILE) ; \
 	fi
 
 getm-sha:
@@ -134,14 +134,14 @@ getm-sha:
 	  if [ $(shell grep -c GETM_GIT_SHA_KEY $(SHA_FILE)) -gt 0 ] ; then \
 	    $(SED) -i '/GETM_GIT_SHA_KEY/d' $(SHA_FILE) ; \
 	  fi ; \
-	  echo 'character(len=40), parameter :: GETM_GIT_SHA_KEY = "'$(GETM_SHA)'"'	 >> $(SHA_FILE) ; \
+	  echo 'character(len=40) :: GETM_GIT_SHA_KEY = "'$(GETM_SHA)'"'	 >> $(SHA_FILE) ; \
 	fi
 
 ifeq ($(MOSSCO_EROSED),true)
 .PHONY: erosed-rev
 erosed-rev: erosed.rev git-sha.h
 	@$(SED) -i '/EROSED_SVN_REVISION/d' $(SHA_FILE)
-	@echo 'character(len=40), parameter :: EROSED_SVN_REVISION = "'`cat erosed.rev 2> /dev/null || echo none`'"'	 >> $(SHA_FILE)
+	@echo 'character(len=40) :: EROSED_SVN_REVISION = "'`cat erosed.rev 2> /dev/null || echo none`'"'	 >> $(SHA_FILE)
 
 erosed.rev: $(EROSED_DIR)/source/erosed.f90
 	@svn log $(EROSED_DIR)/source/erosed.f90 2> /dev/null | head -2 | tail -1 | awk '{print $$1}' > erosed.rev

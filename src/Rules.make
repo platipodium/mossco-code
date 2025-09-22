@@ -1,7 +1,7 @@
 # This Makefile snippet is part of MOSSCO; definition of MOSSCO-wide
 # make rules
 #
-# SPDX-FileCopyrightText 2021-2025 Helmholtz-Zentrum Hereon GmbH
+# SPDX-FileCopyrightText 2021-2025 Helmholtz-Zentrum hereon GmbH
 # SPDX-FileCopyrightText 2013-2021 Helmholtz-Zentrum Geesthacht GmbH
 # SPDX-License-Identifier: CC0-1.0
 # SPDX-FileContributor Carsten Lemmen <carsten.lemmen@hereon.de

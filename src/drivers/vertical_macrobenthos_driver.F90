@@ -2,7 +2,8 @@
 !> @file vertical_macrobenthos_driver.F90
 !!
 !  self computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2018 Helmholtz-Zentrum Geesthacht
+!> @copyright 2021-2025 Helmholtz-Zentrum hereon GmbH
+!> @copyright 2018-2021 Helmholtz-Zentrum Geesthacht GmbH
 !> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -90,7 +91,7 @@ subroutine initialize(self, inum, jnum, rc)
   self%adaptive_solver_diagnostics = .true.
 
   allocate(self%mask(self%inum,self%jnum,self%knum))
-  self%mask = .false.
+  self%mask = 0
 
   allocate(self%conc(self%inum,self%jnum,self%knum,self%nvar))
   self%conc = 0.0
@@ -105,7 +106,7 @@ subroutine initialize(self, inum, jnum, rc)
   self%depth_endobenthic => self%conc(:,:,1,4)
 
   allocate(self%depth(inum,jnum))
-  where (self%mask(:,:,1) .and. self%biomass>0)
+  where (self%mask(:,:,1)<1 .and. self%biomass>0)
   self%depth = (self%depth_epibenthic * self%biomass_endobenthic &
      + self%depth_endobenthic * self%biomass_endobenthic) &
      /self%biomass
@@ -164,7 +165,7 @@ subroutine get_rhs(rhs_driver, rhs)
 
   do j=1,rhs_driver%jnum
     do i=1,rhs_driver%inum
-      if (.not.rhs_driver%mask(i,j,1)) then
+      if (rhs_driver%mask(i,j,1) < 1) then
 
         drpdz = 0 ! pelagic respiration with depth
         drbdz = rhs_driver%respiration_rate / rhs_driver%predation_depth &
