@@ -239,7 +239,8 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     character (len=ESMF_MAXSTR) :: message, creatorName
     type(ESMF_Time)             :: currTime, startTime
     type(ESMF_Clock)            :: clock
-    character(len=ESMF_MAXSTR), dimension(:), allocatable :: itemNameList, differList
+    character(len=ESMF_MAXSTR), dimension(:), allocatable :: itemNameList
+    character(len=ESMF_MAXSTR - 4), dimension(:), allocatable :: differList
     type(ESMF_StateItem_Flag),  dimension(:), allocatable :: itemTypeList
     type(ESMF_Field)            :: importField, exportField
     type(ESMF_Field), allocatable :: importFieldList(:), exportFieldList(:)
