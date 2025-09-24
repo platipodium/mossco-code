@@ -19,73 +19,103 @@
 
 ifndef MOSSCO_PREFIX
 
-# 1. Checking that we're using GNU make
-#    Of course, this command already requires gmake, so a better solution is required here
-ifeq ($(shell make --version | grep -c GNU),0)
-  $(error GNU make is required)
-endif
+  # 1.1. Require GNU make
+  ifndef MAKE_VERSION
+    $(error GNU make is required. Try invoking 'gmake' or install GNU make.)
+  endif
 
-AWK:=$(shell which gawk 2> /dev/null)
-ifeq ($(strip $(AWK)),)
-AWK:=$(shell which awk 2> /dev/null)
-endif
-ifneq ($(strip $(AWK)),)
-export AWK:=$(basename $(AWK))
-$(info Using awk ... $(AWK))
-endif
+  # 1.2 Set AWK
+  ifndef AWK
+    AWK := $(shell command -v gawk 2>/dev/null || command -v awk 2>/dev/null)
+  endif
+  ifneq ($(strip $(AWK)),)
+  export AWK
+  $(info Using awk ... $(AWK))
+  else
+    $(warning awk not found; some features may not work)
+  endif
 
-CMAKE:=$(shell which cmake3 2> /dev/null)
-ifeq ($(strip $(CMAKE)),)
-CMAKE:=$(shell which cmake 2> /dev/null)
-endif
-ifneq ($(strip $(CMAKE)),)
-export CMAKE:=$(basename $(CMAKE))
-$(info Using cmake ... $(CMAKE))
-else
-$(error Cannot find cmake)
-endif
+  # 1.3 Discover CMake (prefer full path). Respect pre-set CMAKE.
+  ifndef CMAKE
+    CMAKE := $(shell command -v cmake 2>/dev/null || command -v cmake3 2>/dev/null)
+  endif
+  ifeq ($(strip $(CMAKE)),)
+    $(error Cannot find CMake. Please install cmake >= 3.5 and ensure it is on PATH)
+  else
+    export CMAKE
+    $(info Using cmake ... $(CMAKE))
+    # Optional: check minimum version 3.5
+    CMAKE_VERSION := $(shell "$(CMAKE)" --version 2>/dev/null | sed -n '1s/.* \([0-9][0-9.]*\)$$/\1/p')
+    CMAKE_VER_MAJOR := $(firstword $(subst ., ,$(CMAKE_VERSION)))
+    CMAKE_VER_MINOR := $(word 2,$(subst ., ,$(CMAKE_VERSION)))
+    CMAKE_OK := $(shell [ -n "$(CMAKE_VERSION)" ] && { [ $(CMAKE_VER_MAJOR) -gt 3 ] || { [ $(CMAKE_VER_MAJOR) -eq 3 ] && [ $(CMAKE_VER_MINOR) -ge 5 ]; }; } && echo yes || echo no)
+    ifeq ($(CMAKE_OK),no)
+      $(warning Detected CMake $(CMAKE_VERSION); recommend >= 3.5 for policy support)
+    endif
+  endif
 
-export MOSSCO_OBJC:=false
-OBJC=$(shell which objconv 2> /dev/null)
-ifeq ($(strip $(OBJC)),)
-OBJC=$(shell which gobjcopy 2> /dev/null)
-endif
-ifeq ($(strip $(OBJC)),)
-OBJC=$(shell which objcopy 2> /dev/null)
-endif
-ifneq ($(strip $(OBJC)),)
-MOSSCO_OBJC:=$(shell basename $(OBJC))
-$(info Using objcopy ... $(MOSSCO_OBJC))
-else
-$(info Using objcopy ... no)
-endif
+  # 1.4 Discover GNU objcopy (prefer full path). Respect pre-set OBJCOPY.
+  ifndef OBJCOPY
+    # gobjcopy appears on macOS (Homebrew binutils), objcopy elsewhere
+    OBJCOPY := $(shell command -v objcopy 2>/dev/null || command -v gobjcopy 2>/dev/null)
+  endif
+  ifeq ($(strip $(OBJCOPY)),)
+    export MOSSCO_HAS_OBJCOPY := false
+    $(info Using objcopy ... not found)
+  else
+    export MOSSCO_HAS_OBJCOPY := true
+    export OBJCOPY
+    $(info Using objcopy ... $(OBJCOPY))
+  endif
+  ifeq ($(MOSSCO_HAS_OBJCOPY),false)
+      ifndef OBJCONV
+        OBJCONV := $(shell command -v objconv 2>/dev/null)
+      endif
+      ifneq ($(strip $(OBJCONV)),)
+        export MOSSCO_HAS_OBJCONV := true
+        $(info Using objconv ... $(OBJCONV))
+      endif
+  endif
 
-export MOSSCO_GIT:=false
-ifneq ($(wildcard $(shell which git)),)
-MOSSCO_GIT:=true
-export MOSSCO_GIT_VERSION:=$(shell git --version |cut -f3 -d" ")
-export MOSSCO_GIT_VERSION_MAJOR:=$(shell git --version |cut -f3 -d" "|cut -f1 -d.)
-ifeq ($(MOSSCO_GIT_VERSION_MAJOR),1)
-  $(warning Consider upgrading git to version 2)
-endif
-else
-  $(warning Consider installing git)
-endif
-$(info Using git ... $(shell which git) ($(MOSSCO_GIT_VERSION)))
+  ifndef GIT
+    GIT := $(shell command -v git 2>/dev/null)
+  endif
 
-# System-dependent flags
-ifeq ($(shell hostname),rznp0023)
-  export ARFLAGS:=rv
-  export AR:=ar
-  $(warning use changed ARFLAGS=rvU)
-endif
+  # 1.5 Discover git (prefer full path). Respect pre-set GIT.
+  ifeq ($(strip $(GIT)),)
+    export MOSSCO_GIT := false
+    $(warning git not found; VCS metadata features will be disabled)
+  else
+    export MOSSCO_GIT := true
+    export GIT
+    # Extract version string (e.g. "2.43.0")
+    GIT_VERSION := $(shell "$(GIT)" --version 2>/dev/null | sed -n 's/.* \([0-9][0-9.]*\)$$/\1/p')
+    ifneq ($(strip $(GIT_VERSION)),)
+      export MOSSCO_GIT_VERSION := $(GIT_VERSION)
+      export MOSSCO_GIT_VERSION_MAJOR := $(firstword $(subst ., ,$(GIT_VERSION)))
+      $(info Using git ... $(GIT) ($(MOSSCO_GIT_VERSION)))
+      # Warn for very old git (major < 2)
+      GIT_OK := $(shell [ "$(firstword $(subst ., ,$(GIT_VERSION)))" -ge 2 ] 2>/dev/null && echo yes || echo no)
+      ifeq ($(GIT_OK),no)
+        $(warning Consider upgrading git to version 2 or newer)
+      endif
+    else
+      $(info Using git ... $(GIT))
+    endif
+  endif
+  # Portable ar setup: respect pre-set AR/ARFLAGS, otherwise discover
+  ifndef AR
+    AR := $(shell command -v ar 2>/dev/null || command -v llvm-ar 2>/dev/null || command -v gar 2>/dev/null)
+  endif
+  ifeq ($(strip $(AR)),)
+    $(error 'ar' not found; please install binutils (ar) or llvm-ar and ensure it is on PATH)
+  endif
 
-ifeq ($(shell hostname),KSEZ8002)
-  export ARFLAGS:=rvU
-  export AR:=ar
-  $(warning use changed ARFLAGS=rvU)
-endif
-$(info Using ar ... $(AR) -$(ARFLAGS))
+  # Safe, portable default flags: rcs (replace/create, write index)
+  ARFLAGS ?= rcs
+
+  export AR ARFLAGS
+  $(info Using ar ... $(AR) -$(ARFLAGS))
 
 ifeq ($(MOSSCO_INSTALL_PREFIX),)
   export MOSSCO_INSTALL_PREFIX:=$(MOSSCO_DIR)
@@ -115,6 +145,21 @@ else
   MOSSCO_ESMF:=true
 
   $(info Using ESMFMKFILE ... $(ESMFMKFILE))
+
+    # Compilers from ESMF
+    ifdef ESMF_F90COMPILER
+      export F90 := $(ESMF_F90COMPILER)
+      export FC  := $(ESMF_F90COMPILER)
+    else
+      $(error ESMF_F90COMPILER not defined in $(ESMFMKFILE))
+    endif
+    ifdef ESMF_CXXCOMPILER
+      export CXX := $(ESMF_CXXCOMPILER)
+    endif
+    ifdef ESMF_CCOMPILER
+      export CC := $(ESMF_CCOMPILER)
+    endif
+
 
   # Find the communicator and determine whether this is parallel device, this
   # is still buggy with mpiifort and needs improvement
