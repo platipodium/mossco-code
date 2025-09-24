@@ -126,6 +126,22 @@ else
 
   ifeq ("$(ESMF_COMM)","mpiuni")
     export MOSSCO_MPI:=false
+    ESMF_FC:=$(shell echo $(ESMF_F90COMPILER) | cut -d'-' -f1)
+    ifneq (,$(filter $(ESMF_FC),X86_64 x86_64 arm64))
+      ESMF_FC:=$(shell echo $(ESMF_F90COMPILER) | $(AWK) -F'-' '{print $$NF}')
+    endif
+    ifeq ($(ESMF_FC),gnu)
+      ESMF_FC:=gfortran
+    endif
+
+    ESMF_CC:=$(shell echo $(ESMF_CCOMPILER) | cut -d'-' -f1)
+    ifneq (,$(filter $(ESMF_CC),X86_64 x86_64 arm64))
+      ESMF_CC:=$(shell echo $(ESMF_CCOMPILER) | $(AWK) -F'-' '{print $$NF}')
+    endif
+    ifeq ($(ESMF_CC),gnu)
+      ESMF_CC:=g++
+    endif  
+  
   else
     export MOSSCO_MPI:=true
     ifeq ($(ESMF_COMM),openmpi)
@@ -163,19 +179,13 @@ else
     ifeq ($(ESMF_CC),gnu)
       ESMF_CC:=g++
     endif
-
-#      ifeq ($(ESMF_FC),)
-#	      ifeq ($(ESMF_F90COMPILER),mpifort)
-#          ESMF_FC:=$(shell mpif90 --showme:command 2> /dev/null)
-#        endif
-#      endif
   endif
 
   export MOSSCO_F90COMPILER=$(shell which $(ESMF_FC))
   export MOSSCO_CCOMPILER=$(shell which $(ESMF_CC))
 
-  $(info Using ESMF_FC ... $(ESMF_FC))
-  $(info Using ESMF_CC ... $(ESMF_CC))
+  $(info Using ESMF_FC ... $(ESMF_FC) as $(MOSSCO_F90COMPILER))
+  $(info Using ESMF_CC ... $(ESMF_CC) as $(MOSSCO_CCOMPILER))
 
   ESMF_OPENMP:=$(strip $(shell grep '^. ESMF_OPENMP:' $(ESMFMKFILE) | cut -d':' -f2-))
   ifeq ("$(ESMF_OPENMP)","OFF")
