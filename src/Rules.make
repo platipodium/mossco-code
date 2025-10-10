@@ -121,7 +121,7 @@ ifeq ($(MOSSCO_INSTALL_PREFIX),)
   export MOSSCO_INSTALL_PREFIX:=$(MOSSCO_DIR)
 endif
 
-# Filter out all MAKELEVELS that are not 1 or 0 to avoid unneccessary execution
+# Filter out all MAKELEVELS that are not 1 or 0 to avoid unnecessary execution
 # of the preamble section of this Rules.make in repeated calls.  In most circumstances,
 # Rules.make is executed at MAKELEVEL 1, unless directly called in $(MOSSCODIR)/src
 #ifneq (,$(filter $(MAKELEVEL),0 1))
@@ -159,7 +159,8 @@ else
     ifdef ESMF_CCOMPILER
       export CC := $(ESMF_CCOMPILER)
     endif
-
+  $(info Using ESMF_F90COMPILER ... $(ESMF_F90COMPILER))
+  $(info Using ESMF_CXXCOMPILER ... $(ESMF_CXXCOMPILER))
 
   # Find the communicator and determine whether this is parallel device, this
   # is still buggy with mpiifort and needs improvement
@@ -167,26 +168,28 @@ else
   $(info Using ESMF_COMM ... $(ESMF_COMM))
   ESMF_OS:=$(strip $(shell grep '^. ESMF_OS:' $(ESMFMKFILE) | cut -d':' -f2-))
   $(info Using ESMF_OS ... $(ESMF_OS))
-  $(info Using ESMF_F90COMPILER ... $(ESMF_F90COMPILER))
 
   ifeq ("$(ESMF_COMM)","mpiuni")
     export MOSSCO_MPI:=false
-    ESMF_FC:=$(shell echo $(ESMF_F90COMPILER) | cut -d'-' -f1)
-    ifneq (,$(filter $(ESMF_FC),X86_64 x86_64 arm64))
-      ESMF_FC:=$(shell echo $(ESMF_F90COMPILER) | $(AWK) -F'-' '{print $$NF}')
-    endif
-    ifeq ($(ESMF_FC),gnu)
-      ESMF_FC:=gfortran
-    endif
+    ifneq (,$(filter %gfortran gfortran% %gnu gnu%,$(notdir $(ESMF_F90COMPILER))))
+      ESMF_FC := gfortran
+    else 
+      ifneq (,$(filter %flang flang% %llvm llvm%,$(notdir $(ESMF_F90COMPILER))))
+        ESMF_FC := flang
+      else
+        ESMF_FC := $(shell echo $(notdir $(ESMF_F90COMPILER)) | cut -d'-' -f1)
+      endif
+    endif 
 
-    ESMF_CC:=$(shell echo $(ESMF_CCOMPILER) | cut -d'-' -f1)
-    ifneq (,$(filter $(ESMF_CC),X86_64 x86_64 arm64))
-      ESMF_CC:=$(shell echo $(ESMF_CCOMPILER) | $(AWK) -F'-' '{print $$NF}')
-    endif
-    ifeq ($(ESMF_CC),gnu)
-      ESMF_CC:=g++
-    endif  
-  
+    ifneq (,$(filter %gcc gcc% %gnu gnu%,$(notdir $(ESMF_CXXCOMPILER))))
+      ESMF_CC := gcc
+    else 
+      ifneq (,$(filter %clang++ clang++% %llvm llvm%,$(notdir $(ESMF_CXXCOMPILER))))
+        ESMF_CC := clang
+      else
+        ESMF_CC := $(shell echo $(notdir $(ESMF_CXXCOMPILER)) | cut -d'-' -f1)
+      endif
+    endif   
   else
     export MOSSCO_MPI:=true
     ifeq ($(ESMF_COMM),openmpi)

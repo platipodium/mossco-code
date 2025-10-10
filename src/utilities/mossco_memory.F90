@@ -1,7 +1,7 @@
 !> @brief Implementation of additional ESMF memory allocation utilities
 !
 !  This computer program is part of MOSSCO.
-!> @copyright 2021-2023 Helmholtz-Zentrum Hereon GmbH
+!> @copyright 2021-2025 Helmholtz-Zentrum hereon GmbH
 !> @copyright 2016-2021 Helmholtz-Zentrum Geesthacht GmbH
 !> @author Carsten Lemmen <carsten.lemmen@hereon.de>
 !
