@@ -12,7 +12,7 @@ license = "GPL-3.0-or-later"
 readme = "README.md"
 homepage = "http://www.mossco.de"
 documentation = "http://www.mossco.de/doc"
-repository = "git@gitlab.hzdr.de:mossco/code.git"
+repository = "https://codebase.helmholtz.cloud/mossco/code.git"
 classifiers = [
   "Development Status :: 7 - Upscaling",
   "Environment :: Console",
